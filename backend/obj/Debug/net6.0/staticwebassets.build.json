@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "rNMWTxHA+pvgA8hWWjqUHMl29TyhdPPZCghUS7XBTGg=",
+  "Source": "backend",
+  "BasePath": "_content/backend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "backend\\wwwroot",
+      "Source": "backend",
+      "ContentRoot": "D:\\AiraEuro\\die_pattern\\backend\\wwwroot\\",
+      "BasePath": "_content/backend",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}

@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary color variables - compatible with v3 */
+  --primary: #0d6efd;
+  --primary-50: #e7f1ff;
+  --primary-100: #cfe3ff;
+  --primary-200: #9fc7ff;
+  --primary-300: #6fabff;
+  --primary-400: #3f8fff;
+  --primary-500: #0d6efd;
+  --primary-600: #0a58ca;
+  --primary-700: #084298;
+  --primary-800: #052c65;
+  --primary-900: #031633;
+
+  --secondary: #6c757d;
+  --text: #000000;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--text);
+  background: #f8f9fa;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
