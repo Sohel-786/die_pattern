@@ -2,9 +2,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using backend.Data;
-using backend.Services;
-using System.Text.Json.Serialization;
+using net_backend.Data;
+using net_backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,23 +11,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Configure Services
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<ICodeGeneratorService, CodeGeneratorService>();
+builder.Services.AddScoped<IExcelService, ExcelService>();
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourSuperSecretKeyWithAtLeast32Characters";
+var jwtKey = builder.Configuration["Jwt:Key"];
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -38,8 +37,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "DPMS",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "DPMS_Client",
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
         options.Events = new JwtBearerEvents
@@ -64,6 +63,9 @@ builder.Services.AddCors(options =>
                    .AllowCredentials();
         });
 });
+
+// Configure Port (matching Node.js backend)
+// Port configuration will be handled by environment variables (e.g., ASPNETCORE_URLS)
 
 var app = builder.Build();
 

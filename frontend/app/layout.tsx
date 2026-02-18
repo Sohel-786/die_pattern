@@ -6,15 +6,15 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DPMS | Die & Pattern Management System",
-  description: "Company & Location Based Die & Pattern Management",
+  title: "QC Item Management System",
+  description: "Internal QC Item Management Web CRM",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={inter.className}>

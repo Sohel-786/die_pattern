@@ -1,34 +1,49 @@
 using Microsoft.EntityFrameworkCore;
+using net_backend.Data;
 
-namespace backend.Services
+namespace net_backend.Services
 {
     public interface ICodeGeneratorService
     {
-        Task<string> GenerateCodeAsync(string prefix, string tableName, string columnName);
+        Task<string> GenerateCode(string type);
     }
 
     public class CodeGeneratorService : ICodeGeneratorService
     {
-        private readonly Data.ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public CodeGeneratorService(Data.ApplicationDbContext context)
+        public CodeGeneratorService(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        public async Task<string> GenerateCodeAsync(string prefix, string tableName, string columnName)
+        public async Task<string> GenerateCode(string type)
         {
-            // Simple logic: count entries + 1
-            var connection = _context.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open)
-                await connection.OpenAsync();
-                
-            using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-            var count = (int)(await command.ExecuteScalarAsync() ?? 0);
-            
-            var year = DateTime.Now.ToString("yy");
-            return $"{prefix}-{year}-{(count + 1):D4}";
+            int count = 0;
+            string prefix = type;
+
+            if (type == "PI")
+            {
+                count = await _context.PurchaseIndents.CountAsync();
+                prefix = "PI";
+            }
+            else if (type == "PO")
+            {
+                count = await _context.PurchaseOrders.CountAsync();
+                prefix = "PO";
+            }
+            else if (type == "OUT")
+            {
+                count = await _context.Movements.CountAsync(m => m.Type == Models.MovementType.Outward);
+                prefix = "MOV-OUT";
+            }
+            else if (type == "INW")
+            {
+                count = await _context.Movements.CountAsync(m => m.Type == Models.MovementType.Inward);
+                prefix = "MOV-INW";
+            }
+
+            return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
         }
     }
 }

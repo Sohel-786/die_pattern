@@ -1,26 +1,19 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace backend.Models
+namespace net_backend.Models
 {
     [Table("app_settings")]
     public class AppSettings
     {
         public int Id { get; set; }
         [Required]
-        public string CompanyName { get; set; } = "Die & Pattern Management";
+        public string CompanyName { get; set; } = "Die & Pattern System";
         public string? CompanyLogo { get; set; }
         [MaxLength(255)]
         public string? SoftwareName { get; set; }
         [MaxLength(20)]
         public string? PrimaryColor { get; set; }
-        [MaxLength(255)]
-        public string? SupportEmail { get; set; }
-        [MaxLength(50)]
-        public string? SupportPhone { get; set; }
-        public string? Address { get; set; }
-        [MaxLength(255)]
-        public string? Website { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
@@ -70,7 +63,6 @@ namespace backend.Models
 
         [ForeignKey("CompanyId")]
         public virtual Company? Company { get; set; }
-        public virtual ICollection<PatternDie> PatternDies { get; set; } = new List<PatternDie>();
     }
 
     [Table("parties")]
@@ -79,8 +71,7 @@ namespace backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
-        public string? ContactPerson { get; set; }
-        public string? Phone { get; set; }
+        public string? PhoneNumber { get; set; }
         public string? Email { get; set; }
         public string? Address { get; set; }
         public bool IsActive { get; set; } = true;
@@ -88,139 +79,113 @@ namespace backend.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    [Table("type_masters")]
-    public class TypeMaster
+    [Table("pattern_types")]
+    public class PatternType
     {
         public int Id { get; set; }
         [Required]
-        public string Name { get; set; } = string.Empty; // e.g. Die, Pattern
+        public string Name { get; set; } = string.Empty; // Die / Pattern
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    [Table("status_masters")]
-    public class StatusMaster
+    [Table("pattern_statuses")]
+    public class PatternStatus
     {
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    [Table("material_masters")]
-    public class MaterialMaster
+    [Table("materials")]
+    public class Material
     {
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    [Table("owner_type_masters")]
-    public class OwnerTypeMaster
+    [Table("owner_types")]
+    public class OwnerType
     {
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
     [Table("pattern_dies")]
     public class PatternDie
     {
         public int Id { get; set; }
+        
         [Required]
-        public string MainPartName { get; set; } = string.Empty; // Permanent, Never Editable
+        public string MainPartName { get; set; } = string.Empty; // Permanent, Never Editable, Unique
+        
         [Required]
         public string CurrentName { get; set; } = string.Empty; // Editable only via Change Process
-        public int TypeId { get; set; }
+
+        public int PatternTypeId { get; set; }
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
+        
         public int MaterialId { get; set; }
         public int OwnerTypeId { get; set; }
         public int StatusId { get; set; }
+
+        public HolderType CurrentHolderType { get; set; }
         public int? CurrentLocationId { get; set; }
-        public int? CurrentVendorId { get; set; }
-        public bool IsAtVendor => CurrentVendorId.HasValue;
+        public int? CurrentPartyId { get; set; }
+
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("TypeId")]
-        public virtual TypeMaster? Type { get; set; }
+        [ForeignKey("PatternTypeId")]
+        public virtual PatternType? PatternType { get; set; }
         [ForeignKey("MaterialId")]
-        public virtual MaterialMaster? Material { get; set; }
+        public virtual Material? Material { get; set; }
         [ForeignKey("OwnerTypeId")]
-        public virtual OwnerTypeMaster? OwnerType { get; set; }
+        public virtual OwnerType? OwnerType { get; set; }
         [ForeignKey("StatusId")]
-        public virtual StatusMaster? Status { get; set; }
+        public virtual PatternStatus? Status { get; set; }
         [ForeignKey("CurrentLocationId")]
         public virtual Location? CurrentLocation { get; set; }
-        [ForeignKey("CurrentVendorId")]
-        public virtual Party? CurrentVendor { get; set; }
-
-        public virtual ICollection<ChangeHistory> ChangeHistories { get; set; } = new List<ChangeHistory>();
-        public virtual ICollection<Movement> Movements { get; set; } = new List<Movement>();
-    }
-
-    [Table("change_histories")]
-    public class ChangeHistory
-    {
-        public int Id { get; set; }
-        public int PatternDieId { get; set; }
-        public string PreviousName { get; set; } = string.Empty;
-        public string PreviousRevision { get; set; } = string.Empty;
-        public string NewName { get; set; } = string.Empty;
-        public string NewRevision { get; set; } = string.Empty;
-        public string Reason { get; set; } = string.Empty;
-        public int ChangedBy { get; set; }
-        public DateTime ChangedAt { get; set; } = DateTime.Now;
-
-        [ForeignKey("PatternDieId")]
-        public virtual PatternDie? PatternDie { get; set; }
-
-        [ForeignKey("ChangedBy")]
-        public virtual User? Changer { get; set; }
+        [ForeignKey("CurrentPartyId")]
+        public virtual Party? CurrentParty { get; set; }
     }
 
     [Table("purchase_indents")]
     public class PurchaseIndent
     {
         public int Id { get; set; }
-        public string PINo { get; set; } = string.Empty;
-        public DateTime PIDate { get; set; } = DateTime.Now;
-        public string Type { get; set; } = string.Empty; // New / Repair / Correction / Modification
-        public string? Description { get; set; }
+        [Required]
+        public string PiNo { get; set; } = string.Empty;
+        public PiType Type { get; set; }
+        public PiStatus Status { get; set; } = PiStatus.Pending;
+        public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
-        public PIStatus Status { get; set; } = PIStatus.PENDING;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? ApprovedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
-        public virtual ICollection<PIItem> Items { get; set; } = new List<PIItem>();
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
+        public virtual ICollection<PurchaseIndentItem> Items { get; set; } = new List<PurchaseIndentItem>();
     }
 
-    [Table("pi_items")]
-    public class PIItem
+    [Table("purchase_indent_items")]
+    public class PurchaseIndentItem
     {
         public int Id { get; set; }
-        public int PIId { get; set; }
+        public int PurchaseIndentId { get; set; }
         public int PatternDieId { get; set; }
-        public string? Remarks { get; set; }
-        public bool IsOrdered { get; set; } = false;
-
-        [ForeignKey("PIId")]
+        
+        [ForeignKey("PurchaseIndentId")]
         public virtual PurchaseIndent? PurchaseIndent { get; set; }
         [ForeignKey("PatternDieId")]
         public virtual PatternDie? PatternDie { get; set; }
@@ -230,135 +195,118 @@ namespace backend.Models
     public class PurchaseOrder
     {
         public int Id { get; set; }
-        public string PONo { get; set; } = string.Empty;
-        public DateTime PODate { get; set; } = DateTime.Now;
+        [Required]
+        public string PoNo { get; set; } = string.Empty;
         public int VendorId { get; set; }
-        public decimal? TotalAmount { get; set; }
+        public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public string? Terms { get; set; }
-        public string? QuotationPath { get; set; }
+        public string? QuotationUrl { get; set; }
+        public PoStatus Status { get; set; } = PoStatus.Pending;
+        public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
-        public POStatus Status { get; set; } = POStatus.PENDING;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? ApprovedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
-        public virtual ICollection<POItem> Items { get; set; } = new List<POItem>();
         [ForeignKey("VendorId")]
         public virtual Party? Vendor { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
+        public virtual ICollection<PurchaseOrderItem> Items { get; set; } = new List<PurchaseOrderItem>();
     }
 
-    [Table("po_items")]
-    public class POItem
+    [Table("purchase_order_items")]
+    public class PurchaseOrderItem
     {
         public int Id { get; set; }
-        public int POId { get; set; }
-        public int PIItemId { get; set; }
-        public decimal? Rate { get; set; }
-        public string? Specifications { get; set; }
-        public bool IsReceived { get; set; } = false;
-        public bool IsQCApproved { get; set; } = false;
+        public int PurchaseOrderId { get; set; }
+        public int PurchaseIndentItemId { get; set; }
 
-        [ForeignKey("POId")]
+        [ForeignKey("PurchaseOrderId")]
         public virtual PurchaseOrder? PurchaseOrder { get; set; }
-        [ForeignKey("PIItemId")]
-        public virtual PIItem? PIItem { get; set; }
-    }
-
-    [Table("inward_entries")]
-    public class InwardEntry
-    {
-        public int Id { get; set; }
-        public string InwardNo { get; set; } = string.Empty;
-        public DateTime InwardDate { get; set; } = DateTime.Now;
-        public int POId { get; set; }
-        public string? ChallanNo { get; set; }
-        public DateTime? ChallanDate { get; set; }
-        public string? VehicleNo { get; set; }
-        public string? Remarks { get; set; }
-        public int ReceivedBy { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        [ForeignKey("POId")]
-        public virtual PurchaseOrder? PurchaseOrder { get; set; }
-        [ForeignKey("ReceivedBy")]
-        public virtual User? Receiver { get; set; }
-        public virtual ICollection<InwardItem> Items { get; set; } = new List<InwardItem>();
-    }
-
-    [Table("inward_items")]
-    public class InwardItem
-    {
-        public int Id { get; set; }
-        public int InwardId { get; set; }
-        public int POItemId { get; set; }
-        public bool IsQCProcessed { get; set; } = false;
-
-        [ForeignKey("InwardId")]
-        public virtual InwardEntry? InwardEntry { get; set; }
-        [ForeignKey("POItemId")]
-        public virtual POItem? POItem { get; set; }
-    }
-
-    [Table("qc_inspections")]
-    public class QCInspection
-    {
-        public int Id { get; set; }
-        public string QCNo { get; set; } = string.Empty;
-        public int InwardItemId { get; set; }
-        public QCStatus Status { get; set; } = QCStatus.PENDING;
-        public string? InspectionNotes { get; set; }
-        public string? ParametersChecked { get; set; }
-        public int? TargetLocationId { get; set; } // Where to move after approval
-        public int InspectedBy { get; set; }
-        public DateTime InspectedAt { get; set; } = DateTime.Now;
-
-        [ForeignKey("InwardItemId")]
-        public virtual InwardItem? InwardItem { get; set; }
-        [ForeignKey("TargetLocationId")]
-        public virtual Location? TargetLocation { get; set; }
-        [ForeignKey("InspectedBy")]
-        public virtual User? Inspector { get; set; }
+        [ForeignKey("PurchaseIndentItemId")]
+        public virtual PurchaseIndentItem? PurchaseIndentItem { get; set; }
     }
 
     [Table("movements")]
     public class Movement
     {
         public int Id { get; set; }
-        public string MovementNo { get; set; } = string.Empty;
-        public int PatternDieId { get; set; }
         public MovementType Type { get; set; }
+        public int PatternDieId { get; set; }
+        
+        public HolderType FromType { get; set; }
         public int? FromLocationId { get; set; }
+        public int? FromPartyId { get; set; }
+
+        public HolderType ToType { get; set; }
         public int? ToLocationId { get; set; }
-        public int? FromVendorId { get; set; }
-        public int? ToVendorId { get; set; }
-        public string Reason { get; set; } = string.Empty;
-        public int CreatedBy { get; set; }
-        public bool IsQCRequired { get; set; } = false;
+        public int? ToPartyId { get; set; }
+
+        public string? Remarks { get; set; }
+        public string? Reason { get; set; } // Mandatory for SystemReturn
+        
+        public int? PurchaseOrderId { get; set; }
+        
+        public bool IsQCPending { get; set; } = false;
         public bool IsQCApproved { get; set; } = false;
-        public int? QCBy { get; set; }
-        public DateTime? QCAt { get; set; }
-        public string? QCRemarks { get; set; }
+
+        public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [ForeignKey("PatternDieId")]
         public virtual PatternDie? PatternDie { get; set; }
         [ForeignKey("FromLocationId")]
         public virtual Location? FromLocation { get; set; }
+        [ForeignKey("FromPartyId")]
+        public virtual Party? FromParty { get; set; }
         [ForeignKey("ToLocationId")]
         public virtual Location? ToLocation { get; set; }
-        [ForeignKey("FromVendorId")]
-        public virtual Party? FromVendor { get; set; }
-        [ForeignKey("ToVendorId")]
-        public virtual Party? ToVendor { get; set; }
+        [ForeignKey("ToPartyId")]
+        public virtual Party? ToParty { get; set; }
+        [ForeignKey("PurchaseOrderId")]
+        public virtual PurchaseOrder? PurchaseOrder { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
-        [ForeignKey("QCBy")]
-        public virtual User? QCUser { get; set; }
+    }
+
+    [Table("quality_controls")]
+    public class QualityControl
+    {
+        public int Id { get; set; }
+        public int MovementId { get; set; }
+        public bool IsApproved { get; set; }
+        public string? Remarks { get; set; }
+        public int CheckedBy { get; set; }
+        public DateTime CheckedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("MovementId")]
+        public virtual Movement? Movement { get; set; }
+        [ForeignKey("CheckedBy")]
+        public virtual User? Checker { get; set; }
+    }
+
+    [Table("pattern_change_logs")]
+    public class PatternChangeLog
+    {
+        public int Id { get; set; }
+        public int PatternDieId { get; set; }
+        public string OldName { get; set; } = string.Empty;
+        public string NewName { get; set; } = string.Empty;
+        public string OldRevision { get; set; } = string.Empty;
+        public string NewRevision { get; set; } = string.Empty;
+        public string ChangeType { get; set; } = string.Empty; // Modification / Repair
+        public string? Remarks { get; set; }
+        public int CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("PatternDieId")]
+        public virtual PatternDie? PatternDie { get; set; }
+        [ForeignKey("CreatedBy")]
+        public virtual User? Creator { get; set; }
     }
 
     [Table("users")]
@@ -377,10 +325,12 @@ namespace backend.Models
         public bool IsActive { get; set; } = true;
         public string? Avatar { get; set; }
         public string? MobileNumber { get; set; }
+        public int? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         public virtual UserPermission? Permission { get; set; }
+        public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
     }
 
     [Table("user_permissions")]
@@ -388,14 +338,39 @@ namespace backend.Models
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public bool ViewDashboard { get; set; } = false;
+        
+        public bool ViewDashboard { get; set; } = true;
+        
+        // Master Permissions
         public bool ViewMaster { get; set; } = false;
+        public bool ManageMaster { get; set; } = false; // Add/Edit/Delete
+
+        // PI Permissions
         public bool ViewPI { get; set; } = false;
+        public bool CreatePI { get; set; } = false;
+        public bool ApprovePI { get; set; } = false;
+
+        // PO Permissions
         public bool ViewPO { get; set; } = false;
+        public bool CreatePO { get; set; } = false;
+        public bool ApprovePO { get; set; } = false;
+
+        // Movement Permissions
         public bool ViewMovement { get; set; } = false;
+        public bool CreateMovement { get; set; } = false;
+        
+        // QC Permissions
+        public bool ViewQC { get; set; } = false;
+        public bool PerformQC { get; set; } = false;
+
+        // Change Control
+        public bool ManageChanges { get; set; } = false;
+        public bool RevertChanges { get; set; } = false; // Admin only
+
         public bool ViewReports { get; set; } = false;
         public bool ManageUsers { get; set; } = false;
         public bool AccessSettings { get; set; } = false;
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 

@@ -1,218 +1,262 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    LayoutDashboard,
-    Building2,
-    MapPin,
-    Users,
-    Settings,
-    LogOut,
-    ChevronDown,
-    ChevronRight,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Layers,
-    ClipboardList,
-    ShoppingCart,
-    ArrowLeftRight,
-    ShieldCheck,
-    History,
-    Tag,
-    Hammer,
-    UserCheck,
-    Boxes
+  LayoutDashboard,
+  Package,
+  Building2,
+  MapPin,
+  Users,
+  Layers,
+  FileText,
+  ShoppingCart,
+  ArrowLeftRight,
+  ClipboardCheck,
+  BarChart3,
+  Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronDown,
+  ChevronRight,
+  LogOut,
+  FolderOpen
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Role, UserPermission } from "@/types";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useAppSettings, useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useLogout } from "@/hooks/use-auth-mutations";
 
-const SIDEBAR_WIDTH_EXPANDED = 280;
-const SIDEBAR_WIDTH_COLLAPSED = 80;
-
-interface NavLink {
-    href: string;
-    label: string;
-    icon: any;
+interface SidebarProps {
+  userRole: Role;
+  currentUser?: any;
+  expanded: boolean;
+  onExpandChange: (expanded: boolean) => void;
+  sidebarWidth: number;
 }
 
-const masterEntries: NavLink[] = [
-    { href: "/masters/companies", label: "Company", icon: Building2 },
-    { href: "/masters/locations", label: "Location", icon: MapPin },
-    { href: "/masters/parties", label: "Parties", icon: Users },
-    { href: "/masters/types", label: "Item Types", icon: Layers },
-    { href: "/masters/statuses", label: "Statuses", icon: Tag },
-    { href: "/masters/materials", label: "Materials", icon: Hammer },
-    { href: "/masters/owners", label: "Owner Types", icon: UserCheck },
-    { href: "/patterns", label: "Die & Patterns", icon: Boxes },
-];
+const SidebarText = ({ show, children, className = "" }: { show: boolean; children: React.ReactNode; className?: string }) => (
+  <AnimatePresence mode="popLayout">
+    {show && (
+      <motion.span
+        initial={{ opacity: 0, x: -5 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -5 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className={`whitespace-nowrap ml-3 ${className}`}
+      >
+        {children}
+      </motion.span>
+    )}
+  </AnimatePresence>
+);
 
-const transactionEntries: NavLink[] = [
-    { href: "/opening", label: "Opening Entry", icon: ClipboardList },
-    { href: "/indent", label: "Purchase Indent", icon: ShoppingCart },
-    { href: "/order", label: "Purchase Order", icon: ShoppingCart },
-    { href: "/movement", label: "Movements", icon: ArrowLeftRight },
-];
+export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: SidebarProps) {
+  const pathname = usePathname();
+  const { data: appSettings } = useAppSettings();
+  const { data: permissions } = useCurrentUserPermissions();
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+    master: true,
+    indent: false,
+    order: false,
+    transaction: false,
+    qc: false,
+    report: false
+  });
+  const [isHovered, setIsHovered] = useState(false);
 
-export function Sidebar({ expanded, onExpandChange }: { expanded: boolean; onExpandChange: (v: boolean) => void }) {
-    const pathname = usePathname();
-    const [masterOpen, setMasterOpen] = useState(true);
-    const [transOpen, setTransOpen] = useState(true);
+  const HOVER_EXPANDED_WIDTH = 256;
+  const showFullSidebar = expanded || isHovered;
+  const currentWidth = expanded ? sidebarWidth : isHovered ? HOVER_EXPANDED_WIDTH : sidebarWidth;
 
-    const linkClass = (href: string) => {
-        const isActive = pathname === href || pathname.startsWith(`${href}/`);
-        return cn(
-            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium",
-            isActive
-                ? "bg-primary text-white shadow-lg shadow-primary/30"
-                : "text-secondary-600 hover:bg-secondary-100/50 hover:text-primary"
-        );
-    };
+  const toggleMenu = (menu: string) => {
+    setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
+  };
 
-    const navItem = (item: NavLink) => (
-        <Link key={item.href} href={item.href}>
-            <motion.div
-                whileHover={{ x: 4 }}
-                className={cn(linkClass(item.href), !expanded && "justify-center px-0")}
-            >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {expanded && <span>{item.label}</span>}
-            </motion.div>
-        </Link>
-    );
+  const logoutMutation = useLogout();
+  const handleLogout = () => logoutMutation.mutate();
 
+  const portalLabel = userRole === Role.ADMIN ? "Admin" : userRole === Role.MANAGER ? "Manager" : "User";
+
+  const linkClass = (href: string, iconOnly = false) => {
+    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+    const base = "flex items-center gap-2 rounded-md transition-all text-sm cursor-pointer " +
+      (isActive ? "bg-primary-50 text-primary-600 font-medium shadow-sm" : "text-secondary-600 hover:bg-secondary-50 hover:text-primary-600");
+    return iconOnly ? `${base} justify-center px-2 py-2.5` : `${base} px-4 py-2.5`;
+  };
+
+  const sectionHeaderClass = "flex items-center justify-between w-full px-3 py-1.5 rounded-md text-secondary-700 hover:bg-secondary-50 transition-all text-sm font-medium";
+
+  const renderMenuItem = (href: string, label: string, icon: any) => {
+    const Icon = icon;
     return (
-        <aside
-            className={cn(
-                "fixed left-0 top-0 h-screen bg-white border-r border-secondary-100 z-50 transition-all duration-300 ease-in-out shadow-xl overflow-hidden flex flex-col",
-                expanded ? "w-[280px]" : "w-[80px]"
-            )}
-        >
-            {/* Brand */}
-            <div className="h-20 flex items-center px-6 border-b border-secondary-100 shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shrink-0">
-                    <Settings className="w-6 h-6 animate-spin-slow" />
-                </div>
-                {expanded && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="ml-3 font-bold text-lg text-secondary-900 tracking-tight"
-                    >
-                        DPMS <span className="text-primary text-xs font-normal">v1.0</span>
-                    </motion.div>
-                )}
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 custom-scrollbar">
-                <Link href="/dashboard">
-                    <div className={cn(linkClass("/dashboard"), !expanded && "justify-center px-0")}>
-                        <LayoutDashboard className="w-5 h-5 shrink-0" />
-                        {expanded && <span>Dashboard</span>}
-                    </div>
-                </Link>
-
-                {/* Masters */}
-                <div className="pt-2">
-                    {expanded ? (
-                        <>
-                            <button
-                                onClick={() => setMasterOpen(!masterOpen)}
-                                className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-secondary-400 uppercase tracking-wider hover:text-secondary-600 transition-colors"
-                            >
-                                Masters
-                                {masterOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                            </button>
-                            <AnimatePresence>
-                                {masterOpen && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: "auto", opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="space-y-1 mt-1 overflow-hidden"
-                                    >
-                                        {masterEntries.map(navItem)}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center gap-2 pt-2 border-t border-secondary-50">
-                            {masterEntries.map(item => (
-                                <Link key={item.href} href={item.href} title={item.label}>
-                                    <div className={cn(linkClass(item.href), "justify-center px-0 w-12 h-12")}>
-                                        <item.icon className="w-5 h-5" />
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Transactions */}
-                <div className="pt-2">
-                    {expanded ? (
-                        <>
-                            <button
-                                onClick={() => setTransOpen(!transOpen)}
-                                className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-secondary-400 uppercase tracking-wider hover:text-secondary-600 transition-colors"
-                            >
-                                Transactions
-                                {transOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                            </button>
-                            <AnimatePresence>
-                                {transOpen && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: "auto", opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="space-y-1 mt-1 overflow-hidden"
-                                    >
-                                        {transactionEntries.map(navItem)}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center gap-2 pt-2 border-t border-secondary-50">
-                            {transactionEntries.map(item => (
-                                <Link key={item.href} href={item.href} title={item.label}>
-                                    <div className={cn(linkClass(item.href), "justify-center px-0 w-12 h-12")}>
-                                        <item.icon className="w-5 h-5" />
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Global/Single Links */}
-                <div className="pt-2 border-t border-secondary-100">
-                    {navItem({ href: "/qc", label: "QC Approval", icon: ShieldCheck })}
-                    {navItem({ href: "/history", label: "Change History", icon: History })}
-                    {navItem({ href: "/settings", label: "Settings", icon: Settings })}
-                </div>
-            </nav>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-secondary-100 bg-secondary-50/50">
-                <Button
-                    variant="ghost"
-                    className={cn("w-full text-red-500 hover:bg-red-50 hover:text-red-600", !expanded && "px-0 justify-center")}
-                >
-                    <LogOut className="w-5 h-5" />
-                    {expanded && <span className="ml-3">Logout</span>}
-                </Button>
-                <button
-                    onClick={() => onExpandChange(!expanded)}
-                    className="mt-4 flex items-center justify-center w-full py-2 hover:bg-secondary-200/50 rounded-lg text-secondary-400"
-                >
-                    {expanded ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
-                </button>
-            </div>
-        </aside>
+      <Link href={href} key={href}>
+        <motion.div whileHover={showFullSidebar ? { x: 2 } : {}} className={linkClass(href, !showFullSidebar)}>
+          <Icon className="w-5 h-5 shrink-0" />
+          <SidebarText show={showFullSidebar} className="-ml-1">{label}</SidebarText>
+        </motion.div>
+      </Link>
     );
+  };
+
+  const renderSubMenuItem = (href: string, label: string, icon: any) => {
+    const Icon = icon;
+    return (
+      <Link href={href} key={href}>
+        <motion.div whileHover={{ x: 2 }} className={linkClass(href, false)}>
+          <Icon className="w-5 h-5 shrink-0" />
+          <SidebarText show={showFullSidebar} className="-ml-1">{label}</SidebarText>
+        </motion.div>
+      </Link>
+    );
+  };
+
+  return (
+    <aside
+      className="h-screen fixed left-0 top-0 flex flex-col bg-white border-r border-secondary-200 shadow-lg z-50 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+      style={{ width: currentWidth }}
+      onMouseEnter={() => !expanded && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className={`shrink-0 border-b border-secondary-200 bg-gradient-to-r from-primary-600 to-primary-700 flex transition-[padding] duration-300 ${showFullSidebar ? "min-h-[5.5rem] px-4 py-3 items-center gap-3" : "min-h-[3rem] px-2 py-2 items-center justify-center"}`}>
+        {showFullSidebar ? (
+          <>
+            <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
+              <span className="text-sm font-bold text-white truncate">{appSettings?.companyName || "Aira Euro"}</span>
+              <span className="text-xs font-medium text-white/90 truncate">{appSettings?.softwareName || "Pattern Management"}</span>
+              <span className="text-[10px] text-white/70 uppercase tracking-wider">{portalLabel}</span>
+            </div>
+            <button onClick={() => onExpandChange(!expanded)} className="p-1.5 rounded-md hover:bg-white/20 text-white"><PanelLeftClose className="w-4 h-4" /></button>
+          </>
+        ) : (
+          <button onClick={() => onExpandChange(true)} className="p-2 rounded-md hover:bg-white/20 text-white"><PanelLeftOpen className="w-4 h-4" /></button>
+        )}
+      </div>
+
+      <nav className="flex-1 overflow-y-auto py-2 px-2 scrollbar-hide">
+        <div className="space-y-0.5">
+          {permissions?.viewDashboard && renderMenuItem("/dashboard", "Dashboard", LayoutDashboard)}
+
+          {/* Master Entry */}
+          {permissions?.viewMaster && (
+            <div className="pt-1">
+              {showFullSidebar ? (
+                <>
+                  <button onClick={() => toggleMenu('master')} className={sectionHeaderClass}>
+                    <div className="flex items-center gap-1">
+                      <FolderOpen className="w-4 h-4 text-secondary-500" />
+                      <SidebarText show={showFullSidebar} className="-ml-1">Master Entry</SidebarText>
+                    </div>
+                    {openMenus.master ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                  {openMenus.master && (
+                    <div className="pl-1 mt-0.5 space-y-0.5">
+                      {renderSubMenuItem("/companies", "Company Master", Building2)}
+                      {renderSubMenuItem("/locations", "Location Master", MapPin)}
+                      {renderSubMenuItem("/parties", "Party Master (Vendor)", Users)}
+                      {renderSubMenuItem("/masters", "Other Masters", Layers)}
+                      {renderSubMenuItem("/pattern-dies", "Pattern/Die Entry", Package)}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-1">
+                  {renderMenuItem("/pattern-dies", "Pattern/Die", Package)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Indent Module */}
+          {permissions?.viewPI && (
+            <div className="pt-1">
+              {showFullSidebar ? (
+                <>
+                  <button onClick={() => toggleMenu('indent')} className={sectionHeaderClass}>
+                    <div className="flex items-center gap-1">
+                      <FileText className="w-4 h-4 text-secondary-500" />
+                      <SidebarText show={showFullSidebar} className="-ml-1">Indent Module</SidebarText>
+                    </div>
+                    {openMenus.indent ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                  {openMenus.indent && (
+                    <div className="pl-1 mt-0.5 space-y-0.5">
+                      {renderSubMenuItem("/purchase-indents/create", "Create PI", FileText)}
+                      {renderSubMenuItem("/purchase-indents", "PI List", ClipboardCheck)}
+                    </div>
+                  )}
+                </>
+              ) : renderMenuItem("/purchase-indents", "PI", FileText)}
+            </div>
+          )}
+
+          {/* Order Module */}
+          {permissions?.viewPO && (
+            <div className="pt-1">
+              {showFullSidebar ? (
+                <>
+                  <button onClick={() => toggleMenu('order')} className={sectionHeaderClass}>
+                    <div className="flex items-center gap-1">
+                      <ShoppingCart className="w-4 h-4 text-secondary-500" />
+                      <SidebarText show={showFullSidebar} className="-ml-1">Order Module</SidebarText>
+                    </div>
+                    {openMenus.order ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                  {openMenus.order && (
+                    <div className="pl-1 mt-0.5 space-y-0.5">
+                      {renderSubMenuItem("/purchase-orders/create", "Create PO", ShoppingCart)}
+                      {renderSubMenuItem("/purchase-orders", "PO List", ClipboardCheck)}
+                    </div>
+                  )}
+                </>
+              ) : renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
+            </div>
+          )}
+
+          {/* Transaction Entry */}
+          {permissions?.viewMovement && (
+            <div className="pt-1">
+              {showFullSidebar ? (
+                <>
+                  <button onClick={() => toggleMenu('transaction')} className={sectionHeaderClass}>
+                    <div className="flex items-center gap-1">
+                      <ArrowLeftRight className="w-4 h-4 text-secondary-500" />
+                      <SidebarText show={showFullSidebar} className="-ml-1">Transaction Entry</SidebarText>
+                    </div>
+                    {openMenus.transaction ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                  {openMenus.transaction && (
+                    <div className="pl-1 mt-0.5 space-y-0.5">
+                      {renderSubMenuItem("/movements/outward", "Outward Entry", ArrowLeftRight)}
+                      {renderSubMenuItem("/movements/inward", "Inward Entry", ArrowLeftRight)}
+                      {renderSubMenuItem("/movements/system-return", "System Return", ArrowLeftRight)}
+                    </div>
+                  )}
+                </>
+              ) : renderMenuItem("/movements", "Movements", ArrowLeftRight)}
+            </div>
+          )}
+
+          {/* QC Module */}
+          {permissions?.viewQC && renderMenuItem("/quality-control", "QC Entry", ClipboardCheck)}
+
+          {/* Reports & Settings */}
+          <div className="pt-1 border-t border-secondary-100 mt-1 space-y-0.5">
+            {permissions?.viewReports && renderMenuItem("/reports", "Reports", BarChart3)}
+            {permissions?.accessSettings && renderMenuItem("/settings", "Settings", Settings)}
+          </div>
+        </div>
+      </nav>
+
+      <div className="shrink-0 p-2 border-t border-secondary-200 bg-secondary-50">
+        <Button variant="ghost" size="sm" className={`w-full hover:bg-red-50 hover:text-red-600 ${!showFullSidebar ? "justify-center px-2" : "justify-start"}`} onClick={handleLogout}>
+          <LogOut className="w-5 h-5 shrink-0" />
+          <SidebarText show={showFullSidebar} className="-ml-1 text-red-600">Logout</SidebarText>
+        </Button>
+      </div>
+    </aside>
+  );
 }

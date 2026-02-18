@@ -1,317 +1,229 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
-using backend.Services;
-using backend.DTOs;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
+using net_backend.Services;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("pattern-dies")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class PatternDiesController : ControllerBase
+    public class PatternDiesController : BaseController
     {
-        private readonly ApplicationDbContext _context;
         private readonly IExcelService _excelService;
 
-        public PatternDiesController(ApplicationDbContext context, IExcelService excelService)
+        public PatternDiesController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
-            _context = context;
             _excelService = excelService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PatternDie>>> GetPatternDies()
+        public async Task<ActionResult<ApiResponse<IEnumerable<PatternDieDto>>>> GetAll()
         {
-            return await _context.PatternDies
-                .Include(p => p.Type)
+            var data = await _context.PatternDies
+                .Include(p => p.PatternType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
-                .Include(p => p.CurrentVendor)
+                .Include(p => p.CurrentParty)
+                .Select(p => new PatternDieDto
+                {
+                    Id = p.Id,
+                    MainPartName = p.MainPartName,
+                    CurrentName = p.CurrentName,
+                    PatternTypeId = p.PatternTypeId,
+                    PatternTypeName = p.PatternType!.Name,
+                    DrawingNo = p.DrawingNo,
+                    RevisionNo = p.RevisionNo,
+                    MaterialId = p.MaterialId,
+                    MaterialName = p.Material!.Name,
+                    OwnerTypeId = p.OwnerTypeId,
+                    OwnerTypeName = p.OwnerType!.Name,
+                    StatusId = p.StatusId,
+                    StatusName = p.Status!.Name,
+                    CurrentHolderType = p.CurrentHolderType,
+                    CurrentLocationId = p.CurrentLocationId,
+                    CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
+                    CurrentPartyId = p.CurrentPartyId,
+                    CurrentPartyName = p.CurrentParty != null ? p.CurrentParty.Name : null,
+                    IsActive = p.IsActive
+                })
                 .ToListAsync();
-        }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<PatternDie>> GetPatternDie(int id)
-        {
-            var patternDie = await _context.PatternDies
-                .Include(p => p.Type)
-                .Include(p => p.Material)
-                .Include(p => p.OwnerType)
-                .Include(p => p.Status)
-                .Include(p => p.CurrentLocation)
-                .Include(p => p.CurrentVendor)
-                .Include(p => p.ChangeHistories)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (patternDie == null)
-            {
-                return NotFound();
-            }
-
-            return patternDie;
+            return Ok(new ApiResponse<IEnumerable<PatternDieDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<PatternDie>> PostPatternDie(PatternDie patternDie)
+        public async Task<ActionResult<ApiResponse<PatternDie>>> Create([FromBody] CreatePatternDieDto dto)
         {
-            // MainPartName is permanent
-            patternDie.CreatedAt = DateTime.Now;
-            patternDie.UpdatedAt = DateTime.Now;
-            
-            // If it's a new entry, CurrentName = MainPartName initially or as provided
-            if (string.IsNullOrEmpty(patternDie.CurrentName))
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            if (await _context.PatternDies.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
+                return BadRequest(new ApiResponse<PatternDie> { Success = false, Message = "Main Part Name must be unique" });
+
+            var patternDie = new PatternDie
             {
-                patternDie.CurrentName = patternDie.MainPartName;
-            }
+                MainPartName = dto.MainPartName.Trim(),
+                CurrentName = dto.CurrentName.Trim(),
+                PatternTypeId = dto.PatternTypeId,
+                DrawingNo = dto.DrawingNo,
+                RevisionNo = dto.RevisionNo,
+                MaterialId = dto.MaterialId,
+                OwnerTypeId = dto.OwnerTypeId,
+                StatusId = dto.StatusId,
+                CurrentHolderType = dto.CurrentHolderType,
+                CurrentLocationId = dto.CurrentLocationId,
+                CurrentPartyId = dto.CurrentPartyId,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
 
             _context.PatternDies.Add(patternDie);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetPatternDie), new { id = patternDie.Id }, patternDie);
+            return StatusCode(201, new ApiResponse<PatternDie> { Data = patternDie });
+        }
+
+        [HttpPost("change-process")]
+        public async Task<ActionResult<ApiResponse<PatternDie>>> ChangeProcess([FromBody] PatternChangeRequestDto dto)
+        {
+            if (!await HasPermission("ManageChanges")) return Forbidden();
+
+            var patternDie = await _context.PatternDies.FindAsync(dto.PatternDieId);
+            if (patternDie == null) return NotFound(new ApiResponse<PatternDie> { Success = false, Message = "Pattern/Die not found" });
+
+            // Store history
+            var log = new PatternChangeLog
+            {
+                PatternDieId = patternDie.Id,
+                OldName = patternDie.CurrentName,
+                NewName = dto.NewName,
+                OldRevision = patternDie.RevisionNo ?? "",
+                NewRevision = dto.NewRevision,
+                ChangeType = dto.ChangeType,
+                Remarks = dto.Remarks,
+                CreatedBy = CurrentUserId,
+                CreatedAt = DateTime.Now
+            };
+
+            // Update current
+            patternDie.CurrentName = dto.NewName;
+            patternDie.RevisionNo = dto.NewRevision;
+            patternDie.UpdatedAt = DateTime.Now;
+
+            _context.PatternChangeLogs.Add(log);
+            await _context.SaveChangesAsync();
+
+            return Ok(new ApiResponse<PatternDie> { Data = patternDie, Message = "Change process completed successfully" });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPatternDie(int id, PatternDie patternDie)
+        public async Task<ActionResult<ApiResponse<PatternDie>>> Update(int id, [FromBody] UpdatePatternDieDto dto)
         {
-            if (id != patternDie.Id)
-            {
-                return BadRequest();
-            }
+            if (!await HasPermission("ManageMaster")) return Forbidden();
 
-            var existing = await _context.PatternDies.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
-            if (existing == null)
-            {
-                return NotFound();
-            }
+            if (id != dto.Id) return BadRequest(new ApiResponse<PatternDie> { Success = false, Message = "ID mismatch" });
 
-            // ENFORCE RULES:
-            // 1. MainPartName never editable
-            patternDie.MainPartName = existing.MainPartName;
-            
-            // 2. CurrentName editable only via change process (I'll allow it here for now, but usually it should be a separate endpoint)
-            // Actually, requirements say: "Current Name (Editable only via Change Process)"
-            // So I should block it here.
-            patternDie.CurrentName = existing.CurrentName;
+            var existing = await _context.PatternDies.FindAsync(id);
+            if (existing == null) return NotFound(new ApiResponse<PatternDie> { Success = false, Message = "Pattern/Die not found" });
 
-            patternDie.UpdatedAt = DateTime.Now;
-            _context.Entry(patternDie).State = EntityState.Modified;
-            _context.Entry(patternDie).Property(x => x.CreatedAt).IsModified = false;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PatternDieExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        [HttpGet("history")]
-        public async Task<ActionResult<IEnumerable<ChangeHistory>>> GetHistory()
-        {
-            return await _context.ChangeHistories
-                .Include(h => h.PatternDie)
-                .Include(h => h.Changer)
-                .OrderByDescending(h => h.ChangedAt)
-                .ToListAsync();
-        }
-
-        [HttpPost("{id}/change")]
-        public async Task<IActionResult> ChangePatternDie(int id, [FromBody] ChangeHistory change)
-        {
-            var patternDie = await _context.PatternDies.FindAsync(id);
-            if (patternDie == null)
-            {
-                return NotFound();
-            }
-
-            // Record history
-            change.PatternDieId = id;
-            change.PreviousName = patternDie.CurrentName;
-            change.PreviousRevision = patternDie.RevisionNo ?? "";
-            change.ChangedAt = DateTime.Now;
-            change.ChangedBy = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            _context.ChangeHistories.Add(change);
-
-            // Update PatternDie
-            patternDie.CurrentName = change.NewName;
-            patternDie.RevisionNo = change.NewRevision;
-            patternDie.UpdatedAt = DateTime.Now;
+            existing.StatusId = dto.StatusId;
+            existing.DrawingNo = dto.DrawingNo;
+            existing.IsActive = dto.IsActive;
+            existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-
-            return Ok(patternDie);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePatternDie(int id)
-        {
-            var patternDie = await _context.PatternDies.FindAsync(id);
-            if (patternDie == null)
-            {
-                return NotFound();
-            }
-
-            _context.PatternDies.Remove(patternDie);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        [HttpPost("validate-opening")]
-        public async Task<ActionResult<ValidationResultDto<PatternDieOpeningImportDto>>> ValidateOpening(IFormFile file)
-        {
-            if (file == null || file.Length == 0) return BadRequest("No file uploaded");
-            
-            using var stream = file.OpenReadStream();
-            var importResult = _excelService.ImportExcel<PatternDieOpeningImportDto>(stream);
-            var validation = await PerformValidation(importResult.Data);
-            validation.TotalRows = importResult.TotalRows;
-            
-            return Ok(validation);
+            return Ok(new ApiResponse<PatternDie> { Data = existing });
         }
 
         [HttpPost("import-opening")]
-        public async Task<ActionResult<object>> ImportOpening(IFormFile file)
+        public async Task<ActionResult<ApiResponse<object>>> ImportOpening(IFormFile file)
         {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
-            
+
             using var stream = file.OpenReadStream();
-            var importResult = _excelService.ImportExcel<PatternDieOpeningImportDto>(stream);
-            var validation = await PerformValidation(importResult.Data);
+            var excelResult = _excelService.ImportExcel<PatternDieImportDto>(stream);
             
-            var newPatterns = new List<PatternDie>();
+            // Strict Validation
+            var validation = await ValidateImport(excelResult.Data);
             
-            var types = await _context.TypeMasters.ToDictionaryAsync(t => t.Name.ToLower(), t => t.Id);
-            var materials = await _context.MaterialMasters.ToDictionaryAsync(m => m.Name.ToLower(), m => m.Id);
-            var owners = await _context.OwnerTypeMasters.ToDictionaryAsync(o => o.Name.ToLower(), o => o.Id);
-            var statuses = await _context.StatusMasters.ToDictionaryAsync(s => s.Name.ToLower(), s => s.Id);
-            var locations = await _context.Locations.ToDictionaryAsync(l => l.Name.ToLower(), l => l.Id);
-            var vendors = await _context.Parties.ToDictionaryAsync(v => v.Name.ToLower(), v => v.Id);
-
-            foreach (var entry in validation.Valid)
+            if (validation.Valid.Any())
             {
-                var dto = entry.Data;
-                newPatterns.Add(new PatternDie
+                foreach (var row in validation.Valid)
                 {
-                    MainPartName = dto.MainPartName.Trim(),
-                    CurrentName = string.IsNullOrEmpty(dto.CurrentName) ? dto.MainPartName.Trim() : dto.CurrentName.Trim(),
-                    TypeId = types[dto.Type.ToLower()],
-                    MaterialId = materials[dto.Material.ToLower()],
-                    OwnerTypeId = owners[dto.OwnerType.ToLower()],
-                    StatusId = statuses[dto.Status.ToLower()],
-                    CurrentLocationId = locations[dto.CurrentLocation.ToLower()],
-                    CurrentVendorId = !string.IsNullOrEmpty(dto.CurrentVendor) && vendors.ContainsKey(dto.CurrentVendor.ToLower()) 
-                                      ? vendors[dto.CurrentVendor.ToLower()] : null,
-                    DrawingNo = dto.DrawingNo,
-                    RevisionNo = dto.RevisionNo,
-                    IsActive = true,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
-                });
-            }
+                    // Map names to IDs
+                    var type = await _context.PatternTypes.FirstOrDefaultAsync(t => t.Name == row.Data.PatternType);
+                    var material = await _context.Materials.FirstOrDefaultAsync(m => m.Name == row.Data.Material);
+                    var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.OwnerType);
+                    var status = await _context.PatternStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
+                    
+                    int? locationId = null;
+                    int? partyId = null;
 
-            if (newPatterns.Any())
-            {
-                _context.PatternDies.AddRange(newPatterns);
+                    if (row.Data.CurrentHolderType == "Location")
+                        locationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CurrentHolderName))?.Id;
+                    else
+                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.Name == row.Data.CurrentHolderName))?.Id;
+
+                    _context.PatternDies.Add(new PatternDie
+                    {
+                        MainPartName = row.Data.MainPartName,
+                        CurrentName = row.Data.CurrentName,
+                        PatternTypeId = type?.Id ?? 0,
+                        DrawingNo = row.Data.DrawingNo,
+                        RevisionNo = row.Data.RevisionNo,
+                        MaterialId = material?.Id ?? 0,
+                        OwnerTypeId = ownerType?.Id ?? 0,
+                        StatusId = status?.Id ?? 0,
+                        CurrentHolderType = row.Data.CurrentHolderType == "Location" ? HolderType.Location : HolderType.Vendor,
+                        CurrentLocationId = locationId,
+                        CurrentPartyId = partyId,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    });
+                }
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new 
-            { 
-                Imported = newPatterns.Count, 
-                TotalRows = importResult.TotalRows,
-                Errors = validation.Invalid.Count + validation.Duplicates.Count + validation.AlreadyExists.Count
+            return Ok(new ApiResponse<object> { 
+                Data = validation, 
+                Message = $"{validation.Valid.Count} records imported" 
             });
         }
 
-        private async Task<ValidationResultDto<PatternDieOpeningImportDto>> PerformValidation(List<ExcelRow<PatternDieOpeningImportDto>> rows)
+        private async Task<ValidationResultDto<PatternDieImportDto>> ValidateImport(List<ExcelRow<PatternDieImportDto>> rows)
         {
-            var result = new ValidationResultDto<PatternDieOpeningImportDto>();
-            
+            var result = new ValidationResultDto<PatternDieImportDto>();
             var existingNames = await _context.PatternDies.Select(p => p.MainPartName.ToLower()).ToListAsync();
-            var types = await _context.TypeMasters.Select(t => t.Name.ToLower()).ToListAsync();
-            var materials = await _context.MaterialMasters.Select(m => m.Name.ToLower()).ToListAsync();
-            var owners = await _context.OwnerTypeMasters.Select(o => o.Name.ToLower()).ToListAsync();
-            var statuses = await _context.StatusMasters.Select(s => s.Name.ToLower()).ToListAsync();
-            var locations = await _context.Locations.Select(l => l.Name.ToLower()).ToListAsync();
-            var vendors = await _context.Parties.Select(v => v.Name.ToLower()).ToListAsync();
-
-            var processedNames = new HashSet<string>();
+            
+            var types = await _context.PatternTypes.Select(t => t.Name.ToLower()).ToListAsync();
+            var materials = await _context.Materials.Select(m => m.Name.ToLower()).ToListAsync();
+            var ownerTypes = await _context.OwnerTypes.Select(o => o.Name.ToLower()).ToListAsync();
+            var statuses = await _context.PatternStatuses.Select(s => s.Name.ToLower()).ToListAsync();
 
             foreach (var row in rows)
             {
-                var dto = row.Data;
+                var d = row.Data;
                 var errors = new List<string>();
 
-                if (string.IsNullOrEmpty(dto.MainPartName)) errors.Add("Main Part Name is required");
-                if (string.IsNullOrEmpty(dto.Type)) errors.Add("Type is required");
-                if (string.IsNullOrEmpty(dto.Material)) errors.Add("Material is required");
-                if (string.IsNullOrEmpty(dto.OwnerType)) errors.Add("Owner Type is required");
-                if (string.IsNullOrEmpty(dto.Status)) errors.Add("Status is required");
-                if (string.IsNullOrEmpty(dto.CurrentLocation)) errors.Add("Current Location is required");
+                if (string.IsNullOrEmpty(d.MainPartName)) errors.Add("Main Part Name is required");
+                if (existingNames.Contains(d.MainPartName.ToLower())) errors.Add("Main Part Name already exists");
+                if (!types.Contains(d.PatternType.ToLower())) errors.Add("Invalid Pattern Type");
+                if (!materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
+                if (!ownerTypes.Contains(d.OwnerType.ToLower())) errors.Add("Invalid Owner Type");
+                if (!statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 
                 if (errors.Any())
-                {
-                    result.Invalid.Add(new ValidationEntry<PatternDieOpeningImportDto> { Row = row.RowNumber, Data = dto, Message = string.Join(", ", errors) });
-                    continue;
-                }
-
-                var nameLower = dto.MainPartName.Trim().ToLower();
-
-                // Check dependencies
-                if (!types.Contains(dto.Type.ToLower())) errors.Add($"Type '{dto.Type}' not found");
-                if (!materials.Contains(dto.Material.ToLower())) errors.Add($"Material '{dto.Material}' not found");
-                if (!owners.Contains(dto.OwnerType.ToLower())) errors.Add($"Owner Type '{dto.OwnerType}' not found");
-                if (!statuses.Contains(dto.Status.ToLower())) errors.Add($"Status '{dto.Status}' not found");
-                if (!locations.Contains(dto.CurrentLocation.ToLower())) errors.Add($"Location '{dto.CurrentLocation}' not found");
-                if (!string.IsNullOrEmpty(dto.CurrentVendor) && !vendors.Contains(dto.CurrentVendor.ToLower())) errors.Add($"Vendor '{dto.CurrentVendor}' not found");
-
-                if (errors.Any())
-                {
-                    result.Invalid.Add(new ValidationEntry<PatternDieOpeningImportDto> { Row = row.RowNumber, Data = dto, Message = string.Join(", ", errors) });
-                    continue;
-                }
-
-                if (processedNames.Contains(nameLower))
-                {
-                    result.Duplicates.Add(new ValidationEntry<PatternDieOpeningImportDto> { Row = row.RowNumber, Data = dto, Message = "Duplicate in file" });
-                    continue;
-                }
-
-                if (existingNames.Contains(nameLower))
-                {
-                    result.AlreadyExists.Add(new ValidationEntry<PatternDieOpeningImportDto> { Row = row.RowNumber, Data = dto, Message = "Already exists in database" });
-                    processedNames.Add(nameLower);
-                    continue;
-                }
-
-                result.Valid.Add(new ValidationEntry<PatternDieOpeningImportDto> { Row = row.RowNumber, Data = dto });
-                processedNames.Add(nameLower);
+                    result.Invalid.Add(new ValidationEntry<PatternDieImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });
+                else
+                    result.Valid.Add(new ValidationEntry<PatternDieImportDto> { Row = row.RowNumber, Data = d });
             }
 
             return result;
-        }
-
-        private bool PatternDieExists(int id)
-        {
-            return _context.PatternDies.Any(e => e.Id == id);
         }
     }
 }

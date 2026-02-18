@@ -1,115 +1,118 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
-using backend.Services;
-using System.Security.Claims;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
+using net_backend.Services;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("purchase-indents")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class PurchaseIndentsController : ControllerBase
+    public class PurchaseIndentsController : BaseController
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICodeGeneratorService _codeGen;
+        private readonly ICodeGeneratorService _codeGenerator;
 
-        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGen)
+        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
-            _context = context;
-            _codeGen = codeGen;
+            _codeGenerator = codeGenerator;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PurchaseIndent>>> GetIndents()
+        public async Task<ActionResult<ApiResponse<IEnumerable<PIDto>>>> GetAll()
         {
-            return await _context.PurchaseIndents
-                .Include(pi => pi.Creator)
-                .Include(pi => pi.Approver)
-                .Include(pi => pi.Items)
+            var data = await _context.PurchaseIndents
+                .Include(p => p.Creator)
+                .Include(p => p.Items)
                     .ThenInclude(i => i.PatternDie)
-                .OrderByDescending(pi => pi.CreatedAt)
+                .Select(p => new PIDto
+                {
+                    Id = p.Id,
+                    PiNo = p.PiNo,
+                    Type = p.Type,
+                    Status = p.Status,
+                    Remarks = p.Remarks,
+                    CreatedBy = p.CreatedBy,
+                    CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
+                    CreatedAt = p.CreatedAt,
+                    Items = p.Items.Select(i => new PIItemDto
+                    {
+                        Id = i.Id,
+                        PatternDieId = i.PatternDieId,
+                        MainPartName = i.PatternDie!.MainPartName,
+                        CurrentName = i.PatternDie.CurrentName,
+                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
+                    }).ToList()
+                })
+                .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
-        }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<PurchaseIndent>> GetIndent(int id)
-        {
-            var pi = await _context.PurchaseIndents
-                .Include(pi => pi.Creator)
-                .Include(pi => pi.Approver)
-                .Include(pi => pi.Items)
-                    .ThenInclude(i => i.PatternDie)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pi == null) return NotFound();
-            return pi;
+            return Ok(new ApiResponse<IEnumerable<PIDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<PurchaseIndent>> PostIndent(PurchaseIndent pi)
+        public async Task<ActionResult<ApiResponse<PurchaseIndent>>> Create([FromBody] CreatePIDto dto)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            pi.PINo = await _codeGen.GenerateCodeAsync("PI", "purchase_indents", "PINo");
-            pi.CreatedBy = userId;
-            pi.Status = PIStatus.PENDING;
-            pi.CreatedAt = DateTime.Now;
+            if (!await HasPermission("CreatePI")) return Forbidden();
 
-            foreach (var item in pi.Items)
+            var pi = new PurchaseIndent
             {
-                item.IsOrdered = false;
+                PiNo = await _codeGenerator.GenerateCode("PI"),
+                Type = dto.Type,
+                Remarks = dto.Remarks,
+                CreatedBy = CurrentUserId,
+                Status = PiStatus.Pending,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            foreach (var itemId in dto.ItemIds)
+            {
+                pi.Items.Add(new PurchaseIndentItem { PatternDieId = itemId });
             }
 
             _context.PurchaseIndents.Add(pi);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetIndent), new { id = pi.Id }, pi);
+            return StatusCode(201, new ApiResponse<PurchaseIndent> { Data = pi });
         }
 
         [HttpPost("{id}/approve")]
-        public async Task<IActionResult> ApproveIndent(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
+            if (!await HasPermission("ApprovePI")) return Forbidden();
+
             var pi = await _context.PurchaseIndents.FindAsync(id);
             if (pi == null) return NotFound();
 
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            pi.Status = PIStatus.APPROVED;
-            pi.ApprovedBy = userId;
+            pi.Status = PiStatus.Approved;
+            pi.ApprovedBy = CurrentUserId;
             pi.ApprovedAt = DateTime.Now;
+            pi.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(pi);
+            return Ok(new ApiResponse<bool> { Data = true });
         }
-
-        [HttpPost("{id}/reject")]
-        public async Task<IActionResult> RejectIndent(int id)
+        
+        [HttpGet("approved-items")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<PIItemDto>>>> GetApprovedItems()
         {
-            var pi = await _context.PurchaseIndents.FindAsync(id);
-            if (pi == null) return NotFound();
-
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            pi.Status = PIStatus.REJECTED;
-            pi.ApprovedBy = userId;
-            pi.ApprovedAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-            return Ok(pi);
-        }
-
-        [HttpGet("pending")]
-        public async Task<ActionResult<IEnumerable<PIItem>>> GetPendingPIItems()
-        {
-            // Items that are approved but not yet ordered
-            return await _context.PIItems
-                .Include(i => i.PurchaseIndent)
-                .Include(i => i.PatternDie)
-                .Where(i => i.PurchaseIndent!.Status == PIStatus.APPROVED && !i.IsOrdered)
+            // Items from approved PIs that are NOT already in a PO
+            var items = await _context.PurchaseIndentItems
+                .Include(pii => pii.PurchaseIndent)
+                .Include(pii => pii.PatternDie)
+                .Where(pii => pii.PurchaseIndent!.Status == PiStatus.Approved && 
+                             !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id))
+                .Select(pii => new PIItemDto
+                {
+                    Id = pii.Id,
+                    PatternDieId = pii.PatternDieId,
+                    MainPartName = pii.PatternDie!.MainPartName,
+                    CurrentName = pii.PatternDie.CurrentName
+                })
                 .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<PIItemDto>> { Data = items });
         }
     }
 }

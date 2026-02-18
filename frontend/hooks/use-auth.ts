@@ -1,43 +1,47 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import api from "@/lib/api";
+'use client';
 
-export function useLogin() {
-    const router = useRouter();
-    const queryClient = useQueryClient();
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
+import { User } from '@/types';
 
-    return useMutation({
-        mutationFn: async (data: any) => {
-            const response = await api.post("/auth/login", data);
-            return response.data;
-        },
-        onSuccess: (data) => {
-            localStorage.setItem("user", JSON.stringify(data.user));
-            queryClient.setQueryData(["user"], data.user);
-            toast.success(`Welcome back, ${data.user.firstName}!`);
-            router.push("/dashboard");
-        },
-        onError: (error: any) => {
-            const message = error.response?.data?.message || "Login failed";
-            toast.error(message);
-        },
-    });
-}
+export function useAuth() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export function useLogout() {
-    const router = useRouter();
-    const queryClient = useQueryClient();
+  useEffect(() => {
+    const validateAuth = async () => {
+      try {
+        await api.post('/auth/validate');
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          router.push('/login');
+        }
+      } catch {
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return useMutation({
-        mutationFn: async () => {
-            await api.post("/auth/logout");
-        },
-        onSuccess: () => {
-            localStorage.removeItem("user");
-            queryClient.clear();
-            router.push("/login");
-            toast.success("Logged out successfully");
-        },
-    });
+    validateAuth();
+  }, [router]);
+
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignore errors
+    } finally {
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+      // Force full page reload to clear all state including React Query
+      window.location.href = '/login';
+    }
+  };
+
+  return { user, loading, logout };
 }

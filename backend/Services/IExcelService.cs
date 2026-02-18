@@ -1,6 +1,6 @@
-using backend.DTOs;
+using net_backend.DTOs;
 
-namespace backend.Services
+namespace net_backend.Services
 {
     public interface IExcelService
     {

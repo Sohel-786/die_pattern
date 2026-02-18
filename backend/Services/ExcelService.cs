@@ -1,8 +1,13 @@
 using ClosedXML.Excel;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
 using System.Reflection;
-using backend.DTOs;
+using net_backend.DTOs;
 
-namespace backend.Services
+namespace net_backend.Services
 {
     public class ExcelService : IExcelService
     {
@@ -30,23 +35,26 @@ namespace backend.Services
                     }
                 }
 
+                // Get properties for headers
                 var firstItem = data.First();
                 var properties = firstItem.GetType().GetProperties()
                     .Where(p => p.PropertyType.IsPrimitive || p.PropertyType == typeof(string) || p.PropertyType == typeof(decimal) || p.PropertyType == typeof(double) || p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(int) || p.PropertyType == typeof(int?) || p.PropertyType == typeof(bool) || p.PropertyType.IsEnum)
                     .ToList();
 
+                // Write Headers
                 for (int i = 0; i < properties.Count; i++)
                 {
                     var cell = worksheet.Cell(rowIdx, i + 1);
                     cell.Value = SplitCamelCase(properties[i].Name);
                     cell.Style.Font.Bold = true;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F3F4F6");
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F3F4F6"); // Light gray background
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 }
                 
                 var headerRow = rowIdx;
                 rowIdx++;
 
+                // Write Data
                 foreach (var item in data)
                 {
                     for (int i = 0; i < properties.Count; i++)
@@ -57,8 +65,10 @@ namespace backend.Services
                     rowIdx++;
                 }
 
+                // Formatting
                 worksheet.Columns().AdjustToContents();
                 
+                // Add filter to headers if data exists
                 if (data.Any())
                 {
                     worksheet.Range(headerRow, 1, rowIdx - 1, properties.Count).SetAutoFilter();
@@ -83,14 +93,22 @@ namespace backend.Services
                 var properties = typeof(T).GetProperties().ToList();
                 var firstRow = worksheet.Row(1);
                 
+                // Map column index to property
                 var columnMap = new Dictionary<int, PropertyInfo>();
                 foreach (var cell in firstRow.CellsUsed())
                 {
                     var header = cell.Value.ToString().Replace(" ", "").ToLower();
                     
+                    // Match DTO properties with common Excel header aliases
                     var prop = properties.FirstOrDefault(p => {
                         var propName = p.Name.ToLower();
-                        return propName == header; // Strict matching for "correct heading"
+                        return propName == header || 
+                               (propName == "mainpartname" && (header == "mainpartname" || header == "partname")) ||
+                               (propName == "currentname" && (header == "currentname" || header == "name")) ||
+                               (propName == "patterntype" && (header == "type" || header == "patterntype")) ||
+                               (propName == "drawingno" && (header == "drawing" || header == "drawingno")) ||
+                               (propName == "revisionno" && (header == "revision" || header == "revisionno")) ||
+                               (propName == "isactive" && (header == "status" || header == "active"));
                     });
                     
                     if (prop != null)
@@ -123,14 +141,6 @@ namespace backend.Services
                                 {
                                     value = cellValue.ToLower() == "yes" || cellValue.ToLower() == "true" || cellValue == "1";
                                 }
-                                else if (targetType == typeof(int))
-                                {
-                                    value = int.Parse(cellValue);
-                                }
-                                else if (targetType == typeof(DateTime))
-                                {
-                                    value = DateTime.Parse(cellValue);
-                                }
                                 else
                                 {
                                     value = Convert.ChangeType(cellValue, targetType);
@@ -146,7 +156,7 @@ namespace backend.Services
                     }
                     catch (Exception ex)
                     {
-                        result.Errors.Add(new RowError { Row = row.RowNumber(), Message = $"Parsing error: {ex.Message}" });
+                        result.Errors.Add(new RowError { Row = row.RowNumber(), Message = ex.Message });
                     }
                 }
             }

@@ -3,9 +3,9 @@
  * Add new filenames here when you add more SVGs to frontend/public/avatar/.
  */
 export const AVATAR_OPTIONS: string[] = [
-    "first_avatar.svg",
-    "second_avatar.svg",
-    "third_avatar.svg",
+  "first_avatar.svg",
+  "second_avatar.svg",
+  "third_avatar.svg",
 ];
 
 /** Base path for preset avatars (public/avatar → /avatar). */
@@ -21,7 +21,7 @@ export const FALLBACK_AVATAR_PATH = DEFAULT_AVATAR_PATH;
  * Preset avatars (from public/avatar) use /avatar/; legacy use /assets/avatar/.
  */
 export function getAvatarUrl(avatar: string | null | undefined): string {
-    if (!avatar) return FALLBACK_AVATAR_PATH;
-    if (AVATAR_OPTIONS.includes(avatar)) return `${AVATAR_PRESETS_PATH}/${avatar}`;
-    return `/assets/avatar/${avatar}`;
+  if (!avatar) return FALLBACK_AVATAR_PATH;
+  if (AVATAR_OPTIONS.includes(avatar)) return `${AVATAR_PRESETS_PATH}/${avatar}`;
+  return `/assets/avatar/${avatar}`;
 }

@@ -1,6 +1,6 @@
-namespace backend.DTOs
+namespace net_backend.DTOs
 {
-    public class LoginDto
+    public class LoginRequest
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
@@ -13,18 +13,14 @@ namespace backend.DTOs
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
-        public UserPermissionDto? Permission { get; set; }
+        public string? Avatar { get; set; }
     }
 
-    public class UserPermissionDto
+    public class LoginResponse
     {
-        public bool ViewDashboard { get; set; }
-        public bool ViewMaster { get; set; }
-        public bool ViewPI { get; set; }
-        public bool ViewPO { get; set; }
-        public bool ViewMovement { get; set; }
-        public bool ViewReports { get; set; }
-        public bool ManageUsers { get; set; }
-        public bool AccessSettings { get; set; }
+        public bool Success { get; set; }
+        public string Token { get; set; } = string.Empty;
+        public UserDto? User { get; set; }
+        public string? Message { get; set; }
     }
 }

@@ -1,102 +1,96 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
+using net_backend.Services;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("companies")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class CompaniesController : ControllerBase
+    public class CompaniesController : BaseController
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IExcelService _excelService;
 
-        public CompaniesController(ApplicationDbContext context)
+        public CompaniesController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
-            _context = context;
+            _excelService = excelService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Company>>> GetCompanies()
+        public async Task<ActionResult<ApiResponse<IEnumerable<Company>>>> GetAll()
         {
-            return await _context.Companies.Include(c => c.Locations).ToListAsync();
+            var companies = await _context.Companies
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+            return Ok(new ApiResponse<IEnumerable<Company>> { Data = companies });
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<Company>>>> GetActive()
+        {
+            var companies = await _context.Companies
+                .Where(c => c.IsActive)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+            return Ok(new ApiResponse<IEnumerable<Company>> { Data = companies });
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Company>> GetCompany(int id)
+        public async Task<ActionResult<ApiResponse<Company>>> GetById(int id)
         {
-            var company = await _context.Companies.Include(c => c.Locations).FirstOrDefaultAsync(c => c.Id == id);
-
-            if (company == null)
-            {
-                return NotFound();
-            }
-
-            return company;
+            var company = await _context.Companies.FindAsync(id);
+            if (company == null) return NotFound(new ApiResponse<Company> { Success = false, Message = "Company not found" });
+            return Ok(new ApiResponse<Company> { Data = company });
         }
 
         [HttpPost]
-        public async Task<ActionResult<Company>> PostCompany(Company company)
+        public async Task<ActionResult<ApiResponse<Company>>> Create([FromBody] Company company)
         {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == company.Name.Trim().ToLower()))
+                return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
+
             company.CreatedAt = DateTime.Now;
             company.UpdatedAt = DateTime.Now;
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetCompany), new { id = company.Id }, company);
+            return StatusCode(201, new ApiResponse<Company> { Data = company });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCompany(int id, Company company)
+        public async Task<ActionResult<ApiResponse<Company>>> Update(int id, [FromBody] Company company)
         {
-            if (id != company.Id)
-            {
-                return BadRequest();
-            }
+            if (!await HasPermission("ManageMaster")) return Forbidden();
 
-            company.UpdatedAt = DateTime.Now;
-            _context.Entry(company).State = EntityState.Modified;
-            _context.Entry(company).Property(x => x.CreatedAt).IsModified = false;
+            var existing = await _context.Companies.FindAsync(id);
+            if (existing == null) return NotFound(new ApiResponse<Company> { Success = false, Message = "Company not found" });
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CompanyExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            if (await _context.Companies.AnyAsync(c => c.Id != id && c.Name.ToLower() == company.Name.Trim().ToLower()))
+                return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
 
-            return NoContent();
+            existing.Name = company.Name.Trim();
+            existing.IsActive = company.IsActive;
+            existing.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<Company> { Data = existing });
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCompany(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
             var company = await _context.Companies.FindAsync(id);
-            if (company == null)
-            {
-                return NotFound();
-            }
+            if (company == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Company not found" });
 
             _context.Companies.Remove(company);
             await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool CompanyExists(int id)
-        {
-            return _context.Companies.Any(e => e.Id == id);
+            return Ok(new ApiResponse<bool> { Data = true });
         }
     }
 }

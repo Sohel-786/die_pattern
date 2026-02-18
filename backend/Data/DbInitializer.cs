@@ -1,85 +1,114 @@
-using backend.Models;
+using net_backend.Models;
+using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 
-namespace backend.Data
+namespace net_backend.Data
 {
     public static class DbInitializer
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            context.Database.EnsureCreated();
+            context.Database.Migrate();
 
-            if (context.Users.Any())
+            // 1. Ensure Admin User Exists
+            var adminUser = context.Users.FirstOrDefault(u => u.Username == "mitul");
+            if (adminUser == null)
             {
-                return; // DB has been seeded
+                adminUser = new User 
+                { 
+                    Username = "mitul", 
+                    Password = BCrypt.Net.BCrypt.HashPassword("admin"), 
+                    FirstName = "Mitul", 
+                    LastName = "Admin", 
+                    Role = Role.ADMIN, 
+                    IsActive = true, 
+                    CreatedAt = DateTime.Now, 
+                    UpdatedAt = DateTime.Now 
+                };
+                context.Users.Add(adminUser);
+                context.SaveChanges();
             }
 
-            // Seed AppSettings
-            var settings = new AppSettings
+            // 2. Refresh Permissions for Admin
+            var adminPerm = context.UserPermissions.FirstOrDefault(p => p.UserId == adminUser.Id);
+            if (adminPerm == null)
             {
-                CompanyName = "Die & Pattern Management",
-                SoftwareName = "DPMS v1.0",
-                PrimaryColor = "#3b82f6"
-            };
-            context.AppSettings.Add(settings);
-
-            // Seed Admin User
-            var admin = new User
-            {
-                Username = "admin",
-                Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                FirstName = "System",
-                LastName = "Admin",
-                Role = Role.ADMIN,
-                IsActive = true
-            };
-            context.Users.Add(admin);
+                adminPerm = new UserPermission { UserId = adminUser.Id };
+                context.UserPermissions.Add(adminPerm);
+            }
+            
+            adminPerm.ViewDashboard = true;
+            adminPerm.ViewMaster = true;
+            adminPerm.ManageMaster = true;
+            adminPerm.ViewPI = true;
+            adminPerm.CreatePI = true;
+            adminPerm.ApprovePI = true;
+            adminPerm.ViewPO = true;
+            adminPerm.CreatePO = true;
+            adminPerm.ApprovePO = true;
+            adminPerm.ViewMovement = true;
+            adminPerm.CreateMovement = true;
+            adminPerm.ViewQC = true;
+            adminPerm.PerformQC = true;
+            adminPerm.ManageChanges = true;
+            adminPerm.RevertChanges = true;
+            adminPerm.ViewReports = true;
+            adminPerm.ManageUsers = true;
+            adminPerm.AccessSettings = true;
+            
             context.SaveChanges();
 
-            var permission = new UserPermission
+            // 3. Seed App Settings
+            var settings = context.AppSettings.FirstOrDefault();
+            if (settings == null)
             {
-                UserId = admin.Id,
-                ViewDashboard = true,
-                ViewMaster = true,
-                ViewPI = true,
-                ViewPO = true,
-                ViewMovement = true,
-                ViewReports = true,
-                ManageUsers = true,
-                AccessSettings = true
-            };
-            context.UserPermissions.Add(permission);
+                context.AppSettings.Add(new AppSettings 
+                { 
+                    CompanyName = "Aira Euro Automation Pvt Ltd", 
+                    SoftwareName = "Die & Pattern Management",
+                    CreatedAt = DateTime.Now, 
+                    UpdatedAt = DateTime.Now 
+                });
+                context.SaveChanges();
+            }
+
+            // 4. Seed Initial Masters if empty
+            if (!context.PatternTypes.Any())
+            {
+                context.PatternTypes.AddRange(new PatternType[] {
+                    new PatternType { Name = "Die" },
+                    new PatternType { Name = "Pattern" }
+                });
+            }
+
+            if (!context.PatternStatuses.Any())
+            {
+                context.PatternStatuses.AddRange(new PatternStatus[] {
+                    new PatternStatus { Name = "New" },
+                    new PatternStatus { Name = "Under Repair" },
+                    new PatternStatus { Name = "Good Condition" },
+                    new PatternStatus { Name = "Scrapped" }
+                });
+            }
+
+            if (!context.Materials.Any())
+            {
+                context.Materials.AddRange(new Material[] {
+                    new Material { Name = "Aluminium" },
+                    new Material { Name = "Cast Iron" },
+                    new Material { Name = "Steel" }
+                });
+            }
+
+            if (!context.OwnerTypes.Any())
+            {
+                context.OwnerTypes.AddRange(new OwnerType[] {
+                    new OwnerType { Name = "Customer" },
+                    new OwnerType { Name = "In-House" }
+                });
+            }
+
             context.SaveChanges();
-        }
-
-        public static async Task ResetDatabase(ApplicationDbContext context)
-        {
-            // Clear all data except Admin
-            // In a real factory reset, we might drop and recreate, but here we just clear tables
-            context.ChangeHistories.RemoveRange(context.ChangeHistories);
-            context.Movements.RemoveRange(context.Movements);
-            context.QCInspections.RemoveRange(context.QCInspections);
-            context.InwardItems.RemoveRange(context.InwardItems);
-            context.InwardEntries.RemoveRange(context.InwardEntries);
-            context.POItems.RemoveRange(context.POItems);
-            context.PurchaseOrders.RemoveRange(context.PurchaseOrders);
-            context.PIItems.RemoveRange(context.PIItems);
-            context.PurchaseIndents.RemoveRange(context.PurchaseIndents);
-            context.PatternDies.RemoveRange(context.PatternDies);
-            
-            context.Locations.RemoveRange(context.Locations);
-            context.Companies.RemoveRange(context.Companies);
-            context.Parties.RemoveRange(context.Parties);
-            context.TypeMasters.RemoveRange(context.TypeMasters);
-            context.MaterialMasters.RemoveRange(context.MaterialMasters);
-            context.StatusMasters.RemoveRange(context.StatusMasters);
-            context.OwnerTypeMasters.RemoveRange(context.OwnerTypeMasters);
-            
-            // Keep users and permissions for now, or just keep admin
-            var nonAdmins = context.Users.Where(u => u.Username != "admin");
-            context.Users.RemoveRange(nonAdmins);
-
-            await context.SaveChangesAsync();
         }
     }
 }

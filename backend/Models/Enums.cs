@@ -1,4 +1,4 @@
-namespace backend.Models
+namespace net_backend.Models
 {
     public enum Role
     {
@@ -7,48 +7,38 @@ namespace backend.Models
         USER
     }
 
-    public enum DiePatternType
+    public enum PiType
     {
-        DIE,
-        PATTERN
+        New,
+        Repair,
+        Correction,
+        Modification
     }
 
-    public enum ItemStatus
+    public enum PiStatus
     {
-        AVAILABLE,
-        ISSUED,
-        MAINTENANCE,
-        SCRAPPED
+        Pending,
+        Approved,
+        Rejected
     }
 
-    public enum PIStatus
+    public enum PoStatus
     {
-        PENDING,
-        APPROVED,
-        REJECTED
-    }
-
-    public enum POStatus
-    {
-        PENDING,
-        APPROVED,
-        COMPLETED,
-        CANCELLED
+        Pending,
+        Approved,
+        Rejected
     }
 
     public enum MovementType
     {
-        ISSUE_TO_VENDOR,
-        RECEIVE_FROM_VENDOR,
-        INTERNAL_TRANSFER,
-        SYSTEM_RETURN
+        Outward,
+        Inward,
+        SystemReturn
     }
 
-    public enum QCStatus
+    public enum HolderType
     {
-        PENDING,
-        APPROVED,
-        REJECTED,
-        REWORK
+        Location,
+        Vendor
     }
 }

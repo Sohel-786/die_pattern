@@ -1,118 +1,99 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
-using backend.Services;
-using System.Security.Claims;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("movements")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class MovementsController : ControllerBase
+    public class MovementsController : BaseController
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICodeGeneratorService _codeGen;
-
-        public MovementsController(ApplicationDbContext context, ICodeGeneratorService codeGen)
+        public MovementsController(ApplicationDbContext context) : base(context)
         {
-            _context = context;
-            _codeGen = codeGen;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Movement>>> GetMovements()
+        public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetAll()
         {
-            return await _context.Movements
+            var data = await _context.Movements
                 .Include(m => m.PatternDie)
                 .Include(m => m.FromLocation)
+                .Include(m => m.FromParty)
                 .Include(m => m.ToLocation)
-                .Include(m => m.FromVendor)
-                .Include(m => m.ToVendor)
-                .Include(m => m.Creator)
+                .Include(m => m.ToParty)
+                .Select(m => new MovementDto
+                {
+                    Id = m.Id,
+                    Type = m.Type,
+                    PatternDieId = m.PatternDieId,
+                    PatternDieName = m.PatternDie!.CurrentName,
+                    FromType = m.FromType,
+                    FromName = m.FromType == HolderType.Location ? m.FromLocation!.Name : m.FromParty!.Name,
+                    ToType = m.ToType,
+                    ToName = m.ToType == HolderType.Location ? m.ToLocation!.Name : m.ToParty!.Name,
+                    Remarks = m.Remarks,
+                    Reason = m.Reason,
+                    IsQCPending = m.IsQCPending,
+                    IsQCApproved = m.IsQCApproved,
+                    CreatedAt = m.CreatedAt
+                })
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<MovementDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<Movement>> PostMovement(Movement movement)
+        public async Task<ActionResult<ApiResponse<Movement>>> Create([FromBody] CreateMovementDto dto)
         {
-            var patternDie = await _context.PatternDies.FindAsync(movement.PatternDieId);
+            if (!await HasPermission("CreateMovement")) return Forbidden();
+
+            var patternDie = await _context.PatternDies.FindAsync(dto.PatternDieId);
             if (patternDie == null) return NotFound("Pattern/Die not found");
 
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            movement.CreatedAt = DateTime.Now;
-            movement.CreatedBy = userId;
-            movement.MovementNo = await _codeGen.GenerateCodeAsync("MOV", "movements", "MovementNo");
+            // Business Rule: One holder at a time
+            // Mandatory reason for SystemReturn
+            if (dto.Type == MovementType.SystemReturn && string.IsNullOrEmpty(dto.Reason))
+                return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Reason is mandatory for System Return" });
 
-            // Basic Stock Control Logic
-            if (movement.Type == MovementType.ISSUE_TO_VENDOR)
+            var movement = new Movement
             {
-                if (patternDie.IsAtVendor) return BadRequest("Pattern/Die is already at a vendor");
+                Type = dto.Type,
+                PatternDieId = dto.PatternDieId,
                 
-                movement.FromLocationId = patternDie.CurrentLocationId;
-                patternDie.CurrentLocationId = null;
-                patternDie.CurrentVendorId = movement.ToVendorId;
-                movement.IsQCRequired = false;
-            }
-            else if (movement.Type == MovementType.RECEIVE_FROM_VENDOR)
+                FromType = patternDie.CurrentHolderType,
+                FromLocationId = patternDie.CurrentLocationId,
+                FromPartyId = patternDie.CurrentPartyId,
+
+                ToType = dto.ToType,
+                ToLocationId = dto.ToLocationId,
+                ToPartyId = dto.ToPartyId,
+
+                Remarks = dto.Remarks,
+                Reason = dto.Reason,
+                PurchaseOrderId = dto.PurchaseOrderId,
+                
+                IsQCPending = (dto.Type == MovementType.Inward || dto.Type == MovementType.SystemReturn),
+                CreatedBy = CurrentUserId,
+                CreatedAt = DateTime.Now
+            };
+
+            // Update PatternDie holder (if no QC pending)
+            // If Inward/SystemReturn, wait for QC to update stock
+            if (dto.Type == MovementType.Outward)
             {
-                if (!patternDie.IsAtVendor) return BadRequest("Pattern/Die is not at a vendor");
-                
-                movement.FromVendorId = patternDie.CurrentVendorId;
-                movement.IsQCRequired = true;
-                movement.IsQCApproved = false;
-                
-                // Location update happens after QC approval usually, 
-                // but we record the intent here.
-            }
-            else if (movement.Type == MovementType.INTERNAL_TRANSFER)
-            {
-                movement.FromLocationId = patternDie.CurrentLocationId;
-                patternDie.CurrentLocationId = movement.ToLocationId;
+                patternDie.CurrentHolderType = dto.ToType;
+                patternDie.CurrentLocationId = dto.ToLocationId;
+                patternDie.CurrentPartyId = dto.ToPartyId;
+                patternDie.UpdatedAt = DateTime.Now;
             }
 
-            patternDie.UpdatedAt = DateTime.Now;
             _context.Movements.Add(movement);
             await _context.SaveChangesAsync();
 
-            return Ok(movement);
+            return StatusCode(201, new ApiResponse<Movement> { Data = movement });
         }
-
-        [HttpPost("{id}/qc")]
-        public async Task<IActionResult> QCApproval(int id, [FromBody] QCApprovalDto qc)
-        {
-            var movement = await _context.Movements
-                .Include(m => m.PatternDie)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            
-            if (movement == null) return NotFound();
-
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-            movement.IsQCApproved = qc.Approved;
-            movement.QCBy = userId;
-            movement.QCAt = DateTime.Now;
-            movement.QCRemarks = qc.Remarks;
-
-            if (qc.Approved && movement.PatternDie != null)
-            {
-                movement.PatternDie.CurrentVendorId = null;
-                movement.PatternDie.CurrentLocationId = movement.ToLocationId;
-                movement.PatternDie.UpdatedAt = DateTime.Now;
-            }
-
-            await _context.SaveChangesAsync();
-            return Ok(movement);
-        }
-    }
-
-    public class QCApprovalDto
-    {
-        public bool Approved { get; set; }
-        public string? Remarks { get; set; }
     }
 }

@@ -1,52 +1,81 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("parties")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class PartiesController : ControllerBase
+    public class PartiesController : BaseController
     {
-        private readonly ApplicationDbContext _context;
-
-        public PartiesController(ApplicationDbContext context)
+        public PartiesController(ApplicationDbContext context) : base(context)
         {
-            _context = context;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Party>>> GetParties() => await _context.Parties.ToListAsync();
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll()
+        {
+            var parties = await _context.Parties
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+            return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive()
+        {
+            var parties = await _context.Parties
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+            return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
+        }
 
         [HttpPost]
-        public async Task<ActionResult<Party>> PostParty(Party party)
+        public async Task<ActionResult<ApiResponse<Party>>> Create([FromBody] Party party)
         {
-            party.IsActive = true;
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            party.CreatedAt = DateTime.Now;
+            party.UpdatedAt = DateTime.Now;
             _context.Parties.Add(party);
             await _context.SaveChangesAsync();
-            return Ok(party);
+
+            return StatusCode(201, new ApiResponse<Party> { Data = party });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutParty(int id, Party party)
+        public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] Party party)
         {
-            if (id != party.Id) return BadRequest();
-            _context.Entry(party).State = EntityState.Modified;
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            var existing = await _context.Parties.FindAsync(id);
+            if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found" });
+
+            existing.Name = party.Name.Trim();
+            existing.PhoneNumber = party.PhoneNumber;
+            existing.Email = party.Email;
+            existing.Address = party.Address;
+            existing.IsActive = party.IsActive;
+            existing.UpdatedAt = DateTime.Now;
+
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new ApiResponse<Party> { Data = existing });
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteParty(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
             var party = await _context.Parties.FindAsync(id);
-            if (party == null) return NotFound();
+            if (party == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Party not found" });
+
             _context.Parties.Remove(party);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new ApiResponse<bool> { Data = true });
         }
     }
 }

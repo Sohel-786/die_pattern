@@ -1,17 +1,18 @@
+using Microsoft.AspNetCore.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using backend.Data;
-using backend.DTOs;
-using backend.Models;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
+    [Route("auth")]
     [ApiController]
-    [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -24,47 +25,51 @@ namespace backend.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users
-                .Include(u => u.Permission)
-                .FirstOrDefaultAsync(u => u.Username == loginDto.Username && u.IsActive);
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
+            if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
             {
-                return Unauthorized(new { message = "Invalid username or password" });
+                return BadRequest(new { success = false, message = "Username and password are required" });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+            {
+                return Unauthorized(new { success = false, message = "Invalid credentials" });
+            }
+
+            if (!user.IsActive)
+            {
+                return StatusCode(403, new { success = false, message = "User account is inactive" });
             }
 
             var token = GenerateJwtToken(user);
 
-            Response.Cookies.Append("access_token", token, new CookieOptions
+            // Set cookie
+            var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false, // Set to true in production
+                Secure = false, 
                 SameSite = SameSiteMode.Lax,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
+                Expires = DateTime.UtcNow.AddDays(7),
+                Path = "/"
+            };
 
-            return Ok(new
+            Response.Cookies.Append("access_token", token, cookieOptions);
+
+            return Ok(new LoginResponse
             {
-                user = new UserDto
+                Success = true,
+                Token = token,
+                User = new UserDto
                 {
                     Id = user.Id,
                     Username = user.Username,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Role = user.Role.ToString(),
-                    Permission = user.Permission == null ? null : new UserPermissionDto
-                    {
-                        ViewDashboard = user.Permission.ViewDashboard,
-                        ViewMaster = user.Permission.ViewMaster,
-                        ViewPI = user.Permission.ViewPI,
-                        ViewPO = user.Permission.ViewPO,
-                        ViewMovement = user.Permission.ViewMovement,
-                        ViewReports = user.Permission.ViewReports,
-                        ManageUsers = user.Permission.ManageUsers,
-                        AccessSettings = user.Permission.AccessSettings
-                    }
+                    Avatar = user.Avatar
                 }
             });
         }
@@ -73,67 +78,61 @@ namespace backend.Controllers
         public IActionResult Logout()
         {
             Response.Cookies.Delete("access_token");
-            return Ok(new { message = "Logged out successfully" });
+            return Ok(new { success = true, message = "Logged out successfully" });
         }
 
-        [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUser()
+        [Authorize]
+        [HttpPost("validate")]
+        public async Task<IActionResult> Validate()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
             {
-                return Unauthorized();
+                return Unauthorized(new { success = false, message = "Invalid token claims" });
             }
 
-            var user = await _context.Users
-                .Include(u => u.Permission)
-                .FirstOrDefaultAsync(u => u.Id == int.Parse(userIdClaim));
-
-            if (user == null)
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null || !user.IsActive)
             {
-                return Unauthorized();
+                return Unauthorized(new { success = false, message = "User not found or inactive" });
             }
 
-            return Ok(new UserDto
+            return Ok(new
             {
-                Id = user.Id,
-                Username = user.Username,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = user.Role.ToString(),
-                Permission = user.Permission == null ? null : new UserPermissionDto
+                success = true,
+                valid = true,
+                user = new UserDto
                 {
-                    ViewDashboard = user.Permission.ViewDashboard,
-                    ViewMaster = user.Permission.ViewMaster,
-                    ViewPI = user.Permission.ViewPI,
-                    ViewPO = user.Permission.ViewPO,
-                    ViewMovement = user.Permission.ViewMovement,
-                    ViewReports = user.Permission.ViewReports,
-                    ManageUsers = user.Permission.ManageUsers,
-                    AccessSettings = user.Permission.AccessSettings
+                    Id = user.Id,
+                    Username = user.Username,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Role = user.Role.ToString(),
+                    Avatar = user.Avatar
                 }
             });
         }
 
         private string GenerateJwtToken(User user)
         {
-            var jwtKey = _configuration["Jwt:Key"] ?? "YourSuperSecretKeyWithAtLeast32Characters";
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddDays(7);
+
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"] ?? "DPMS",
-                audience: _configuration["Jwt:Audience"] ?? "DPMS_Client",
-                claims: claims,
-                expires: DateTime.Now.AddDays(7),
-                signingCredentials: credentials);
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
+                expires: expires,
+                signingCredentials: creds
+            );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }

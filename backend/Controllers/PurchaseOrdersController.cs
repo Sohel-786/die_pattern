@@ -1,111 +1,112 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Data;
-using backend.Models;
-using backend.Services;
-using System.Security.Claims;
+using net_backend.Data;
+using net_backend.DTOs;
+using net_backend.Models;
+using net_backend.Services;
 
-namespace backend.Controllers
+namespace net_backend.Controllers
 {
-    [Authorize]
+    [Route("purchase-orders")]
     [ApiController]
-    [Route("api/[controller]")]
-    public class PurchaseOrdersController : ControllerBase
+    public class PurchaseOrdersController : BaseController
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICodeGeneratorService _codeGen;
+        private readonly ICodeGeneratorService _codeGenerator;
 
-        public PurchaseOrdersController(ApplicationDbContext context, ICodeGeneratorService codeGen)
+        public PurchaseOrdersController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
-            _context = context;
-            _codeGen = codeGen;
+            _codeGenerator = codeGenerator;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PurchaseOrder>>> GetOrders()
+        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetAll()
         {
-            return await _context.PurchaseOrders
-                .Include(po => po.Vendor)
-                .Include(po => po.Creator)
-                .Include(po => po.Approver)
-                .Include(po => po.Items)
-                    .ThenInclude(i => i.PIItem)
+            var data = await _context.PurchaseOrders
+                .Include(p => p.Vendor)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.PatternDie)
-                .OrderByDescending(po => po.CreatedAt)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.PurchaseIndent)
+                .Select(p => new PODto
+                {
+                    Id = p.Id,
+                    PoNo = p.PoNo,
+                    VendorId = p.VendorId,
+                    VendorName = p.Vendor != null ? p.Vendor.Name : "Unknown",
+                    Rate = p.Rate,
+                    DeliveryDate = p.DeliveryDate,
+                    QuotationUrl = p.QuotationUrl,
+                    Status = p.Status,
+                    Remarks = p.Remarks,
+                    CreatedAt = p.CreatedAt,
+                    Items = p.Items.Select(i => new POItemDto
+                    {
+                        Id = i.Id,
+                        PiItemId = i.PurchaseIndentItemId,
+                        PatternDieId = i.PurchaseIndentItem!.PatternDieId,
+                        MainPartName = i.PurchaseIndentItem!.PatternDie!.MainPartName,
+                        CurrentName = i.PurchaseIndentItem.PatternDie.CurrentName,
+                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo
+                    }).ToList()
+                })
+                .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
-        }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<PurchaseOrder>> GetOrder(int id)
-        {
-            var po = await _context.PurchaseOrders
-                .Include(po => po.Vendor)
-                .Include(po => po.Creator)
-                .Include(po => po.Approver)
-                .Include(po => po.Items)
-                    .ThenInclude(i => i.PIItem)
-                        .ThenInclude(pii => pii!.PatternDie)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (po == null) return NotFound();
-            return po;
+            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<PurchaseOrder>> PostOrder(PurchaseOrder po)
+        public async Task<ActionResult<ApiResponse<PurchaseOrder>>> Create([FromBody] CreatePODto dto)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            po.PONo = await _codeGen.GenerateCodeAsync("PO", "purchase_orders", "PONo");
-            po.CreatedBy = userId;
-            po.Status = POStatus.PENDING;
-            po.CreatedAt = DateTime.Now;
+            if (!await HasPermission("CreatePO")) return Forbidden();
 
-            foreach (var item in po.Items)
+            // Additional business logic: Ensure items are not already in another PO
+            var alreadyInPo = await _context.PurchaseOrderItems
+                .AnyAsync(poi => dto.PiItemIds.Contains(poi.PurchaseIndentItemId));
+            if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO" });
+
+            var po = new PurchaseOrder
             {
-                var piItem = await _context.PIItems.FindAsync(item.PIItemId);
-                if (piItem != null)
-                {
-                    piItem.IsOrdered = true;
-                }
-                item.IsReceived = false;
-                item.IsQCApproved = false;
+                PoNo = await _codeGenerator.GenerateCode("PO"),
+                VendorId = dto.VendorId,
+                Rate = dto.Rate,
+                DeliveryDate = dto.DeliveryDate,
+                QuotationUrl = dto.QuotationUrl,
+                Remarks = dto.Remarks,
+                CreatedBy = CurrentUserId,
+                Status = PoStatus.Pending,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            foreach (var piItemId in dto.PiItemIds)
+            {
+                po.Items.Add(new PurchaseOrderItem { PurchaseIndentItemId = piItemId });
             }
 
             _context.PurchaseOrders.Add(po);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetOrder), new { id = po.Id }, po);
+            return StatusCode(201, new ApiResponse<PurchaseOrder> { Data = po });
         }
 
         [HttpPost("{id}/approve")]
-        public async Task<IActionResult> ApproveOrder(int id)
+        public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
+            if (!await HasPermission("ApprovePO")) return Forbidden();
+
             var po = await _context.PurchaseOrders.FindAsync(id);
             if (po == null) return NotFound();
 
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            
-            po.Status = POStatus.APPROVED;
-            po.ApprovedBy = userId;
+            po.Status = PoStatus.Approved;
+            po.ApprovedBy = CurrentUserId;
             po.ApprovedAt = DateTime.Now;
+            po.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(po);
-        }
-
-        [HttpGet("pending-receipt")]
-        public async Task<ActionResult<IEnumerable<POItem>>> GetPendingPOItems()
-        {
-            // Items that are approved but not yet received
-            return await _context.POItems
-                .Include(i => i.PurchaseOrder)
-                    .ThenInclude(po => po!.Vendor)
-                .Include(i => i.PIItem)
-                    .ThenInclude(pii => pii!.PatternDie)
-                .Where(i => i.PurchaseOrder!.Status == POStatus.APPROVED && !i.IsReceived)
-                .ToListAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
         }
     }
 }

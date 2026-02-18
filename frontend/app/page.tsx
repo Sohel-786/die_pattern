@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { Role } from '@/types';
 
-export default function RootPage() {
+export default function Home() {
   const router = useRouter();
+  const { user, loading } = useCurrentUser();
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      router.push("/dashboard");
-    } else {
-      router.push("/login");
+    if (!loading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
     }
-  }, [router]);
+  }, [user, loading, router]);
 
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-secondary-50">
-      <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-    </div>
-  );
+  return null;
 }

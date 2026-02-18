@@ -1,5 +1,24 @@
-namespace backend.DTOs
+namespace net_backend.DTOs
 {
+    public class PatternDieImportDto
+    {
+        public string MainPartName { get; set; } = string.Empty;
+        public string CurrentName { get; set; } = string.Empty;
+        public string PatternType { get; set; } = string.Empty;
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string Material { get; set; } = string.Empty;
+        public string OwnerType { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string CurrentHolderType { get; set; } = string.Empty; // Location / Vendor
+        public string? CurrentHolderName { get; set; }
+    }
+
+    public class MasterImportDto
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
     public class RowError
     {
         public int Row { get; set; }
@@ -34,19 +53,5 @@ namespace backend.DTOs
         public int TotalRows { get; set; }
         public List<RowError> Errors { get; set; } = new List<RowError>();
         public List<ExcelRow<T>> Data { get; set; } = new List<ExcelRow<T>>();
-    }
-
-    public class PatternDieOpeningImportDto
-    {
-        public string MainPartName { get; set; } = string.Empty;
-        public string? CurrentName { get; set; }
-        public string Type { get; set; } = string.Empty;
-        public string? DrawingNo { get; set; }
-        public string? RevisionNo { get; set; }
-        public string Material { get; set; } = string.Empty;
-        public string OwnerType { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public string CurrentLocation { get; set; } = string.Empty;
-        public string? CurrentVendor { get; set; }
     }
 }

@@ -113,29 +113,22 @@ type UserForm = z.infer<typeof userSchema>;
 const permissionLabels: Partial<Record<keyof UserPermission, string>> = {
   viewDashboard: "View Dashboard",
   viewMaster: "View Master Data",
-  viewOutward: "View Outward",
-  viewInward: "View Inward",
-  viewReports: "View Reports",
-  importExportMaster: "Import/Export Master",
-  addOutward: "Add Outward",
-  editOutward: "Edit Outward",
-  addInward: "Add Inward",
-  editInward: "Edit Inward",
-  addMaster: "Add Master",
-  editMaster: "Edit Master",
-  accessSettings: "Access Settings",
+  manageMaster: "Manage Master Data",
+  viewPI: "View Purchase Indents",
+  createPI: "Create Purchase Indents",
+  approvePI: "Approve Purchase Indents",
+  viewPO: "View Purchase Orders",
+  createPO: "Create Purchase Orders",
+  approvePO: "Approve Purchase Orders",
+  viewMovement: "View Movements (In/Out)",
+  createMovement: "Create Movements (In/Out)",
+  viewQC: "View Quality Control",
+  performQC: "Perform Quality Control",
+  manageChanges: "Manage Pattern Changes",
+  revertChanges: "Revert Changes (Admin)",
+  viewReports: "View Strategic Reports",
   manageUsers: "Manage Users",
-  viewCompanyMaster: "View Company Master",
-  viewLocationMaster: "View Location Master",
-  viewContractorMaster: "View Contractor Master",
-  viewStatusMaster: "View Status Master",
-  viewMachineMaster: "View Machine Master",
-  viewItemMaster: "View Item Master",
-  viewItemCategoryMaster: "View Category Master",
-  viewDivisionMaster: "View Division Master",
-  viewActiveIssuesReport: "View Active Issues Report",
-  viewMissingItemsReport: "View Missing Items Report",
-  viewItemHistoryLedgerReport: "View Item History Ledger",
+  accessSettings: "Access System Settings",
 };
 
 const permissionKeys = Object.keys(
@@ -152,7 +145,6 @@ function permissionsFlagsEqual(
   for (const key of permissionKeys) {
     if ((a as any)[key] !== (b as any)[key]) return false;
   }
-  if (a.navigationLayout !== b.navigationLayout) return false;
 
   return true;
 }
@@ -726,7 +718,7 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
 
-{/* {currentUser?.role === Role.QC_ADMIN && (
+                {/* {currentUser?.role === Role.QC_ADMIN && (
                   <Card className="border-red-200 shadow-sm overflow-hidden mt-6">
                     <CardHeader className="bg-red-50 border-b border-red-100">
                       <div className="flex items-center gap-2 text-red-700">
@@ -765,7 +757,7 @@ export default function SettingsPage() {
               </motion.div>
             )}
 
-{/* <Dialog
+            {/* <Dialog
               isOpen={isResetDialogOpen}
               onClose={() => setIsResetDialogOpen(false)}
               title="Full System Reset?"
@@ -868,7 +860,7 @@ export default function SettingsPage() {
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                            {/* Module: System & Navigation */}
+                            {/* Module: Core System */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200">
                               <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
@@ -876,7 +868,7 @@ export default function SettingsPage() {
                                     <LayoutDashboard className="w-5 h-5" />
                                   </div>
                                   <CardTitle className="text-base font-semibold text-primary-900">
-                                    System & Navigation
+                                    Core System
                                   </CardTitle>
                                 </div>
                               </CardHeader>
@@ -914,97 +906,64 @@ export default function SettingsPage() {
                                     />
                                   </div>
                                 </label>
-                                <div className="p-4 hover:bg-secondary-50/50 transition-colors">
-                                  <div className="mb-2">
-                                    <p className="text-sm font-medium text-primary-900">Navigation Layout</p>
-                                    <p className="text-xs text-secondary-500 mt-0.5">Preferred menu style.</p>
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                  <div>
+                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Users</p>
+                                    <p className="text-xs text-secondary-500 mt-0.5">Create and manage accounts.</p>
                                   </div>
-                                  <select
-                                    value={localPermissions.navigationLayout}
-                                    onChange={(e) => handlePermissionChange("navigationLayout", e.target.value)}
-                                    className="w-full text-sm rounded-md border-secondary-300 py-2 px-3 focus:ring-primary-500 focus:border-primary-500 bg-white"
-                                  >
-                                    <option value="VERTICAL">Vertical Sidebar</option>
-                                    <option value="HORIZONTAL">Horizontal Header</option>
-                                  </select>
-                                </div>
+                                  <div className="flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={localPermissions.manageUsers}
+                                      onChange={(e) => handlePermissionChange("manageUsers", e.target.checked)}
+                                      className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                                    />
+                                  </div>
+                                </label>
                               </CardContent>
                             </Card>
 
                             {/* Module: Master Data */}
-                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-orange-500 lg:col-span-2">
+                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-orange-500">
                               <CardHeader className="bg-gradient-to-r from-orange-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="p-2 bg-orange-100/50 rounded-lg text-orange-600">
-                                      <Database className="w-5 h-5" />
-                                    </div>
-                                    <CardTitle className="text-base font-semibold text-primary-900">
-                                      Master Data
-                                    </CardTitle>
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-orange-100/50 rounded-lg text-orange-600">
+                                    <Database className="w-5 h-5" />
                                   </div>
-                                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-secondary-200 px-3 py-1.5 rounded-full hover:bg-secondary-50 transition-colors shadow-sm">
-                                    <span className="text-xs font-medium text-secondary-700">Enable Module</span>
-                                    <input
-                                      type="checkbox"
-                                      checked={localPermissions.viewMaster}
-                                      onChange={(e) => handlePermissionChange("viewMaster", e.target.checked)}
-                                      className="w-4 h-4 rounded-full border-secondary-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
-                                    />
-                                  </label>
+                                  <CardTitle className="text-base font-semibold text-primary-900">
+                                    Master Data
+                                  </CardTitle>
                                 </div>
                               </CardHeader>
-                              <CardContent className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
-                                  {Object.keys(permissionLabels).filter(k => k.startsWith('view') && k.endsWith('Master') && k !== 'viewMaster').map(key => (
-                                    <label key={key} className="flex items-center gap-3 cursor-pointer group">
-                                      <input
-                                        type="checkbox"
-                                        checked={(localPermissions as any)[key]}
-                                        onChange={(e) => handlePermissionChange(key as any, e.target.checked)}
-                                        className="w-4.5 h-4.5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500 transition-colors"
-                                      />
-                                      <span className="text-sm text-secondary-700 group-hover:text-primary-900 transition-colors">{(permissionLabels as any)[key].replace('View ', '')}</span>
-                                    </label>
-                                  ))}
-                                </div>
-
-                                <div className="mt-6 pt-5 border-t border-secondary-100">
-                                  <h5 className="text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-3">Actions</h5>
-                                  <div className="flex flex-wrap gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-secondary-200 hover:border-orange-300 hover:bg-orange-50/50 transition-all">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.addMaster}
-                                        onChange={(e) => handlePermissionChange("addMaster", e.target.checked)}
-                                        className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
-                                      />
-                                      <span className="text-sm font-medium text-secondary-700">Add Records</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-secondary-200 hover:border-orange-300 hover:bg-orange-50/50 transition-all">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.editMaster}
-                                        onChange={(e) => handlePermissionChange("editMaster", e.target.checked)}
-                                        className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
-                                      />
-                                      <span className="text-sm font-medium text-secondary-700">Edit Records</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-secondary-200 hover:border-orange-300 hover:bg-orange-50/50 transition-all">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.importExportMaster}
-                                        onChange={(e) => handlePermissionChange("importExportMaster", e.target.checked)}
-                                        className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
-                                      />
-                                      <span className="text-sm font-medium text-secondary-700">Import / Export</span>
-                                    </label>
+                              <CardContent className="p-4 space-y-3">
+                                <label className="flex items-center justify-between p-3 border border-secondary-100 rounded-lg hover:bg-secondary-50 cursor-pointer transition-colors">
+                                  <div>
+                                    <p className="text-sm font-medium text-primary-900">View Master Data</p>
+                                    <p className="text-xs text-secondary-500">Browse items, machines, contractors etc.</p>
                                   </div>
-                                </div>
+                                  <input
+                                    type="checkbox"
+                                    checked={localPermissions.viewMaster}
+                                    onChange={(e) => handlePermissionChange("viewMaster", e.target.checked)}
+                                    className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
+                                  />
+                                </label>
+                                <label className="flex items-center justify-between p-3 border border-secondary-100 rounded-lg hover:bg-secondary-50 cursor-pointer transition-colors">
+                                  <div>
+                                    <p className="text-sm font-medium text-primary-900">Manage Master Data</p>
+                                    <p className="text-xs text-secondary-500">Add, Edit, and Delete master records.</p>
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    checked={localPermissions.manageMaster}
+                                    onChange={(e) => handlePermissionChange("manageMaster", e.target.checked)}
+                                    className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
+                                  />
+                                </label>
                               </CardContent>
                             </Card>
 
-                            {/* Module: Operations (Outward/Inward) */}
+                            {/* Module: Operations (Movements & QC) */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-blue-500">
                               <CardHeader className="bg-gradient-to-r from-blue-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
@@ -1017,80 +976,139 @@ export default function SettingsPage() {
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
-                                {/* Outward */}
-                                <div className="p-4 hover:bg-secondary-50/50 transition-colors">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.viewOutward}
-                                        onChange={(e) => handlePermissionChange("viewOutward", e.target.checked)}
-                                        className="w-5 h-5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
-                                      />
-                                      <span className="font-semibold text-sm text-primary-900">Outward / Issues</span>
-                                    </label>
+                                <div className="p-4 space-y-3">
+                                  <label className="flex items-center justify-between group cursor-pointer">
+                                    <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-900">View Movements</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={localPermissions.viewMovement}
+                                      onChange={(e) => handlePermissionChange("viewMovement", e.target.checked)}
+                                      className="w-4.5 h-4.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </label>
+                                  <label className="flex items-center justify-between group cursor-pointer">
+                                    <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-900">Create Movements</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={localPermissions.createMovement}
+                                      onChange={(e) => handlePermissionChange("createMovement", e.target.checked)}
+                                      className="w-4.5 h-4.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </label>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                  <label className="flex items-center justify-between group cursor-pointer">
+                                    <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-900">View QC</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={localPermissions.viewQC}
+                                      onChange={(e) => handlePermissionChange("viewQC", e.target.checked)}
+                                      className="w-4.5 h-4.5 rounded border-secondary-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                  </label>
+                                  <label className="flex items-center justify-between group cursor-pointer">
+                                    <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-900">Perform QC</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={localPermissions.performQC}
+                                      onChange={(e) => handlePermissionChange("performQC", e.target.checked)}
+                                      className="w-4.5 h-4.5 rounded border-secondary-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                  </label>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            {/* Module: Purchase Indents & Orders */}
+                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-indigo-500">
+                              <CardHeader className="bg-gradient-to-r from-indigo-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-indigo-100/50 rounded-lg text-indigo-600">
+                                    <FileText className="w-5 h-5" />
                                   </div>
-                                  <div className="flex gap-3 pl-8">
-                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 rounded border border-secondary-200 hover:border-blue-300 transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.addOutward}
-                                        onChange={(e) => handlePermissionChange("addOutward", e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
-                                      />
-                                      <span className="text-xs font-medium text-secondary-700">Create</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 rounded border border-secondary-200 hover:border-blue-300 transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.editOutward}
-                                        onChange={(e) => handlePermissionChange("editOutward", e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
-                                      />
-                                      <span className="text-xs font-medium text-secondary-700">Edit</span>
-                                    </label>
+                                  <CardTitle className="text-base font-semibold text-primary-900">
+                                    Purchasing
+                                  </CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-0 divide-y divide-secondary-100">
+                                <div className="p-4 space-y-2">
+                                  <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Indents</p>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {['viewPI', 'createPI', 'approvePI'].map(k => (
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transiton-colors">
+                                        <input
+                                          type="checkbox"
+                                          checked={(localPermissions as any)[k]}
+                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
+                                          className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <span className="text-[10px] font-bold text-secondary-500 uppercase">{k.replace('PI', '')}</span>
+                                      </label>
+                                    ))}
                                   </div>
                                 </div>
-
-                                {/* Inward */}
-                                <div className="p-4 hover:bg-secondary-50/50 transition-colors">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.viewInward}
-                                        onChange={(e) => handlePermissionChange("viewInward", e.target.checked)}
-                                        className="w-5 h-5 rounded border-secondary-300 text-green-600 focus:ring-green-500"
-                                      />
-                                      <span className="font-semibold text-sm text-primary-900">Inward / Returns</span>
-                                    </label>
-                                  </div>
-                                  <div className="flex gap-3 pl-8">
-                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 rounded border border-secondary-200 hover:border-green-300 transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.addInward}
-                                        onChange={(e) => handlePermissionChange("addInward", e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-secondary-300 text-green-600 focus:ring-green-500"
-                                      />
-                                      <span className="text-xs font-medium text-secondary-700">Create</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 rounded border border-secondary-200 hover:border-green-300 transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        checked={localPermissions.editInward}
-                                        onChange={(e) => handlePermissionChange("editInward", e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-secondary-300 text-green-600 focus:ring-green-500"
-                                      />
-                                      <span className="text-xs font-medium text-secondary-700">Edit</span>
-                                    </label>
+                                <div className="p-4 space-y-2">
+                                  <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Orders</p>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {['viewPO', 'createPO', 'approvePO'].map(k => (
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transiton-colors">
+                                        <input
+                                          type="checkbox"
+                                          checked={(localPermissions as any)[k]}
+                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
+                                          className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <span className="text-[10px] font-bold text-secondary-500 uppercase">{k.replace('PO', '')}</span>
+                                      </label>
+                                    ))}
                                   </div>
                                 </div>
                               </CardContent>
                             </Card>
 
+                            {/* Module: Data Control */}
+                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-rose-500">
+                              <CardHeader className="bg-gradient-to-r from-rose-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
+                                    <Shield className="w-5 h-5" />
+                                  </div>
+                                  <CardTitle className="text-base font-semibold text-primary-900">
+                                    Data Control
+                                  </CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-0 divide-y divide-secondary-100">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                  <div>
+                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Pattern Changes</p>
+                                    <p className="text-xs text-secondary-500 mt-0.5">Edit protected pattern fields.</p>
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    checked={localPermissions.manageChanges}
+                                    onChange={(e) => handlePermissionChange("manageChanges", e.target.checked)}
+                                    className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500"
+                                  />
+                                </label>
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                  <div>
+                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Revert Changes</p>
+                                    <p className="text-xs text-secondary-500 mt-0.5">Undo history movements.</p>
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    checked={localPermissions.revertChanges}
+                                    onChange={(e) => handlePermissionChange("revertChanges", e.target.checked)}
+                                    className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500"
+                                  />
+                                </label>
+                              </CardContent>
+                            </Card>
+
                             {/* Module: Reports */}
-                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-purple-500 lg:col-span-2">
+                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-purple-500">
                               <CardHeader className="bg-gradient-to-r from-purple-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2.5">
@@ -1101,32 +1119,17 @@ export default function SettingsPage() {
                                       Reports & Analytics
                                     </CardTitle>
                                   </div>
-                                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-secondary-200 px-3 py-1.5 rounded-full hover:bg-secondary-50 transition-colors shadow-sm">
-                                    <span className="text-xs font-medium text-secondary-700">Enable Module</span>
+                                  <label className="flex items-center justify-between bg-white border border-secondary-200 px-3 py-1.5 rounded-full hover:bg-secondary-50 transition-colors shadow-sm cursor-pointer">
+                                    <span className="text-xs font-medium text-secondary-700 mr-2">Enable Reports</span>
                                     <input
                                       type="checkbox"
                                       checked={localPermissions.viewReports}
                                       onChange={(e) => handlePermissionChange("viewReports", e.target.checked)}
-                                      className="w-4 h-4 rounded-full border-secondary-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                      className="w-4 h-4 rounded-full border-secondary-300 text-purple-600 focus:ring-purple-500"
                                     />
                                   </label>
                                 </div>
                               </CardHeader>
-                              <CardContent className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {Object.keys(permissionLabels).filter(k => k.startsWith('view') && k.endsWith('Report')).map(key => (
-                                    <label key={key} className="flex items-center justify-between p-3 border border-secondary-200 rounded-lg cursor-pointer hover:border-purple-300 hover:bg-purple-50/30 transition-all group">
-                                      <span className="text-sm text-secondary-700 font-medium group-hover:text-primary-900 transition-colors">{(permissionLabels as any)[key].replace('View ', '')}</span>
-                                      <input
-                                        type="checkbox"
-                                        checked={(localPermissions as any)[key]}
-                                        onChange={(e) => handlePermissionChange(key as any, e.target.checked)}
-                                        className="w-4 h-4 rounded border-secondary-300 text-purple-600 focus:ring-purple-500"
-                                      />
-                                    </label>
-                                  ))}
-                                </div>
-                              </CardContent>
                             </Card>
 
                             {/* Module: Division Access */}

@@ -1,145 +1,139 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
-import {
-    Boxes,
-    Truck,
-    Factory,
-    ShoppingCart,
-    ArrowUpRight,
-    Clock,
-    ShieldCheck
-} from "lucide-react";
 import { motion } from "framer-motion";
+import api from "@/lib/api";
+import { DashboardMetrics } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Package,
+  Users,
+  MapPin,
+  FileText,
+  ShoppingCart,
+  History,
+  AlertCircle,
+  TrendingUp
+} from "lucide-react";
 
 export default function DashboardPage() {
-    const { data: stats, isLoading } = useQuery({
-        queryKey: ["dashboard-stats"],
-        queryFn: async () => {
-            const response = await api.get("/dashboard/stats");
-            return response.data;
-        },
-    });
+  const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
+    queryKey: ["dashboard-metrics"],
+    queryFn: async () => {
+      const response = await api.get("/dashboard/metrics");
+      return response.data.data;
+    },
+  });
 
-    if (isLoading) {
-        return <div className="animate-pulse space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white rounded-3xl border border-secondary-100" />)}
-            </div>
-            <div className="h-96 bg-white rounded-3xl border border-secondary-100" />
-        </div>;
-    }
-
-    const statCards = [
-        { label: "Total Patterns", value: stats?.totalPatterns || 0, icon: Boxes, color: "bg-blue-500" },
-        { label: "At Vendors", value: stats?.atVendor || 0, icon: Truck, color: "bg-amber-500" },
-        { label: "In-House", value: stats?.inHouse || 0, icon: Factory, color: "bg-green-500" },
-        { label: "Pending PO", value: stats?.pendingPO || 0, icon: ShoppingCart, color: "bg-purple-500" },
-    ];
-
+  if (isLoading) {
     return (
-        <div className="space-y-8">
-            {/* Welcome Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-secondary-900 tracking-tight">System Overview</h2>
-                    <p className="text-secondary-500 mt-1">Real-time status of all dies and patterns across locations.</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
-                    <ShieldCheck className="w-4 h-4" /> System Online
-                </div>
-            </div>
-
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {statCards.map((stat, idx) => (
-                    <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="bg-white p-6 rounded-[2rem] border border-secondary-100 shadow-sm hover:shadow-xl transition-all group"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className={cn("p-3 rounded-2xl text-white shadow-lg", stat.color)}>
-                                <stat.icon className="w-6 h-6" />
-                            </div>
-                            <ArrowUpRight className="text-secondary-300 group-hover:text-primary transition-colors" />
-                        </div>
-                        <div className="mt-5">
-                            <h3 className="text-4xl font-bold text-secondary-900">{stat.value}</h3>
-                            <p className="text-sm font-medium text-secondary-500 mt-1">{stat.label}</p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Activities */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white p-8 rounded-[2rem] border border-secondary-100 shadow-sm">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-bold text-secondary-900 flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-primary" /> Recent History
-                            </h3>
-                            <button className="text-sm font-bold text-primary hover:underline">View All</button>
-                        </div>
-
-                        <div className="space-y-6">
-                            {stats?.recentChanges?.length > 0 ? (
-                                stats.recentChanges.map((change: any, i: number) => (
-                                    <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-secondary-50/50 hover:bg-secondary-50 transition-colors">
-                                        <div className="w-10 h-10 rounded-xl bg-white border border-secondary-100 flex items-center justify-center text-primary shadow-sm font-bold">
-                                            {i + 1}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-secondary-900">
-                                                {change.patternDie?.mainPartName} - <span className="text-primary">{change.newName}</span>
-                                            </p>
-                                            <p className="text-xs text-secondary-500 mt-1">
-                                                Revision changed from {change.previousRevision} to {change.newRevision}
-                                            </p>
-                                            <p className="text-[10px] text-secondary-400 mt-2 uppercase font-bold tracking-wider">
-                                                {new Date(change.changedAt).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-10">
-                                    <p className="text-secondary-400 italic">No recent changes found.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Location-wise Pattern count */}
-                <div className="space-y-6">
-                    <div className="bg-white p-8 rounded-[2rem] border border-secondary-100 shadow-sm">
-                        <h3 className="text-xl font-bold text-secondary-900 mb-8">Location Stock</h3>
-                        <div className="space-y-4">
-                            {stats?.locationWiseCount?.map((loc: any, i: number) => (
-                                <div key={i} className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="font-bold text-secondary-700">{loc.locationName}</span>
-                                        <span className="text-secondary-500 font-medium">{loc.count} Units</span>
-                                    </div>
-                                    <div className="w-full bg-secondary-100 h-2 rounded-full overflow-hidden">
-                                        <div
-                                            className="bg-primary h-full rounded-full"
-                                            style={{ width: `${(loc.count / stats.totalPatterns) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
     );
-}
+  }
 
-import { cn } from "@/lib/utils";
+  const statCards = [
+    { title: "Total Patterns", value: metrics?.summary.total || 0, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "At Vendor", value: metrics?.summary.atVendor || 0, icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
+    { title: "At Location", value: metrics?.summary.atLocation || 0, icon: MapPin, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Pending PI", value: metrics?.summary.pendingPI || 0, icon: FileText, color: "text-rose-600", bg: "bg-rose-50" },
+    { title: "Pending PO", value: metrics?.summary.pendingPO || 0, icon: ShoppingCart, color: "text-indigo-600", bg: "bg-indigo-50" },
+  ];
+
+  return (
+    <div className="p-6 space-y-8">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500">Overview of Die & Pattern Management System</p>
+      </motion.div>
+
+      {/* KPI Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        {statCards.map((stat, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+            <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                    <stat.icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500 font-medium">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Location Wise Distribution */}
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary-600" />
+              Location-wise Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {metrics?.locationWiseCount.map((loc, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-secondary-50/50 rounded-lg">
+                  <span className="font-medium text-gray-700">{loc.locationName}</span>
+                  <span className="px-3 py-1 bg-white text-primary-600 rounded-full font-bold shadow-sm">{loc.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Changes & Adjustments */}
+        <div className="space-y-8">
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5 text-indigo-600" />
+                Recent Modifications / Repairs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {metrics?.recentChanges.length ? metrics.recentChanges.map((log, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm p-3 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="font-semibold text-gray-900">{log.mainPartName}</p>
+                      <p className="text-gray-500">{log.oldName} → {log.newName}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md font-medium">{log.changeType}</span>
+                  </div>
+                )) : <p className="text-gray-400 text-center py-4 italic">No recent changes</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-600" />
+                System Adjustments (Returns)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {metrics?.recentSystemAdjustments.length ? metrics.recentSystemAdjustments.map((adj, i) => (
+                  <div key={i} className="p-3 bg-rose-50/30 rounded-lg border border-rose-100/50">
+                    <p className="font-semibold text-gray-900">{adj.mainPartName}</p>
+                    <p className="text-xs text-rose-600 mt-1 italic">Reason: {adj.reason}</p>
+                  </div>
+                )) : <p className="text-gray-400 text-center py-4 italic">No recent adjustments</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
