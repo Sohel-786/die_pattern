@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PatternDie } from "@/types";
+import { Item } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,15 @@ const changeSchema = z.object({
 
 type ChangeFormValues = z.infer<typeof changeSchema>;
 
-interface PatternChangeDialogProps {
+interface ItemChangeDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: ChangeFormValues) => void;
-    item: PatternDie | null;
+    item: Item | null;
     isLoading?: boolean;
 }
 
-export function PatternChangeDialog({ isOpen, onClose, onSubmit, item, isLoading }: PatternChangeDialogProps) {
+export function ItemChangeDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemChangeDialogProps) {
     const {
         register,
         handleSubmit,

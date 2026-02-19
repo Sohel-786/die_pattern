@@ -52,7 +52,7 @@ export default function QualityControlPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["quality-control", "pending"] });
             queryClient.invalidateQueries({ queryKey: ["movements"] });
-            queryClient.invalidateQueries({ queryKey: ["pattern-dies"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Inspection recorded successfully");
             setIsInspectionOpen(false);
             setSelectedMovement(null);
@@ -67,7 +67,7 @@ export default function QualityControlPage() {
     };
 
     const filteredPending = pending.filter(m =>
-        m.patternDieName?.toLowerCase().includes(search.toLowerCase()) ||
+        m.itemName?.toLowerCase().includes(search.toLowerCase()) ||
         m.toName?.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -141,8 +141,8 @@ export default function QualityControlPage() {
                                                     <Package className="w-6 h-6" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-black text-gray-900 text-base leading-tight">{m.patternDieName}</p>
-                                                    <p className="text-[10px] font-black text-gray-300 uppercase mt-1 tracking-widest">UNIT-ID: {m.patternDieId}</p>
+                                                    <p className="font-black text-gray-900 text-base leading-tight">{m.itemName}</p>
+                                                    <p className="text-[10px] font-black text-gray-300 uppercase mt-1 tracking-widest">UNIT-ID: {m.itemId}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -195,7 +195,7 @@ export default function QualityControlPage() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black tracking-tighter">Material Certification</h2>
-                                <p className="text-amber-100/80 font-bold text-sm">Inspecting: {selectedMovement?.patternDieName}</p>
+                                <p className="text-amber-100/80 font-bold text-sm">Inspecting: {selectedMovement?.itemName}</p>
                             </div>
                         </div>
                     </div>

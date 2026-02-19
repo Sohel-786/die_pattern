@@ -1,30 +1,28 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { Division } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Plus, Edit2, Search, Ban, CheckCircle, Download, Upload } from "lucide-react";
+import { Plus, Search, Ban, CheckCircle, Download, Upload, Edit2, Layers } from "lucide-react";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { toast } from "react-hot-toast";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
-
-const divisionSchema = z.object({
-    name: z.string().min(1, "Division name is required"),
-    isActive: z.boolean().optional(),
-});
-
-type DivisionForm = z.infer<typeof divisionSchema>;
+import { DivisionDialog } from "@/components/masters/division-dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 type ActiveFilter = "all" | "active" | "inactive";
 
@@ -40,7 +38,6 @@ export default function DivisionsPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const canAddMaster = permissions?.manageMaster ?? false;
     const canEditMaster = permissions?.manageMaster ?? false;
-    const canImportExportMaster = permissions?.manageMaster ?? false;
 
     const {
         handleExport,
@@ -53,7 +50,6 @@ export default function DivisionsPage() {
         closePreview,
     } = useMasterExportImport("divisions", ["divisions"]);
 
-    // Use backend filtering and searching as requested
     const { data: divisions = [], isLoading } = useQuery<Division[]>({
         queryKey: ["divisions", searchTerm, activeFilter],
         queryFn: async () => {
@@ -67,434 +63,288 @@ export default function DivisionsPage() {
         },
     });
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        formState: { errors },
-        setValue,
-    } = useForm<DivisionForm>({
-        resolver: zodResolver(divisionSchema),
-    });
-
-
     const createMutation = useMutation({
-        mutationFn: async (data: { name: string; isActive?: boolean }) => {
-            const res = await api.post("/divisions", data);
-            return res.data;
-        },
+        mutationFn: async (data: any) => api.post("/divisions", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["divisions"] });
-            reset();
+            setIsFormOpen(false);
             toast.success("Division created successfully");
         },
-        onError: (e: unknown) => {
-            const msg = (e as any)?.response?.data?.message ?? "Failed to create division.";
-            toast.error(msg);
-        },
+        onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to create division")
     });
 
     const updateMutation = useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: DivisionForm }) => {
-            const res = await api.patch(`/divisions/${id}`, data);
-            return res.data;
-        },
+        mutationFn: async (data: any) => api.patch(`/divisions/${editingDivision!.id}`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["divisions"] });
-            handleCloseForm();
+            setIsFormOpen(false);
+            setEditingDivision(null);
             toast.success("Division updated successfully");
         },
-        onError: (e: unknown) => {
-            const msg = (e as any)?.response?.data?.message ?? "Failed to update division.";
-            toast.error(msg);
-        },
+        onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to update division")
     });
 
     const toggleActiveMutation = useMutation({
-        mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
-            const res = await api.patch(`/divisions/${id}`, { isActive });
-            return res.data;
-        },
+        mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => api.patch(`/divisions/${id}`, { isActive }),
         onSuccess: (_, { isActive }) => {
             queryClient.invalidateQueries({ queryKey: ["divisions"] });
             setInactiveTarget(null);
-            toast.success(isActive ? "Division marked active." : "Division marked inactive.");
+            toast.success(isActive ? "Division reactivated" : "Division deactivated");
         },
-        onError: (e: unknown) => {
-            const msg = (e as any)?.response?.data?.message ?? "Failed to update status.";
-            toast.error(msg);
-        },
+        onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to update status")
     });
 
-    const handleOpenForm = (division?: Division) => {
-        if (division) {
-            setEditingDivision(division);
-            setValue("name", division.name);
-            setValue("isActive", division.isActive);
-        } else {
-            setEditingDivision(null);
-            reset();
-        }
-        setIsFormOpen(true);
-    };
-
-    const handleCloseForm = () => {
-        setIsFormOpen(false);
-        setEditingDivision(null);
-        reset();
-        createMutation.reset();
-        updateMutation.reset();
-    };
-
-    const onSubmit = (data: DivisionForm) => {
-        const name = (data.name ?? "").trim();
-        if (!name) {
-            toast.error("Division name is required");
-            return;
-        }
-
-        if (editingDivision) {
-            updateMutation.mutate({ id: editingDivision.id, data });
-        } else {
-            createMutation.mutate({
-                name,
-                isActive: data.isActive,
-            });
-        }
-    };
-
-    const handleMarkInactiveConfirm = () => {
-        if (!inactiveTarget) return;
-        toggleActiveMutation.mutate({ id: inactiveTarget.id, isActive: false });
-    };
-
-    const handleMarkActive = (d: Division) => {
-        toggleActiveMutation.mutate({ id: d.id, isActive: true });
-    };
-
     return (
-        <div className="p-6 space-y-6">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
-                                Division Master
-                            </h1>
-                            <p className="text-secondary-600">
-                                Manage division master entries
-                            </p>
+        <div className="p-6 space-y-6 bg-secondary-50/20 min-h-screen">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                    <h1 className="text-3xl font-bold text-secondary-900 leading-tight mb-2 tracking-tight">Division Master</h1>
+                    <p className="text-secondary-500 font-medium">Manage organization structure and departmental divisions</p>
+                </motion.div>
+
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={() => handleExport()}
+                        disabled={exportLoading || divisions.length === 0}
+                        className="h-11 border-secondary-300 text-secondary-700 font-bold px-5 bg-white shadow-sm active:scale-95 transition-all"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                    <input
+                        type="file"
+                        ref={importFileRef}
+                        onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) {
+                                handleImport(f as any);
+                                e.target.value = "";
+                            }
+                        }}
+                        className="hidden"
+                        accept=".xlsx,.xls,.csv"
+                    />
+                    <Button
+                        variant="outline"
+                        onClick={() => importFileRef.current?.click()}
+                        disabled={importLoading}
+                        className="h-11 border-secondary-300 text-secondary-700 font-bold px-5 bg-white shadow-sm active:scale-95 transition-all"
+                    >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Import
+                    </Button>
+                    {canAddMaster && (
+                        <Button
+                            onClick={() => { setEditingDivision(null); setIsFormOpen(true); }}
+                            className="bg-primary-600 hover:bg-primary-700 text-white shadow-lg font-bold h-11 px-6 active:scale-95 transition-all"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Division
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <Card className="shadow-sm border-secondary-200/60 bg-white">
+                <div className="p-5 flex flex-col sm:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <Input
+                            placeholder="Filter by division name..."
+                            className="pl-11 h-12 border-secondary-200 shadow-none focus:ring-primary-500 text-sm font-medium rounded-xl bg-secondary-50/50"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex bg-secondary-100/80 p-1.5 rounded-2xl h-12">
+                        {(["all", "active", "inactive"] as ActiveFilter[]).map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setActiveFilter(f)}
+                                className={`px-6 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${activeFilter === f ? 'bg-white text-primary-600 shadow-md translate-y-[0px]' : 'text-secondary-500 hover:text-secondary-700'}`}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="shadow-xl shadow-secondary-200/20 border-secondary-200/60 overflow-hidden bg-white">
+                <div className="p-6 border-b border-secondary-100 flex items-center justify-between bg-gradient-to-r from-white to-secondary-50/30">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                            <Layers className="w-5 h-5 text-primary-600" />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="file"
-                                ref={importFileRef}
-                                accept=".xlsx,.xls"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) {
-                                        handleImport(f);
-                                        e.target.value = "";
-                                    }
-                                }}
-                            />
-                            {canImportExportMaster && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleExport}
-                                        disabled={exportLoading}
-                                        className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Export
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => importFileRef.current?.click()}
-                                        disabled={importLoading}
-                                        className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
-                                    >
-                                        <Upload className="w-4 h-4 mr-2" />
-                                        Import
-                                    </Button>
-                                </>
-                            )}
-                            {canAddMaster && (
-                                <Button
-                                    onClick={() => handleOpenForm()}
-                                    size="sm"
-                                    className="h-10 px-4 bg-primary-600 hover:bg-primary-700 text-white shadow-md"
-                                >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Division
-                                </Button>
-                            )}
+                        <div>
+                            <h3 className="text-lg font-bold text-secondary-900 tracking-tight">Organization Ledger</h3>
+                            <p className="text-[11px] font-bold text-secondary-400 uppercase tracking-widest">{divisions.length} Divisions Identified</p>
                         </div>
                     </div>
-
-                    <Card className="shadow-sm border-secondary-100">
-                        <CardContent className="p-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-4 h-4" />
-                                    <Input
-                                        placeholder="Search by division name..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-9 h-10 border-secondary-200 focus-visible:ring-primary-500 rounded-lg text-sm"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Label
-                                        htmlFor="active-filter"
-                                        className="text-sm font-medium text-secondary-600 whitespace-nowrap"
-                                    >
-                                        Status:
-                                    </Label>
-                                    <select
-                                        id="active-filter"
-                                        value={activeFilter}
-                                        onChange={(e) =>
-                                            setActiveFilter(e.target.value as ActiveFilter)
-                                        }
-                                        className="flex h-10 w-full sm:w-40 rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-900 focus-visible:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-medium"
-                                    >
-                                        <option value="all">All Divisions</option>
-                                        <option value="active">Active Only</option>
-                                        <option value="inactive">Inactive Only</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="shadow-sm border-secondary-100 overflow-hidden">
-                        <CardContent className="p-0">
-                            {isLoading ? (
-                                <div className="flex justify-center py-12">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
-                                </div>
-                            ) : divisions.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b border-secondary-100 bg-primary-50">
-                                                <th className="px-6 py-4 font-bold text-primary-900 w-20">
-                                                    SR. NO.
-                                                </th>
-                                                <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
-                                                    Division Name
-                                                </th>
-                                                <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
-                                                    Status
-                                                </th>
-                                                <th className="px-6 py-4 font-bold text-primary-900 text-right uppercase tracking-wider">
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-secondary-50">
-                                            {divisions.map((d, idx) => (
-                                                <motion.tr
-                                                    key={d.id}
-                                                    initial={{ opacity: 0, y: 5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: idx * 0.02 }}
-                                                    className="hover:bg-secondary-50/50 transition-colors group"
-                                                >
-                                                    <td className="px-6 py-4 text-secondary-500 font-medium">
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td className="px-6 py-4 font-semibold text-secondary-900">
-                                                        {d.name}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span
-                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${d.isActive
-                                                                ? "bg-green-100 text-green-700 border border-green-200"
-                                                                : "bg-red-100 text-red-700 border border-red-200"
-                                                                }`}
-                                                        >
-                                                            {d.isActive ? "Active" : "Inactive"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
+                </div>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-secondary-50/50">
+                            <TableRow className="border-secondary-100">
+                                <TableHead className="w-20 pl-6 font-bold text-secondary-600 uppercase tracking-widest text-[10px]">Sr.</TableHead>
+                                <TableHead className="font-bold text-secondary-600 uppercase tracking-widest text-[10px]">Division Mapping</TableHead>
+                                <TableHead className="font-bold text-secondary-600 uppercase tracking-widest text-[10px] text-center">Lifecycle</TableHead>
+                                <TableHead className="w-[120px] pr-6 text-right font-bold text-secondary-600 uppercase tracking-widest text-[10px]">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <AnimatePresence mode="popLayout">
+                                {isLoading ? (
+                                    [1, 2, 3, 4, 5].map((i) => (
+                                        <TableRow key={i} className="animate-pulse">
+                                            {Array(4).fill(0).map((_, j) => (
+                                                <TableCell key={j}><div className="h-5 bg-secondary-100 rounded-lg w-full" /></TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                ) : divisions.length > 0 ? (
+                                    divisions.map((d, idx) => (
+                                        <motion.tr
+                                            key={d.id}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="group hover:bg-primary-50/30 transition-all border-b border-secondary-50 last:border-0"
+                                        >
+                                            <TableCell className="pl-6 py-5 font-bold text-secondary-400 text-xs">{String(idx + 1).padStart(2, '0')}</TableCell>
+                                            <TableCell className="py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-secondary-900 text-sm group-hover:text-primary-700 transition-colors">{d.name}</span>
+                                                    <span className="text-[10px] font-bold text-secondary-400 uppercase tracking-tight">Corporate Division</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-5 text-center">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider border shadow-sm ${d.isActive
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-100'
+                                                    }`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full mr-2 ${d.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                                                    {d.isActive ? 'Active' : 'Deactivated'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="pr-6 py-5 text-right">
+                                                <div className="flex items-center justify-end gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => { setEditingDivision(d); setIsFormOpen(true); }}
+                                                        className="h-9 w-9 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border hover:border-primary-100 rounded-xl transition-all shadow-sm"
+                                                        title="Edit division"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    {canEditMaster && (
+                                                        d.isActive ? (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleOpenForm(d)}
-                                                                className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                                                                title={canEditMaster ? "Edit division" : "View division"}
+                                                                onClick={() => setInactiveTarget(d)}
+                                                                className="h-9 w-9 p-0 text-amber-500 hover:text-amber-600 hover:bg-white border hover:border-amber-100 rounded-xl transition-all shadow-sm"
+                                                                title="Deactivate"
                                                             >
-                                                                <Edit2 className="w-4 h-4" />
+                                                                <Ban className="w-4 h-4" />
                                                             </Button>
-                                                            {canEditMaster &&
-                                                                (d.isActive ? (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => setInactiveTarget(d)}
-                                                                        className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                                        disabled={toggleActiveMutation.isPending}
-                                                                        title="Mark Inactive"
-                                                                    >
-                                                                        <Ban className="w-4 h-4" />
-                                                                    </Button>
-                                                                ) : (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => handleMarkActive(d)}
-                                                                        className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                                        disabled={toggleActiveMutation.isPending}
-                                                                        title="Mark Active"
-                                                                    >
-                                                                        <CheckCircle className="w-4 h-4" />
-                                                                    </Button>
-                                                                ))}
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <p className="text-secondary-500 text-lg">
-                                        {searchTerm || activeFilter !== "all"
-                                            ? "No divisions match your filters."
-                                            : "No divisions yet. Add your first division above."}
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => toggleActiveMutation.mutate({ id: d.id, isActive: true })}
+                                                                className="h-9 w-9 p-0 text-emerald-500 hover:text-emerald-600 hover:bg-white border hover:border-emerald-100 rounded-xl transition-all shadow-sm"
+                                                                title="Reactivate"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4" />
+                                                            </Button>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </motion.tr>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="py-24 text-center bg-secondary-50/20">
+                                            <div className="flex flex-col items-center justify-center space-y-4">
+                                                <div className="h-16 w-16 rounded-2xl bg-white shadow-xl shadow-secondary-200/50 flex items-center justify-center text-secondary-300">
+                                                    <Layers className="w-8 h-8" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-secondary-900 font-bold text-lg">No Divisions Found</p>
+                                                    <p className="text-secondary-400 text-sm font-medium">We couldn't find any division records matching your search.</p>
+                                                </div>
+                                                <Button variant="outline" onClick={() => { setSearchTerm(""); setActiveFilter("all"); }} className="mt-4 font-bold border-secondary-300 rounded-xl px-6">Reset Ledger View</Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </AnimatePresence>
+                        </TableBody>
+                    </Table>
                 </div>
+            </Card>
 
-                <Dialog
-                    isOpen={!!inactiveTarget}
-                    onClose={() => setInactiveTarget(null)}
-                    title="Mark division inactive?"
-                    size="sm"
-                >
-                    <div className="space-y-4">
-                        <p className="text-secondary-600">
-                            {inactiveTarget
-                                ? `"${inactiveTarget.name}" will be marked inactive. You can reactivate it later.`
-                                : ""}
-                        </p>
-                        <div className="flex gap-3 pt-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setInactiveTarget(null)}
-                                className="flex-1"
-                                disabled={toggleActiveMutation.isPending}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="button"
-                                className="flex-1 bg-amber-600 hover:bg-amber-700"
-                                onClick={handleMarkInactiveConfirm}
-                                disabled={toggleActiveMutation.isPending}
-                            >
-                                {toggleActiveMutation.isPending ? "Updating…" : "Mark inactive"}
-                            </Button>
+            <DivisionDialog
+                isOpen={isFormOpen}
+                onClose={() => setIsFormOpen(false)}
+                item={editingDivision}
+                onSubmit={(data) => editingDivision ? updateMutation.mutate(data) : createMutation.mutate(data)}
+                isLoading={createMutation.isPending || updateMutation.isPending}
+            />
+
+            <Dialog
+                isOpen={!!inactiveTarget}
+                onClose={() => setInactiveTarget(null)}
+                title="Deactivate Division"
+                size="sm"
+            >
+                <div className="space-y-8 py-2">
+                    <div className="flex flex-col items-center text-center gap-4">
+                        <div className="h-16 w-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100 shadow-inner">
+                            <Ban className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <h4 className="text-lg font-bold text-secondary-900">Confirm Deactivation</h4>
+                            <p className="text-sm font-medium text-secondary-500 mt-1">
+                                Are you sure you want to deactivate <span className="text-secondary-900 font-bold">{inactiveTarget?.name}</span>? This may affect historical associations.
+                            </p>
                         </div>
                     </div>
-                </Dialog>
 
-                <Dialog
-                    isOpen={isFormOpen}
-                    onClose={handleCloseForm}
-                    title={editingDivision ? "Update Division" : "Add New Division"}
-                    size="lg"
-                >
-                    <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="space-y-4"
-                    >
-                        <div>
-                            <Label htmlFor="division-name-input">
-                                Division Name *
-                            </Label>
-                            <Input
-                                id="division-name-input"
-                                {...register("name")}
-                                placeholder="e.g. Division A"
-                                className="mt-1"
-                                aria-required="true"
-                                aria-invalid={!!errors.name}
-                            />
-                            {errors.name && (
-                                <p className="text-sm text-red-600 mt-1" role="alert">
-                                    {errors.name.message}
-                                </p>
-                            )}
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setInactiveTarget(null)}
+                            className="h-12 border-secondary-300 font-bold rounded-xl"
+                        >
+                            Keep Active
+                        </Button>
+                        <Button
+                            type="button"
+                            className="h-12 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-lg shadow-amber-200 active:scale-95 transition-all"
+                            onClick={() => toggleActiveMutation.mutate({ id: inactiveTarget!.id, isActive: false })}
+                            disabled={toggleActiveMutation.isPending}
+                        >
+                            {toggleActiveMutation.isPending ? "Updating..." : "Confirm Deactivate"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
 
-                        {editingDivision && (
-                            <div>
-                                <Label
-                                    htmlFor="isActive"
-                                    className="flex items-center gap-2 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        id="isActive"
-                                        {...register("isActive")}
-                                        className="rounded w-4 h-4 text-primary-600 focus:ring-primary-500 border-secondary-300"
-                                    />
-                                    <span>Active</span>
-                                </Label>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 pt-4">
-                            {(editingDivision ? canEditMaster : canAddMaster) && (
-                                <Button
-                                    type="submit"
-                                    disabled={createMutation.isPending || updateMutation.isPending}
-                                    className="flex-1"
-                                >
-                                    {createMutation.isPending || updateMutation.isPending
-                                        ? "Saving…"
-                                        : editingDivision
-                                            ? "Update Division"
-                                            : "Create Division"}
-                                </Button>
-                            )}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleCloseForm}
-                                className="flex-1"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </form>
-                </Dialog>
-
-                <ImportPreviewModal
-                    isOpen={isPreviewOpen}
-                    onClose={closePreview}
-                    data={validationData}
-                    onConfirm={confirmImport}
-                    isLoading={importLoading}
-                    title="Import Divisions Preview"
-                />
-            </motion.div>
+            <ImportPreviewModal
+                isOpen={isPreviewOpen}
+                onClose={closePreview}
+                data={validationData}
+                onConfirm={confirmImport}
+                isLoading={importLoading}
+                title="Import Divisions Preview"
+            />
         </div>
     );
 }
+

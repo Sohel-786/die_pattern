@@ -6,7 +6,7 @@ import {
     Package, Layers, ArrowRight
 } from "lucide-react";
 import api from "@/lib/api";
-import { PatternDie, PiType } from "@/types";
+import { Item, PiType, ProformaInvoice } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,20 +23,20 @@ export default function CreatePIPage() {
     const [remarks, setRemarks] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const { data: items = [], isLoading } = useQuery<PatternDie[]>({
-        queryKey: ["pattern-dies"],
+    const { data: items = [], isLoading } = useQuery<Item[]>({
+        queryKey: ["items"],
         queryFn: async () => {
-            const res = await api.get("/pattern-dies");
+            const res = await api.get("/items");
             return res.data.data;
         },
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: any) => api.post("/purchase-indents", data),
+        mutationFn: (data: any) => api.post("/proforma-invoices", data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
-            toast.success("Purchase Indent created successfully");
-            router.push("/purchase-indents");
+            queryClient.invalidateQueries({ queryKey: ["proforma-invoices"] });
+            toast.success("Proforma Invoice created successfully");
+            router.push("/proforma-invoices");
         },
         onError: (err: any) => toast.error(err.response?.data?.message || "Creation failed")
     });
@@ -97,7 +97,7 @@ export default function CreatePIPage() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase">Indent Purpose</label>
+                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase">PI Purpose</label>
                                     <div className="flex gap-2 p-1.5 bg-secondary-50 rounded-2xl border border-gray-100">
                                         {Object.values(PiType).map((t) => (
                                             <button
@@ -205,7 +205,7 @@ export default function CreatePIPage() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-gray-800 leading-tight">{item.currentName}</p>
-                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{item.patternTypeName}</p>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{item.itemTypeName}</p>
                                         </div>
                                     </div>
                                     <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-colors">
@@ -227,7 +227,7 @@ export default function CreatePIPage() {
                             <>
                                 <div className="flex flex-col items-start leading-none">
                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1.5 text-blue-100">Submit for Approval</span>
-                                    <span className="text-xl font-black">Generate Indent</span>
+                                    <span className="text-xl font-black">Generate PI</span>
                                 </div>
                                 <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition-transform" />
                             </>

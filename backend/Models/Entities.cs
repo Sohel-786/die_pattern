@@ -156,37 +156,37 @@ namespace net_backend.Models
         public virtual Party? CurrentParty { get; set; }
     }
 
-    [Table("proforma_invoices")]
-    public class ProformaInvoice
+    [Table("purchase_indents")]
+    public class PurchaseIndent
     {
         public int Id { get; set; }
         [Required]
         public string PiNo { get; set; } = string.Empty;
-        public PiType Type { get; set; }
-        public PiStatus Status { get; set; } = PiStatus.Pending;
+        public PurchaseIndentType Type { get; set; }
+        public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Pending;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
-
+        
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
-        public virtual ICollection<ProformaInvoiceItem> Items { get; set; } = new List<ProformaInvoiceItem>();
+        public virtual ICollection<PurchaseIndentItem> Items { get; set; } = new List<PurchaseIndentItem>();
     }
 
-    [Table("proforma_invoice_items")]
-    public class ProformaInvoiceItem
+    [Table("purchase_indent_items")]
+    public class PurchaseIndentItem
     {
         public int Id { get; set; }
-        public int ProformaInvoiceId { get; set; }
+        public int PurchaseIndentId { get; set; }
         public int ItemId { get; set; }
         
-        [ForeignKey("ProformaInvoiceId")]
-        public virtual ProformaInvoice? ProformaInvoice { get; set; }
+        [ForeignKey("PurchaseIndentId")]
+        public virtual PurchaseIndent? PurchaseIndent { get; set; }
         [ForeignKey("ItemId")]
         public virtual Item? Item { get; set; }
     }
@@ -223,12 +223,12 @@ namespace net_backend.Models
     {
         public int Id { get; set; }
         public int PurchaseOrderId { get; set; }
-        public int ProformaInvoiceItemId { get; set; }
+        public int PurchaseIndentItemId { get; set; }
 
         [ForeignKey("PurchaseOrderId")]
         public virtual PurchaseOrder? PurchaseOrder { get; set; }
-        [ForeignKey("ProformaInvoiceItemId")]
-        public virtual ProformaInvoiceItem? ProformaInvoiceItem { get; set; }
+        [ForeignKey("PurchaseIndentItemId")]
+        public virtual PurchaseIndentItem? PurchaseIndentItem { get; set; }
     }
 
     [Table("movements")]

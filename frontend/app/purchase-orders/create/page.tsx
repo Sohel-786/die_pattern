@@ -7,7 +7,7 @@ import {
     Calendar as CalendarIcon, FileDown, Paperclip
 } from "lucide-react";
 import api from "@/lib/api";
-import { PIItem, Party } from "@/types";
+import { PurchaseIndentItem, Party } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,7 @@ export default function CreatePOPage() {
     const [remarks, setRemarks] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const { data: piItems = [], isLoading: loadingItems } = useQuery<PIItem[]>({
+    const { data: piItems = [], isLoading: loadingItems } = useQuery<PurchaseIndentItem[]>({
         queryKey: ["purchase-indents", "approved-items"],
         queryFn: async () => {
             const res = await api.get("/purchase-indents/approved-items");
@@ -67,7 +67,7 @@ export default function CreatePOPage() {
 
     const handleCreate = () => {
         if (selectedPiItemIds.length === 0) {
-            toast.error("Please select at least one item from indents");
+            toast.error("Please select at least one item from purchase indents");
             return;
         }
         if (!vendorId) {
@@ -79,7 +79,7 @@ export default function CreatePOPage() {
             rate,
             deliveryDate,
             remarks,
-            piItemIds: selectedPiItemIds
+            purchaseIndentItemIds: selectedPiItemIds
         });
     };
 
@@ -98,7 +98,7 @@ export default function CreatePOPage() {
                         <h1 className="text-5xl font-black text-gray-900 tracking-tighter">Issue Work Order</h1>
                         <p className="text-gray-400 mt-2 font-bold text-lg flex items-center gap-3">
                             <span className="h-3 w-3 rounded-full bg-primary-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></span>
-                            Assigning approved indents to vendor for production/repair
+                            Assigning approved purchase indents to vendor for production/repair
                         </p>
                     </motion.div>
                 </div>
@@ -191,7 +191,7 @@ export default function CreatePOPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-black text-gray-900 text-base">{item.currentName}</p>
-                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mt-1 italic">Linked Indent: {item.piNo || 'GEN001'}</p>
+                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mt-1 italic">Linked Purchase Indent: {item.piNo || 'GEN001'}</p>
                                                 </div>
                                             </div>
                                             <Button
@@ -210,7 +210,7 @@ export default function CreatePOPage() {
                                             </div>
                                             <div>
                                                 <p className="text-gray-900 font-black text-xl">Allocation Stack Empty</p>
-                                                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Pull items from the indent registry to proceed</p>
+                                                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Pull items from the Purchase Indent registry to proceed</p>
                                             </div>
                                         </div>
                                     )}
@@ -227,14 +227,14 @@ export default function CreatePOPage() {
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xs font-black text-gray-900 uppercase tracking-[0.2em] flex items-center gap-3">
                                     <ShoppingCart className="w-5 h-5 text-primary-600" />
-                                    Indent Registry
+                                    Purchase Indent Registry
                                 </h3>
                                 <span className="text-primary-800 bg-primary-100 px-4 py-1.5 rounded-full text-[10px] font-black border border-primary-200">{piItems.length} APPROVED ITEMS</span>
                             </div>
                             <div className="relative">
                                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
                                 <Input
-                                    placeholder="Find approved indent items..."
+                                    placeholder="Find approved purchase indent items..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-16 h-18 rounded-[2rem] border-none bg-white shadow-xl font-black text-base placeholder:font-bold"
@@ -266,7 +266,7 @@ export default function CreatePOPage() {
                             {filteredPiItems.length === 0 && (
                                 <div className="p-20 text-center opacity-40 grayscale">
                                     <Paperclip className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                                    <p className="text-xs font-black uppercase tracking-widest">No available indents</p>
+                                    <p className="text-xs font-black uppercase tracking-widest">No available Purchase Indents</p>
                                 </div>
                             )}
                         </div>

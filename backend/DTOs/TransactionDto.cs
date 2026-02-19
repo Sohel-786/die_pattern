@@ -2,20 +2,20 @@ using net_backend.Models;
 
 namespace net_backend.DTOs
 {
-    public class ProformaInvoiceDto
+    public class PurchaseIndentDto
     {
         public int Id { get; set; }
         public string PiNo { get; set; } = string.Empty;
-        public PiType Type { get; set; }
-        public PiStatus Status { get; set; }
+        public PurchaseIndentType Type { get; set; }
+        public PurchaseIndentStatus Status { get; set; }
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
         public DateTime CreatedAt { get; set; }
-        public List<ProformaInvoiceItemDto> Items { get; set; } = new();
+        public List<PurchaseIndentItemDto> Items { get; set; } = new();
     }
 
-    public class ProformaInvoiceItemDto
+    public class PurchaseIndentItemDto
     {
         public int Id { get; set; }
         public int ItemId { get; set; }
@@ -24,9 +24,9 @@ namespace net_backend.DTOs
         public bool IsInPO { get; set; } // Logic for visibility
     }
 
-    public class CreateProformaInvoiceDto
+    public class CreatePurchaseIndentDto
     {
-        public PiType Type { get; set; }
+        public PurchaseIndentType Type { get; set; }
         public string? Remarks { get; set; }
         public List<int> ItemIds { get; set; } = new();
     }
@@ -49,7 +49,7 @@ namespace net_backend.DTOs
     public class POItemDto
     {
         public int Id { get; set; }
-        public int ProformaInvoiceItemId { get; set; }
+        public int PurchaseIndentItemId { get; set; }
         public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
@@ -63,7 +63,7 @@ namespace net_backend.DTOs
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationUrl { get; set; }
         public string? Remarks { get; set; }
-        public List<int> ProformaInvoiceItemIds { get; set; } = new();
+        public List<int> PurchaseIndentItemIds { get; set; } = new();
     }
 
     public class MovementDto

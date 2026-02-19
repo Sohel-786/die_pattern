@@ -7,7 +7,7 @@ import {
     ArrowRight, ShieldCheck, Info, Briefcase
 } from "lucide-react";
 import api from "@/lib/api";
-import { PatternDie, Party, HolderType, MovementType } from "@/types";
+import { Item, Party, HolderType, MovementType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,10 +24,10 @@ export default function OutwardEntryPage() {
     const [remarks, setRemarks] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const { data: items = [], isLoading: loadingItems } = useQuery<PatternDie[]>({
-        queryKey: ["pattern-dies", "available"],
+    const { data: items = [], isLoading: loadingItems } = useQuery<Item[]>({
+        queryKey: ["items", "available"],
         queryFn: async () => {
-            const res = await api.get("/pattern-dies");
+            const res = await api.get("/items");
             // Only items currently at a Location can go Outward to a Vendor
             return res.data.data.filter((i: any) => i.currentHolderType === HolderType.Location && i.isActive);
         },
@@ -45,7 +45,7 @@ export default function OutwardEntryPage() {
         mutationFn: (data: any) => api.post("/movements", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["movements"] });
-            queryClient.invalidateQueries({ queryKey: ["pattern-dies"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Outward movement recorded successfully");
             router.push("/movements");
         },
@@ -64,7 +64,7 @@ export default function OutwardEntryPage() {
         }
         createMutation.mutate({
             type: MovementType.Outward,
-            patternDieId: selectedItemId,
+            itemId: selectedItemId,
             toType: HolderType.Vendor,
             toPartyId: targetPartyId,
             remarks
@@ -102,7 +102,7 @@ export default function OutwardEntryPage() {
                                 </h3>
                                 <div className="space-y-4">
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Package className="w-4 h-4 text-rose-500" /> Pattern / Die Unit
+                                        <Package className="w-4 h-4 text-rose-500" /> Item Unit
                                     </label>
                                     <select
                                         value={selectedItemId}

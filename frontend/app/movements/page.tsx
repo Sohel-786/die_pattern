@@ -54,7 +54,7 @@ export default function MovementsPage() {
     };
 
     const filteredMovements = movements.filter(m =>
-        m.patternDieName?.toLowerCase().includes(search.toLowerCase()) ||
+        m.itemName?.toLowerCase().includes(search.toLowerCase()) ||
         m.fromName?.toLowerCase().includes(search.toLowerCase()) ||
         m.toName?.toLowerCase().includes(search.toLowerCase())
     );
@@ -150,8 +150,8 @@ export default function MovementsPage() {
                                                     {getMovementIcon(m.type)}
                                                 </div>
                                                 <div>
-                                                    <p className="font-black text-gray-900 leading-tight mb-1">{m.patternDieName}</p>
-                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: {m.patternDieId.toString().padStart(4, '0')}</span>
+                                                    <p className="font-black text-gray-900 leading-tight mb-1">{m.itemName}</p>
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID: {m.itemId.toString().padStart(4, '0')}</span>
                                                 </div>
                                             </div>
                                         </TableCell>

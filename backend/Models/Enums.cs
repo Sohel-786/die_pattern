@@ -7,7 +7,7 @@ namespace net_backend.Models
         USER
     }
 
-    public enum PiType
+    public enum PurchaseIndentType
     {
         New,
         Repair,
@@ -15,7 +15,7 @@ namespace net_backend.Models
         Modification
     }
 
-    public enum PiStatus
+    public enum PurchaseIndentStatus
     {
         Pending,
         Approved,

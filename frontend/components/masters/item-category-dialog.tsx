@@ -3,31 +3,30 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Company } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
-import { Save, X, ShieldCheck, Power, Building2 } from "lucide-react";
+import { Save, X, ShieldCheck, Power, Layers } from "lucide-react";
 
 const schema = z.object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(2, "Category name must be at least 2 characters").max(100),
     isActive: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-interface CompanyDialogProps {
+interface ItemCategoryDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: FormValues) => void;
-    item?: Company | null;
+    item?: any | null;
     isLoading?: boolean;
 }
 
-export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: CompanyDialogProps) {
+export function ItemCategoryDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemCategoryDialogProps) {
     const {
         register,
         handleSubmit,
@@ -62,25 +61,25 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={item ? "Update Company Information" : "Register New Company"}
+            title={item ? "Update Classification" : "Register New Classification"}
             size="md"
         >
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="company-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Legal Company Name <span className="text-red-500">*</span>
+                        <Label htmlFor="category-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Category Label Master <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
                             <Input
-                                id="company-name"
+                                id="category-name"
                                 {...register("name")}
-                                className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. Aira Euro Automation Pvt Ltd"
+                                className="h-12 pl-11 border-secondary-200 focus:ring-primary-500/20 rounded-xl font-medium shadow-none"
+                                placeholder="e.g. Precision Calipers, Micrometers"
                             />
                         </div>
-                        {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
+                        {errors.name && <p className="text-xs text-rose-500 mt-1 font-bold">{errors.name.message}</p>}
                     </div>
 
                     <div className="relative group">
@@ -91,7 +90,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                                     {isActive ? <ShieldCheck className="w-5 h-5" /> : <Power className="w-5 h-5" />}
                                 </div>
                                 <div>
-                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Operational Status</h4>
+                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Engagement Status</h4>
                                     <p className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-600' : 'text-secondary-500'} transition-colors`}>
                                         Currently {isActive ? 'Active' : 'Disabled'}
                                     </p>
@@ -107,21 +106,21 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                     </div>
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-secondary-100">
+                <div className="flex gap-3 pt-6 border-t border-secondary-100">
                     <Button
                         type="submit"
                         disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
+                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12 shadow-lg shadow-primary-200"
                     >
                         {isLoading ? (
                             <div className="flex items-center gap-2">
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
+                                Processing...
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
                                 <Save className="w-4 h-4" />
-                                {item ? "Update Information" : "Save Company"}
+                                {item ? "Update Information" : "Save Classification"}
                             </div>
                         )}
                     </Button>
@@ -129,7 +128,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
+                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-12 rounded-xl"
                     >
                         <X className="w-4 h-4 mr-2" />
                         Discard
@@ -139,4 +138,3 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         </Dialog>
     );
 }
-

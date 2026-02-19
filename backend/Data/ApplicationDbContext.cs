@@ -19,8 +19,8 @@ namespace net_backend.Data
         public DbSet<Material> Materials { get; set; }
         public DbSet<OwnerType> OwnerTypes { get; set; }
         public DbSet<Item> Items { get; set; }
-        public DbSet<ProformaInvoice> ProformaInvoices { get; set; }
-        public DbSet<ProformaInvoiceItem> ProformaInvoiceItems { get; set; }
+        public DbSet<PurchaseIndent> PurchaseIndents { get; set; }
+        public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; }
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
         public DbSet<Movement> Movements { get; set; }
@@ -38,7 +38,7 @@ namespace net_backend.Data
                 .HasIndex(p => p.MainPartName)
                 .IsUnique();
 
-            modelBuilder.Entity<ProformaInvoice>()
+            modelBuilder.Entity<PurchaseIndent>()
                 .HasIndex(p => p.PiNo)
                 .IsUnique();
 
@@ -63,16 +63,22 @@ namespace net_backend.Data
                 .HasForeignKey(p => p.StatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<ProformaInvoiceItem>()
-                .HasOne(pii => pii.ProformaInvoice)
+            modelBuilder.Entity<PurchaseIndentItem>()
+                .HasOne(pii => pii.PurchaseIndent)
                 .WithMany(pi => pi.Items)
-                .HasForeignKey(pii => pii.ProformaInvoiceId)
+                .HasForeignKey(pii => pii.PurchaseIndentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PurchaseOrderItem>()
                 .HasOne(poi => poi.PurchaseOrder)
                 .WithMany(po => po.Items)
                 .HasForeignKey(poi => poi.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .HasOne(poi => poi.PurchaseIndentItem)
+                .WithMany()
+                .HasForeignKey(poi => poi.PurchaseIndentItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Movement>()

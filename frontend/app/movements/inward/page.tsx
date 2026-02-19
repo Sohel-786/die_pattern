@@ -59,7 +59,7 @@ export default function InwardEntryPage() {
         }
         createMutation.mutate({
             type: MovementType.Inward,
-            patternDieId: selectedItemId,
+            itemId: selectedItemId,
             toType: HolderType.Location,
             toLocationId: targetLocationId,
             purchaseOrderId: selectedPoId,
@@ -122,7 +122,7 @@ export default function InwardEntryPage() {
                                 </h3>
                                 <div className="space-y-4">
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Package className="w-4 h-4 text-emerald-500" /> Pattern / Die Unit
+                                        <Package className="w-4 h-4 text-emerald-500" /> Item Unit
                                     </label>
                                     <select
                                         disabled={!selectedPoId}
@@ -132,7 +132,7 @@ export default function InwardEntryPage() {
                                     >
                                         <option value={0}>Select Unit from PO</option>
                                         {selectedPo?.items.map(i => (
-                                            <option key={i.id} value={i.patternDieId}>
+                                            <option key={i.id} value={i.itemId}>
                                                 {i.currentName}
                                             </option>
                                         ))}

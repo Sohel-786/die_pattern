@@ -31,7 +31,7 @@ export default function ReportsPage() {
   const { data: inventory = [], isLoading: loadingInv } = useQuery<any[]>({
     queryKey: ["reports", "inventory"],
     queryFn: async () => {
-      const res = await api.get("/pattern-reports/inventory-status");
+      const res = await api.get("/item-reports/inventory-status");
       return res.data.data;
     },
     enabled: activeTab === "inventory"
@@ -40,7 +40,7 @@ export default function ReportsPage() {
   const { data: movements = [], isLoading: loadingMov } = useQuery<any[]>({
     queryKey: ["reports", "movements"],
     queryFn: async () => {
-      const res = await api.get("/pattern-reports/movement-ledger");
+      const res = await api.get("/item-reports/movement-ledger");
       return res.data.data;
     },
     enabled: activeTab === "movements"
@@ -49,7 +49,7 @@ export default function ReportsPage() {
   const { data: qcInfo, isLoading: loadingQC } = useQuery<any>({
     queryKey: ["reports", "qc"],
     queryFn: async () => {
-      const res = await api.get("/pattern-reports/qc-summary");
+      const res = await api.get("/item-reports/qc-summary");
       return res.data.data;
     },
     enabled: activeTab === "qc"
@@ -126,7 +126,7 @@ export default function ReportsPage() {
           </div>
           <div className="space-y-2">
             <h3 className="text-2xl font-black text-white tracking-tight">Export Full Ledger</h3>
-            <p className="text-gray-400 font-medium max-w-xs">Download the complete movement and lifecycle history for all patterns across all companies.</p>
+            <p className="text-gray-400 font-medium max-w-xs">Download the complete movement and lifecycle history for all items across all companies.</p>
           </div>
           <Button className="w-fit mt-10 h-14 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-black px-10 shadow-xl shadow-primary/40">
             Generate .XLSX
@@ -184,7 +184,7 @@ export default function ReportsPage() {
                         </TableCell>
                         <TableCell className="border-b border-gray-50">
                           <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-secondary-50 text-[10px] font-black rounded-lg border border-gray-100">{row.patternType}</span>
+                            <span className="px-3 py-1 bg-secondary-50 text-[10px] font-black rounded-lg border border-gray-100">{row.itemType}</span>
                             <span className="text-[10px] font-black text-gray-400 italic">REV: {row.revisionNo}</span>
                           </div>
                         </TableCell>
@@ -232,7 +232,7 @@ export default function ReportsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="border-b border-gray-50">
-                          <p className="font-black text-gray-800 text-base">{row.pattern}</p>
+                          <p className="font-black text-gray-800 text-base">{row.item}</p>
                         </TableCell>
                         <TableCell className="border-b border-gray-50">
                           <div className="flex items-center gap-4">

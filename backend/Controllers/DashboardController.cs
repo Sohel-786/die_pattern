@@ -20,7 +20,7 @@ namespace net_backend.Controllers
             var itemsAtVendor = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Vendor && p.IsActive);
             var itemsAtLocation = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Location && p.IsActive);
             
-            var pendingPI = await _context.ProformaInvoices.CountAsync(pi => pi.Status == PiStatus.Pending);
+            var pendingPI = await _context.PurchaseIndents.CountAsync(pi => pi.Status == PurchaseIndentStatus.Pending);
             var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.Status == PoStatus.Pending);
 
             var locationWiseCount = await _context.Locations

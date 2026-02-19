@@ -7,7 +7,7 @@ import {
     Info, AlertCircle, HelpCircle
 } from "lucide-react";
 import api from "@/lib/api";
-import { PatternDie, Location, HolderType, MovementType } from "@/types";
+import { Item, Location, HolderType, MovementType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,10 +24,10 @@ export default function SystemReturnPage() {
     const [reason, setReason] = useState("");
     const [remarks, setRemarks] = useState("");
 
-    const { data: items = [], isLoading: loadingItems } = useQuery<PatternDie[]>({
-        queryKey: ["pattern-dies", "all"],
+    const { data: items = [], isLoading: loadingItems } = useQuery<Item[]>({
+        queryKey: ["items", "all"],
         queryFn: async () => {
-            const res = await api.get("/pattern-dies");
+            const res = await api.get("/items");
             return res.data.data.filter((i: any) => i.isActive);
         },
     });
@@ -57,7 +57,7 @@ export default function SystemReturnPage() {
         }
         createMutation.mutate({
             type: MovementType.SystemReturn,
-            patternDieId: selectedItemId,
+            itemId: selectedItemId,
             toType: HolderType.Location,
             toLocationId: targetLocationId,
             reason,
@@ -96,7 +96,7 @@ export default function SystemReturnPage() {
                                 </h3>
                                 <div className="space-y-4">
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Package className="w-4 h-4 text-amber-500" /> Pattern / Die Unit
+                                        <Package className="w-4 h-4 text-amber-500" /> Item Unit
                                     </label>
                                     <select
                                         value={selectedItemId}

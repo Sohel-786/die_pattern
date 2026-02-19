@@ -200,7 +200,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
           )}
 
           {/* PI Module */}
-          {permissions?.viewPI && renderMenuItem("/proforma-invoices", "PI Management", FileText)}
+          {permissions?.viewPI && renderMenuItem("/purchase-indents", "Purchase Indent", FileText)}
 
           {/* Order Module */}
           {permissions?.viewPO && (

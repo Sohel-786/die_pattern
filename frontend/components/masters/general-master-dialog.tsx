@@ -3,12 +3,14 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
+import { Save, X, ShieldCheck, Power } from "lucide-react";
+import { motion } from "framer-motion";
 
 const schema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -49,7 +51,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                 name: item.name,
                 isActive: item.isActive,
             });
-        } else {
+        } else if (isOpen) {
             reset({
                 name: "",
                 isActive: true,
@@ -61,52 +63,78 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={item ? `Edit ${title}` : `New ${title}`}
-            size="sm"
+            title={item ? `Update ${title}` : `Register New ${title}`}
+            size="md"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                <div className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="master-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Master Entry Name <span className="text-red-500">*</span>
+                            {title} Name <span className="text-red-500">*</span>
                         </Label>
                         <Input
                             id="master-name"
                             {...register("name")}
-                            className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
-                            placeholder={`e.g. Standard ${title}`}
+                            className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                            placeholder={`Enter ${title.toLowerCase()} name...`}
                         />
-                        {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name.message}</p>}
+                        {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-secondary-50/50 rounded-xl border border-secondary-200">
-                        <Label htmlFor="active-status" className="text-sm font-bold text-secondary-700">Active Record</Label>
-                        <Switch
-                            id="active-status"
-                            checked={isActive}
-                            onCheckedChange={(checked) => setValue("isActive", checked)}
-                        />
+                    <div className="relative group">
+                        <div className={`absolute inset-0 bg-gradient-to-r ${isActive ? 'from-emerald-500/10 to-emerald-500/5' : 'from-secondary-200/50 to-secondary-200/30'} rounded-2xl blur-xl transition-all duration-500 opacity-0 group-hover:opacity-100`} />
+                        <div className={`relative flex items-center justify-between p-5 ${isActive ? 'bg-emerald-50/30 border-emerald-100' : 'bg-secondary-50 border-secondary-200'} rounded-2xl border transition-all duration-300 shadow-sm`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`h-11 w-11 rounded-1.5xl flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-secondary-200 text-secondary-500'}`}>
+                                    {isActive ? <ShieldCheck className="w-5 h-5" /> : <Power className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Record Status</h4>
+                                    <p className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-600' : 'text-secondary-500'} transition-colors`}>
+                                        Currently {isActive ? 'Active' : 'Disabled'}
+                                    </p>
+                                </div>
+                            </div>
+                            <Switch
+                                id="active-status"
+                                checked={isActive}
+                                onCheckedChange={(checked) => setValue("isActive", checked)}
+                                className="data-[state=checked]:bg-emerald-500"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-4 border-t border-secondary-100 font-sans">
                     <Button
                         type="submit"
                         disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white"
+                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
                     >
-                        {isLoading ? "Saving..." : (item ? "Update Record" : "Create Record")}
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Saving...
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Save className="w-4 h-4" />
+                                {item ? "Update Information" : "Save Entry"}
+                            </div>
+                        )}
                     </Button>
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300"
+                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
                     >
-                        Cancel
+                        <X className="w-4 h-4 mr-2" />
+                        Discard
                     </Button>
                 </div>
             </form>
         </Dialog>
     );
 }
+

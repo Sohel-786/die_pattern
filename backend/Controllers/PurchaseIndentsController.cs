@@ -7,25 +7,32 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("proforma-invoices")]
+    [Route("purchase-indents")]
     [ApiController]
-    public class ProformaInvoicesController : BaseController
+    public class PurchaseIndentsController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
 
-        public ProformaInvoicesController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
             _codeGenerator = codeGenerator;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProformaInvoiceDto>>>> GetAll()
+        [HttpGet("next-code")]
+        public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
-            var data = await _context.ProformaInvoices
+            var code = await _codeGenerator.GenerateCode("PI");
+            return Ok(new ApiResponse<string> { Data = code });
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentDto>>>> GetAll()
+        {
+            var data = await _context.PurchaseIndents
                 .Include(p => p.Creator)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
-                .Select(p => new ProformaInvoiceDto
+                .Select(p => new PurchaseIndentDto
                 {
                     Id = p.Id,
                     PiNo = p.PiNo,
@@ -35,46 +42,46 @@ namespace net_backend.Controllers
                     CreatedBy = p.CreatedBy,
                     CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
                     CreatedAt = p.CreatedAt,
-                    Items = p.Items.Select(i => new ProformaInvoiceItemDto
+                    Items = p.Items.Select(i => new PurchaseIndentItemDto
                     {
                         Id = i.Id,
                         ItemId = i.ItemId,
                         MainPartName = i.Item!.MainPartName,
                         CurrentName = i.Item.CurrentName,
-                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.ProformaInvoiceItemId == i.Id)
+                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
                     }).ToList()
                 })
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<ProformaInvoiceDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<PurchaseIndentDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<ProformaInvoice>>> Create([FromBody] CreateProformaInvoiceDto dto)
+        public async Task<ActionResult<ApiResponse<PurchaseIndent>>> Create([FromBody] CreatePurchaseIndentDto dto)
         {
             if (!await HasPermission("CreatePI")) return Forbidden();
 
-            var pi = new ProformaInvoice
+            var pi = new PurchaseIndent
             {
                 PiNo = await _codeGenerator.GenerateCode("PI"),
                 Type = dto.Type,
                 Remarks = dto.Remarks,
                 CreatedBy = CurrentUserId,
-                Status = PiStatus.Pending,
+                Status = PurchaseIndentStatus.Pending,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
 
             foreach (var itemId in dto.ItemIds)
             {
-                pi.Items.Add(new ProformaInvoiceItem { ItemId = itemId });
+                pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
             }
 
-            _context.ProformaInvoices.Add(pi);
+            _context.PurchaseIndents.Add(pi);
             await _context.SaveChangesAsync();
 
-            return StatusCode(201, new ApiResponse<ProformaInvoice> { Data = pi });
+            return StatusCode(201, new ApiResponse<PurchaseIndent> { Data = pi });
         }
 
         [HttpPost("{id}/approve")]
@@ -82,10 +89,10 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
 
-            var pi = await _context.ProformaInvoices.FindAsync(id);
+            var pi = await _context.PurchaseIndents.FindAsync(id);
             if (pi == null) return NotFound();
 
-            pi.Status = PiStatus.Approved;
+            pi.Status = PurchaseIndentStatus.Approved;
             pi.ApprovedBy = CurrentUserId;
             pi.ApprovedAt = DateTime.Now;
             pi.UpdatedAt = DateTime.Now;
@@ -95,15 +102,15 @@ namespace net_backend.Controllers
         }
         
         [HttpGet("approved-items")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProformaInvoiceItemDto>>>> GetApprovedItems()
+        public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItems()
         {
             // Items from approved PIs that are NOT already in a PO
-            var items = await _context.ProformaInvoiceItems
-                .Include(pii => pii.ProformaInvoice)
+            var items = await _context.PurchaseIndentItems
+                .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
-                .Where(pii => pii.ProformaInvoice!.Status == PiStatus.Approved && 
-                             !_context.PurchaseOrderItems.Any(poi => poi.ProformaInvoiceItemId == pii.Id))
-                .Select(pii => new ProformaInvoiceItemDto
+                .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && 
+                             !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id))
+                .Select(pii => new PurchaseIndentItemDto
                 {
                     Id = pii.Id,
                     ItemId = pii.ItemId,
@@ -112,7 +119,7 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<ProformaInvoiceItemDto>> { Data = items });
+            return Ok(new ApiResponse<IEnumerable<PurchaseIndentItemDto>> { Data = items });
         }
     }
 }

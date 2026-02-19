@@ -7,17 +7,17 @@ export enum Role {
   QC_USER = 'QC_USER',
 }
 
-export enum PiType {
-  New = 'New',
-  Repair = 'Repair',
-  Correction = 'Correction',
-  Modification = 'Modification',
+export enum PurchaseIndentStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2
 }
 
-export enum PiStatus {
-  Pending = 'Pending',
-  Approved = 'Approved',
-  Rejected = 'Rejected',
+export enum PurchaseIndentType {
+  New = 0,
+  Repair = 1,
+  Correction = 2,
+  Modification = 3
 }
 
 export enum PoStatus {
@@ -234,23 +234,25 @@ export interface Item {
   isActive: boolean;
 }
 
-export interface ProformaInvoice {
+export interface PurchaseIndent {
   id: number;
   piNo: string;
-  type: PiType;
-  status: PiStatus;
-  items: ProformaInvoiceItem[];
+  type: PurchaseIndentType;
+  status: PurchaseIndentStatus;
+  remarks?: string;
+  createdBy: number;
+  creatorName: string;
   createdAt: string;
-  creatorName?: string;
+  items: PurchaseIndentItem[];
 }
 
-export interface ProformaInvoiceItem {
+export interface PurchaseIndentItem {
   id: number;
   itemId: number;
   mainPartName: string;
   currentName: string;
+  isInPO?: boolean;
   piNo?: string;
-  isInPO: boolean;
 }
 
 export interface PO {
@@ -268,7 +270,7 @@ export interface PO {
 
 export interface POItem {
   id: number;
-  proformaInvoiceItemId: number;
+  purchaseIndentItemId: number;
   itemId: number;
   mainPartName: string;
   currentName: string;

@@ -34,7 +34,7 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { title: "Total Patterns", value: metrics?.summary.total || 0, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Total Items", value: metrics?.summary.total || 0, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
     { title: "At Vendor", value: metrics?.summary.atVendor || 0, icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
     { title: "At Location", value: metrics?.summary.atLocation || 0, icon: MapPin, color: "text-emerald-600", bg: "bg-emerald-50" },
     { title: "Pending PI", value: metrics?.summary.pendingPI || 0, icon: FileText, color: "text-rose-600", bg: "bg-rose-50" },
@@ -45,7 +45,7 @@ export default function DashboardPage() {
     <div className="p-6 space-y-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">Overview of Die & Pattern Management System</p>
+        <p className="text-gray-500">Overview of Item & Asset Management System</p>
       </motion.div>
 
       {/* KPI Stats */}

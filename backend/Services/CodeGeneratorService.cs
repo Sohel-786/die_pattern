@@ -24,8 +24,8 @@ namespace net_backend.Services
 
             if (type == "PI")
             {
-                count = await _context.ProformaInvoices.CountAsync();
-                prefix = "PI";
+                count = await _context.PurchaseIndents.CountAsync();
+                return $"PI-{count + 1:D2}";
             }
             else if (type == "PO")
             {
@@ -44,6 +44,7 @@ namespace net_backend.Services
             }
 
             return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
+        }
         }
     }
 }

@@ -3,31 +3,34 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Company } from "@/types";
+import { Contractor } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
-import { Save, X, ShieldCheck, Power, Building2 } from "lucide-react";
+import { Save, X, ShieldCheck, Power, User, Phone } from "lucide-react";
 
-const schema = z.object({
-    name: z.string().min(1, "Name is required"),
+const contractorSchema = z.object({
+    name: z.string().min(1, "Contractor name is required"),
+    phoneNumber: z.string()
+        .min(1, "Phone number is required")
+        .regex(/^[6-9]\d{9}$/, "Invalid Indian mobile number (10 digits starting with 6-9)"),
     isActive: z.boolean().default(true),
 });
 
-type FormValues = z.infer<typeof schema>;
+type ContractorFormValues = z.infer<typeof contractorSchema>;
 
-interface CompanyDialogProps {
+interface ContractorDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: FormValues) => void;
-    item?: Company | null;
+    onSubmit: (data: ContractorFormValues) => void;
+    item?: Contractor | null;
     isLoading?: boolean;
 }
 
-export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: CompanyDialogProps) {
+export function ContractorDialog({ isOpen, onClose, onSubmit, item, isLoading }: ContractorDialogProps) {
     const {
         register,
         handleSubmit,
@@ -35,8 +38,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         formState: { errors },
         setValue,
         watch,
-    } = useForm<FormValues>({
-        resolver: zodResolver(schema),
+    } = useForm<ContractorFormValues>({
+        resolver: zodResolver(contractorSchema),
         defaultValues: {
             isActive: true,
         },
@@ -48,11 +51,13 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         if (item && isOpen) {
             reset({
                 name: item.name,
+                phoneNumber: item.phoneNumber,
                 isActive: item.isActive,
             });
         } else if (isOpen) {
             reset({
                 name: "",
+                phoneNumber: "",
                 isActive: true,
             });
         }
@@ -62,25 +67,42 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={item ? "Update Company Information" : "Register New Company"}
+            title={item ? "Update Contractor Details" : "Register New Contractor"}
             size="md"
         >
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="company-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Legal Company Name <span className="text-red-500">*</span>
+                        <Label htmlFor="contractor-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Full Name / Enterprise Name <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
                             <Input
-                                id="company-name"
+                                id="contractor-name"
                                 {...register("name")}
                                 className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. Aira Euro Automation Pvt Ltd"
+                                placeholder="e.g. Acme Constructions"
                             />
                         </div>
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="contractor-phone" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Primary Mobile Number <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input
+                                id="contractor-phone"
+                                {...register("phoneNumber")}
+                                className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                placeholder="10-digit mobile number"
+                                maxLength={10}
+                            />
+                        </div>
+                        {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.phoneNumber.message}</p>}
                     </div>
 
                     <div className="relative group">
@@ -91,7 +113,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                                     {isActive ? <ShieldCheck className="w-5 h-5" /> : <Power className="w-5 h-5" />}
                                 </div>
                                 <div>
-                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Operational Status</h4>
+                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Engagement Status</h4>
                                     <p className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-600' : 'text-secondary-500'} transition-colors`}>
                                         Currently {isActive ? 'Active' : 'Disabled'}
                                     </p>
@@ -116,12 +138,12 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                         {isLoading ? (
                             <div className="flex items-center gap-2">
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
+                                Processing...
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
                                 <Save className="w-4 h-4" />
-                                {item ? "Update Information" : "Save Company"}
+                                {item ? "Update Contractor" : "Save Contractor"}
                             </div>
                         )}
                     </Button>
@@ -139,4 +161,3 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         </Dialog>
     );
 }
-
