@@ -79,8 +79,8 @@ namespace net_backend.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    [Table("pattern_types")]
-    public class PatternType
+    [Table("item_types")]
+    public class ItemType
     {
         public int Id { get; set; }
         [Required]
@@ -88,8 +88,8 @@ namespace net_backend.Models
         public bool IsActive { get; set; } = true;
     }
 
-    [Table("pattern_statuses")]
-    public class PatternStatus
+    [Table("item_statuses")]
+    public class ItemStatus
     {
         public int Id { get; set; }
         [Required]
@@ -115,8 +115,8 @@ namespace net_backend.Models
         public bool IsActive { get; set; } = true;
     }
 
-    [Table("pattern_dies")]
-    public class PatternDie
+    [Table("items")]
+    public class Item
     {
         public int Id { get; set; }
         
@@ -126,7 +126,7 @@ namespace net_backend.Models
         [Required]
         public string CurrentName { get; set; } = string.Empty; // Editable only via Change Process
 
-        public int PatternTypeId { get; set; }
+        public int ItemTypeId { get; set; }
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
         
@@ -142,22 +142,22 @@ namespace net_backend.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("PatternTypeId")]
-        public virtual PatternType? PatternType { get; set; }
+        [ForeignKey("ItemTypeId")]
+        public virtual ItemType? ItemType { get; set; }
         [ForeignKey("MaterialId")]
         public virtual Material? Material { get; set; }
         [ForeignKey("OwnerTypeId")]
         public virtual OwnerType? OwnerType { get; set; }
         [ForeignKey("StatusId")]
-        public virtual PatternStatus? Status { get; set; }
+        public virtual ItemStatus? Status { get; set; }
         [ForeignKey("CurrentLocationId")]
         public virtual Location? CurrentLocation { get; set; }
         [ForeignKey("CurrentPartyId")]
         public virtual Party? CurrentParty { get; set; }
     }
 
-    [Table("purchase_indents")]
-    public class PurchaseIndent
+    [Table("proforma_invoices")]
+    public class ProformaInvoice
     {
         public int Id { get; set; }
         [Required]
@@ -175,20 +175,20 @@ namespace net_backend.Models
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
-        public virtual ICollection<PurchaseIndentItem> Items { get; set; } = new List<PurchaseIndentItem>();
+        public virtual ICollection<ProformaInvoiceItem> Items { get; set; } = new List<ProformaInvoiceItem>();
     }
 
-    [Table("purchase_indent_items")]
-    public class PurchaseIndentItem
+    [Table("proforma_invoice_items")]
+    public class ProformaInvoiceItem
     {
         public int Id { get; set; }
-        public int PurchaseIndentId { get; set; }
-        public int PatternDieId { get; set; }
+        public int ProformaInvoiceId { get; set; }
+        public int ItemId { get; set; }
         
-        [ForeignKey("PurchaseIndentId")]
-        public virtual PurchaseIndent? PurchaseIndent { get; set; }
-        [ForeignKey("PatternDieId")]
-        public virtual PatternDie? PatternDie { get; set; }
+        [ForeignKey("ProformaInvoiceId")]
+        public virtual ProformaInvoice? ProformaInvoice { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
     }
 
     [Table("purchase_orders")]
@@ -223,12 +223,12 @@ namespace net_backend.Models
     {
         public int Id { get; set; }
         public int PurchaseOrderId { get; set; }
-        public int PurchaseIndentItemId { get; set; }
+        public int ProformaInvoiceItemId { get; set; }
 
         [ForeignKey("PurchaseOrderId")]
         public virtual PurchaseOrder? PurchaseOrder { get; set; }
-        [ForeignKey("PurchaseIndentItemId")]
-        public virtual PurchaseIndentItem? PurchaseIndentItem { get; set; }
+        [ForeignKey("ProformaInvoiceItemId")]
+        public virtual ProformaInvoiceItem? ProformaInvoiceItem { get; set; }
     }
 
     [Table("movements")]
@@ -236,7 +236,7 @@ namespace net_backend.Models
     {
         public int Id { get; set; }
         public MovementType Type { get; set; }
-        public int PatternDieId { get; set; }
+        public int ItemId { get; set; }
         
         public HolderType FromType { get; set; }
         public int? FromLocationId { get; set; }
@@ -257,8 +257,8 @@ namespace net_backend.Models
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("PatternDieId")]
-        public virtual PatternDie? PatternDie { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
         [ForeignKey("FromLocationId")]
         public virtual Location? FromLocation { get; set; }
         [ForeignKey("FromPartyId")]
@@ -289,11 +289,11 @@ namespace net_backend.Models
         public virtual User? Checker { get; set; }
     }
 
-    [Table("pattern_change_logs")]
-    public class PatternChangeLog
+    [Table("item_change_logs")]
+    public class ItemChangeLog
     {
         public int Id { get; set; }
-        public int PatternDieId { get; set; }
+        public int ItemId { get; set; }
         public string OldName { get; set; } = string.Empty;
         public string NewName { get; set; } = string.Empty;
         public string OldRevision { get; set; } = string.Empty;
@@ -303,8 +303,8 @@ namespace net_backend.Models
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("PatternDieId")]
-        public virtual PatternDie? PatternDie { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
     }

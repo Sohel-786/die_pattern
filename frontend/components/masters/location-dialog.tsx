@@ -68,57 +68,70 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
     }, [item, reset, isOpen]);
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={item ? "Update Location" : "Add Location"} hideHeader={true}>
-            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
-                <div className="bg-primary-600 p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-black text-white uppercase tracking-tight">
-                            {item ? "Update Location" : "Add Location"}
-                        </DialogTitle>
-                    </DialogHeader>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={item ? "Update Location" : "Add Location"}
+            size="md"
+        >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-5">
+                    <div className="space-y-2">
+                        <Label htmlFor="parent-company" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Parent Company <span className="text-red-500">*</span>
+                        </Label>
+                        <select
+                            id="parent-company"
+                            {...register("companyId")}
+                            className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        >
+                            <option value="">Select Company</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        {errors.companyId && <p className="text-xs text-rose-500 mt-1">Required</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="location-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Location Name / Code <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                            id="location-name"
+                            {...register("name")}
+                            className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
+                            placeholder="e.g. Warehouse 01 or Shop Floor"
+                        />
+                        {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name.message}</p>}
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-secondary-50/50 rounded-xl border border-secondary-200">
+                        <Label htmlFor="active-status" className="text-sm font-bold text-secondary-700">Storage Capability</Label>
+                        <Switch
+                            id="active-status"
+                            checked={isActive}
+                            onCheckedChange={(checked) => setValue("isActive", checked)}
+                        />
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
-                    <div className="space-y-5">
-                        <div className="space-y-2">
-                            <Label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Parent Company</Label>
-                            <select
-                                {...register("companyId")}
-                                className={`w-full h-12 rounded-2xl bg-secondary-50/50 border-gray-200 text-sm font-bold px-4 focus:bg-white transition-all ${errors.companyId ? 'border-rose-500' : ''}`}
-                            >
-                                <option value="">Select Company</option>
-                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                            {errors.companyId && <p className="text-xs text-rose-500 ml-1">Required</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Location Name / Code</Label>
-                            <Input
-                                {...register("name")}
-                                className="rounded-2xl h-12 bg-secondary-50/50 border-gray-200 font-bold focus:bg-white transition-all"
-                                placeholder="e.g. Warehouse 01 or Shop Floor"
-                            />
-                            {errors.name && <p className="text-xs text-rose-500 ml-1">{errors.name.message}</p>}
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 bg-secondary-50/50 rounded-2xl border border-gray-100">
-                            <Label className="text-sm font-bold text-gray-700">Storage Capability</Label>
-                            <Switch
-                                checked={isActive}
-                                onCheckedChange={(checked) => setValue("isActive", checked)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                        <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-12 rounded-2xl font-bold border-gray-100">Cancel</Button>
-                        <Button type="submit" disabled={isLoading} className="flex-1 h-12 rounded-2xl font-black bg-primary-600 hover:bg-primary-700 text-white shadow-xl shadow-primary/20 transition-all active:scale-[0.98]">
-                            {isLoading ? "Saving..." : "Save Location"}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
+                <div className="flex gap-3 pt-4">
+                    <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white"
+                    >
+                        {isLoading ? "Saving..." : (item ? "Update Location" : "Create Location")}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        className="flex-1 border-secondary-300"
+                    >
+                        Cancel
+                    </Button>
+                </div>
+            </form>
         </Dialog>
     );
 }

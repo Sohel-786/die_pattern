@@ -21,6 +21,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserDialog } from "@/components/users/user-dialog";
 import { PermissionDialog } from "@/components/users/permission-dialog";
 
@@ -65,121 +66,167 @@ export default function UsersPage() {
     );
 
     return (
-        <div className="p-8 space-y-10">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
-                        <Users className="w-10 h-10 text-primary-600" />
+        <div className="p-6 space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                    <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2 flex items-center gap-3">
+                        <Users className="w-8 h-8 text-primary-600" />
                         Access Management
                     </h1>
-                    <p className="text-gray-500 mt-2 font-semibold text-lg">Govern digital identities and granular system reach</p>
+                    <p className="text-secondary-600">Govern digital identities and granular system reach</p>
                 </motion.div>
 
                 <Button
                     onClick={() => { setSelectedUser(null); setIsUserDialogOpen(true); }}
-                    className="h-16 px-8 rounded-[2rem] bg-gray-900 hover:bg-black text-white shadow-2xl shadow-gray-900/20 flex items-center gap-4 transition-all active:scale-95 group"
+                    size="sm"
+                    className="h-10 px-4 bg-primary-600 hover:bg-primary-700 text-white shadow-md flex items-center gap-2"
                 >
-                    <UserPlus className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                    <span className="font-black text-lg">Provision New Identity</span>
+                    <UserPlus className="w-4 h-4" />
+                    Provision New Identity
                 </Button>
             </div>
 
-            <div className="relative max-w-2xl bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-                <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-                <Input
-                    placeholder="Search operatives by name or alias..."
-                    className="pl-16 h-16 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-base font-bold placeholder:text-gray-300"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
+            <Card className="shadow-sm border-secondary-100">
+                <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-4 h-4" />
+                            <Input
+                                placeholder="Search operatives by name or alias..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9 h-10 border-secondary-200 focus-visible:ring-primary-500 rounded-lg text-sm"
+                            />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                <AnimatePresence>
-                    {filteredUsers.map((user, idx) => (
-                        <motion.div
-                            key={user.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.05 }}
-                            className="group"
-                        >
-                            <div className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-xl shadow-black/5 hover:shadow-2xl hover:shadow-primary-600/10 transition-all relative overflow-hidden flex flex-col h-full">
-                                <div className="flex justify-between items-start mb-8 relative z-10">
-                                    <div className="h-24 w-24 rounded-[2rem] bg-gradient-to-br from-secondary-50 to-gray-100 border-2 border-white shadow-inner flex items-center justify-center relative overflow-hidden">
-                                        {user.avatar ? (
-                                            <img src={user.avatar} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="text-3xl font-black text-gray-300">{user.firstName[0]}{user.lastName[0]}</span>
-                                        )}
-                                        <div className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white ${user.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleEdit(user)}
-                                            className="h-12 w-12 rounded-2xl bg-secondary-50 hover:bg-primary-50 hover:text-primary-600 transition-all"
+            <Card className="shadow-sm border-secondary-100 overflow-hidden">
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
+                        </div>
+                    ) : filteredUsers.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-secondary-100 bg-primary-50">
+                                        <th className="px-6 py-4 font-bold text-primary-900 w-20">
+                                            SR. NO.
+                                        </th>
+                                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
+                                            Operative
+                                        </th>
+                                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
+                                            Role
+                                        </th>
+                                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
+                                            Contact
+                                        </th>
+                                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="px-6 py-4 font-bold text-primary-900 text-right uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-secondary-50">
+                                    {filteredUsers.map((user, idx) => (
+                                        <motion.tr
+                                            key={user.id}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.02 }}
+                                            className="hover:bg-secondary-50/50 transition-colors group"
                                         >
-                                            <Edit3 className="w-5 h-5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handlePermissions(user)}
-                                            className="h-12 w-12 rounded-2xl bg-secondary-50 hover:bg-amber-50 hover:text-amber-600 transition-all"
-                                        >
-                                            <Shield className="w-5 h-5" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6 flex-1 relative z-10">
-                                    <div>
-                                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">{user.firstName} {user.lastName}</h3>
-                                        <p className="text-sm font-black text-primary-600/70 uppercase tracking-widest mt-1">@{user.username}</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${user.role === Role.ADMIN ? 'bg-rose-50 text-rose-500 border-rose-100' :
-                                            user.role === Role.MANAGER ? 'bg-indigo-50 text-indigo-500 border-indigo-100' :
-                                                'bg-emerald-50 text-emerald-500 border-emerald-100'
-                                            }`}>
-                                            {user.role}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-3 pt-4">
-                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
-                                            <Phone className="w-4 h-4" />
-                                            <span>{user.mobileNumber || "No contact linked"}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
-                                            <Lock className="w-4 h-4" />
-                                            <span>Role-Based Encryption Active</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {user.username.toLowerCase() !== 'qc_admin' && (
-                                    <div className="mt-10 pt-8 border-t border-gray-50 flex justify-end opacity-0 group-hover:opacity-100 transition-all">
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => deleteMutation.mutate(user.id)}
-                                            className="text-rose-500 hover:bg-rose-50 font-black gap-2 h-12 rounded-2xl"
-                                        >
-                                            <Trash2 className="w-4 h-4" /> Revoke Access
-                                        </Button>
-                                    </div>
-                                )}
-
-                                <div className="absolute -right-4 -bottom-4 h-32 w-32 bg-secondary-50/50 rounded-full blur-3xl group-hover:bg-primary-50/50 transition-all" />
+                                            <td className="px-6 py-4 text-secondary-500 font-medium">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-secondary-100 flex items-center justify-center overflow-hidden border border-secondary-200">
+                                                        {user.avatar ? (
+                                                            <img src={user.avatar} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-xs font-bold text-secondary-500">{user.firstName[0]}{user.lastName[0]}</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-secondary-900">{user.firstName} {user.lastName}</div>
+                                                        <div className="text-xs text-secondary-500 font-medium">@{user.username}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${user.role === Role.ADMIN ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                    user.role === Role.MANAGER ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                        'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                    }`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-secondary-600 font-medium">
+                                                {user.mobileNumber || "N/A"}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${user.isActive ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-secondary-100 text-secondary-600 border border-secondary-200'}`}>
+                                                    {user.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(user)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                        title="Edit Operative"
+                                                    >
+                                                        <Edit3 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handlePermissions(user)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                        title="Security Clearance"
+                                                    >
+                                                        <Shield className="w-4 h-4" />
+                                                    </Button>
+                                                    {user.username.toLowerCase() !== 'qc_admin' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => deleteMutation.mutate(user.id)}
+                                                            className="h-8 w-8 p-0 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Revoke Identity"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-20 px-4">
+                            <div className="h-16 w-16 bg-secondary-50 rounded-full flex items-center justify-center mx-auto mb-4 text-secondary-300">
+                                <Search className="w-8 h-8" />
                             </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+                            <h3 className="text-lg font-bold text-secondary-900 mb-1">No Operatives Found</h3>
+                            <p className="text-secondary-500 max-w-md mx-auto">
+                                Check your search filters or provision a new digital identity for the system.
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <UserDialog
                 isOpen={isUserDialogOpen}

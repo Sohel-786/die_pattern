@@ -173,7 +173,7 @@ export default function DivisionsPage() {
     };
 
     return (
-        <div className="p-6">
+        <div className="p-6 space-y-6">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -181,7 +181,7 @@ export default function DivisionsPage() {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-text mb-2">
+                            <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
                                 Division Master
                             </h1>
                             <p className="text-secondary-600">
@@ -206,18 +206,20 @@ export default function DivisionsPage() {
                                 <>
                                     <Button
                                         variant="outline"
+                                        size="sm"
                                         onClick={handleExport}
                                         disabled={exportLoading}
-                                        className="shadow-sm"
+                                        className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
                                     >
                                         <Download className="w-4 h-4 mr-2" />
                                         Export
                                     </Button>
                                     <Button
                                         variant="outline"
+                                        size="sm"
                                         onClick={() => importFileRef.current?.click()}
                                         disabled={importLoading}
-                                        className="shadow-sm"
+                                        className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
                                     >
                                         <Upload className="w-4 h-4 mr-2" />
                                         Import
@@ -225,7 +227,11 @@ export default function DivisionsPage() {
                                 </>
                             )}
                             {canAddMaster && (
-                                <Button onClick={() => handleOpenForm()} className="shadow-md">
+                                <Button
+                                    onClick={() => handleOpenForm()}
+                                    size="sm"
+                                    className="h-10 px-4 bg-primary-600 hover:bg-primary-700 text-white shadow-md"
+                                >
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Division
                                 </Button>
@@ -233,24 +239,24 @@ export default function DivisionsPage() {
                         </div>
                     </div>
 
-                    <Card className="shadow-sm">
+                    <Card className="shadow-sm border-secondary-100">
                         <CardContent className="p-4">
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-5 h-5" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-4 h-4" />
                                     <Input
                                         placeholder="Search by division name..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10"
+                                        className="pl-9 h-10 border-secondary-200 focus-visible:ring-primary-500 rounded-lg text-sm"
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Label
                                         htmlFor="active-filter"
-                                        className="text-sm whitespace-nowrap"
+                                        className="text-sm font-medium text-secondary-600 whitespace-nowrap"
                                     >
-                                        Status
+                                        Status:
                                     </Label>
                                     <select
                                         id="active-filter"
@@ -258,65 +264,60 @@ export default function DivisionsPage() {
                                         onChange={(e) =>
                                             setActiveFilter(e.target.value as ActiveFilter)
                                         }
-                                        className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                                        className="flex h-10 w-full sm:w-40 rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-900 focus-visible:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-medium"
                                     >
-                                        <option value="all">All</option>
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
+                                        <option value="all">All Divisions</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="inactive">Inactive Only</option>
                                     </select>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-sm">
-                        <CardHeader>
-                            <CardTitle>
-                                All Divisions ({divisions.length})
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                    <Card className="shadow-sm border-secondary-100 overflow-hidden">
+                        <CardContent className="p-0">
                             {isLoading ? (
                                 <div className="flex justify-center py-12">
-                                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
+                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
                                 </div>
                             ) : divisions.length > 0 ? (
-                                <div className="overflow-x-auto overflow-y-hidden rounded-lg border border-secondary-200">
+                                <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
                                         <thead>
-                                            <tr className="border-b border-primary-200 bg-primary-100">
-                                                <th className="px-4 py-3 font-semibold text-primary-900 w-16">
-                                                    Sr.No
+                                            <tr className="border-b border-secondary-100 bg-primary-50">
+                                                <th className="px-6 py-4 font-bold text-primary-900 w-20">
+                                                    SR. NO.
                                                 </th>
-                                                <th className="px-4 py-3 font-semibold text-primary-900">
-                                                    Name
+                                                <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
+                                                    Division Name
                                                 </th>
-                                                <th className="px-4 py-3 font-semibold text-primary-900">
+                                                <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
                                                     Status
                                                 </th>
-                                                <th className="px-4 py-3 font-semibold text-primary-900 text-right">
+                                                <th className="px-6 py-4 font-bold text-primary-900 text-right uppercase tracking-wider">
                                                     Actions
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-secondary-50">
                                             {divisions.map((d, idx) => (
                                                 <motion.tr
                                                     key={d.id}
-                                                    initial={{ opacity: 0, y: 10 }}
+                                                    initial={{ opacity: 0, y: 5 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: idx * 0.03 }}
-                                                    className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
+                                                    transition={{ delay: idx * 0.02 }}
+                                                    className="hover:bg-secondary-50/50 transition-colors group"
                                                 >
-                                                    <td className="px-4 py-3 text-secondary-600">
+                                                    <td className="px-6 py-4 text-secondary-500 font-medium">
                                                         {idx + 1}
                                                     </td>
-                                                    <td className="px-4 py-3 font-medium text-text">
+                                                    <td className="px-6 py-4 font-semibold text-secondary-900">
                                                         {d.name}
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-6 py-4">
                                                         <span
-                                                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${d.isActive
+                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${d.isActive
                                                                 ? "bg-green-100 text-green-700 border border-green-200"
                                                                 : "bg-red-100 text-red-700 border border-red-200"
                                                                 }`}
@@ -324,13 +325,14 @@ export default function DivisionsPage() {
                                                             {d.isActive ? "Active" : "Inactive"}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-right">
+                                                    <td className="px-6 py-4 text-right">
                                                         <div className="flex items-center justify-end gap-1">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={() => handleOpenForm(d)}
-                                                                title={canEditMaster ? "Edit division" : "View division (edit disabled)"}
+                                                                className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                                                title={canEditMaster ? "Edit division" : "View division"}
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </Button>
@@ -340,8 +342,9 @@ export default function DivisionsPage() {
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         onClick={() => setInactiveTarget(d)}
-                                                                        className="text-amber-600 hover:bg-amber-50"
+                                                                        className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                                                                         disabled={toggleActiveMutation.isPending}
+                                                                        title="Mark Inactive"
                                                                     >
                                                                         <Ban className="w-4 h-4" />
                                                                     </Button>
@@ -350,8 +353,9 @@ export default function DivisionsPage() {
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         onClick={() => handleMarkActive(d)}
-                                                                        className="text-green-600 hover:bg-green-50"
+                                                                        className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                                         disabled={toggleActiveMutation.isPending}
+                                                                        title="Mark Active"
                                                                     >
                                                                         <CheckCircle className="w-4 h-4" />
                                                                     </Button>

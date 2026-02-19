@@ -24,7 +24,7 @@ namespace net_backend.Services
 
             if (type == "PI")
             {
-                count = await _context.PurchaseIndents.CountAsync();
+                count = await _context.ProformaInvoices.CountAsync();
                 prefix = "PI";
             }
             else if (type == "PO")

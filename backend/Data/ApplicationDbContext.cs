@@ -14,18 +14,18 @@ namespace net_backend.Data
         public DbSet<Company> Companies { get; set; }
         public DbSet<Location> Locations { get; set; }
         public DbSet<Party> Parties { get; set; }
-        public DbSet<PatternType> PatternTypes { get; set; }
-        public DbSet<PatternStatus> PatternStatuses { get; set; }
+        public DbSet<ItemType> ItemTypes { get; set; }
+        public DbSet<ItemStatus> ItemStatuses { get; set; }
         public DbSet<Material> Materials { get; set; }
         public DbSet<OwnerType> OwnerTypes { get; set; }
-        public DbSet<PatternDie> PatternDies { get; set; }
-        public DbSet<PurchaseIndent> PurchaseIndents { get; set; }
-        public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; }
+        public DbSet<Item> Items { get; set; }
+        public DbSet<ProformaInvoice> ProformaInvoices { get; set; }
+        public DbSet<ProformaInvoiceItem> ProformaInvoiceItems { get; set; }
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
         public DbSet<Movement> Movements { get; set; }
         public DbSet<QualityControl> QualityControls { get; set; }
-        public DbSet<PatternChangeLog> PatternChangeLogs { get; set; }
+        public DbSet<ItemChangeLog> ItemChangeLogs { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
 
@@ -34,11 +34,11 @@ namespace net_backend.Data
             base.OnModelCreating(modelBuilder);
 
             // Unique constraints
-            modelBuilder.Entity<PatternDie>()
+            modelBuilder.Entity<Item>()
                 .HasIndex(p => p.MainPartName)
                 .IsUnique();
 
-            modelBuilder.Entity<PurchaseIndent>()
+            modelBuilder.Entity<ProformaInvoice>()
                 .HasIndex(p => p.PiNo)
                 .IsUnique();
 
@@ -57,16 +57,16 @@ namespace net_backend.Data
                 .HasForeignKey(l => l.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PatternDie>()
+            modelBuilder.Entity<Item>()
                 .HasOne(p => p.Status)
                 .WithMany()
                 .HasForeignKey(p => p.StatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PurchaseIndentItem>()
-                .HasOne(pii => pii.PurchaseIndent)
+            modelBuilder.Entity<ProformaInvoiceItem>()
+                .HasOne(pii => pii.ProformaInvoice)
                 .WithMany(pi => pi.Items)
-                .HasForeignKey(pii => pii.PurchaseIndentId)
+                .HasForeignKey(pii => pii.ProformaInvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PurchaseOrderItem>()
@@ -76,9 +76,9 @@ namespace net_backend.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Movement>()
-                .HasOne(m => m.PatternDie)
+                .HasOne(m => m.Item)
                 .WithMany()
-                .HasForeignKey(m => m.PatternDieId)
+                .HasForeignKey(m => m.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<QualityControl>()
@@ -87,10 +87,10 @@ namespace net_backend.Data
                 .HasForeignKey(qc => qc.MovementId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<PatternChangeLog>()
-                .HasOne(pcl => pcl.PatternDie)
+            modelBuilder.Entity<ItemChangeLog>()
+                .HasOne(pcl => pcl.Item)
                 .WithMany()
-                .HasForeignKey(pcl => pcl.PatternDieId)
+                .HasForeignKey(pcl => pcl.ItemId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<AuditLog>()

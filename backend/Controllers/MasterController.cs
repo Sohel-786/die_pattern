@@ -11,24 +11,24 @@ namespace net_backend.Controllers
     {
         public MasterController(ApplicationDbContext context) : base(context) { }
 
-        // Pattern Types
-        [HttpGet("pattern-types")]
-        public async Task<IActionResult> GetPatternTypes() => Ok(new { data = await _context.PatternTypes.ToListAsync() });
+        // Item Types
+        [HttpGet("item-types")]
+        public async Task<IActionResult> GetItemTypes() => Ok(new { data = await _context.ItemTypes.ToListAsync() });
 
-        [HttpPost("pattern-types")]
-        public async Task<IActionResult> CreatePatternType([FromBody] PatternType item)
+        [HttpPost("item-types")]
+        public async Task<IActionResult> CreateItemType([FromBody] ItemType item)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            _context.PatternTypes.Add(item);
+            _context.ItemTypes.Add(item);
             await _context.SaveChangesAsync();
             return Ok(new { data = item });
         }
 
-        [HttpPut("pattern-types/{id}")]
-        public async Task<IActionResult> UpdatePatternType(int id, [FromBody] PatternType item)
+        [HttpPut("item-types/{id}")]
+        public async Task<IActionResult> UpdateItemType(int id, [FromBody] ItemType item)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            var existing = await _context.PatternTypes.FindAsync(id);
+            var existing = await _context.ItemTypes.FindAsync(id);
             if (existing == null) return NotFound();
             existing.Name = item.Name;
             existing.IsActive = item.IsActive;
@@ -36,35 +36,35 @@ namespace net_backend.Controllers
             return Ok(new { data = existing });
         }
 
-        [HttpDelete("pattern-types/{id}")]
-        public async Task<IActionResult> DeletePatternType(int id)
+        [HttpDelete("item-types/{id}")]
+        public async Task<IActionResult> DeleteItemType(int id)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            var item = await _context.PatternTypes.FindAsync(id);
+            var item = await _context.ItemTypes.FindAsync(id);
             if (item == null) return NotFound();
-            _context.PatternTypes.Remove(item);
+            _context.ItemTypes.Remove(item);
             await _context.SaveChangesAsync();
             return Ok(new { data = true });
         }
 
-        // Pattern Statuses
-        [HttpGet("pattern-statuses")]
-        public async Task<IActionResult> GetPatternStatuses() => Ok(new { data = await _context.PatternStatuses.ToListAsync() });
+        // Item Statuses
+        [HttpGet("item-statuses")]
+        public async Task<IActionResult> GetItemStatuses() => Ok(new { data = await _context.ItemStatuses.ToListAsync() });
 
-        [HttpPost("pattern-statuses")]
-        public async Task<IActionResult> CreatePatternStatus([FromBody] PatternStatus item)
+        [HttpPost("item-statuses")]
+        public async Task<IActionResult> CreateItemStatus([FromBody] ItemStatus item)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            _context.PatternStatuses.Add(item);
+            _context.ItemStatuses.Add(item);
             await _context.SaveChangesAsync();
             return Ok(new { data = item });
         }
 
-        [HttpPut("pattern-statuses/{id}")]
-        public async Task<IActionResult> UpdatePatternStatus(int id, [FromBody] PatternStatus item)
+        [HttpPut("item-statuses/{id}")]
+        public async Task<IActionResult> UpdateItemStatus(int id, [FromBody] ItemStatus item)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            var existing = await _context.PatternStatuses.FindAsync(id);
+            var existing = await _context.ItemStatuses.FindAsync(id);
             if (existing == null) return NotFound();
             existing.Name = item.Name;
             existing.IsActive = item.IsActive;
@@ -72,13 +72,13 @@ namespace net_backend.Controllers
             return Ok(new { data = existing });
         }
 
-        [HttpDelete("pattern-statuses/{id}")]
-        public async Task<IActionResult> DeletePatternStatus(int id)
+        [HttpDelete("item-statuses/{id}")]
+        public async Task<IActionResult> DeleteItemStatus(int id)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-            var item = await _context.PatternStatuses.FindAsync(id);
+            var item = await _context.ItemStatuses.FindAsync(id);
             if (item == null) return NotFound();
-            _context.PatternStatuses.Remove(item);
+            _context.ItemStatuses.Remove(item);
             await _context.SaveChangesAsync();
             return Ok(new { data = true });
         }

@@ -73,21 +73,21 @@ namespace net_backend.Data
             }
 
             // 4. Seed Initial Masters if empty
-            if (!context.PatternTypes.Any())
+            if (!context.ItemTypes.Any())
             {
-                context.PatternTypes.AddRange(new PatternType[] {
-                    new PatternType { Name = "Die" },
-                    new PatternType { Name = "Pattern" }
+                context.ItemTypes.AddRange(new ItemType[] {
+                    new ItemType { Name = "Die" },
+                    new ItemType { Name = "Pattern" }
                 });
             }
 
-            if (!context.PatternStatuses.Any())
+            if (!context.ItemStatuses.Any())
             {
-                context.PatternStatuses.AddRange(new PatternStatus[] {
-                    new PatternStatus { Name = "New" },
-                    new PatternStatus { Name = "Under Repair" },
-                    new PatternStatus { Name = "Good Condition" },
-                    new PatternStatus { Name = "Scrapped" }
+                context.ItemStatuses.AddRange(new ItemStatus[] {
+                    new ItemStatus { Name = "New" },
+                    new ItemStatus { Name = "Under Repair" },
+                    new ItemStatus { Name = "Good Condition" },
+                    new ItemStatus { Name = "Scrapped" }
                 });
             }
 

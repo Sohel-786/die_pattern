@@ -92,27 +92,28 @@ export default function OtherMastersPage() {
     };
 
     return (
-        <div className="p-8 space-y-10">
+        <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight">System Configuration</h1>
-                    <p className="text-gray-500 mt-2 font-semibold">Manage global parameters and metadata</p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                    <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">System Configuration</h1>
+                    <p className="text-secondary-600">Manage global parameters and master list metadata</p>
                 </motion.div>
                 <Button
                     onClick={handleAdd}
-                    className="rounded-2xl h-14 px-8 bg-primary-600 hover:bg-primary-700 text-white font-black shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+                    size="sm"
+                    className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-medium"
                 >
-                    <Plus className="w-6 h-6 mr-2" />
+                    <Plus className="w-4 h-4 mr-2" />
                     Add {getTitle()}
                 </Button>
             </div>
 
             <Tabs defaultValue="pattern-types" className="w-full" onValueChange={(v) => setActiveTab(v as MasterType)}>
-                <TabsList className="bg-secondary-100/50 p-2 rounded-[2rem] h-auto gap-3">
-                    <TabsTrigger value="pattern-types" className="rounded-2xl px-8 py-3.5 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-primary-600 font-extrabold transition-all"><Tag className="w-5 h-5 mr-3" /> TYPES</TabsTrigger>
-                    <TabsTrigger value="materials" className="rounded-2xl px-8 py-3.5 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-primary-600 font-extrabold transition-all"><Hammer className="w-5 h-5 mr-3" /> MATERIALS</TabsTrigger>
-                    <TabsTrigger value="pattern-statuses" className="rounded-2xl px-8 py-3.5 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-primary-600 font-extrabold transition-all"><Info className="w-5 h-5 mr-3" /> STATUSES</TabsTrigger>
-                    <TabsTrigger value="owner-types" className="rounded-2xl px-8 py-3.5 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-primary-600 font-extrabold transition-all"><Users className="w-5 h-5 mr-3" /> OWNERS</TabsTrigger>
+                <TabsList className="bg-secondary-100 p-1 rounded-full h-auto mb-8">
+                    <TabsTrigger value="pattern-types" className="rounded-full px-6 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary-600 transition-all"><Tag className="w-4 h-4 mr-2" /> Types</TabsTrigger>
+                    <TabsTrigger value="materials" className="rounded-full px-6 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary-600 transition-all"><Hammer className="w-4 h-4 mr-2" /> Materials</TabsTrigger>
+                    <TabsTrigger value="pattern-statuses" className="rounded-full px-6 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary-600 transition-all"><Info className="w-4 h-4 mr-2" /> Statuses</TabsTrigger>
+                    <TabsTrigger value="owner-types" className="rounded-full px-6 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary-600 transition-all"><Users className="w-4 h-4 mr-2" /> Owners</TabsTrigger>
                 </TabsList>
 
                 <AnimatePresence mode="wait">
@@ -122,52 +123,52 @@ export default function OtherMastersPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
-                        className="mt-10"
                     >
                         {currentLoading ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 rounded-3xl bg-gray-100 animate-pulse" />)}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 rounded-xl bg-gray-100 animate-pulse" />)}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {currentData.map((item: any) => (
-                                    <Card key={item.id} className="border-none shadow-sm hover:shadow-xl transition-all group overflow-hidden bg-white/50 backdrop-blur-sm rounded-3xl relative">
-                                        <CardContent className="p-6">
+                                    <Card key={item.id} className="shadow-sm border-secondary-100 hover:border-primary-200 transition-all overflow-hidden bg-white">
+                                        <div className="p-4">
                                             <div className="flex items-center justify-between mb-4">
-                                                <div className={`h-10 w-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 font-black text-sm`}>
-                                                    {item.id}
+                                                <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-primary-50 text-primary-600 font-bold text-xs border border-primary-100">
+                                                    #{item.id}
                                                 </div>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="group-hover:bg-white rounded-xl"><MoreVertical className="w-5 h-5 text-gray-400" /></Button>
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-md hover:bg-secondary-100"><MoreVertical className="w-4 h-4 text-secondary-400" /></Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 shadow-xl p-2 w-40">
-                                                        <DropdownMenuItem onClick={() => handleEdit(item)} className="rounded-xl gap-2 cursor-pointer font-bold"><Edit className="w-4 h-4 text-primary-600" /> Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(item.id); }} className="rounded-xl gap-2 cursor-pointer font-bold text-rose-600"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
+                                                    <DropdownMenuContent align="end" className="rounded-xl border-secondary-200 shadow-xl p-1 w-40">
+                                                        <DropdownMenuItem onClick={() => handleEdit(item)} className="rounded-lg gap-2 cursor-pointer py-2 font-medium text-secondary-700">
+                                                            <Edit className="w-4 h-4" /> Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(item.id); }} className="rounded-lg gap-2 cursor-pointer py-2 font-medium text-red-600 hover:bg-red-50">
+                                                            <Trash2 className="w-4 h-4" /> Delete
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </div>
 
-                                            <h3 className="text-lg font-black text-gray-800 break-words pr-2">{item.name}</h3>
+                                            <h3 className="text-base font-bold text-secondary-900 mb-4 line-clamp-1">{item.name}</h3>
 
-                                            <div className="mt-6 flex items-center justify-between">
-                                                <span className={`h-2 w-2 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`}></span>
-                                                <span className={`text-[10px] font-black uppercase tracking-widest ${item.isActive ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                            <div className="flex items-center justify-between border-t border-secondary-50 pt-3">
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-secondary-100 text-secondary-500'}`}>
                                                     {item.isActive ? 'Active' : 'Disabled'}
                                                 </span>
                                             </div>
-                                        </CardContent>
+                                        </div>
                                     </Card>
                                 ))}
 
                                 <button
                                     onClick={handleAdd}
-                                    className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-100 rounded-[2rem] text-gray-300 hover:border-primary-400 hover:text-primary-600 hover:bg-white transition-all group space-y-3 cursor-pointer"
+                                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-secondary-200 rounded-xl text-secondary-400 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50/30 transition-all group space-y-2 cursor-pointer"
                                 >
-                                    <div className="p-4 bg-gray-50 rounded-2xl group-hover:bg-primary-50 transition-colors">
-                                        <Plus className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                                    </div>
-                                    <span className="text-sm font-black uppercase tracking-widest">New {getTitle()}</span>
+                                    <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">New Entry</span>
                                 </button>
                             </div>
                         )}

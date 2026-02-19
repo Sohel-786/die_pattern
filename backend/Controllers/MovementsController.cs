@@ -18,7 +18,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetAll()
         {
             var data = await _context.Movements
-                .Include(m => m.PatternDie)
+                .Include(m => m.Item)
                 .Include(m => m.FromLocation)
                 .Include(m => m.FromParty)
                 .Include(m => m.ToLocation)
@@ -27,8 +27,8 @@ namespace net_backend.Controllers
                 {
                     Id = m.Id,
                     Type = m.Type,
-                    PatternDieId = m.PatternDieId,
-                    PatternDieName = m.PatternDie!.CurrentName,
+                    ItemId = m.ItemId,
+                    ItemName = m.Item!.CurrentName,
                     FromType = m.FromType,
                     FromName = m.FromType == HolderType.Location ? m.FromLocation!.Name : m.FromParty!.Name,
                     ToType = m.ToType,
@@ -50,8 +50,8 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("CreateMovement")) return Forbidden();
 
-            var patternDie = await _context.PatternDies.FindAsync(dto.PatternDieId);
-            if (patternDie == null) return NotFound("Pattern/Die not found");
+            var item = await _context.Items.FindAsync(dto.ItemId);
+            if (item == null) return NotFound("Item not found");
 
             // Business Rule: One holder at a time
             // Mandatory reason for SystemReturn
@@ -61,11 +61,11 @@ namespace net_backend.Controllers
             var movement = new Movement
             {
                 Type = dto.Type,
-                PatternDieId = dto.PatternDieId,
+                ItemId = dto.ItemId,
                 
-                FromType = patternDie.CurrentHolderType,
-                FromLocationId = patternDie.CurrentLocationId,
-                FromPartyId = patternDie.CurrentPartyId,
+                FromType = item.CurrentHolderType,
+                FromLocationId = item.CurrentLocationId,
+                FromPartyId = item.CurrentPartyId,
 
                 ToType = dto.ToType,
                 ToLocationId = dto.ToLocationId,
@@ -80,14 +80,14 @@ namespace net_backend.Controllers
                 CreatedAt = DateTime.Now
             };
 
-            // Update PatternDie holder (if no QC pending)
+            // Update Item holder (if no QC pending)
             // If Inward/SystemReturn, wait for QC to update stock
             if (dto.Type == MovementType.Outward)
             {
-                patternDie.CurrentHolderType = dto.ToType;
-                patternDie.CurrentLocationId = dto.ToLocationId;
-                patternDie.CurrentPartyId = dto.ToPartyId;
-                patternDie.UpdatedAt = DateTime.Now;
+                item.CurrentHolderType = dto.ToType;
+                item.CurrentLocationId = dto.ToLocationId;
+                item.CurrentPartyId = dto.ToPartyId;
+                item.UpdatedAt = DateTime.Now;
             }
 
             _context.Movements.Add(movement);

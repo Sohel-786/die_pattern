@@ -24,11 +24,11 @@ namespace net_backend.Controllers
             var data = await _context.PurchaseOrders
                 .Include(p => p.Vendor)
                 .Include(p => p.Items)
-                    .ThenInclude(i => i.PurchaseIndentItem)
-                        .ThenInclude(pii => pii!.PatternDie)
+                    .ThenInclude(i => i.ProformaInvoiceItem)
+                        .ThenInclude(pii => pii!.Item)
                 .Include(p => p.Items)
-                    .ThenInclude(i => i.PurchaseIndentItem)
-                        .ThenInclude(pii => pii!.PurchaseIndent)
+                    .ThenInclude(i => i.ProformaInvoiceItem)
+                        .ThenInclude(pii => pii!.ProformaInvoice)
                 .Select(p => new PODto
                 {
                     Id = p.Id,
@@ -44,11 +44,11 @@ namespace net_backend.Controllers
                     Items = p.Items.Select(i => new POItemDto
                     {
                         Id = i.Id,
-                        PiItemId = i.PurchaseIndentItemId,
-                        PatternDieId = i.PurchaseIndentItem!.PatternDieId,
-                        MainPartName = i.PurchaseIndentItem!.PatternDie!.MainPartName,
-                        CurrentName = i.PurchaseIndentItem.PatternDie.CurrentName,
-                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo
+                        ProformaInvoiceItemId = i.ProformaInvoiceItemId,
+                        ItemId = i.ProformaInvoiceItem!.ItemId,
+                        MainPartName = i.ProformaInvoiceItem!.Item!.MainPartName,
+                        CurrentName = i.ProformaInvoiceItem.Item.CurrentName,
+                        PiNo = i.ProformaInvoiceItem.ProformaInvoice!.PiNo
                     }).ToList()
                 })
                 .OrderByDescending(p => p.CreatedAt)
@@ -64,7 +64,7 @@ namespace net_backend.Controllers
 
             // Additional business logic: Ensure items are not already in another PO
             var alreadyInPo = await _context.PurchaseOrderItems
-                .AnyAsync(poi => dto.PiItemIds.Contains(poi.PurchaseIndentItemId));
+                .AnyAsync(poi => dto.ProformaInvoiceItemIds.Contains(poi.ProformaInvoiceItemId));
             if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO" });
 
             var po = new PurchaseOrder
@@ -81,9 +81,9 @@ namespace net_backend.Controllers
                 UpdatedAt = DateTime.Now
             };
 
-            foreach (var piItemId in dto.PiItemIds)
+            foreach (var piItemId in dto.ProformaInvoiceItemIds)
             {
-                po.Items.Add(new PurchaseOrderItem { PurchaseIndentItemId = piItemId });
+                po.Items.Add(new PurchaseOrderItem { ProformaInvoiceItemId = piItemId });
             }
 
             _context.PurchaseOrders.Add(po);

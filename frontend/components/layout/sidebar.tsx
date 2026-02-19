@@ -124,15 +124,44 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
       <div className={`shrink-0 border-b border-secondary-200 bg-gradient-to-r from-primary-600 to-primary-700 flex transition-[padding] duration-300 ${showFullSidebar ? "min-h-[5.5rem] px-4 py-3 items-center gap-3" : "min-h-[3rem] px-2 py-2 items-center justify-center"}`}>
         {showFullSidebar ? (
           <>
-            <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
-              <span className="text-sm font-bold text-white truncate">{appSettings?.companyName || "Aira Euro"}</span>
-              <span className="text-xs font-medium text-white/90 truncate">{appSettings?.softwareName || "Pattern Management"}</span>
-              <span className="text-[10px] text-white/70 uppercase tracking-wider">{portalLabel}</span>
+            <div className="min-w-0 flex-1 flex flex-col justify-center gap-1.5">
+              <SidebarText
+                show={showFullSidebar}
+                className="!ml-0 text-base font-bold text-white/90 truncate leading-tight block"
+              >
+                {appSettings?.companyName || "Aira Euro"}
+              </SidebarText>
+              <SidebarText
+                show={showFullSidebar}
+                className="!ml-0 text-sm font-semibold text-white truncate leading-tight block"
+              >
+                {appSettings?.softwareName || "Pattern Management"}
+              </SidebarText>
+              <SidebarText
+                show={showFullSidebar}
+                className="!ml-0 text-xs text-white/90 leading-tight block"
+              >
+                {portalLabel}
+              </SidebarText>
             </div>
-            <button onClick={() => onExpandChange(!expanded)} className="p-1.5 rounded-md hover:bg-white/20 text-white"><PanelLeftClose className="w-4 h-4" /></button>
+            <button
+              type="button"
+              onClick={() => onExpandChange(!expanded)}
+              className="shrink-0 p-1.5 rounded-md hover:bg-white/20 text-white transition-colors"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
           </>
         ) : (
-          <button onClick={() => onExpandChange(true)} className="p-2 rounded-md hover:bg-white/20 text-white"><PanelLeftOpen className="w-4 h-4" /></button>
+          <button
+            type="button"
+            onClick={() => onExpandChange(true)}
+            className="shrink-0 p-2 rounded-md hover:bg-white/20 text-white transition-colors"
+            aria-label="Expand sidebar"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
         )}
       </div>
 
@@ -158,40 +187,20 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                       {renderSubMenuItem("/locations", "Location Master", MapPin)}
                       {renderSubMenuItem("/parties", "Party Master (Vendor)", Users)}
                       {renderSubMenuItem("/masters", "Other Masters", Layers)}
-                      {renderSubMenuItem("/pattern-dies", "Pattern/Die Entry", Package)}
+                      {renderSubMenuItem("/items", "Item Entry", Package)}
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
-                  {renderMenuItem("/pattern-dies", "Pattern/Die", Package)}
+                  {renderMenuItem("/items", "Items", Package)}
                 </div>
               )}
             </div>
           )}
 
-          {/* Indent Module */}
-          {permissions?.viewPI && (
-            <div className="pt-1">
-              {showFullSidebar ? (
-                <>
-                  <button onClick={() => toggleMenu('indent')} className={sectionHeaderClass}>
-                    <div className="flex items-center gap-1">
-                      <FileText className="w-4 h-4 text-secondary-500" />
-                      <SidebarText show={showFullSidebar} className="-ml-1">Indent Module</SidebarText>
-                    </div>
-                    {openMenus.indent ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  </button>
-                  {openMenus.indent && (
-                    <div className="pl-1 mt-0.5 space-y-0.5">
-                      {renderSubMenuItem("/purchase-indents/create", "Create PI", FileText)}
-                      {renderSubMenuItem("/purchase-indents", "PI List", ClipboardCheck)}
-                    </div>
-                  )}
-                </>
-              ) : renderMenuItem("/purchase-indents", "PI", FileText)}
-            </div>
-          )}
+          {/* PI Module */}
+          {permissions?.viewPI && renderMenuItem("/proforma-invoices", "PI Management", FileText)}
 
           {/* Order Module */}
           {permissions?.viewPO && (

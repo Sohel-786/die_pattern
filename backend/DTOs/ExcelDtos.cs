@@ -1,10 +1,10 @@
 namespace net_backend.DTOs
 {
-    public class PatternDieImportDto
+    public class ItemImportDto
     {
         public string MainPartName { get; set; } = string.Empty;
         public string CurrentName { get; set; } = string.Empty;
-        public string PatternType { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
         public string Material { get; set; } = string.Empty;

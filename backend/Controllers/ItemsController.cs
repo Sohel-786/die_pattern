@@ -7,34 +7,34 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("pattern-dies")]
+    [Route("items")]
     [ApiController]
-    public class PatternDiesController : BaseController
+    public class ItemsController : BaseController
     {
         private readonly IExcelService _excelService;
 
-        public PatternDiesController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public ItemsController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
             _excelService = excelService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PatternDieDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll()
         {
-            var data = await _context.PatternDies
-                .Include(p => p.PatternType)
+            var data = await _context.Items
+                .Include(p => p.ItemType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
                 .Include(p => p.CurrentParty)
-                .Select(p => new PatternDieDto
+                .Select(p => new ItemDto
                 {
                     Id = p.Id,
                     MainPartName = p.MainPartName,
                     CurrentName = p.CurrentName,
-                    PatternTypeId = p.PatternTypeId,
-                    PatternTypeName = p.PatternType!.Name,
+                    ItemTypeId = p.ItemTypeId,
+                    ItemTypeName = p.ItemType!.Name,
                     DrawingNo = p.DrawingNo,
                     RevisionNo = p.RevisionNo,
                     MaterialId = p.MaterialId,
@@ -52,22 +52,22 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<PatternDieDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<PatternDie>>> Create([FromBody] CreatePatternDieDto dto)
+        public async Task<ActionResult<ApiResponse<Item>>> Create([FromBody] CreateItemDto dto)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
-            if (await _context.PatternDies.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
-                return BadRequest(new ApiResponse<PatternDie> { Success = false, Message = "Main Part Name must be unique" });
+            if (await _context.Items.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique" });
 
-            var patternDie = new PatternDie
+            var item = new Item
             {
                 MainPartName = dto.MainPartName.Trim(),
                 CurrentName = dto.CurrentName.Trim(),
-                PatternTypeId = dto.PatternTypeId,
+                ItemTypeId = dto.ItemTypeId,
                 DrawingNo = dto.DrawingNo,
                 RevisionNo = dto.RevisionNo,
                 MaterialId = dto.MaterialId,
@@ -80,27 +80,27 @@ namespace net_backend.Controllers
                 UpdatedAt = DateTime.Now
             };
 
-            _context.PatternDies.Add(patternDie);
+            _context.Items.Add(item);
             await _context.SaveChangesAsync();
 
-            return StatusCode(201, new ApiResponse<PatternDie> { Data = patternDie });
+            return StatusCode(201, new ApiResponse<Item> { Data = item });
         }
 
         [HttpPost("change-process")]
-        public async Task<ActionResult<ApiResponse<PatternDie>>> ChangeProcess([FromBody] PatternChangeRequestDto dto)
+        public async Task<ActionResult<ApiResponse<Item>>> ChangeProcess([FromBody] ItemChangeRequestDto dto)
         {
             if (!await HasPermission("ManageChanges")) return Forbidden();
 
-            var patternDie = await _context.PatternDies.FindAsync(dto.PatternDieId);
-            if (patternDie == null) return NotFound(new ApiResponse<PatternDie> { Success = false, Message = "Pattern/Die not found" });
+            var item = await _context.Items.FindAsync(dto.ItemId);
+            if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
             // Store history
-            var log = new PatternChangeLog
+            var log = new ItemChangeLog
             {
-                PatternDieId = patternDie.Id,
-                OldName = patternDie.CurrentName,
+                ItemId = item.Id,
+                OldName = item.CurrentName,
                 NewName = dto.NewName,
-                OldRevision = patternDie.RevisionNo ?? "",
+                OldRevision = item.RevisionNo ?? "",
                 NewRevision = dto.NewRevision,
                 ChangeType = dto.ChangeType,
                 Remarks = dto.Remarks,
@@ -109,25 +109,25 @@ namespace net_backend.Controllers
             };
 
             // Update current
-            patternDie.CurrentName = dto.NewName;
-            patternDie.RevisionNo = dto.NewRevision;
-            patternDie.UpdatedAt = DateTime.Now;
+            item.CurrentName = dto.NewName;
+            item.RevisionNo = dto.NewRevision;
+            item.UpdatedAt = DateTime.Now;
 
-            _context.PatternChangeLogs.Add(log);
+            _context.ItemChangeLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            return Ok(new ApiResponse<PatternDie> { Data = patternDie, Message = "Change process completed successfully" });
+            return Ok(new ApiResponse<Item> { Data = item, Message = "Change process completed successfully" });
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<PatternDie>>> Update(int id, [FromBody] UpdatePatternDieDto dto)
+        public async Task<ActionResult<ApiResponse<Item>>> Update(int id, [FromBody] UpdateItemDto dto)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
-            if (id != dto.Id) return BadRequest(new ApiResponse<PatternDie> { Success = false, Message = "ID mismatch" });
+            if (id != dto.Id) return BadRequest(new ApiResponse<Item> { Success = false, Message = "ID mismatch" });
 
-            var existing = await _context.PatternDies.FindAsync(id);
-            if (existing == null) return NotFound(new ApiResponse<PatternDie> { Success = false, Message = "Pattern/Die not found" });
+            var existing = await _context.Items.FindAsync(id);
+            if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
             existing.StatusId = dto.StatusId;
             existing.DrawingNo = dto.DrawingNo;
@@ -135,7 +135,7 @@ namespace net_backend.Controllers
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<PatternDie> { Data = existing });
+            return Ok(new ApiResponse<Item> { Data = existing });
         }
 
         [HttpPost("import-opening")]
@@ -146,7 +146,7 @@ namespace net_backend.Controllers
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
 
             using var stream = file.OpenReadStream();
-            var excelResult = _excelService.ImportExcel<PatternDieImportDto>(stream);
+            var excelResult = _excelService.ImportExcel<ItemImportDto>(stream);
             
             // Strict Validation
             var validation = await ValidateImport(excelResult.Data);
@@ -156,10 +156,10 @@ namespace net_backend.Controllers
                 foreach (var row in validation.Valid)
                 {
                     // Map names to IDs
-                    var type = await _context.PatternTypes.FirstOrDefaultAsync(t => t.Name == row.Data.PatternType);
+                    var type = await _context.ItemTypes.FirstOrDefaultAsync(t => t.Name == row.Data.ItemType);
                     var material = await _context.Materials.FirstOrDefaultAsync(m => m.Name == row.Data.Material);
                     var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.OwnerType);
-                    var status = await _context.PatternStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
+                    var status = await _context.ItemStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
                     
                     int? locationId = null;
                     int? partyId = null;
@@ -169,11 +169,11 @@ namespace net_backend.Controllers
                     else
                         partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.Name == row.Data.CurrentHolderName))?.Id;
 
-                    _context.PatternDies.Add(new PatternDie
+                    _context.Items.Add(new Item
                     {
                         MainPartName = row.Data.MainPartName,
                         CurrentName = row.Data.CurrentName,
-                        PatternTypeId = type?.Id ?? 0,
+                        ItemTypeId = type?.Id ?? 0,
                         DrawingNo = row.Data.DrawingNo,
                         RevisionNo = row.Data.RevisionNo,
                         MaterialId = material?.Id ?? 0,
@@ -195,15 +195,15 @@ namespace net_backend.Controllers
             });
         }
 
-        private async Task<ValidationResultDto<PatternDieImportDto>> ValidateImport(List<ExcelRow<PatternDieImportDto>> rows)
+        private async Task<ValidationResultDto<ItemImportDto>> ValidateImport(List<ExcelRow<ItemImportDto>> rows)
         {
-            var result = new ValidationResultDto<PatternDieImportDto>();
-            var existingNames = await _context.PatternDies.Select(p => p.MainPartName.ToLower()).ToListAsync();
+            var result = new ValidationResultDto<ItemImportDto>();
+            var existingNames = await _context.Items.Select(p => p.MainPartName.ToLower()).ToListAsync();
             
-            var types = await _context.PatternTypes.Select(t => t.Name.ToLower()).ToListAsync();
+            var types = await _context.ItemTypes.Select(t => t.Name.ToLower()).ToListAsync();
             var materials = await _context.Materials.Select(m => m.Name.ToLower()).ToListAsync();
             var ownerTypes = await _context.OwnerTypes.Select(o => o.Name.ToLower()).ToListAsync();
-            var statuses = await _context.PatternStatuses.Select(s => s.Name.ToLower()).ToListAsync();
+            var statuses = await _context.ItemStatuses.Select(s => s.Name.ToLower()).ToListAsync();
 
             foreach (var row in rows)
             {
@@ -212,15 +212,15 @@ namespace net_backend.Controllers
 
                 if (string.IsNullOrEmpty(d.MainPartName)) errors.Add("Main Part Name is required");
                 if (existingNames.Contains(d.MainPartName.ToLower())) errors.Add("Main Part Name already exists");
-                if (!types.Contains(d.PatternType.ToLower())) errors.Add("Invalid Pattern Type");
+                if (!types.Contains(d.ItemType.ToLower())) errors.Add("Invalid Item Type");
                 if (!materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
                 if (!ownerTypes.Contains(d.OwnerType.ToLower())) errors.Add("Invalid Owner Type");
                 if (!statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 
                 if (errors.Any())
-                    result.Invalid.Add(new ValidationEntry<PatternDieImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });
+                    result.Invalid.Add(new ValidationEntry<ItemImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });
                 else
-                    result.Valid.Add(new ValidationEntry<PatternDieImportDto> { Row = row.RowNumber, Data = d });
+                    result.Valid.Add(new ValidationEntry<ItemImportDto> { Row = row.RowNumber, Data = d });
             }
 
             return result;

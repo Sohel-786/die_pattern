@@ -16,27 +16,27 @@ namespace net_backend.Controllers
         [HttpGet("metrics")]
         public async Task<ActionResult<ApiResponse<object>>> GetMetrics()
         {
-            var totalPatterns = await _context.PatternDies.CountAsync(p => p.IsActive);
-            var patternsAtVendor = await _context.PatternDies.CountAsync(p => p.CurrentHolderType == HolderType.Vendor && p.IsActive);
-            var patternsAtLocation = await _context.PatternDies.CountAsync(p => p.CurrentHolderType == HolderType.Location && p.IsActive);
+            var totalItems = await _context.Items.CountAsync(p => p.IsActive);
+            var itemsAtVendor = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Vendor && p.IsActive);
+            var itemsAtLocation = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Location && p.IsActive);
             
-            var pendingPI = await _context.PurchaseIndents.CountAsync(pi => pi.Status == PiStatus.Pending);
+            var pendingPI = await _context.ProformaInvoices.CountAsync(pi => pi.Status == PiStatus.Pending);
             var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.Status == PoStatus.Pending);
 
             var locationWiseCount = await _context.Locations
                 .Select(l => new
                 {
                     LocationName = l.Name,
-                    Count = _context.PatternDies.Count(p => p.CurrentLocationId == l.Id && p.IsActive)
+                    Count = _context.Items.Count(p => p.CurrentLocationId == l.Id && p.IsActive)
                 })
                 .ToListAsync();
 
-            var recentChanges = await _context.PatternChangeLogs
-                .Include(l => l.PatternDie)
+            var recentChanges = await _context.ItemChangeLogs
+                .Include(l => l.Item)
                 .OrderByDescending(l => l.CreatedAt)
                 .Take(5)
                 .Select(l => new {
-                    l.PatternDie!.MainPartName,
+                    l.Item!.MainPartName,
                     l.OldName,
                     l.NewName,
                     l.ChangeType,
@@ -45,12 +45,12 @@ namespace net_backend.Controllers
                 .ToListAsync();
 
             var recentSystemAdjustments = await _context.Movements
-                .Include(m => m.PatternDie)
+                .Include(m => m.Item)
                 .Where(m => m.Type == MovementType.SystemReturn)
                 .OrderByDescending(m => m.CreatedAt)
                 .Take(5)
                 .Select(m => new {
-                    m.PatternDie!.MainPartName,
+                    m.Item!.MainPartName,
                     m.Reason,
                     m.CreatedAt
                 })
@@ -59,9 +59,9 @@ namespace net_backend.Controllers
             var result = new
             {
                 summary = new { 
-                    total = totalPatterns, 
-                    atVendor = patternsAtVendor, 
-                    atLocation = patternsAtLocation,
+                    total = totalItems, 
+                    atVendor = itemsAtVendor, 
+                    atLocation = itemsAtLocation,
                     pendingPI,
                     pendingPO
                 },

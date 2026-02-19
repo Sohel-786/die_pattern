@@ -110,13 +110,13 @@ export interface Party {
   isActive: boolean;
 }
 
-export interface PatternType {
+export interface ItemType {
   id: number;
   name: string;
   isActive: boolean;
 }
 
-export interface PatternStatus {
+export interface ItemStatusMaster {
   id: number;
   name: string;
   isActive: boolean;
@@ -140,7 +140,7 @@ export interface ItemCategory {
   isActive: boolean;
 }
 
-export interface Item {
+export interface StoreItem {
   id: number;
   name: string;
   itemName: string;
@@ -161,7 +161,7 @@ export interface Issue {
   id: number;
   issueNo?: string;
   itemId: number;
-  item?: Item & { categoryId?: number };
+  item?: StoreItem & { categoryId?: number };
   companyId?: number;
   company?: { id: number; name: string };
   contractorId?: number;
@@ -191,7 +191,7 @@ export interface Return {
   issueId?: number;
   issue?: Issue;
   itemId?: number;
-  item?: Item;
+  item?: StoreItem;
   companyId?: number;
   company?: { id: number; name: string };
   contractorId?: number;
@@ -212,12 +212,12 @@ export interface Return {
   createdAt: string;
 }
 
-export interface PatternDie {
+export interface Item {
   id: number;
   mainPartName: string;
   currentName: string;
-  patternTypeId: number;
-  patternTypeName?: string;
+  itemTypeId: number;
+  itemTypeName?: string;
   drawingNo?: string;
   revisionNo?: string;
   materialId: number;
@@ -234,19 +234,19 @@ export interface PatternDie {
   isActive: boolean;
 }
 
-export interface PI {
+export interface ProformaInvoice {
   id: number;
   piNo: string;
   type: PiType;
   status: PiStatus;
-  items: PIItem[];
+  items: ProformaInvoiceItem[];
   createdAt: string;
   creatorName?: string;
 }
 
-export interface PIItem {
+export interface ProformaInvoiceItem {
   id: number;
-  patternDieId: number;
+  itemId: number;
   mainPartName: string;
   currentName: string;
   piNo?: string;
@@ -268,8 +268,8 @@ export interface PO {
 
 export interface POItem {
   id: number;
-  piItemId: number;
-  patternDieId: number;
+  proformaInvoiceItemId: number;
+  itemId: number;
   mainPartName: string;
   currentName: string;
   piNo: string;
@@ -278,8 +278,8 @@ export interface POItem {
 export interface Movement {
   id: number;
   type: MovementType;
-  patternDieId: number;
-  patternDieName?: string;
+  itemId: number;
+  itemName?: string;
   fromType: HolderType;
   fromName?: string;
   toType: HolderType;

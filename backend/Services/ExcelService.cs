@@ -105,7 +105,7 @@ namespace net_backend.Services
                         return propName == header || 
                                (propName == "mainpartname" && (header == "mainpartname" || header == "partname")) ||
                                (propName == "currentname" && (header == "currentname" || header == "name")) ||
-                               (propName == "patterntype" && (header == "type" || header == "patterntype")) ||
+                               (propName == "itemtype" && (header == "type" || header == "itemtype")) ||
                                (propName == "drawingno" && (header == "drawing" || header == "drawingno")) ||
                                (propName == "revisionno" && (header == "revision" || header == "revisionno")) ||
                                (propName == "isactive" && (header == "status" || header == "active"));

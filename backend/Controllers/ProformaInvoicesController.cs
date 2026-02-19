@@ -7,25 +7,25 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("purchase-indents")]
+    [Route("proforma-invoices")]
     [ApiController]
-    public class PurchaseIndentsController : BaseController
+    public class ProformaInvoicesController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
 
-        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        public ProformaInvoicesController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
             _codeGenerator = codeGenerator;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PIDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ProformaInvoiceDto>>>> GetAll()
         {
-            var data = await _context.PurchaseIndents
+            var data = await _context.ProformaInvoices
                 .Include(p => p.Creator)
                 .Include(p => p.Items)
-                    .ThenInclude(i => i.PatternDie)
-                .Select(p => new PIDto
+                    .ThenInclude(i => i.Item)
+                .Select(p => new ProformaInvoiceDto
                 {
                     Id = p.Id,
                     PiNo = p.PiNo,
@@ -35,27 +35,27 @@ namespace net_backend.Controllers
                     CreatedBy = p.CreatedBy,
                     CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
                     CreatedAt = p.CreatedAt,
-                    Items = p.Items.Select(i => new PIItemDto
+                    Items = p.Items.Select(i => new ProformaInvoiceItemDto
                     {
                         Id = i.Id,
-                        PatternDieId = i.PatternDieId,
-                        MainPartName = i.PatternDie!.MainPartName,
-                        CurrentName = i.PatternDie.CurrentName,
-                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
+                        ItemId = i.ItemId,
+                        MainPartName = i.Item!.MainPartName,
+                        CurrentName = i.Item.CurrentName,
+                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.ProformaInvoiceItemId == i.Id)
                     }).ToList()
                 })
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<PIDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<ProformaInvoiceDto>> { Data = data });
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<PurchaseIndent>>> Create([FromBody] CreatePIDto dto)
+        public async Task<ActionResult<ApiResponse<ProformaInvoice>>> Create([FromBody] CreateProformaInvoiceDto dto)
         {
             if (!await HasPermission("CreatePI")) return Forbidden();
 
-            var pi = new PurchaseIndent
+            var pi = new ProformaInvoice
             {
                 PiNo = await _codeGenerator.GenerateCode("PI"),
                 Type = dto.Type,
@@ -68,13 +68,13 @@ namespace net_backend.Controllers
 
             foreach (var itemId in dto.ItemIds)
             {
-                pi.Items.Add(new PurchaseIndentItem { PatternDieId = itemId });
+                pi.Items.Add(new ProformaInvoiceItem { ItemId = itemId });
             }
 
-            _context.PurchaseIndents.Add(pi);
+            _context.ProformaInvoices.Add(pi);
             await _context.SaveChangesAsync();
 
-            return StatusCode(201, new ApiResponse<PurchaseIndent> { Data = pi });
+            return StatusCode(201, new ApiResponse<ProformaInvoice> { Data = pi });
         }
 
         [HttpPost("{id}/approve")]
@@ -82,7 +82,7 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
 
-            var pi = await _context.PurchaseIndents.FindAsync(id);
+            var pi = await _context.ProformaInvoices.FindAsync(id);
             if (pi == null) return NotFound();
 
             pi.Status = PiStatus.Approved;
@@ -95,24 +95,24 @@ namespace net_backend.Controllers
         }
         
         [HttpGet("approved-items")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PIItemDto>>>> GetApprovedItems()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ProformaInvoiceItemDto>>>> GetApprovedItems()
         {
             // Items from approved PIs that are NOT already in a PO
-            var items = await _context.PurchaseIndentItems
-                .Include(pii => pii.PurchaseIndent)
-                .Include(pii => pii.PatternDie)
-                .Where(pii => pii.PurchaseIndent!.Status == PiStatus.Approved && 
-                             !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id))
-                .Select(pii => new PIItemDto
+            var items = await _context.ProformaInvoiceItems
+                .Include(pii => pii.ProformaInvoice)
+                .Include(pii => pii.Item)
+                .Where(pii => pii.ProformaInvoice!.Status == PiStatus.Approved && 
+                             !_context.PurchaseOrderItems.Any(poi => poi.ProformaInvoiceItemId == pii.Id))
+                .Select(pii => new ProformaInvoiceItemDto
                 {
                     Id = pii.Id,
-                    PatternDieId = pii.PatternDieId,
-                    MainPartName = pii.PatternDie!.MainPartName,
-                    CurrentName = pii.PatternDie.CurrentName
+                    ItemId = pii.ItemId,
+                    MainPartName = pii.Item!.MainPartName,
+                    CurrentName = pii.Item.CurrentName
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<PIItemDto>> { Data = items });
+            return Ok(new ApiResponse<IEnumerable<ProformaInvoiceItemDto>> { Data = items });
         }
     }
 }

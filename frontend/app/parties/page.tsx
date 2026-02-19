@@ -6,10 +6,11 @@ import api from "@/lib/api";
 import { Party } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { PartyDialog } from "@/components/masters/party-dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -91,106 +92,120 @@ export default function PartiesPage() {
     );
 
     return (
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Party Master</h1>
-                    <p className="text-gray-500 mt-1 font-medium">Coordinate with your external vendors and stakeholders</p>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                    <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">Party Master</h1>
+                    <p className="text-secondary-600">Coordinate with your external vendors and stakeholders</p>
                 </motion.div>
                 <Button
                     onClick={handleAdd}
-                    className="rounded-2xl h-12 px-6 bg-primary-600 hover:bg-primary-700 text-white shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+                    size="sm"
+                    className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-medium"
                 >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add New Party
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Party
                 </Button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-                <div className="relative w-full max-w-md">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                        placeholder="Search by name, email, phone..."
-                        className="pl-12 h-12 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-sm font-medium"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+            <Card className="shadow-sm">
+                <div className="p-4 flex flex-col sm:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <Input
+                            placeholder="Search by name, email, phone..."
+                            className="pl-10 h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-secondary-50/50 rounded-2xl border border-gray-100">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sort:</span>
-                    <select className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
-                        <option>Name (A-Z)</option>
-                        <option>Recently Added</option>
-                    </select>
-                </div>
-            </div>
+            </Card>
 
-            {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="h-64 rounded-3xl bg-gray-100 animate-pulse" />
-                    ))}
+            <Card className="shadow-sm">
+                <div className="p-6 border-b border-secondary-100 flex items-center justify-between">
+                    <h3 className="text-xl font-semibold leading-none tracking-tight text-secondary-900">
+                        All Parties ({filteredParties.length})
+                    </h3>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredParties.map(party => (
-                        <Card key={party.id} className="border-none shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden bg-white relative">
-                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-primary-600" />
-                            <CardContent className="p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="h-16 w-16 bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl flex items-center justify-center text-primary-600 font-extrabold text-2xl shadow-inner border border-primary-100">
-                                        {party.name.charAt(0)}
-                                    </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-secondary-50 transition-colors">
-                                                <MoreVertical className="w-5 h-5 text-gray-400" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="rounded-xl border-gray-100 shadow-xl p-2 w-48">
-                                            <DropdownMenuItem onClick={() => handleEdit(party)} className="rounded-lg gap-2 cursor-pointer font-medium py-2.5">
-                                                <Edit className="w-4 h-4 text-primary-600" /> Edit Details
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => { if (confirm('Are you sure you want to delete this party?')) deleteMutation.mutate(party.id); }}
-                                                className="rounded-lg gap-2 cursor-pointer font-medium py-2.5 text-rose-600 hover:bg-rose-50"
+                <div>
+                    {isLoading ? (
+                        <div className="flex justify-center py-12">
+                            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
+                        </div>
+                    ) : filteredParties.length > 0 ? (
+                        <div className="overflow-x-auto rounded-lg border border-secondary-200 m-6 mt-0">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-primary-200 bg-primary-50">
+                                        <th className="px-4 py-3 font-semibold text-primary-900 w-16">Sr.No</th>
+                                        <th className="px-4 py-3 font-semibold text-primary-900">Name</th>
+                                        <th className="px-4 py-3 font-semibold text-primary-900">Contact</th>
+                                        <th className="px-4 py-3 font-semibold text-primary-900">Status</th>
+                                        <th className="px-4 py-3 font-semibold text-primary-900 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <AnimatePresence>
+                                        {filteredParties.map((party, idx) => (
+                                            <motion.tr
+                                                key={party.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.03 }}
+                                                className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
                                             >
-                                                <Trash2 className="w-4 h-4" /> Delete Party
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 truncate">{party.name}</h3>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 text-sm font-semibold text-gray-500 hover:text-primary-600 transition-colors">
-                                        <div className="p-2 bg-secondary-50 rounded-lg group-hover:bg-primary-50 transition-colors"><Phone className="w-4 h-4" /></div>
-                                        {party.phoneNumber || <span className="text-gray-300 italic">Not available</span>}
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm font-semibold text-gray-500 hover:text-primary-600 transition-colors">
-                                        <div className="p-2 bg-secondary-50 rounded-lg group-hover:bg-primary-50 transition-colors"><Mail className="w-4 h-4" /></div>
-                                        {party.email || <span className="text-gray-300 italic">Not available</span>}
-                                    </div>
-                                    {party.address && (
-                                        <div className="flex items-start gap-3 text-sm font-semibold text-gray-500">
-                                            <div className="p-2 bg-secondary-50 rounded-lg group-hover:bg-primary-50 transition-colors mt-0.5"><MapPin className="w-4 h-4" /></div>
-                                            <span className="line-clamp-2 leading-relaxed">{party.address}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-                                    <span className={`px-4 py-1.5 rounded-full text-[10px] uppercase font-extrabold tracking-widest border ${party.isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                                        {party.isActive ? 'Active' : 'Inactive'}
-                                    </span>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">ID: {party.id.toString().padStart(4, '0')}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                                <td className="px-4 py-3 text-secondary-600">{idx + 1}</td>
+                                                <td className="px-4 py-3 font-medium text-secondary-900">{party.name}</td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col gap-1 text-xs text-secondary-600">
+                                                        {party.email && (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Mail className="w-3 h-3" />
+                                                                {party.email}
+                                                            </div>
+                                                        )}
+                                                        {party.phoneNumber && (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Phone className="w-3 h-3" />
+                                                                {party.phoneNumber}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${party.isActive
+                                                        ? 'bg-green-100 text-green-700 border-green-200'
+                                                        : 'bg-red-100 text-red-700 border-red-200'
+                                                        }`}>
+                                                        {party.isActive ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEdit(party)}
+                                                            className="h-8 w-8 p-0"
+                                                        >
+                                                            <Edit className="w-4 h-4 text-secondary-500" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </AnimatePresence>
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-secondary-500 text-lg">No parties found.</p>
+                        </div>
+                    )}
                 </div>
-            )}
+            </Card>
 
             <PartyDialog
                 isOpen={isDialogOpen}
@@ -202,6 +217,3 @@ export default function PartiesPage() {
         </div>
     );
 }
-
-// Helper to use motion without massive layout shift if it was missing imports
-import { motion } from "framer-motion";

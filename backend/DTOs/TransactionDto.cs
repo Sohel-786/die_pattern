@@ -2,7 +2,7 @@ using net_backend.Models;
 
 namespace net_backend.DTOs
 {
-    public class PIDto
+    public class ProformaInvoiceDto
     {
         public int Id { get; set; }
         public string PiNo { get; set; } = string.Empty;
@@ -12,19 +12,19 @@ namespace net_backend.DTOs
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
         public DateTime CreatedAt { get; set; }
-        public List<PIItemDto> Items { get; set; } = new();
+        public List<ProformaInvoiceItemDto> Items { get; set; } = new();
     }
 
-    public class PIItemDto
+    public class ProformaInvoiceItemDto
     {
         public int Id { get; set; }
-        public int PatternDieId { get; set; }
+        public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
         public bool IsInPO { get; set; } // Logic for visibility
     }
 
-    public class CreatePIDto
+    public class CreateProformaInvoiceDto
     {
         public PiType Type { get; set; }
         public string? Remarks { get; set; }
@@ -49,8 +49,8 @@ namespace net_backend.DTOs
     public class POItemDto
     {
         public int Id { get; set; }
-        public int PiItemId { get; set; }
-        public int PatternDieId { get; set; }
+        public int ProformaInvoiceItemId { get; set; }
+        public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
         public string? PiNo { get; set; }
@@ -63,15 +63,15 @@ namespace net_backend.DTOs
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationUrl { get; set; }
         public string? Remarks { get; set; }
-        public List<int> PiItemIds { get; set; } = new();
+        public List<int> ProformaInvoiceItemIds { get; set; } = new();
     }
 
     public class MovementDto
     {
         public int Id { get; set; }
         public MovementType Type { get; set; }
-        public int PatternDieId { get; set; }
-        public string? PatternDieName { get; set; }
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
         public HolderType FromType { get; set; }
         public string? FromName { get; set; }
         public HolderType ToType { get; set; }
@@ -86,7 +86,7 @@ namespace net_backend.DTOs
     public class CreateMovementDto
     {
         public MovementType Type { get; set; }
-        public int PatternDieId { get; set; }
+        public int ItemId { get; set; }
         public HolderType ToType { get; set; }
         public int? ToLocationId { get; set; }
         public int? ToPartyId { get; set; }

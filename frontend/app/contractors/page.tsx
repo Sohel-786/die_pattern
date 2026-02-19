@@ -210,7 +210,7 @@ export default function ContractorsPage() {
   }, [contractors, searchTerm, activeFilter]);
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -218,7 +218,7 @@ export default function ContractorsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-text mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
                 Contractor Master
               </h1>
               <p className="text-secondary-600">
@@ -243,18 +243,20 @@ export default function ContractorsPage() {
                 <>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={handleExport}
                     disabled={exportLoading}
-                    className="shadow-sm"
+                    className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => importFileRef.current?.click()}
                     disabled={importLoading}
-                    className="shadow-sm"
+                    className="h-10 px-4 border-secondary-200 hover:bg-secondary-50"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Import
@@ -262,7 +264,11 @@ export default function ContractorsPage() {
                 </>
               )}
               {canAddMaster && (
-                <Button onClick={() => handleOpenForm()} className="shadow-md">
+                <Button
+                  onClick={() => handleOpenForm()}
+                  size="sm"
+                  className="h-10 px-4 bg-primary-600 hover:bg-primary-700 text-white shadow-md"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Contractor
                 </Button>
@@ -270,24 +276,24 @@ export default function ContractorsPage() {
             </div>
           </div>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-secondary-100">
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-5 h-5" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 w-4 h-4" />
                   <Input
-                    placeholder="Search by master name or code..."
+                    placeholder="Search by name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-10 border-secondary-200 focus-visible:ring-primary-500 rounded-lg text-sm"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <Label
                     htmlFor="active-filter"
-                    className="text-sm whitespace-nowrap"
+                    className="text-sm font-medium text-secondary-600 whitespace-nowrap"
                   >
-                    Status
+                    Status:
                   </Label>
                   <select
                     id="active-filter"
@@ -295,71 +301,66 @@ export default function ContractorsPage() {
                     onChange={(e) =>
                       setActiveFilter(e.target.value as ActiveFilter)
                     }
-                    className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className="flex h-10 w-full sm:w-40 rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-900 focus-visible:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-medium"
                   >
-                    <option value="all">All</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="all">All Contractors</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
                   </select>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>
-                All Contractors ({filteredContractors.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="shadow-sm border-secondary-100 overflow-hidden">
+            <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
                 </div>
               ) : filteredContractors.length > 0 ? (
-                <div className="overflow-x-auto overflow-y-hidden rounded-lg border border-secondary-200">
+                <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-primary-200 bg-primary-100">
-                        <th className="px-4 py-3 font-semibold text-primary-900 w-16">
-                          Sr.No
+                      <tr className="border-b border-secondary-100 bg-primary-50">
+                        <th className="px-6 py-4 font-bold text-primary-900 w-20">
+                          SR. NO.
                         </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900">
+                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
                           Name
                         </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900">
+                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
                           Phone Number
                         </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900">
+                        <th className="px-6 py-4 font-bold text-primary-900 uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-right">
+                        <th className="px-6 py-4 font-bold text-primary-900 text-right uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-secondary-50">
                       {filteredContractors.map((c, idx) => (
                         <motion.tr
                           key={c.id}
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.03 }}
-                          className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
+                          transition={{ delay: idx * 0.02 }}
+                          className="hover:bg-secondary-50/50 transition-colors group"
                         >
-                          <td className="px-4 py-3 text-secondary-600">
+                          <td className="px-6 py-4 text-secondary-500 font-medium">
                             {idx + 1}
                           </td>
-                          <td className="px-4 py-3 font-medium text-text">
+                          <td className="px-6 py-4 font-semibold text-secondary-900">
                             {c.name}
                           </td>
-                          <td className="px-4 py-3 text-secondary-600">
+                          <td className="px-6 py-4 text-secondary-600 font-medium">
                             {c.phoneNumber}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-6 py-4">
                             <span
-                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${c.isActive
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${c.isActive
                                 ? "bg-green-100 text-green-700 border border-green-200"
                                 : "bg-red-100 text-red-700 border border-red-200"
                                 }`}
@@ -367,13 +368,14 @@ export default function ContractorsPage() {
                               {c.isActive ? "Active" : "Inactive"}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleOpenForm(c)}
-                                title={canEditMaster ? "Edit contractor" : "View contractor (edit disabled)"}
+                                className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                title={canEditMaster ? "Edit contractor" : "View contractor"}
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
@@ -383,8 +385,9 @@ export default function ContractorsPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setInactiveTarget(c)}
-                                    className="text-amber-600 hover:bg-amber-50"
+                                    className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                                     disabled={toggleActiveMutation.isPending}
+                                    title="Mark Inactive"
                                   >
                                     <Ban className="w-4 h-4" />
                                   </Button>
@@ -393,8 +396,9 @@ export default function ContractorsPage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleMarkActive(c)}
-                                    className="text-green-600 hover:bg-green-50"
+                                    className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                     disabled={toggleActiveMutation.isPending}
+                                    title="Mark Active"
                                   >
                                     <CheckCircle className="w-4 h-4" />
                                   </Button>
@@ -407,169 +411,152 @@ export default function ContractorsPage() {
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-secondary-500 text-lg">
+                <div className="text-center py-20 px-4">
+                  <div className="h-16 w-16 bg-secondary-50 rounded-full flex items-center justify-center mx-auto mb-4 text-secondary-300">
+                    <Search className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-secondary-900 mb-1">No Contractors Found</h3>
+                  <p className="text-secondary-500 max-w-md mx-auto">
                     {searchTerm || activeFilter !== "all"
-                      ? "No contractors match your filters."
-                      : "No contractors yet. Add your first contractor above."}
+                      ? "We couldn't find any contractors matching your search criteria."
+                      : "No contractors added yet."}
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-
-        <Dialog
-          isOpen={!!inactiveTarget}
-          onClose={() => setInactiveTarget(null)}
-          title="Mark contractor inactive?"
-          size="sm"
-        >
-          <div className="space-y-4">
-            <p className="text-secondary-600">
-              {inactiveTarget
-                ? `"${inactiveTarget.name}" will be marked inactive. You can reactivate it later.`
-                : ""}
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setInactiveTarget(null)}
-                className="flex-1"
-                disabled={toggleActiveMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="flex-1 bg-amber-600 hover:bg-amber-700"
-                onClick={handleMarkInactiveConfirm}
-                disabled={toggleActiveMutation.isPending}
-              >
-                {toggleActiveMutation.isPending ? "Updating…" : "Mark inactive"}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
-
-        <Dialog
-          isOpen={isFormOpen}
-          onClose={handleCloseForm}
-          title={editingContractor ? "Update Contractor" : "Add New Contractor"}
-          size="lg"
-        >
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="space-y-4"
-            aria-label={
-              editingContractor ? "Update contractor" : "Add new contractor"
-            }
-          >
-            <div>
-              <Label htmlFor="contractor-name-input">
-                Contractor Master Name *
-              </Label>
-              <Input
-                id="contractor-name-input"
-                {...register("name")}
-                placeholder="e.g. ABC Construction"
-                className="mt-1"
-                aria-required="true"
-                aria-invalid={!!errors.name}
-                aria-describedby={
-                  errors.name
-                    ? "contractor-name-error"
-                    : "contractor-form-hint"
-                }
-              />
-              {errors.name && (
-                <p
-                  id="contractor-name-error"
-                  className="text-sm text-red-600 mt-1"
-                  role="alert"
-                >
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="contractor-phone-input">
-                Phone Number *
-              </Label>
-              <Input
-                id="contractor-phone-input"
-                {...register("phoneNumber")}
-                placeholder="10-digit mobile number"
-                className="mt-1"
-                aria-required="true"
-                maxLength={10}
-                onInput={(e) => {
-                  e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 10);
-                }}
-                aria-invalid={!!errors.phoneNumber}
-              />
-              {errors.phoneNumber && (
-                <p className="text-sm text-red-600 mt-1" role="alert">
-                  {errors.phoneNumber.message}
-                </p>
-              )}
-            </div>
-            {editingContractor && (
-              <div>
-                <Label
-                  htmlFor="isActive"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    {...register("isActive")}
-                    className="rounded w-4 h-4 text-primary-600 focus:ring-primary-500 border-secondary-300"
-                    aria-describedby="contractor-form-hint"
-                  />
-                  <span>Active</span>
-                </Label>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              {(editingContractor ? canEditMaster : canAddMaster) && (
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  className="flex-1"
-                  aria-describedby="contractor-form-hint"
-                >
-                  {createMutation.isPending || updateMutation.isPending
-                    ? "Saving…"
-                    : editingContractor
-                      ? "Update Contractor Master"
-                      : "Create Contractor Master"}
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseForm}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Dialog>
-
-        <ImportPreviewModal
-          isOpen={isPreviewOpen}
-          onClose={closePreview}
-          data={validationData}
-          onConfirm={confirmImport}
-          isLoading={importLoading}
-          title="Import Contractors Preview"
-        />
       </motion.div>
+
+      <Dialog
+        isOpen={!!inactiveTarget}
+        onClose={() => setInactiveTarget(null)}
+        title="Mark contractor inactive?"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-secondary-600">
+            {inactiveTarget
+              ? `"${inactiveTarget.name}" will be marked inactive. You can reactivate it later.`
+              : ""}
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setInactiveTarget(null)}
+              className="flex-1"
+              disabled={toggleActiveMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 bg-amber-600 hover:bg-amber-700"
+              onClick={handleMarkInactiveConfirm}
+              disabled={toggleActiveMutation.isPending}
+            >
+              {toggleActiveMutation.isPending ? "Updating…" : "Mark inactive"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        title={editingContractor ? "Update Contractor" : "Add New Contractor"}
+        size="lg"
+      >
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
+          <div>
+            <Label htmlFor="contractor-name-input">
+              Contractor Master Name *
+            </Label>
+            <Input
+              id="contractor-name-input"
+              {...register("name")}
+              placeholder="e.g. ABC Construction"
+              className="mt-1"
+            />
+            {errors.name && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.name.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="contractor-phone-input">
+              Phone Number *
+            </Label>
+            <Input
+              id="contractor-phone-input"
+              {...register("phoneNumber")}
+              placeholder="10-digit mobile number"
+              className="mt-1"
+              maxLength={10}
+            />
+            {errors.phoneNumber && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.phoneNumber.message}
+              </p>
+            )}
+          </div>
+          {editingContractor && (
+            <div>
+              <Label
+                htmlFor="isActive"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  {...register("isActive")}
+                  className="rounded w-4 h-4 text-primary-600 focus:ring-primary-500 border-secondary-300"
+                />
+                <span>Active</span>
+              </Label>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            {(editingContractor ? canEditMaster : canAddMaster) && (
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="flex-1"
+              >
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving…"
+                  : editingContractor
+                    ? "Update Contractor Master"
+                    : "Create Contractor Master"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseForm}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <ImportPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        data={validationData}
+        onConfirm={confirmImport}
+        isLoading={importLoading}
+        title="Import Contractors Preview"
+      />
     </div>
   );
 }

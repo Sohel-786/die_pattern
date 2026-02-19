@@ -69,90 +69,118 @@ export default function CompaniesPage() {
   );
 
   return (
-    <div className="p-8 space-y-10">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
-            <Building2 className="w-10 h-10 text-primary-600" />
-            Company Registry
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
+            Company Master
           </h1>
-          <p className="text-gray-500 mt-2 font-semibold">Manage global company entities within the system</p>
+          <p className="text-secondary-600">
+            Manage company master entries
+          </p>
         </motion.div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-2">
           <Button
             variant="outline"
-            className="rounded-2xl h-14 px-6 border-2 border-gray-100 font-bold hover:bg-secondary-50 shadow-sm"
+            size="sm"
+            className="shadow-sm border-secondary-300"
           >
-            <Download className="w-5 h-5 mr-3 text-primary-600" />
+            <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
           <Button
             onClick={handleAdd}
-            className="rounded-2xl h-14 px-8 bg-primary-600 hover:bg-primary-700 text-white font-black shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+            size="sm"
+            className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-medium"
           >
-            <Plus className="w-6 h-6 mr-2" />
-            Register Company
+            <Plus className="w-4 h-4 mr-2" />
+            Add Company
           </Button>
         </div>
       </div>
 
-      <div className="relative max-w-2xl bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-        <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-        <Input
-          placeholder="Search by company name..."
-          className="pl-16 h-14 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-base font-bold"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-48 rounded-[2.5rem] bg-gray-100 animate-pulse" />)}
+      <Card className="shadow-sm">
+        <div className="p-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+            <Input
+              placeholder="Search by name..."
+              className="pl-10 h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <AnimatePresence>
-            {filteredCompanies.map((company, idx) => (
-              <motion.div
-                key={company.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.05 }}
-              >
-                <Card className="border-none shadow-sm hover:shadow-2xl transition-all group overflow-hidden bg-white rounded-[2.5rem] p-8 relative h-full flex flex-col justify-between border border-transparent hover:border-primary-100">
-                  <div className="absolute top-0 right-0 p-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-secondary-50"><MoreVertical className="w-5 h-5 text-gray-400" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 shadow-xl p-2 w-40">
-                        <DropdownMenuItem onClick={() => handleEdit(company)} className="rounded-xl gap-2 cursor-pointer font-bold"><Edit2 className="w-4 h-4 text-primary-600" /> Edit Detail</DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold text-rose-600"><Trash2 className="w-4 h-4" /> Deactivate</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+      </Card>
 
-                  <div>
-                    <div className="h-16 w-16 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 font-black text-2xl mb-6 shadow-inner border border-primary-100">
-                      {company.name.charAt(0)}
-                    </div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight pr-6">{company.name}</h3>
-                  </div>
-
-                  <div className="mt-8 flex items-center justify-between border-t border-gray-50 pt-6">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${company.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
-                      {company.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <p className="text-[10px] font-black text-gray-300 uppercase">SYS-ID: {company.id.toString().padStart(3, '0')}</p>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+      <Card className="shadow-sm">
+        <div className="p-6 border-b border-secondary-100 flex items-center justify-between">
+          <h3 className="text-xl font-semibold leading-none tracking-tight text-secondary-900">
+            All Companies ({filteredCompanies.length})
+          </h3>
         </div>
-      )}
+        <div>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
+            </div>
+          ) : filteredCompanies.length > 0 ? (
+            <div className="overflow-x-auto rounded-lg border border-secondary-200 m-6 mt-0">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-primary-200 bg-primary-50">
+                    <th className="px-4 py-3 font-semibold text-primary-900 w-16">Sr.No</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900">Name</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900">Status</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {filteredCompanies.map((company, idx) => (
+                      <motion.tr
+                        key={company.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-secondary-600">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-secondary-900">{company.name}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${company.isActive
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-red-100 text-red-700 border-red-200'
+                            }`}>
+                            {company.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(company)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit2 className="w-4 h-4 text-secondary-500" />
+                            </Button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-secondary-500 text-lg">No companies found.</p>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <CompanyDialog
         isOpen={isDialogOpen}

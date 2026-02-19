@@ -69,87 +69,115 @@ export default function LocationsPage() {
   );
 
   return (
-    <div className="p-8 space-y-10">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
-            <MapPin className="w-10 h-10 text-primary-600" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
             Location Master
           </h1>
-          <p className="text-gray-500 mt-2 font-semibold text-lg">Manage storage zones and facility locations</p>
+          <p className="text-secondary-600">
+            Manage storage zones and facility locations
+          </p>
         </motion.div>
 
         <Button
           onClick={handleAdd}
-          className="rounded-2xl h-14 px-8 bg-primary-600 hover:bg-primary-700 text-white font-black shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
+          size="sm"
+          className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-medium"
         >
-          <Plus className="w-6 h-6 mr-2" />
-          Add New Location
+          <Plus className="w-4 h-4 mr-2" />
+          Add Location
         </Button>
       </div>
 
-      <div className="relative max-w-2xl bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-        <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-        <Input
-          placeholder="Search by location or company name..."
-          className="pl-16 h-14 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-base font-bold"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-56 rounded-[2.5rem] bg-gray-100 animate-pulse" />)}
+      <Card className="shadow-sm">
+        <div className="p-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+            <Input
+              placeholder="Search by location or company..."
+              className="pl-10 h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <AnimatePresence>
-            {filteredLocations.map((loc, idx) => (
-              <motion.div
-                key={loc.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-              >
-                <Card className="border-none shadow-sm hover:shadow-2xl transition-all group overflow-hidden bg-white rounded-[2.5rem] p-8 relative flex flex-col justify-between h-56 border border-transparent hover:border-primary-100">
-                  <div className="absolute top-0 right-0 p-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-secondary-50"><MoreVertical className="w-5 h-5 text-gray-400" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 shadow-xl p-2 w-40">
-                        <DropdownMenuItem onClick={() => handleEdit(loc)} className="rounded-xl gap-2 cursor-pointer font-bold"><Edit2 className="w-4 h-4 text-primary-600" /> Edit Detail</DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-xl gap-2 cursor-pointer font-bold text-rose-600"><Trash2 className="w-4 h-4" /> Deactivate</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+      </Card>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-secondary-50 rounded-xl flex items-center justify-center text-primary-600 border border-gray-100 group-hover:bg-primary-50 transition-colors">
-                        <MapPin className="w-5 h-5" />
-                      </div>
-                      <h3 className="text-xl font-black text-gray-900 leading-tight truncate pr-6">{loc.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-400 font-bold px-1">
-                      <Building2 className="w-3.5 h-3.5" />
-                      <span className="text-xs uppercase tracking-tight truncate">{loc.company?.name || 'GENERIC'}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-gray-50 pt-5">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${loc.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-400'}`}>
-                      {loc.isActive ? 'Storage Ready' : 'Decommissioned'}
-                    </span>
-                    <p className="text-[10px] font-black text-gray-100 uppercase">#{loc.id.toString().padStart(3, '0')}</p>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+      <Card className="shadow-sm">
+        <div className="p-6 border-b border-secondary-100 flex items-center justify-between">
+          <h3 className="text-xl font-semibold leading-none tracking-tight text-secondary-900">
+            All Locations ({filteredLocations.length})
+          </h3>
         </div>
-      )}
+        <div>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
+            </div>
+          ) : filteredLocations.length > 0 ? (
+            <div className="overflow-x-auto rounded-lg border border-secondary-200 m-6 mt-0">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-primary-200 bg-primary-50">
+                    <th className="px-4 py-3 font-semibold text-primary-900 w-16">Sr.No</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900">Location Name</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900">Company</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900">Status</th>
+                    <th className="px-4 py-3 font-semibold text-primary-900 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence>
+                    {filteredLocations.map((loc, idx) => (
+                      <motion.tr
+                        key={loc.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-secondary-600">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-secondary-900">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-primary-500" />
+                            {loc.name}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-secondary-600">{loc.company?.name || 'GENERIC'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${loc.isActive
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-red-100 text-red-700 border-red-200'
+                            }`}>
+                            {loc.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(loc)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit2 className="w-4 h-4 text-secondary-500" />
+                            </Button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-secondary-500 text-lg">No locations found.</p>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <LocationDialog
         isOpen={isDialogOpen}

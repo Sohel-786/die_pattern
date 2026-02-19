@@ -57,90 +57,90 @@ export function PatternChangeDialog({ isOpen, onClose, onSubmit, item, isLoading
     if (!item) return null;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="Change Process" hideHeader={true}>
-            <DialogContent className="sm:max-w-[500px] rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-8">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-black text-white flex items-center gap-3">
-                            <Settings2 className="w-8 h-8" />
-                            Change Process
-                        </DialogTitle>
-                        <p className="text-white/90 text-sm font-medium mt-2">
-                            Recording a modification or repair for <span className="underline decoration-white/40">{item.currentName}</span>
-                        </p>
-                    </DialogHeader>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Change Process"
+            size="md"
+        >
+            <div className="mb-6">
+                <p className="text-secondary-500 text-sm font-medium">
+                    Recording a modification or repair for <span className="text-amber-600 font-bold">{item.currentName}</span>
+                </p>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                <div className="space-y-6">
+                    <div className="flex gap-2 p-1 bg-secondary-50/50 rounded-lg border border-secondary-200 w-full">
+                        <button
+                            type="button"
+                            onClick={() => setValue("changeType", "Modification")}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${changeType === "Modification" ? 'bg-amber-500 text-white shadow-sm' : 'text-secondary-500 hover:text-secondary-700'}`}
+                        >
+                            <Settings2 className="w-4 h-4" /> MODIFICATION
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setValue("changeType", "Repair")}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${changeType === "Repair" ? 'bg-amber-500 text-white shadow-sm' : 'text-secondary-500 hover:text-secondary-700'}`}
+                        >
+                            <Hammer className="w-4 h-4" /> REPAIR
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="newName" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Updated Pattern Name</Label>
+                            <Input
+                                id="newName"
+                                {...register("newName")}
+                                className="h-10 border-secondary-300 shadow-sm focus:ring-amber-500 text-sm"
+                                placeholder="Enter new name after process"
+                            />
+                            {errors.newName && <p className="text-xs text-rose-500 mt-1">{errors.newName.message}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="newRevision" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">New Revision Number</Label>
+                            <Input
+                                id="newRevision"
+                                {...register("newRevision")}
+                                className="h-10 border-secondary-300 shadow-sm focus:ring-amber-500 text-sm"
+                                placeholder="e.g. 1, 2, 3"
+                            />
+                            {errors.newRevision && <p className="text-xs text-rose-500 mt-1">{errors.newRevision.message}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="remarks" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Process Remarks</Label>
+                            <Textarea
+                                id="remarks"
+                                {...register("remarks")}
+                                className="border-secondary-300 shadow-sm focus:ring-amber-500 text-sm min-h-[100px]"
+                                placeholder="Describe the changes or repair work performed..."
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-10 space-y-8">
-                    <div className="space-y-6">
-                        <div className="flex gap-4 p-1.5 bg-secondary-100/50 rounded-2xl border border-gray-100">
-                            <button
-                                type="button"
-                                onClick={() => setValue("changeType", "Modification")}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${changeType === "Modification" ? 'bg-white text-amber-600 shadow-sm border border-amber-100' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                <Settings2 className="w-4 h-4" /> MODIFICATION
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setValue("changeType", "Repair")}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${changeType === "Repair" ? 'bg-white text-amber-600 shadow-sm border border-amber-100' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                <Hammer className="w-4 h-4" /> REPAIR
-                            </button>
-                        </div>
-
-                        <div className="space-y-4 pt-2">
-                            <div className="space-y-2">
-                                <Label className="text-sm font-extrabold text-gray-700 ml-1 uppercase tracking-tight">Updated Pattern Name</Label>
-                                <Input
-                                    {...register("newName")}
-                                    className="rounded-2xl h-14 bg-secondary-50/50 border-gray-200 focus:bg-white transition-all text-base font-bold"
-                                    placeholder="Enter new name after process"
-                                />
-                                {errors.newName && <p className="text-xs text-rose-500 ml-1">{errors.newName.message}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-sm font-extrabold text-gray-700 ml-1 uppercase tracking-tight">New Revision Number</Label>
-                                <Input
-                                    {...register("newRevision")}
-                                    className="rounded-2xl h-14 bg-secondary-50/50 border-gray-200 focus:bg-white transition-all text-base font-bold"
-                                    placeholder="e.g. 1, 2, 3"
-                                />
-                                {errors.newRevision && <p className="text-xs text-rose-500 ml-1">{errors.newRevision.message}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-sm font-extrabold text-gray-700 ml-1 uppercase tracking-tight">Process Remarks</Label>
-                                <Textarea
-                                    {...register("remarks")}
-                                    className="rounded-2xl min-h-[120px] bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-medium leading-relaxed"
-                                    placeholder="Describe the changes or repair work performed..."
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4 pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={onClose}
-                            className="flex-1 h-14 rounded-2xl font-bold border-gray-200 text-gray-500 hover:bg-gray-50"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={isLoading}
-                            className="flex-[1.5] h-14 rounded-2xl font-black bg-amber-500 hover:bg-amber-600 text-white shadow-xl shadow-amber-500/20 transition-all active:scale-[0.98]"
-                        >
-                            {isLoading ? "Processing..." : "Finish Change Process"}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
+                <div className="flex gap-3 pt-4 border-t border-secondary-100">
+                    <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="flex-[1.5] bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                        {isLoading ? "Processing..." : "Finish Change Process"}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        className="flex-1 border-secondary-300"
+                    >
+                        Cancel
+                    </Button>
+                </div>
+            </form>
         </Dialog>
     );
 }

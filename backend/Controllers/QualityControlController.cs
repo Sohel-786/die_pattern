@@ -18,7 +18,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetPending()
         {
             var data = await _context.Movements
-                .Include(m => m.PatternDie)
+                .Include(m => m.Item)
                 .Include(m => m.ToLocation)
                 .Include(m => m.ToParty)
                 .Where(m => m.IsQCPending && !m.IsQCApproved)
@@ -26,8 +26,8 @@ namespace net_backend.Controllers
                 {
                     Id = m.Id,
                     Type = m.Type,
-                    PatternDieId = m.PatternDieId,
-                    PatternDieName = m.PatternDie!.CurrentName,
+                    ItemId = m.ItemId,
+                    ItemName = m.Item!.CurrentName,
                     ToType = m.ToType,
                     ToName = m.ToType == HolderType.Location ? m.ToLocation!.Name : m.ToParty!.Name,
                     Remarks = m.Remarks,
@@ -44,7 +44,7 @@ namespace net_backend.Controllers
             if (!await HasPermission("PerformQC")) return Forbidden();
 
             var movement = await _context.Movements
-                .Include(m => m.PatternDie)
+                .Include(m => m.Item)
                 .FirstOrDefaultAsync(m => m.Id == dto.MovementId);
 
             if (movement == null) return NotFound("Movement not found");
@@ -64,13 +64,13 @@ namespace net_backend.Controllers
             if (dto.IsApproved)
             {
                 // Update stock holder only on approval
-                var patternDie = movement.PatternDie;
-                if (patternDie != null)
+                var item = movement.Item;
+                if (item != null)
                 {
-                    patternDie.CurrentHolderType = movement.ToType;
-                    patternDie.CurrentLocationId = movement.ToLocationId;
-                    patternDie.CurrentPartyId = movement.ToPartyId;
-                    patternDie.UpdatedAt = DateTime.Now;
+                    item.CurrentHolderType = movement.ToType;
+                    item.CurrentLocationId = movement.ToLocationId;
+                    item.CurrentPartyId = movement.ToPartyId;
+                    item.UpdatedAt = DateTime.Now;
                 }
             }
 

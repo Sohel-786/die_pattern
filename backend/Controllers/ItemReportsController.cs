@@ -7,13 +7,13 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("pattern-reports")]
+    [Route("item-reports")]
     [ApiController]
-    public class PatternReportsController : BaseController
+    public class ItemReportsController : BaseController
     {
         private readonly IExcelService _excelService;
 
-        public PatternReportsController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public ItemReportsController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
             _excelService = excelService;
         }
@@ -21,8 +21,8 @@ namespace net_backend.Controllers
         [HttpGet("inventory-status")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetInventoryStatus()
         {
-            var data = await _context.PatternDies
-                .Include(p => p.PatternType)
+            var data = await _context.Items
+                .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
                 .Include(p => p.CurrentParty)
@@ -31,7 +31,7 @@ namespace net_backend.Controllers
                     p.Id,
                     p.MainPartName,
                     p.CurrentName,
-                    PatternType = p.PatternType!.Name,
+                    ItemType = p.ItemType!.Name,
                     p.RevisionNo,
                     Status = p.Status!.Name,
                     Holder = p.CurrentHolderType == HolderType.Location ? p.CurrentLocation!.Name : p.CurrentParty!.Name,
@@ -47,7 +47,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetMovementLedger()
         {
             var data = await _context.Movements
-                .Include(m => m.PatternDie)
+                .Include(m => m.Item)
                 .Include(m => m.FromLocation)
                 .Include(m => m.FromParty)
                 .Include(m => m.ToLocation)
@@ -59,7 +59,7 @@ namespace net_backend.Controllers
                     m.Id,
                     Date = m.CreatedAt,
                     m.Type,
-                    Pattern = m.PatternDie!.CurrentName,
+                    ItemName = m.Item!.CurrentName,
                     From = m.FromType == HolderType.Location ? m.FromLocation!.Name : m.FromParty!.Name,
                     To = m.ToType == HolderType.Location ? m.ToLocation!.Name : m.ToParty!.Name,
                     m.Remarks,
@@ -81,14 +81,14 @@ namespace net_backend.Controllers
 
             var recent = await _context.QualityControls
                 .Include(q => q.Movement)
-                    .ThenInclude(m => m!.PatternDie)
+                    .ThenInclude(m => m!.Item)
                 .Include(q => q.Checker)
                 .OrderByDescending(q => q.CheckedAt)
                 .Take(10)
                 .Select(q => new
                 {
                     q.Id,
-                    Pattern = q.Movement!.PatternDie!.CurrentName,
+                    ItemName = q.Movement!.Item!.CurrentName,
                     q.IsApproved,
                     q.Remarks,
                     CheckedBy = q.Checker!.FirstName + " " + q.Checker.LastName,
