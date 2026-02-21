@@ -8,7 +8,15 @@ namespace net_backend.Data
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            context.Database.Migrate();
+            try
+            {
+                context.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                // Handle cases where database is already created but __EFMigrationsHistory is out of sync
+                Console.WriteLine($"Migration skipped or failed: {ex.Message}");
+            }
 
             // 1. Ensure Admin User Exists
             var adminUser = context.Users.FirstOrDefault(u => u.Username == "mitul");

@@ -59,12 +59,12 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemD
     const isActive = watch("isActive");
 
     // Fetch Master Data
-    const { data: itemTypes = [] } = useQuery({ queryKey: ["item-types"], queryFn: async () => (await api.get("/masters/item-types")).data.data });
-    const { data: materials = [] } = useQuery({ queryKey: ["materials"], queryFn: async () => (await api.get("/masters/materials")).data.data });
-    const { data: statuses = [] } = useQuery({ queryKey: ["item-statuses"], queryFn: async () => (await api.get("/masters/item-statuses")).data.data });
-    const { data: owners = [] } = useQuery({ queryKey: ["owner-types"], queryFn: async () => (await api.get("/masters/owner-types")).data.data });
-    const { data: locations = [] } = useQuery({ queryKey: ["locations", "active"], queryFn: async () => (await api.get("/locations")).data.data });
-    const { data: parties = [] } = useQuery({ queryKey: ["parties", "active"], queryFn: async () => (await api.get("/parties")).data.data });
+    const { data: itemTypes = [] } = useQuery({ queryKey: ["item-types", "active"], queryFn: async () => (await api.get("/masters/item-types/active")).data.data });
+    const { data: materials = [] } = useQuery({ queryKey: ["materials", "active"], queryFn: async () => (await api.get("/masters/materials/active")).data.data });
+    const { data: statuses = [] } = useQuery({ queryKey: ["item-statuses", "active"], queryFn: async () => (await api.get("/masters/item-statuses/active")).data.data });
+    const { data: owners = [] } = useQuery({ queryKey: ["owner-types", "active"], queryFn: async () => (await api.get("/masters/owner-types/active")).data.data });
+    const { data: locations = [] } = useQuery({ queryKey: ["locations", "active"], queryFn: async () => (await api.get("/locations/active")).data.data });
+    const { data: parties = [] } = useQuery({ queryKey: ["parties", "active"], queryFn: async () => (await api.get("/parties/active")).data.data });
 
     useEffect(() => {
         if (item && isOpen) {
@@ -301,27 +301,20 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemD
                             <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200"></div>
                             <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Record Visibility</h4>
                         </div>
-                        <div className="relative group">
-                            <div className={`absolute inset-0 bg-gradient-to-r ${isActive ? 'from-emerald-500/10 to-emerald-500/5' : 'from-secondary-200/50 to-secondary-200/30'} rounded-2xl blur-xl transition-all duration-500 opacity-0 group-hover:opacity-100`} />
-                            <div className={`relative flex items-center justify-between p-5 ${isActive ? 'bg-emerald-50/30 border-emerald-100' : 'bg-secondary-50 border-secondary-200'} rounded-2xl border transition-all duration-300 shadow-sm`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-11 w-11 rounded-1.5xl flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-secondary-200 text-secondary-500'}`}>
-                                        {isActive ? <ShieldCheck className="w-5 h-5" /> : <Power className="w-5 h-5" />}
-                                    </div>
-                                    <div>
-                                        <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Asset Availability</h4>
-                                        <p className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-600' : 'text-secondary-500'} transition-colors`}>
-                                            {isActive ? 'Live in System' : 'Deactivated'}
-                                        </p>
-                                    </div>
+                        <div className="flex items-center py-2 px-1">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={isActive}
+                                        onChange={(e) => setValue("isActive", e.target.checked)}
+                                    />
+                                    <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
+                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
                                 </div>
-                                <Switch
-                                    id="active-status"
-                                    checked={isActive}
-                                    onCheckedChange={(checked) => setValue("isActive", checked)}
-                                    className="data-[state=checked]:bg-emerald-500"
-                                />
-                            </div>
+                                <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -340,7 +333,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemD
                         ) : (
                             <div className="flex items-center gap-2">
                                 <Save className="w-4 h-4" />
-                                {item ? "Update Asset Record" : "Save Asset Entry"}
+                                Save
                             </div>
                         )}
                     </Button>
@@ -351,7 +344,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading }: ItemD
                         className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95"
                     >
                         <X className="w-4 h-4 mr-2" />
-                        Discard
+                        Cancel
                     </Button>
                 </div>
             </form>

@@ -60,7 +60,15 @@ namespace net_backend.Services
                     for (int i = 0; i < properties.Count; i++)
                     {
                         var value = properties[i].GetValue(item);
-                        worksheet.Cell(rowIdx, i + 1).Value = value != null ? XLCellValue.FromObject(value) : "";
+                        if (value == null) worksheet.Cell(rowIdx, i + 1).Value = "";
+                        else if (value is string s) worksheet.Cell(rowIdx, i + 1).Value = s;
+                        else if (value is bool b) worksheet.Cell(rowIdx, i + 1).Value = b;
+                        else if (value is int iVal) worksheet.Cell(rowIdx, i + 1).Value = iVal;
+                        else if (value is long lVal) worksheet.Cell(rowIdx, i + 1).Value = lVal;
+                        else if (value is decimal d) worksheet.Cell(rowIdx, i + 1).Value = (double)d;
+                        else if (value is double db) worksheet.Cell(rowIdx, i + 1).Value = db;
+                        else if (value is DateTime dt) worksheet.Cell(rowIdx, i + 1).Value = dt;
+                        else worksheet.Cell(rowIdx, i + 1).Value = value.ToString();
                     }
                     rowIdx++;
                 }
@@ -103,6 +111,8 @@ namespace net_backend.Services
                     var prop = properties.FirstOrDefault(p => {
                         var propName = p.Name.ToLower();
                         return propName == header || 
+                               (propName == "name" && (header == "name" || header == "locationname" || header == "partyname" || header == "entityname")) ||
+                               (propName == "companyname" && (header == "companyname" || header == "company" || header == "parentcompany")) ||
                                (propName == "mainpartname" && (header == "mainpartname" || header == "partname")) ||
                                (propName == "currentname" && (header == "currentname" || header == "name")) ||
                                (propName == "itemtype" && (header == "type" || header == "itemtype")) ||

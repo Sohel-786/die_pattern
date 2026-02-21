@@ -37,7 +37,7 @@ export default function CreatePOPage() {
     const { data: vendors = [], isLoading: loadingVendors } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
         queryFn: async () => {
-            const res = await api.get("/parties");
+            const res = await api.get("/parties/active");
             return res.data.data;
         },
     });
@@ -94,13 +94,13 @@ export default function CreatePOPage() {
                     >
                         <ArrowLeft className="w-8 h-8 text-gray-400" />
                     </Button>
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                    <div>
                         <h1 className="text-5xl font-black text-gray-900 tracking-tighter">Issue Work Order</h1>
                         <p className="text-gray-400 mt-2 font-bold text-lg flex items-center gap-3">
                             <span className="h-3 w-3 rounded-full bg-primary-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></span>
                             Assigning approved purchase indents to vendor for production/repair
                         </p>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 
@@ -175,46 +175,40 @@ export default function CreatePOPage() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <AnimatePresence mode="popLayout">
-                                    {selectedItems.length > 0 ? selectedItems.map((item, idx) => (
-                                        <motion.div
-                                            key={item.id}
-                                            layout
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            className="flex items-center justify-between p-7 bg-white rounded-[2.5rem] border-2 border-gray-100 shadow-sm group hover:border-primary-400 hover:shadow-xl hover:shadow-primary/5 transition-all relative"
-                                        >
-                                            <div className="flex items-center gap-5">
-                                                <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform">
-                                                    <Package className="w-7 h-7" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-gray-900 text-base">{item.currentName}</p>
-                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mt-1 italic">Linked Purchase Indent: {item.piNo || 'GEN001'}</p>
-                                                </div>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => toggleItem(item.id)}
-                                                className="h-12 w-12 rounded-2xl text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
-                                            >
-                                                <Trash2 className="w-6 h-6" />
-                                            </Button>
-                                        </motion.div>
-                                    )) : (
-                                        <div className="col-span-full py-32 text-center border-4 border-dashed border-gray-50 rounded-[3rem] space-y-6 bg-secondary-50/20">
-                                            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-gray-100">
-                                                <Layers className="w-10 h-10 text-gray-200" />
+                                {selectedItems.length > 0 ? selectedItems.map((item, idx) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center justify-between p-7 bg-white rounded-[2.5rem] border-2 border-gray-100 shadow-sm group hover:border-primary-400 hover:shadow-xl hover:shadow-primary/5 transition-all relative"
+                                    >
+                                        <div className="flex items-center gap-5">
+                                            <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform">
+                                                <Package className="w-7 h-7" />
                                             </div>
                                             <div>
-                                                <p className="text-gray-900 font-black text-xl">Allocation Stack Empty</p>
-                                                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Pull items from the Purchase Indent registry to proceed</p>
+                                                <p className="font-black text-gray-900 text-base">{item.currentName}</p>
+                                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mt-1 italic">Linked Purchase Indent: {item.piNo || 'GEN001'}</p>
                                             </div>
                                         </div>
-                                    )}
-                                </AnimatePresence>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => toggleItem(item.id)}
+                                            className="h-12 w-12 rounded-2xl text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
+                                        >
+                                            <Trash2 className="w-6 h-6" />
+                                        </Button>
+                                    </div>
+                                )) : (
+                                    <div className="col-span-full py-32 text-center border-4 border-dashed border-gray-50 rounded-[3rem] space-y-6 bg-secondary-50/20">
+                                        <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-gray-100">
+                                            <Layers className="w-10 h-10 text-gray-200" />
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-900 font-black text-xl">Allocation Stack Empty</p>
+                                            <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Pull items from the Purchase Indent registry to proceed</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

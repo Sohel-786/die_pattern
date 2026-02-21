@@ -25,17 +25,17 @@ export default function SystemReturnPage() {
     const [remarks, setRemarks] = useState("");
 
     const { data: items = [], isLoading: loadingItems } = useQuery<Item[]>({
-        queryKey: ["items", "all"],
+        queryKey: ["items", "active"],
         queryFn: async () => {
-            const res = await api.get("/items");
-            return res.data.data.filter((i: any) => i.isActive);
+            const res = await api.get("/items/active");
+            return res.data.data;
         },
     });
 
     const { data: locations = [] } = useQuery<Location[]>({
         queryKey: ["locations", "active"],
         queryFn: async () => {
-            const res = await api.get("/locations");
+            const res = await api.get("/locations/active");
             return res.data.data;
         },
     });
@@ -75,13 +75,13 @@ export default function SystemReturnPage() {
                 >
                     <ArrowLeft className="w-8 h-8 text-gray-400" />
                 </Button>
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                <div>
                     <h1 className="text-4xl font-black text-gray-900 tracking-tighter">System Stock Return</h1>
                     <p className="text-gray-400 mt-2 font-bold flex items-center gap-2 uppercase text-xs tracking-widest text-amber-600">
                         <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></div>
                         Internal Reconciliation & Stock Adjustment
                     </p>
-                </motion.div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">

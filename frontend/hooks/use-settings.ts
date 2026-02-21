@@ -60,7 +60,7 @@ export function useUploadCompanyLogo() {
 export function useUserPermissions(userId?: number) {
   return useQuery({
     queryKey: ['settings', 'permissions', userId],
-    queryFn: async (): Promise<{ permissions: UserPermission; allowedDivisionIds: number[] } | null> => {
+    queryFn: async (): Promise<{ permissions: UserPermission } | null> => {
       if (!userId) return null;
       const response = await api.get(`/settings/permissions/user/${userId}`);
       return response.data.data;
@@ -87,8 +87,8 @@ export function useUpdateUserPermissions() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, permissions, allowedDivisionIds }: { userId: number; permissions: Partial<UserPermission>; allowedDivisionIds: number[] }): Promise<any> => {
-      const response = await api.put(`/settings/permissions/user/${userId}`, { permissions, allowedDivisionIds });
+    mutationFn: async ({ userId, permissions }: { userId: number; permissions: Partial<UserPermission> }): Promise<any> => {
+      const response = await api.put(`/settings/permissions/user/${userId}`, { permissions });
       return response.data.data;
     },
     onSuccess: (_, variables) => {

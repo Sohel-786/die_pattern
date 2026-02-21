@@ -9,8 +9,6 @@ namespace net_backend.DTOs
         public string? ReceivedBy { get; set; }
         public int? StatusId { get; set; }
         public int? CompanyId { get; set; }
-        public int? ContractorId { get; set; }
-        public int? MachineId { get; set; }
         public int? LocationId { get; set; }
     }
 
@@ -21,8 +19,6 @@ namespace net_backend.DTOs
         public int? StatusId { get; set; }
         public string? Condition { get; set; }
         public int? CompanyId { get; set; }
-        public int? ContractorId { get; set; }
-        public int? MachineId { get; set; }
         public int? LocationId { get; set; }
     }
 }

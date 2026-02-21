@@ -8,10 +8,7 @@ import api from "@/lib/api";
 import {
   Issue,
   Item,
-  ItemCategory,
   Company,
-  Contractor,
-  Machine,
   Location,
   Role,
   ItemStatus,
@@ -62,11 +59,8 @@ import { cn } from "@/lib/utils";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const issueSchema = z.object({
-  categoryId: z.number().min(1, "Item category is required"),
   itemId: z.number().min(1, "Item is required"),
   companyId: z.number().min(1, "Company is required"),
-  contractorId: z.number().min(1, "Contractor is required"),
-  machineId: z.number().min(1, "Machine is required"),
   locationId: z.number().min(1, "Location is required"),
   issuedTo: z.string().min(1, "Operator name is required"),
   remarks: z.string().optional(),
@@ -80,16 +74,11 @@ export default function IssuesPage() {
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [inactiveTarget, setInactiveTarget] = useState<Issue | null>(null);
   const [nextIssueCode, setNextIssueCode] = useState<string>("");
-  const [filters, setFilters] =
-    useState<TransactionFiltersState>(defaultFilters);
-  const [fullScreenImageSrc, setFullScreenImageSrc] = useState<string | null>(
-    null,
-  );
+  const [filters, setFilters] = useState<TransactionFiltersState>(defaultFilters);
+  const [fullScreenImageSrc, setFullScreenImageSrc] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [activeImageTab, setActiveImageTab] = useState<"reference" | "live">(
-    "live",
-  );
+  const [activeImageTab, setActiveImageTab] = useState<"reference" | "live">("live");
   const cameraInputRef = useRef<CameraPhotoInputRef>(null);
 
   const queryClient = useQueryClient();
@@ -98,19 +87,12 @@ export default function IssuesPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const canAddOutward = permissions?.createMovement ?? false;
   const canEditOutward = permissions?.createMovement ?? false;
-  const isManager = currentUser?.role === Role.QC_MANAGER;
   const isAdmin = currentUser?.role === Role.QC_ADMIN;
   const isViewOnly = !!editingIssue?.isReturned;
 
   const debouncedSearch = useDebouncedValue(filters.search, 400);
-  const filtersForApi = useMemo(
-    () => ({ ...filters, search: debouncedSearch }),
-    [filters, debouncedSearch],
-  );
-  const filterKey = useMemo(
-    () => JSON.stringify(filtersForApi),
-    [filtersForApi],
-  );
+  const filtersForApi = useMemo(() => ({ ...filters, search: debouncedSearch }), [filters, debouncedSearch]);
+  const filterKey = useMemo(() => JSON.stringify(filtersForApi), [filtersForApi]);
 
   const { data: issues = [], isFetching: issuesLoading } = useQuery<Issue[]>({
     queryKey: ["issues", filterKey],
@@ -125,34 +107,10 @@ export default function IssuesPage() {
     },
   });
 
-  const { data: categories = [] } = useQuery<ItemCategory[]>({
-    queryKey: ["item-categories", "active"],
-    queryFn: async () => {
-      const res = await api.get("/item-categories/active");
-      return res.data?.data ?? [];
-    },
-  });
-
   const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ["companies", "active"],
     queryFn: async () => {
       const res = await api.get("/companies/active");
-      return res.data?.data ?? [];
-    },
-  });
-
-  const { data: contractors = [] } = useQuery<Contractor[]>({
-    queryKey: ["contractors", "active"],
-    queryFn: async () => {
-      const res = await api.get("/contractors/active");
-      return res.data?.data ?? [];
-    },
-  });
-
-  const { data: machines = [] } = useQuery<Machine[]>({
-    queryKey: ["machines", "active"],
-    queryFn: async () => {
-      const res = await api.get("/machines/active");
       return res.data?.data ?? [];
     },
   });
@@ -165,7 +123,7 @@ export default function IssuesPage() {
     },
   });
 
-  const { data: filterItems = [] } = useQuery<Item[]>({
+  const { data: availableItems = [], isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["items", "active"],
     queryFn: async () => {
       const res = await api.get("/items/active");
@@ -184,52 +142,15 @@ export default function IssuesPage() {
     resolver: zodResolver(issueSchema),
   });
 
-  const selectedCategoryId = watch("categoryId");
-  const selectedItemId = watch("itemId");
   const watchedCompanyId = watch("companyId");
-  const watchedContractorId = watch("contractorId");
-  const watchedMachineId = watch("machineId");
   const watchedLocationId = watch("locationId");
   const watchedIssuedTo = watch("issuedTo");
-
-  const hasAllRequired =
-    typeof selectedCategoryId === "number" &&
-    !Number.isNaN(selectedCategoryId) &&
-    selectedCategoryId >= 1 &&
-    typeof selectedItemId === "number" &&
-    !Number.isNaN(selectedItemId) &&
-    selectedItemId >= 1 &&
-    typeof watchedCompanyId === "number" &&
-    !Number.isNaN(watchedCompanyId) &&
-    watchedCompanyId >= 1 &&
-    typeof watchedContractorId === "number" &&
-    !Number.isNaN(watchedContractorId) &&
-    watchedContractorId >= 1 &&
-    typeof watchedMachineId === "number" &&
-    !Number.isNaN(watchedMachineId) &&
-    watchedMachineId >= 1 &&
-    typeof watchedLocationId === "number" &&
-    !Number.isNaN(watchedLocationId) &&
-    watchedLocationId >= 1 &&
-    typeof watchedIssuedTo === "string" &&
-    watchedIssuedTo.trim().length > 0;
-
-  const { data: itemsByCategory = [], isLoading: itemsLoading } = useQuery<
-    Item[]
-  >({
-    queryKey: ["items-by-category", selectedCategoryId],
-    queryFn: async () => {
-      if (!selectedCategoryId || selectedCategoryId === 0) return [];
-      const res = await api.get(`/items/by-category/${selectedCategoryId}`);
-      return res.data?.data ?? [];
-    },
-    enabled: !!selectedCategoryId && selectedCategoryId !== 0,
-  });
+  const selectedItemId = watch("itemId");
 
   const selectedItem = useMemo(() => {
     if (!selectedItemId) return null;
-    return itemsByCategory.find((i) => i.id === selectedItemId) ?? null;
-  }, [selectedItemId, itemsByCategory]);
+    return availableItems.find((i) => i.id === selectedItemId) ?? null;
+  }, [selectedItemId, availableItems]);
 
   const createMutation = useMutation({
     mutationFn: async (data: IssueForm) => {
@@ -250,32 +171,15 @@ export default function IssuesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issues"] });
-      queryClient.invalidateQueries({ queryKey: ["active-issues"] });
-      queryClient.invalidateQueries({ queryKey: ["items-by-category"] });
-      queryClient.invalidateQueries({ queryKey: ["available-items"] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       handleCloseForm();
       toast.success("Outward entry created");
     },
-    onError: (e: unknown) => {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create outward entry.";
-      toast.error(msg);
-    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to create outward entry.")
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: Partial<IssueForm>;
-    }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<IssueForm> }) => {
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -291,64 +195,29 @@ export default function IssuesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issues"] });
-      queryClient.invalidateQueries({ queryKey: ["active-issues"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       handleCloseForm();
       toast.success("Outward entry updated");
     },
-    onError: (e: unknown) => {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update outward entry.";
-      toast.error(msg);
-    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to update outward entry.")
   });
 
   const setInactiveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await api.patch(`/issues/${id}/inactive`);
-      return res.data;
-    },
+    mutationFn: async (id: number) => api.patch(`/issues/${id}/inactive`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issues"] });
-      queryClient.invalidateQueries({ queryKey: ["active-issues"] });
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       setInactiveTarget(null);
       toast.success("Outward marked inactive");
     },
-    onError: (e: unknown) => {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update.";
-      toast.error(msg);
-    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to update.")
   });
 
   const setActiveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await api.patch(`/issues/${id}/active`);
-      return res.data;
-    },
+    mutationFn: async (id: number) => api.patch(`/issues/${id}/active`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issues"] });
-      queryClient.invalidateQueries({ queryKey: ["active-issues"] });
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       toast.success("Outward marked active");
     },
-    onError: (e: unknown) => {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update.";
-      toast.error(msg);
-    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? "Failed to update.")
   });
 
   const handleOpenForm = async () => {
@@ -367,11 +236,8 @@ export default function IssuesPage() {
     setEditingIssue(issue);
     setNextIssueCode("");
     reset();
-    setValue("categoryId", issue.item?.categoryId ?? 0);
     setValue("itemId", issue.itemId);
-    setValue("companyId", issue.companyId ?? 0);
-    setValue("contractorId", issue.contractorId ?? 0);
-    setValue("machineId", issue.machineId ?? 0);
+    setValue("companyId", (issue as any).companyId ?? 0);
     setValue("locationId", issue.locationId ?? 0);
     setValue("issuedTo", issue.issuedTo ?? "");
     setValue("remarks", issue.remarks ?? "");
@@ -401,21 +267,11 @@ export default function IssuesPage() {
     updateMutation.reset();
   };
 
-  useEffect(() => {
-    if (isFormOpen && !editingIssue) {
-      setTimeout(() => {
-        document.getElementById("outward-company-id")?.focus();
-      }, 300);
-    }
-  }, [isFormOpen, editingIssue]);
-
   const handleImageCapture = (file: File | null) => {
     if (file) {
       setImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
+      reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     } else {
       setImageFile(null);
@@ -435,10 +291,7 @@ export default function IssuesPage() {
         id: editingIssue.id,
         data: {
           itemId: data.itemId,
-          categoryId: data.categoryId,
           companyId: data.companyId,
-          contractorId: data.contractorId,
-          machineId: data.machineId,
           locationId: data.locationId,
           issuedTo: data.issuedTo,
           remarks: data.remarks,
@@ -447,7 +300,6 @@ export default function IssuesPage() {
     } else {
       createMutation.mutate({
         ...data,
-        categoryId: Number(data.categoryId),
         itemId: Number(data.itemId),
       });
     }
@@ -458,107 +310,37 @@ export default function IssuesPage() {
     setInactiveMutation.mutate(inactiveTarget.id);
   };
 
-  const filterOptions = useMemo(() => {
-    const filteredLocations =
-      filters.companyIds.length > 0
-        ? locations.filter((l) => filters.companyIds.includes(l.companyId))
-        : locations;
+  const filterOptions = useMemo(() => ({
+    company: companies.map((c) => ({ value: c.id, label: c.name })),
+    location: (filters.companyIds.length > 0 ? locations.filter(l => filters.companyIds.includes(l.companyId)) : locations).map(l => ({ value: l.id, label: l.name })),
+    item: availableItems.map(i => ({ value: i.id, label: (i as any).serialNumber ? `${i.currentName} (${(i as any).serialNumber})` : i.currentName })),
+  }), [companies, locations, availableItems, filters.companyIds]);
 
-    const filteredMachines =
-      filters.contractorIds.length > 0
-        ? machines.filter((m) => filters.contractorIds.includes(m.contractorId))
-        : machines;
-
-    const filteredItems =
-      filters.itemCategoryIds.length > 0
-        ? filterItems.filter((i) =>
-          filters.itemCategoryIds.includes(i.categoryId!),
-        )
-        : filterItems;
-
-    return {
-      company: companies.map((c) => ({ value: c.id, label: c.name })),
-      location: filteredLocations.map((l) => ({ value: l.id, label: l.name })),
-      contractor: contractors.map((c) => ({ value: c.id, label: c.name })),
-      machine: filteredMachines.map((m) => ({ value: m.id, label: m.name })),
-      category: categories.map((c) => ({ value: c.id, label: c.name })),
-      item: filteredItems.map((i) => ({
-        value: i.id,
-        label: i.serialNumber
-          ? `${i.itemName} (${i.serialNumber})`
-          : i.itemName,
-      })),
-    };
-  }, [
-    companies,
-    contractors,
-    machines,
-    locations,
-    filterItems,
-    categories,
-    filters.companyIds,
-    filters.contractorIds,
-    filters.itemCategoryIds,
-  ]);
-
-  const categorySelectOptions = useMemo(() => {
-    return categories.map((c) => ({ value: c.id, label: c.name }));
-  }, [categories]);
-
-  const companySelectOptions = useMemo(() => {
-    return companies.map((c) => ({ value: c.id, label: c.name }));
-  }, [companies]);
-
-  const contractorSelectOptions = useMemo(() => {
-    return contractors.map((c) => ({ value: c.id, label: c.name }));
-  }, [contractors]);
-
+  const companySelectOptions = useMemo(() => companies.map(c => ({ value: c.id, label: c.name })), [companies]);
   const locationSelectOptions = useMemo(() => {
     if (!watchedCompanyId) return [];
-    return locations
-      .filter((l) => l.companyId === watchedCompanyId)
-      .map((l) => ({ value: l.id, label: l.name }));
+    return locations.filter(l => l.companyId === watchedCompanyId).map(l => ({ value: l.id, label: l.name }));
   }, [locations, watchedCompanyId]);
+  const itemSelectOptions = useMemo(() => availableItems.map(item => ({
+    value: item.id,
+    label: `${item.currentName}${(item as any).serialNumber ? ` (${(item as any).serialNumber})` : ""}${item.statusName && item.statusName !== "AVAILABLE" && item.statusName !== "Available" ? ` — ${item.statusName}` : ""}`,
+    disabled: item.statusName !== "AVAILABLE" && item.statusName !== "Available",
+  })), [availableItems]);
 
-  const machineSelectOptions = useMemo(() => {
-    if (!watchedContractorId) return [];
-    return machines
-      .filter((m) => m.contractorId === watchedContractorId)
-      .map((m) => ({ value: m.id, label: m.name }));
-  }, [machines, watchedContractorId]);
-
-  const itemSelectOptions = useMemo(() => {
-    return itemsByCategory.map((item) => ({
-      value: item.id,
-      label: `${item.itemName}${item.serialNumber ? ` (${item.serialNumber})` : ""}${item.status !== ItemStatus.AVAILABLE ? ` — ${item.status}` : ""}`,
-      disabled: item.status !== ItemStatus.AVAILABLE,
-    }));
-  }, [itemsByCategory]);
-
-  const goToInward = (issue: Issue) => {
-    router.push(`/returns?issueId=${issue.id}`);
-  };
+  const goToInward = (issue: Issue) => router.push(`/returns?issueId=${issue.id}`);
 
   return (
     <div className="p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-text mb-2">Outward</h1>
-              <p className="text-secondary-600">
-                {isManager
-                  ? "View outward entries"
-                  : "Create and manage outward entries"}
-              </p>
+              <p className="text-secondary-600">Create and manage outward entries</p>
             </div>
             {canAddOutward && (
               <Button onClick={handleOpenForm} className="shadow-md">
-                <Plus className="w-4 h-4 mr-2" />
-                Outward Entry
+                <Plus className="w-4 h-4 mr-2" /> Outward Entry
               </Button>
             )}
           </div>
@@ -568,13 +350,9 @@ export default function IssuesPage() {
             onFiltersChange={setFilters}
             companyOptions={filterOptions.company}
             locationOptions={filterOptions.location}
-            contractorOptions={filterOptions.contractor}
-            machineOptions={filterOptions.machine}
-            itemCategoryOptions={filterOptions.category}
             itemOptions={filterOptions.item}
             onClear={() => setFilters(defaultFilters)}
-            searchPlaceholder="Search by outward no., item, company, location, operator…"
-            className="shadow-sm"
+            searchPlaceholder="Search entries..."
           />
 
           <Card className="shadow-sm">
@@ -587,717 +365,167 @@ export default function IssuesPage() {
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
                 </div>
               ) : issues.length > 0 ? (
-                <div className="overflow-x-auto overflow-y-hidden rounded-lg border border-secondary-200">
+                <div className="overflow-x-auto rounded-lg border border-secondary-200">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-primary-200 bg-primary-100">
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[110px]">
-                          Issue No
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[120px]">
-                          Outward Date
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[140px]">
-                          Item
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[120px]">
-                          Company
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[120px]">
-                          Contractor
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[120px]">
-                          Machine
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[120px]">
-                          Location
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[100px]">
-                          Operator
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[90px]">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[100px]">
-                          Image
-                        </th>
-                        {/* <th className="px-4 py-3 font-semibold text-primary-900 text-center whitespace-nowrap min-w-[100px]">
-                          Inward Done
-                        </th> */}
-                        {(canAddOutward || canEditOutward) && (
-                          <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[200px]">
-                            Actions
-                          </th>
-                        )}
+                      <tr className="border-b border-primary-200 bg-primary-100/50">
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[110px]">Outward No</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[120px]">Date</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[140px]">Item</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[120px]">Location</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[100px]">Operator</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[90px]">Status</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[100px]">Image</th>
+                        <th className="px-4 py-3 font-semibold text-primary-900 text-center min-w-[150px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {issues.map((issue: any, idx) => (
-                        <motion.tr
-                          key={issue.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.02 }}
-                          className="border-b border-secondary-100 hover:bg-primary-50 transition-colors"
-                        >
-                          <td className="px-4 py-3 font-mono text-secondary-700 text-center">
-                            {issue.issueNo}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {formatDate(issue.issuedAt)}
-                          </td>
-                          <td className="px-4 py-3 font-medium text-text text-center">
-                            {issue.item?.itemName ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {issue.company?.name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {issue.contractor?.name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {issue.machine?.name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {issue.location?.name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-secondary-600 text-center">
-                            {issue.issuedTo ?? "—"}
-                          </td>
+                        <motion.tr key={issue.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-secondary-100 hover:bg-primary-50">
+                          <td className="px-4 py-3 font-mono text-center">{issue.issueNo}</td>
+                          <td className="px-4 py-3 text-center">{formatDate(issue.issuedAt)}</td>
+                          <td className="px-4 py-3 font-medium text-center">{issue.item?.currentName ?? "—"}</td>
+                          <td className="px-4 py-3 text-center">{issue.location?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-center">{issue.issuedTo ?? "—"}</td>
                           <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${issue.isActive
-                                  ? "bg-green-100 text-green-700 border border-green-200"
-                                  : "bg-red-100 text-red-700 border border-red-200"
-                                }`}
-                            >
+                            <span className={`px-2 py-1 rounded-full text-xs ${issue.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                               {issue.isActive ? "Active" : "Inactive"}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {issue.issueImage ? (
-                              <div className="relative group/thumb inline-block">
-                                <img
-                                  src={
-                                    issue.issueImage.startsWith("/")
-                                      ? `${API_BASE}${issue.issueImage}`
-                                      : `${API_BASE}/storage/${issue.issueImage}`
-                                  }
-                                  alt="Outward"
-                                  className="w-10 h-10 object-cover rounded-lg border border-secondary-200 shadow-sm transition-transform group-hover/thumb:scale-105 cursor-pointer"
-                                  onClick={() =>
-                                    setFullScreenImageSrc(
-                                      issue?.issueImage.startsWith("/")
-                                        ? `${API_BASE}${issue.issueImage}`
-                                        : `${API_BASE}/storage/${issue.issueImage}`,
-                                    )
-                                  }
-                                />
-                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity rounded-lg flex items-center justify-center pointer-events-none">
-                                  <ZoomIn className="w-4 h-4 text-white" />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 bg-secondary-50 border border-dashed border-secondary-200 rounded-lg flex items-center justify-center mx-auto text-secondary-300">
-                                <Camera className="w-4 h-4" />
-                              </div>
+                            {issue.issueImage && (
+                              <img
+                                src={issue.issueImage.startsWith("/") ? `${API_BASE}${issue.issueImage}` : `${API_BASE}/storage/${issue.issueImage}`}
+                                className="w-10 h-10 object-cover rounded mx-auto cursor-pointer"
+                                onClick={() => setFullScreenImageSrc(issue.issueImage.startsWith("/") ? `${API_BASE}${issue.issueImage}` : `${API_BASE}/storage/${issue.issueImage}`)}
+                              />
                             )}
                           </td>
-                          {/* <td className="px-4 py-3 text-center">
-                            <span
-                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                                issue.isReturned
-                                  ? "bg-green-100 text-green-700 border border-green-200"
-                                  : "bg-amber-100 text-amber-700 border border-amber-200"
-                              }`}
-                            >
-                              {issue.isReturned ? "Yes" : "No"}
-                            </span>
-                          </td> */}
-                          {(canAddOutward || canEditOutward) && (
-                            <td className="px-4 py-3 min-w-[200px]">
-                              <div className="flex flex-nowrap items-center justify-center gap-1 whitespace-nowrap">
-                                {!issue.isReturned && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => goToInward(issue)}
-                                    className="shrink-0 text-primary-600 border-primary-200 hover:bg-primary-50 hover:border-primary-300"
-                                  >
-                                    <LogIn className="w-4 h-4 mr-1" />
-                                    Inward
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenEdit(issue)}
-                                  title={
-                                    issue.isReturned
-                                      ? "View only (inward done)"
-                                      : canEditOutward
-                                        ? "Edit outward"
-                                        : "View outward (edit disabled)"
-                                  }
-                                  className="shrink-0"
-                                >
-                                  <Edit2 className="w-4 h-4" />
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {!issue.isReturned && (
+                                <Button variant="outline" size="sm" onClick={() => goToInward(issue)} className="text-primary-600 h-8">
+                                  Inward
                                 </Button>
-                                {isAdmin && (
-                                  <>
-                                    {issue.isActive && !issue.isReturned && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setInactiveTarget(issue)}
-                                        title="Mark outward inactive"
-                                        className="shrink-0 text-amber-600 hover:bg-amber-50"
-                                        disabled={setInactiveMutation.isPending}
-                                      >
-                                        <Ban className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {!issue.isActive && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          setActiveMutation.mutate(issue.id)
-                                        }
-                                        title="Mark outward active"
-                                        className="shrink-0 text-green-600 hover:bg-green-50"
-                                        disabled={setActiveMutation.isPending}
-                                      >
-                                        <CheckCircle className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          )}
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(issue)} className="h-8">
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              {isAdmin && (
+                                issue.isActive && !issue.isReturned ? (
+                                  <Button variant="ghost" size="sm" onClick={() => setInactiveTarget(issue)} className="text-amber-600 h-8">
+                                    <Ban className="w-4 h-4" />
+                                  </Button>
+                                ) : (
+                                  !issue.isActive && (
+                                    <Button variant="ghost" size="sm" onClick={() => setActiveMutation.mutate(issue.id)} className="text-green-600 h-8">
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                  )
+                                )
+                              )}
+                            </div>
+                          </td>
                         </motion.tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-secondary-500 text-lg">
-                    {hasActiveFilters(filters)
-                      ? "No outward entries match your filters."
-                      : "No outward entries yet. Create one above."}
-                  </p>
-                </div>
+                <div className="text-center py-12 text-secondary-500">No outward entries found.</div>
               )}
             </CardContent>
           </Card>
         </div>
+      </motion.div>
 
-        <Dialog
-          isOpen={!!inactiveTarget}
-          onClose={() => setInactiveTarget(null)}
-          title="Mark outward inactive?"
-          size="sm"
-        >
-          <div className="space-y-4">
-            <p className="text-secondary-600">
-              {inactiveTarget
-                ? `"${inactiveTarget.issueNo}" — ${inactiveTarget.item?.itemName ?? "Item"} will be marked inactive. You can reactivate it later.`
-                : ""}
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setInactiveTarget(null)}
-                className="flex-1"
-                disabled={setInactiveMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="flex-1 bg-amber-600 hover:bg-amber-700"
-                onClick={handleMarkInactiveConfirm}
-                disabled={setInactiveMutation.isPending}
-              >
-                {setInactiveMutation.isPending ? "Updating…" : "Mark inactive"}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
-
-        <Dialog
-          isOpen={isFormOpen}
-          onClose={handleCloseForm}
-          title={
-            editingIssue
-              ? editingIssue.isReturned
-                ? "View Outward"
-                : "Edit Outward"
-              : "Outward Entry"
-          }
-          size="3xl"
-          contentScroll={false}
-        >
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="flex flex-col h-full overflow-hidden"
-            aria-label="Outward entry form"
-          >
-            <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
-              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-                {/* Left Column: Form Fields */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3.5">
-                    {/* Outward Number - Aligned with returns/page.tsx */}
-                    <div>
-                      <Label
-                        htmlFor="outward-no"
-                        className="text-sm font-medium text-secondary-700"
-                      >
-                        Outward No
-                      </Label>
-                      <Input
-                        id="outward-no"
-                        value={
-                          editingIssue
-                            ? editingIssue.issueNo
-                            : nextIssueCode || "Generating..."
-                        }
-                        disabled
-                        readOnly
-                        className="mt-1.5 h-10 bg-secondary-50 border-secondary-200"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div>
-                        <Label
-                          htmlFor="outward-company-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Company <span className="text-red-500">*</span>
-                        </Label>
-                        <SearchableSelect
-                          id="outward-company-id"
-                          options={companySelectOptions}
-                          value={watchedCompanyId ?? ""}
-                          onChange={(v) => {
-                            setValue("companyId", Number(v));
-                            setValue("locationId", 0);
-                            setTimeout(() => {
-                              document
-                                .getElementById("outward-location-id")
-                                ?.focus();
-                            }, 100);
-                          }}
-                          disabled={isViewOnly}
-                          placeholder="Select company"
-                          error={errors.companyId?.message}
-                        />
-                      </div>
-
-                      <div>
-                        <Label
-                          htmlFor="outward-location-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Location <span className="text-red-500">*</span>
-                        </Label>
-                        <SearchableSelect
-                          id="outward-location-id"
-                          options={locationSelectOptions}
-                          value={watchedLocationId ?? ""}
-                          onChange={(v) => {
-                            setValue("locationId", Number(v));
-                            setTimeout(() => {
-                              document
-                                .getElementById("outward-contractor-id")
-                                ?.focus();
-                            }, 100);
-                          }}
-                          disabled={isViewOnly || !watchedCompanyId}
-                          placeholder={
-                            watchedCompanyId
-                              ? "Select location"
-                              : "Select company first"
-                          }
-                          error={errors.locationId?.message}
-                        />
-                      </div>
-
-                      <div>
-                        <Label
-                          htmlFor="outward-contractor-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Contractor <span className="text-red-500">*</span>
-                        </Label>
-                        <SearchableSelect
-                          id="outward-contractor-id"
-                          options={contractorSelectOptions}
-                          value={watchedContractorId ?? ""}
-                          onChange={(v) => {
-                            setValue("contractorId", Number(v));
-                            setValue("machineId", 0);
-                            setTimeout(() => {
-                              document
-                                .getElementById("outward-machine-id")
-                                ?.focus();
-                            }, 100);
-                          }}
-                          disabled={isViewOnly}
-                          placeholder="Select contractor"
-                          error={errors.contractorId?.message}
-                        />
-                      </div>
-
-                      <div>
-                        <Label
-                          htmlFor="outward-machine-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Machine <span className="text-red-500">*</span>
-                        </Label>
-                        <SearchableSelect
-                          id="outward-machine-id"
-                          options={machineSelectOptions}
-                          value={watchedMachineId ?? ""}
-                          onChange={(v) => {
-                            setValue("machineId", Number(v));
-                            setTimeout(() => {
-                              document
-                                .getElementById("outward-category-id")
-                                ?.focus();
-                            }, 100);
-                          }}
-                          disabled={isViewOnly || !watchedContractorId}
-                          placeholder={
-                            watchedContractorId
-                              ? "Select machine"
-                              : "Select contractor first"
-                          }
-                          error={errors.machineId?.message}
-                        />
-                      </div>
-
-                      <div>
-                        <Label
-                          htmlFor="outward-category-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Category <span className="text-red-500">*</span>
-                        </Label>
-                        <SearchableSelect
-                          id="outward-category-id"
-                          options={categorySelectOptions}
-                          value={selectedCategoryId ?? ""}
-                          onChange={(v) => {
-                            const n = v ? Number(v) : 0;
-                            setValue("categoryId", n);
-                            setValue("itemId", 0);
-                            if (n !== 0) setIsItemDialogOpen(true);
-                          }}
-                          disabled={isViewOnly}
-                          placeholder="Select category"
-                          error={errors.categoryId?.message}
-                        />
-                      </div>
-
-                      <div id="outward-item-block">
-                        <Label
-                          htmlFor="outward-item-id"
-                          className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                        >
-                          Item <span className="text-red-500">*</span>
-                        </Label>
-                        <div
-                          id="outward-item-id"
-                          tabIndex={isViewOnly || !selectedCategoryId ? -1 : 0}
-                          onClick={() =>
-                            !isViewOnly &&
-                            selectedCategoryId &&
-                            setIsItemDialogOpen(true)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              !isViewOnly &&
-                                selectedCategoryId &&
-                                setIsItemDialogOpen(true);
-                            }
-                          }}
-                          className={cn(
-                            "flex h-10 w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-500",
-                            isViewOnly || !selectedCategoryId
-                              ? "bg-secondary-50 cursor-not-allowed opacity-60 border-secondary-200"
-                              : "bg-white border-secondary-300 hover:border-primary-400 cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "truncate font-medium",
-                              !selectedItemId
-                                ? "text-secondary-400 italic"
-                                : "text-secondary-900",
-                            )}
-                          >
-                            {selectedItemId
-                              ? filterItems.find((i) => i.id === selectedItemId)
-                                ?.itemName || "Select item"
-                              : "Browse..."}
-                          </span>
-                        </div>
-                        {errors.itemId?.message && (
-                          <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-tight">
-                            {errors.itemId.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor="outward-operator"
-                        className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                      >
-                        Operator Name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="outward-operator"
-                        {...register("issuedTo")}
-                        placeholder="Type operator name"
-                        disabled={isViewOnly}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            document.getElementById("outward-remarks")?.focus();
-                          }
-                        }}
-                        className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm"
-                      />
-                      {errors.issuedTo && (
-                        <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-tight">
-                          {errors.issuedTo.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor="outward-remarks"
-                        className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block"
-                      >
-                        Remarks{" "}
-                        <span className="text-secondary-400 font-normal ml-1">
-                          (Optional)
-                        </span>
-                      </Label>
-                      <Textarea
-                        id="outward-remarks"
-                        {...register("remarks")}
-                        placeholder="Add outward notes..."
-                        rows={1}
-                        disabled={isViewOnly}
-                        className="border-secondary-300 shadow-sm focus:ring-primary-500 resize-none min-h-[60px]"
-                      />
-                    </div>
-                  </div>
+      <Dialog isOpen={isFormOpen} onClose={handleCloseForm} title={editingIssue ? (editingIssue.isReturned ? "View Outward" : "Edit Outward") : "Outward Entry"} size="3xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <Label>Outward No</Label>
+                <Input value={editingIssue ? editingIssue.issueNo : nextIssueCode || "Generating..."} disabled readOnly className="bg-secondary-50" />
+              </div>
+              <div>
+                <Label>Company *</Label>
+                <SearchableSelect options={companySelectOptions} value={watchedCompanyId ?? ""} onChange={v => { setValue("companyId", Number(v)); setValue("locationId", 0); }} disabled={isViewOnly} placeholder="Select company" />
+              </div>
+              <div>
+                <Label>Location *</Label>
+                <SearchableSelect options={locationSelectOptions} value={watchedLocationId ?? ""} onChange={v => setValue("locationId", Number(v))} disabled={isViewOnly || !watchedCompanyId} placeholder="Select location" />
+              </div>
+              <div>
+                <Label>Item *</Label>
+                <div className="flex gap-2">
+                  <Input value={selectedItem ? `${selectedItem.currentName} (${(selectedItem as any).serialNumber || "No Serial"})` : "No item selected"} disabled className="bg-secondary-50 flex-1" />
+                  {!isViewOnly && (
+                    <Button type="button" variant="outline" onClick={() => setIsItemDialogOpen(true)} className="shrink-0">
+                      Select
+                    </Button>
+                  )}
                 </div>
-
-                {/* Right Column: Tabbed Visual Documentation */}
-                <div className="flex flex-col h-full space-y-4">
-                  {/* Professional Tab Switcher */}
-                  <div className="flex items-center justify-between bg-secondary-100/50 p-1 rounded-xl border border-secondary-200 shadow-inner">
-                    <div className="flex w-full gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveImageTab("live")}
-                        className={cn(
-                          "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300 font-black text-[11px] uppercase tracking-widest",
-                          activeImageTab === "live"
-                            ? "bg-primary-600 text-white shadow-lg ring-1 ring-primary-500"
-                            : "text-secondary-500 hover:bg-secondary-200/50 hover:text-secondary-700",
-                        )}
-                      >
-                        <Camera
-                          className={cn(
-                            "w-4 h-4",
-                            activeImageTab === "live" ? "animate-pulse" : "",
-                          )}
-                        />
-                        Material With Person
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveImageTab("reference")}
-                        className={cn(
-                          "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300 font-black text-[11px] uppercase tracking-widest",
-                          activeImageTab === "reference"
-                            ? "bg-slate-600 text-white shadow-lg ring-1 ring-slate-500"
-                            : "text-secondary-500 hover:bg-secondary-200/50 hover:text-secondary-700",
-                        )}
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                        Item Photo
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Active Tab Content - FIXED HEIGHT */}
-                  <div className="h-[430px] flex flex-col">
-                    {activeImageTab === "live" ? (
-                      <div className="flex-1 rounded-2xl border border-secondary-200 bg-white shadow-2xl overflow-hidden flex flex-col group relative">
-                        <div className="flex-1 p-4 flex flex-col overflow-hidden">
-                          <CameraPhotoInput
-                            label="Handover Photo - Person With Item"
-                            required={true}
-                            hint="Use your camera to capture the outward photo"
-                            previewUrl={imagePreview}
-                            onCapture={handleImageCapture}
-                            aspectRatio="video"
-                            onPreviewClick={(url) => setFullScreenImageSrc(url)}
-                          />
-                        </div>
-
-                        <div className="px-5 py-3 bg-secondary-50/50 border-t border-secondary-100 flex items-center justify-center">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-1 rounded-2xl border border-secondary-200 bg-white shadow-xl overflow-hidden flex flex-col relative group">
-                        <div className="px-5 py-3 bg-secondary-50 border-b border-secondary-100 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-slate-600 rounded-lg shadow-sm">
-                              <ImageIcon className="w-3.5 h-3.5 text-white" />
-                            </div>
-                            <span className="text-[10px] font-black text-secondary-700 uppercase tracking-widest">
-                              Recent Condition Of Item
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex-1 p-6 bg-white flex items-center justify-center overflow-hidden">
-                          <div className="w-full h-full rounded-xl border border-secondary-100 bg-secondary-50/30 flex items-center justify-center overflow-hidden relative group/ref shadow-inner">
-                            {selectedItem || editingIssue?.item ? (
-                              (() => {
-                                const item = selectedItem || editingIssue?.item;
-                                const imagePath =
-                                  (item as any)?.latestImage ||
-                                  (item as any)?.image;
-                                if (imagePath) {
-                                  const src = imagePath.startsWith("/")
-                                    ? `${API_BASE}${imagePath}`
-                                    : `${API_BASE}/storage/${imagePath}`;
-                                  return (
-                                    <>
-                                      <img
-                                        src={src}
-                                        alt="Condition Reference"
-                                        className="w-full h-full object-contain p-2"
-                                      />
-                                      <div
-                                        className="absolute inset-0 bg-black/40 opacity-0 group-hover/ref:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm cursor-zoom-in"
-                                        onClick={() =>
-                                          setFullScreenImageSrc(src)
-                                        }
-                                      >
-                                        <button
-                                          type="button"
-                                          className="p-4 bg-white rounded-full shadow-2xl text-secondary-900 transform scale-75 group-hover/ref:scale-100 transition-transform"
-                                        >
-                                          <ZoomIn className="w-8 h-8" />
-                                        </button>
-                                      </div>
-                                    </>
-                                  );
-                                }
-                                return (
-                                  <div className="text-center opacity-30 flex flex-col items-center gap-3">
-                                    <div className="p-4 bg-secondary-200 rounded-full">
-                                      <ImageIcon className="w-12 h-12 text-secondary-500" />
-                                    </div>
-                                  </div>
-                                );
-                              })()
-                            ) : (
-                              <div className="text-center opacity-30 px-6 space-y-3">
-                                <div className="p-4 bg-secondary-200/50 rounded-full mx-auto w-fit">
-                                  <ImageIcon className="w-12 h-12 text-secondary-500" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              </div>
+              <div>
+                <Label>Operator Name *</Label>
+                <Input {...register("issuedTo")} disabled={isViewOnly} placeholder="Enter operator name" />
+                {errors.issuedTo && <p className="text-xs text-red-500 mt-1">{errors.issuedTo.message}</p>}
+              </div>
+              <div>
+                <Label>Remarks</Label>
+                <Textarea {...register("remarks")} disabled={isViewOnly} placeholder="Enter remarks..." rows={3} />
               </div>
             </div>
 
-            <div className="flex-none flex gap-3 px-6 py-3 border-t border-secondary-200 bg-secondary-50/50 rounded-b-[2rem]">
-              {!isViewOnly &&
-                (editingIssue ? canEditOutward : canAddOutward) && (
-                  <Button
-                    type="submit"
-                    disabled={
-                      createMutation.isPending ||
-                      updateMutation.isPending ||
-                      !hasAllRequired ||
-                      (!editingIssue && !imageFile)
-                    }
-                    className="flex-1 bg-primary-600 hover:bg-primary-700 text-white"
-                  >
-                    {createMutation.isPending || updateMutation.isPending ? (
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </div>
-                    ) : editingIssue ? (
-                      "Update"
-                    ) : (
-                      "Save"
-                    )}
-                  </Button>
-                )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseForm}
-                className="flex-1 border-secondary-300"
-              >
-                Close
+            <div className="space-y-4">
+              <Label>Photo Entry *</Label>
+              {!isViewOnly ? (
+                <div className="space-y-4">
+                  <CameraPhotoInput ref={cameraInputRef} onCapture={handleImageCapture} previewUrl={imagePreview} className="w-full aspect-video rounded-xl border-2 border-dashed border-secondary-200" />
+                  {imagePreview && (
+                    <div className="relative rounded-xl overflow-hidden border border-secondary-200">
+                      <img src={imagePreview} className="w-full h-auto" />
+                      <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 rounded-full" onClick={() => { setImageFile(null); setImagePreview(null); }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                imagePreview && <img src={imagePreview} className="w-full rounded-xl border border-secondary-200" />
+              )}
+            </div>
+          </div>
+
+          {!isViewOnly && (
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button type="button" variant="outline" onClick={handleCloseForm}>Cancel</Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingIssue ? "Update Outward" : "Confirm Outward"}
               </Button>
             </div>
-          </form>
-        </Dialog>
+          )}
+        </form>
+      </Dialog>
 
-        <FullScreenImageViewer
-          isOpen={!!fullScreenImageSrc}
-          imageSrc={fullScreenImageSrc}
-          onClose={() => setFullScreenImageSrc(null)}
-        />
+      <ItemSelectionDialog
+        isOpen={isItemDialogOpen}
+        onClose={() => setIsItemDialogOpen(false)}
+        onSelectItem={(item) => { setValue("itemId", item.id); setIsItemDialogOpen(false); }}
+        items={availableItems}
+      />
 
-        <ItemSelectionDialog
-          isOpen={isItemDialogOpen}
-          onClose={() => setIsItemDialogOpen(false)}
-          items={itemsByCategory}
-          categories={categories}
-          selectedCategoryId={selectedCategoryId ?? null}
-          onSelectItem={(item) => {
-            setValue("itemId", item.id);
-            setTimeout(() => {
-              document.getElementById("outward-operator")?.focus();
-            }, 100);
-          }}
-          currentItemId={editingIssue?.itemId}
-        />
-      </motion.div>
+      <Dialog isOpen={!!inactiveTarget} onClose={() => setInactiveTarget(null)} title="Mark outward inactive?" size="sm">
+        <div className="space-y-4">
+          <p className="text-secondary-600">This action will mark the outward entry as inactive.</p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setInactiveTarget(null)} className="flex-1">Cancel</Button>
+            <Button variant="destructive" onClick={handleMarkInactiveConfirm} className="flex-1">Confirm</Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {fullScreenImageSrc && <FullScreenImageViewer isOpen={!!fullScreenImageSrc} imageSrc={fullScreenImageSrc} onClose={() => setFullScreenImageSrc(null)} />}
     </div>
   );
 }

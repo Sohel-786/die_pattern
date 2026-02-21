@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "QC Item Management System",
-  description: "Internal QC Item Management Web CRM",
+  title: "Die & Pattern Management",
+  description: "Advanced lifecycle and movement management system for dies and patterns.",
 };
 
 export default function RootLayout({

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, AlertCircle, Loader2 } from "lucide-react";
-import { Item, ItemCategory } from "@/types";
+import { Item } from "@/types";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +14,6 @@ interface ItemSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   items: Item[];
-  categories: ItemCategory[];
-  selectedCategoryId: number | null;
   onSelectItem: (item: Item) => void;
   isLoading?: boolean;
   currentItemId?: number;
@@ -25,8 +23,6 @@ export function ItemSelectionDialog({
   isOpen,
   onClose,
   items,
-  categories,
-  selectedCategoryId,
   onSelectItem,
   isLoading = false,
   currentItemId,
@@ -34,33 +30,28 @@ export function ItemSelectionDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
-  // Filter items by selected category and search query
+  // Filter items by search query
   const filteredItems = useMemo(() => {
     let result = items;
-
-    // Filter by category
-    if (selectedCategoryId) {
-      result = result.filter((item) => item.categoryId === selectedCategoryId);
-    }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (item) =>
-          item.itemName.toLowerCase().includes(query) ||
-          item.serialNumber?.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query),
+          item.currentName.toLowerCase().includes(query) ||
+          (item as any).serialNumber?.toLowerCase().includes(query) ||
+          (item as any).description?.toLowerCase().includes(query),
       );
     }
 
     return result;
-  }, [items, selectedCategoryId, searchQuery]);
+  }, [items, searchQuery]);
 
   const handleSelectItem = (item: Item) => {
-    const isAvailable = item.status === "AVAILABLE";
+    const isAvailable = item.statusName === "AVAILABLE" || item.statusName === "Available";
     const isCurrent = currentItemId && item.id === currentItemId;
-    const hasImage = !!(item.latestImage || item.image);
+    const hasImage = !!((item as any).latestImage || (item as any).image);
     if ((isAvailable || isCurrent) && hasImage) {
       onSelectItem(item);
       onClose();
@@ -73,10 +64,7 @@ export function ItemSelectionDialog({
     setSearchQuery(""); // Reset search on close
   };
 
-  const getCategoryName = (categoryId: number | null | undefined) => {
-    if (!categoryId) return "N/A";
-    return categories.find((c) => c.id === categoryId)?.name || "Unknown";
-  };
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -149,7 +137,7 @@ export function ItemSelectionDialog({
                 <AlertCircle className="w-12 h-12 mb-3 text-secondary-400" />
                 <p className="text-lg font-medium">No items found</p>
                 <p className="text-sm">
-                  Try adjusting your search or select a different category
+                  Try adjusting your search query
                 </p>
               </div>
             ) : (
@@ -163,9 +151,6 @@ export function ItemSelectionDialog({
                       Item Name
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-700 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-700 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-secondary-700 uppercase tracking-wider w-[80px]">
@@ -177,12 +162,12 @@ export function ItemSelectionDialog({
                 </thead>
                 <tbody className="divide-y divide-secondary-200">
                   {filteredItems.map((item) => {
-                    const isAvailable = item.status === "AVAILABLE";
+                    const isAvailable = item.statusName === "AVAILABLE" || item.statusName === "Available";
                     const isCurrent = currentItemId && item.id === currentItemId;
-                    const hasImage = !!(item.latestImage || item.image);
+                    const hasImage = !!((item as any).latestImage || (item as any).image);
                     const isSelectable = (isAvailable || isCurrent) && hasImage;
 
-                    const baseImage = item.latestImage || item.image;
+                    const baseImage = (item as any).latestImage || (item as any).image;
                     const imageUrl = baseImage
                       ? baseImage.startsWith("/")
                         ? `${API_BASE}${baseImage}`
@@ -195,7 +180,7 @@ export function ItemSelectionDialog({
                         tabIndex={isSelectable ? 0 : -1}
                         role="button"
                         aria-disabled={!isSelectable}
-                        aria-label={`Select item ${item.itemName} (${item.serialNumber || "No serial number"})`}
+                        aria-label={`Select item ${item.currentName}`}
                         onClick={() => isSelectable && handleSelectItem(item)}
                         onKeyDown={(e) => {
                           if (isSelectable && (e.key === "Enter" || e.key === " ")) {
@@ -219,7 +204,7 @@ export function ItemSelectionDialog({
                                 : "text-secondary-500",
                             )}
                           >
-                            {item.serialNumber || "N/A"}
+                            {(item as any).serialNumber || "N/A"}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -232,29 +217,18 @@ export function ItemSelectionDialog({
                                   : "text-secondary-500",
                               )}
                             >
-                              {item.itemName}
+                              {item.currentName}
                             </span>
-                            {item.description && (
+                            {(item as any).description && (
                               <span className="text-xs text-secondary-500 mt-0.5 line-clamp-1">
-                                {item.description}
+                                {(item as any).description}
                               </span>
                             )}
                           </div>
                         </td>
+
                         <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "text-sm",
-                              isSelectable
-                                ? "text-secondary-700"
-                                : "text-secondary-500",
-                            )}
-                          >
-                            {getCategoryName(item.categoryId)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {getStatusBadge(item.status)}
+                          {getStatusBadge(item.statusName || "")}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end">
@@ -267,7 +241,7 @@ export function ItemSelectionDialog({
                                   {/* Full size of parent */}
                                   <img
                                     src={imageUrl}
-                                    alt={item.itemName}
+                                    alt={item.currentName}
                                     className="w-full h-full object-cover rounded-lg border-2 border-secondary-200"
                                   />
                                   <button

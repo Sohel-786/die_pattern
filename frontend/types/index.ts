@@ -63,30 +63,6 @@ export interface User {
   mobileNumber?: string | null;
 }
 
-export interface Contractor {
-  id: number;
-  name: string;
-  email?: string;
-  phoneNumber?: string;
-  address?: string;
-  isActive: boolean;
-}
-
-export interface Machine {
-  id: number;
-  name: string;
-  contractorId: number;
-  contractor?: Contractor;
-  isActive: boolean;
-}
-
-export interface Division {
-  id: number;
-  name: string;
-  code: string;
-  isActive: boolean;
-}
-
 export interface Company {
   id: number;
   name: string;
@@ -134,20 +110,12 @@ export interface OwnerType {
   isActive: boolean;
 }
 
-export interface ItemCategory {
-  id: number;
-  name: string;
-  isActive: boolean;
-}
-
 export interface StoreItem {
   id: number;
   name: string;
   itemName: string;
   itemCode?: string;
   serialNumber?: string;
-  categoryId?: number;
-  categoryName?: string;
   description?: string;
   inHouseLocation?: string;
   image?: string;
@@ -161,13 +129,6 @@ export interface Issue {
   id: number;
   issueNo?: string;
   itemId: number;
-  item?: StoreItem & { categoryId?: number };
-  companyId?: number;
-  company?: { id: number; name: string };
-  contractorId?: number;
-  contractor?: { id: number; name: string };
-  machineId?: number;
-  machine?: { id: number; name: string };
   locationId?: number;
   location?: { id: number; name: string };
   issuedTo?: string;
@@ -192,12 +153,6 @@ export interface Return {
   issue?: Issue;
   itemId?: number;
   item?: StoreItem;
-  companyId?: number;
-  company?: { id: number; name: string };
-  contractorId?: number;
-  contractor?: { id: number; name: string };
-  machineId?: number;
-  machine?: { id: number; name: string };
   locationId?: number;
   location?: { id: number; name: string };
   condition?: string;

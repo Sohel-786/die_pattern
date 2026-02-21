@@ -12,6 +12,5 @@ namespace net_backend.DTOs
     public class UpdateUserPermissionsRequest
     {
         public UserPermission? Permissions { get; set; }
-        public List<int> AllowedDivisionIds { get; set; } = new();
     }
 }

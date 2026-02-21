@@ -11,10 +11,7 @@ import { cn } from "@/lib/utils";
 
 export interface TransactionFiltersState {
   companyIds: number[];
-  contractorIds: number[];
-  machineIds: number[];
   locationIds: number[];
-  itemCategoryIds: number[];
   itemIds: number[];
   conditions: string[];
   operatorName: string;
@@ -24,10 +21,7 @@ export interface TransactionFiltersState {
 
 const defaultFilters: TransactionFiltersState = {
   companyIds: [],
-  contractorIds: [],
-  machineIds: [],
   locationIds: [],
-  itemCategoryIds: [],
   itemIds: [],
   conditions: [],
   operatorName: "",
@@ -41,10 +35,7 @@ export interface TransactionFiltersProps {
   filters: TransactionFiltersState;
   onFiltersChange: (f: TransactionFiltersState) => void;
   companyOptions: MultiSelectSearchOption[];
-  contractorOptions: MultiSelectSearchOption[];
-  machineOptions: MultiSelectSearchOption[];
   locationOptions: MultiSelectSearchOption[];
-  itemCategoryOptions: MultiSelectSearchOption[];
   itemOptions: MultiSelectSearchOption[];
   onClear: () => void;
   /** Placeholder for the search bar; when set, the search bar is shown to the right of the filter icon */
@@ -54,7 +45,6 @@ export interface TransactionFiltersProps {
   showConditionFilter?: boolean;
   /** Options for Condition filter; use RETURN_CONDITIONS mapped to { value, label } */
   conditionOptions?: MultiSelectSearchOption[];
-  /** When true, hide the Item multi-select filter */
   /** When true, hide the Item multi-select filter */
   hideItemFilter?: boolean;
   /** When true, hide the Operator filter input */
@@ -67,10 +57,7 @@ export function TransactionFilters({
   filters,
   onFiltersChange,
   companyOptions,
-  contractorOptions,
-  machineOptions,
   locationOptions,
-  itemCategoryOptions,
   itemOptions,
   onClear,
   searchPlaceholder,
@@ -84,12 +71,8 @@ export function TransactionFilters({
   const hasActiveFilters =
     filters.companyIds.length > 0 ||
     filters.locationIds.length > 0 ||
-    filters.contractorIds.length > 0 ||
-    filters.machineIds.length > 0 ||
-    filters.itemCategoryIds.length > 0 ||
     filters.itemIds.length > 0 ||
     (filters.conditions?.length ?? 0) > 0 ||
-    !!filters.operatorName.trim() ||
     !!filters.operatorName.trim() ||
     !!filters.receivedBy.trim() ||
     !!filters.search.trim();
@@ -138,7 +121,7 @@ export function TransactionFilters({
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 overflow-visible items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-visible items-start">
             <div className="min-w-0 flex flex-col">
               <MultiSelectSearch
                 label="Company"
@@ -161,39 +144,6 @@ export function TransactionFilters({
               />
             </div>
 
-            <div className="min-w-0 flex flex-col">
-              <MultiSelectSearch
-                label="Contractor"
-                options={contractorOptions}
-                value={filters.contractorIds}
-                onChange={(v) => update({ contractorIds: v as number[] })}
-                placeholder="All contractors"
-                searchPlaceholder="Search contractor…"
-              />
-            </div>
-
-            <div className="min-w-0 flex flex-col">
-              <MultiSelectSearch
-                label="Machine"
-                options={machineOptions}
-                value={filters.machineIds}
-                onChange={(v) => update({ machineIds: v as number[] })}
-                placeholder="All machines"
-                searchPlaceholder="Search machine…"
-              />
-            </div>
-
-            <div className="min-w-0 flex flex-col">
-              <MultiSelectSearch
-                label="Item Category"
-                options={itemCategoryOptions}
-                value={filters.itemCategoryIds}
-                onChange={(v) => update({ itemCategoryIds: v as number[], itemIds: [] })}
-                placeholder="All categories"
-                searchPlaceholder="Search category…"
-              />
-            </div>
-
             {!hideItemFilter && (
               <div className="min-w-0 flex flex-col">
                 <MultiSelectSearch
@@ -206,8 +156,6 @@ export function TransactionFilters({
                 />
               </div>
             )}
-
-
 
             {showConditionFilter && conditionOptions.length > 0 && (
               <div className="min-w-0 flex flex-col">

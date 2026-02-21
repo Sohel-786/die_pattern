@@ -45,6 +45,5 @@ namespace net_backend.Services
 
             return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
         }
-        }
     }
 }

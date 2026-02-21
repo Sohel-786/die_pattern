@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
+using net_backend.Services;
 
 namespace net_backend.Controllers
 {
@@ -10,8 +11,135 @@ namespace net_backend.Controllers
     [ApiController]
     public class PartiesController : BaseController
     {
-        public PartiesController(ApplicationDbContext context) : base(context)
+        private readonly IExcelService _excelService;
+        public PartiesController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
+            _excelService = excelService;
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> Export()
+        {
+            var parties = await _context.Parties
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+            var data = parties.Select(p => new {
+                Name = p.Name,
+                PhoneNumber = p.PhoneNumber ?? "",
+                Email = p.Email ?? "",
+                Address = p.Address ?? "",
+                IsActive = p.IsActive ? "Yes" : "No",
+                CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+            });
+
+            var file = _excelService.GenerateExcel(data, "Parties");
+            return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "parties.xlsx");
+        }
+
+        [HttpPost("validate")]
+        public async Task<ActionResult<ApiResponse<ValidationResultDto<PartyImportDto>>>> Validate(IFormFile file)
+        {
+            if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<PartyImportDto>> { Success = false, Message = "No file uploaded" });
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var result = _excelService.ImportExcel<PartyImportDto>(stream);
+                var validation = await ValidateParties(result.Data);
+                validation.TotalRows = result.TotalRows;
+                return Ok(new ApiResponse<ValidationResultDto<PartyImportDto>> { Data = validation });
+            }
+            catch (Exception ex) { return Ok(new ApiResponse<ValidationResultDto<PartyImportDto>> { Success = false, Message = ex.Message }); }
+        }
+
+        [HttpPost("import")]
+        public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
+        {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            if (file == null || file.Length == 0)
+                return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
+
+            try
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var result = _excelService.ImportExcel<PartyImportDto>(stream);
+                    var validation = await ValidateParties(result.Data);
+                    var newParties = new List<Party>();
+
+                    foreach (var validRow in validation.Valid)
+                    {
+                        newParties.Add(new Party
+                        {
+                            Name = validRow.Data.Name.Trim(),
+                            PhoneNumber = validRow.Data.PhoneNumber,
+                            Email = validRow.Data.Email,
+                            Address = validRow.Data.Address,
+                            IsActive = true,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        });
+                    }
+
+                    if (newParties.Any())
+                    {
+                        _context.Parties.AddRange(newParties);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    var finalResult = new
+                    {
+                        imported = newParties.Count,
+                        totalRows = result.TotalRows,
+                        errors = validation.Invalid.Select(e => new RowError { Row = e.Row, Message = e.Message ?? "" }).ToList()
+                    };
+
+                    return Ok(new ApiResponse<object> { Data = finalResult, Message = $"{newParties.Count} parties imported successfully" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new ApiResponse<object> { Success = false, Message = $"Import failed: {ex.Message}" });
+            }
+        }
+
+        private async Task<ValidationResultDto<PartyImportDto>> ValidateParties(List<ExcelRow<PartyImportDto>> rows)
+        {
+            var validation = new ValidationResultDto<PartyImportDto>();
+            var existingNames = await _context.Parties
+                .Select(p => p.Name.ToLower())
+                .ToListAsync();
+            var processedInFile = new HashSet<string>();
+
+            foreach (var row in rows)
+            {
+                var item = row.Data;
+                if (string.IsNullOrWhiteSpace(item.Name))
+                {
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    continue;
+                }
+
+                var nameLower = item.Name.Trim().ToLower();
+
+                if (processedInFile.Contains(nameLower))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name in file" });
+                    continue;
+                }
+
+                if (existingNames.Contains(nameLower))
+                {
+                    validation.AlreadyExists.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
+                    processedInFile.Add(nameLower);
+                    continue;
+                }
+
+                validation.Valid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item });
+                processedInFile.Add(nameLower);
+            }
+
+            return validation;
         }
 
         [HttpGet]
@@ -38,6 +166,9 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
+            if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == party.Name.Trim().ToLower()))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
+
             party.CreatedAt = DateTime.Now;
             party.UpdatedAt = DateTime.Now;
             _context.Parties.Add(party);
@@ -47,18 +178,23 @@ namespace net_backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] Party party)
+        public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] UpdatePartyRequest request)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
             var existing = await _context.Parties.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found" });
 
-            existing.Name = party.Name.Trim();
-            existing.PhoneNumber = party.PhoneNumber;
-            existing.Email = party.Email;
-            existing.Address = party.Address;
-            existing.IsActive = party.IsActive;
+            if (request.Name != null) 
+            {
+                if (await _context.Parties.AnyAsync(p => p.Id != id && p.Name.ToLower() == request.Name.Trim().ToLower()))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
+                existing.Name = request.Name.Trim();
+            }
+            if (request.PhoneNumber != null) existing.PhoneNumber = request.PhoneNumber;
+            if (request.Email != null) existing.Email = request.Email;
+            if (request.Address != null) existing.Address = request.Address;
+            existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();

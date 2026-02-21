@@ -185,7 +185,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                     <div className="pl-1 mt-0.5 space-y-0.5">
                       {renderSubMenuItem("/companies", "Company Master", Building2)}
                       {renderSubMenuItem("/locations", "Location Master", MapPin)}
-                      {renderSubMenuItem("/parties", "Party Master (Vendor)", Users)}
+                      {renderSubMenuItem("/parties", "Party Master", Users)}
                       {renderSubMenuItem("/masters", "Other Masters", Layers)}
                       {renderSubMenuItem("/items", "Item Entry", Package)}
                     </div>

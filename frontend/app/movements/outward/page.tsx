@@ -25,18 +25,18 @@ export default function OutwardEntryPage() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const { data: items = [], isLoading: loadingItems } = useQuery<Item[]>({
-        queryKey: ["items", "available"],
+        queryKey: ["items", "active"],
         queryFn: async () => {
-            const res = await api.get("/items");
+            const res = await api.get("/items/active");
             // Only items currently at a Location can go Outward to a Vendor
-            return res.data.data.filter((i: any) => i.currentHolderType === HolderType.Location && i.isActive);
+            return res.data.data.filter((i: any) => i.currentHolderType === HolderType.Location);
         },
     });
 
     const { data: vendors = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
         queryFn: async () => {
-            const res = await api.get("/parties");
+            const res = await api.get("/parties/active");
             return res.data.data;
         },
     });
@@ -81,13 +81,13 @@ export default function OutwardEntryPage() {
                 >
                     <ArrowLeft className="w-8 h-8 text-gray-400" />
                 </Button>
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                <div>
                     <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Outward Gate Pass</h1>
                     <p className="text-gray-400 mt-2 font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
                         <div className="h-2 w-2 rounded-full bg-rose-500"></div>
-                        Dispatching Assets to Vendor / Contractor
+                        Dispatching Assets to Vendor
                     </p>
-                </motion.div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">

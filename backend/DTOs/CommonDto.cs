@@ -40,38 +40,31 @@ namespace net_backend.DTOs
         public bool? IsActive { get; set; }
     }
 
-    public class MachineDto
+    public class UpdateCompanyRequest
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int ContractorId { get; set; }
-        public string? ContractorName { get; set; }
+        public string? Name { get; set; }
         public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
     }
 
-    public class CreateMachineRequest
+    public class UpdateLocationRequest
     {
-        public string Name { get; set; } = string.Empty;
-        public int ContractorId { get; set; }
-        public bool? IsActive { get; set; }
-    }
-
-    public class ContractorDto
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string? Name { get; set; }
+        public int? CompanyId { get; set; }
         public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
     }
 
-    public class CreateContractorRequest
+    public class UpdatePartyRequest
     {
-        public string Name { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public bool? IsActive { get; set; }
+        public string? Name { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class UpdateMasterRequest
+    {
+        public string? Name { get; set; }
+        public bool IsActive { get; set; }
     }
 }

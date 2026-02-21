@@ -74,7 +74,7 @@ export default function QualityControlPage() {
     return (
         <div className="p-8 space-y-10">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
                     <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
                         <ClipboardCheck className="w-10 h-10 text-primary-600" />
                         Quality Certification
@@ -122,9 +122,9 @@ export default function QualityControlPage() {
                                 {filteredPending.map((m, idx) => (
                                     <motion.tr
                                         key={m.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
+                                        initial={{ opacity: 0, y: 4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.02, duration: 0.2 }}
                                         className="group border-b border-gray-50 hover:bg-amber-50/20 transition-colors"
                                     >
                                         <TableCell className="py-8 pl-10">

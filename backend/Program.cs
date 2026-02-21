@@ -60,7 +60,8 @@ builder.Services.AddCors(options =>
             policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
                    .AllowAnyMethod()
                    .AllowAnyHeader()
-                   .AllowCredentials();
+                   .AllowCredentials()
+                   .WithExposedHeaders("Content-Disposition");
         });
 });
 

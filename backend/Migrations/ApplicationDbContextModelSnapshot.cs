@@ -462,7 +462,7 @@ namespace net_backend.Migrations
                     b.ToTable("parties");
                 });
 
-            modelBuilder.Entity("net_backend.Models.ProformaInvoice", b =>
+            modelBuilder.Entity("net_backend.Models.PurchaseIndent", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -507,10 +507,10 @@ namespace net_backend.Migrations
                     b.HasIndex("PiNo")
                         .IsUnique();
 
-                    b.ToTable("proforma_invoices");
+                    b.ToTable("purchase_indents");
                 });
 
-            modelBuilder.Entity("net_backend.Models.ProformaInvoiceItem", b =>
+            modelBuilder.Entity("net_backend.Models.PurchaseIndentItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -521,16 +521,16 @@ namespace net_backend.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ProformaInvoiceId")
+                    b.Property<int>("PurchaseIndentId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ItemId");
 
-                    b.HasIndex("ProformaInvoiceId");
+                    b.HasIndex("PurchaseIndentId");
 
-                    b.ToTable("proforma_invoice_items");
+                    b.ToTable("purchase_indent_items");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseOrder", b =>
@@ -600,7 +600,7 @@ namespace net_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
-                    b.Property<int>("ProformaInvoiceItemId")
+                    b.Property<int>("PurchaseIndentItemId")
                         .HasColumnType("int");
 
                     b.Property<int>("PurchaseOrderId")
@@ -608,7 +608,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProformaInvoiceItemId");
+                    b.HasIndex("PurchaseIndentItemId");
 
                     b.HasIndex("PurchaseOrderId");
 
@@ -913,7 +913,7 @@ namespace net_backend.Migrations
                     b.Navigation("ToParty");
                 });
 
-            modelBuilder.Entity("net_backend.Models.ProformaInvoice", b =>
+            modelBuilder.Entity("net_backend.Models.PurchaseIndent", b =>
                 {
                     b.HasOne("net_backend.Models.User", "Approver")
                         .WithMany()
@@ -930,7 +930,7 @@ namespace net_backend.Migrations
                     b.Navigation("Creator");
                 });
 
-            modelBuilder.Entity("net_backend.Models.ProformaInvoiceItem", b =>
+            modelBuilder.Entity("net_backend.Models.PurchaseIndentItem", b =>
                 {
                     b.HasOne("net_backend.Models.Item", "Item")
                         .WithMany()
@@ -938,15 +938,15 @@ namespace net_backend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("net_backend.Models.ProformaInvoice", "ProformaInvoice")
+                    b.HasOne("net_backend.Models.PurchaseIndent", "PurchaseIndent")
                         .WithMany("Items")
-                        .HasForeignKey("ProformaInvoiceId")
+                        .HasForeignKey("PurchaseIndentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Item");
 
-                    b.Navigation("ProformaInvoice");
+                    b.Navigation("PurchaseIndent");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseOrder", b =>
@@ -976,10 +976,10 @@ namespace net_backend.Migrations
 
             modelBuilder.Entity("net_backend.Models.PurchaseOrderItem", b =>
                 {
-                    b.HasOne("net_backend.Models.ProformaInvoiceItem", "ProformaInvoiceItem")
+                    b.HasOne("net_backend.Models.PurchaseIndentItem", "PurchaseIndentItem")
                         .WithMany()
-                        .HasForeignKey("ProformaInvoiceItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("PurchaseIndentItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("net_backend.Models.PurchaseOrder", "PurchaseOrder")
@@ -988,7 +988,7 @@ namespace net_backend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ProformaInvoiceItem");
+                    b.Navigation("PurchaseIndentItem");
 
                     b.Navigation("PurchaseOrder");
                 });
@@ -1028,7 +1028,7 @@ namespace net_backend.Migrations
                     b.Navigation("Locations");
                 });
 
-            modelBuilder.Entity("net_backend.Models.ProformaInvoice", b =>
+            modelBuilder.Entity("net_backend.Models.PurchaseIndent", b =>
                 {
                     b.Navigation("Items");
                 });

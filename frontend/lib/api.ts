@@ -6,23 +6,6 @@ const api: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
 });
 
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    // Get division ID from localStorage if available
-    if (typeof window !== 'undefined') {
-      const divisionId = localStorage.getItem('selectedDivisionId');
-      if (divisionId) {
-        config.headers['X-Division-Id'] = divisionId;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
 // Response interceptor
 api.interceptors.response.use(
   (response) => response,

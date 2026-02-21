@@ -19,6 +19,20 @@ namespace net_backend.DTOs
         public string Name { get; set; } = string.Empty;
     }
 
+    public class LocationImportDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string CompanyName { get; set; } = string.Empty;
+    }
+
+    public class PartyImportDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+    }
+
     public class RowError
     {
         public int Row { get; set; }

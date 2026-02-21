@@ -81,27 +81,20 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
 
-                    <div className="relative group">
-                        <div className={`absolute inset-0 bg-gradient-to-r ${isActive ? 'from-emerald-500/10 to-emerald-500/5' : 'from-secondary-200/50 to-secondary-200/30'} rounded-2xl blur-xl transition-all duration-500 opacity-0 group-hover:opacity-100`} />
-                        <div className={`relative flex items-center justify-between p-5 ${isActive ? 'bg-emerald-50/30 border-emerald-100' : 'bg-secondary-50 border-secondary-200'} rounded-2xl border transition-all duration-300 shadow-sm`}>
-                            <div className="flex items-center gap-4">
-                                <div className={`h-11 w-11 rounded-1.5xl flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-secondary-200 text-secondary-500'}`}>
-                                    {isActive ? <ShieldCheck className="w-5 h-5" /> : <Power className="w-5 h-5" />}
-                                </div>
-                                <div>
-                                    <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-900' : 'text-secondary-900'} transition-colors`}>Record Status</h4>
-                                    <p className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-600' : 'text-secondary-500'} transition-colors`}>
-                                        Currently {isActive ? 'Active' : 'Disabled'}
-                                    </p>
-                                </div>
+                    <div className="flex items-center py-2">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={isActive}
+                                    onChange={(e) => setValue("isActive", e.target.checked)}
+                                />
+                                <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
+                                <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
                             </div>
-                            <Switch
-                                id="active-status"
-                                checked={isActive}
-                                onCheckedChange={(checked) => setValue("isActive", checked)}
-                                className="data-[state=checked]:bg-emerald-500"
-                            />
-                        </div>
+                            <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                        </label>
                     </div>
                 </div>
 
@@ -119,7 +112,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                         ) : (
                             <div className="flex items-center gap-2">
                                 <Save className="w-4 h-4" />
-                                {item ? "Update Information" : "Save Entry"}
+                                Save
                             </div>
                         )}
                     </Button>
@@ -130,7 +123,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                         className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
                     >
                         <X className="w-4 h-4 mr-2" />
-                        Discard
+                        Cancel
                     </Button>
                 </div>
             </form>

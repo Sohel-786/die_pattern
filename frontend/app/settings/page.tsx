@@ -21,8 +21,7 @@ import {
   Database,
   Truck,
   BarChart3,
-  FileText,
-  LayoutGrid
+  FileText
 } from "lucide-react";
 import {
   Card,
@@ -41,7 +40,7 @@ import {
   useCurrentUserPermissions,
 } from "@/hooks/use-settings";
 import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/use-users";
-import { useDivisions } from "@/hooks/use-divisions";
+// Removed useDivisions import
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -172,7 +171,6 @@ export default function SettingsPage() {
   const { data: userPermissionsData, isLoading: permissionsLoading } = useUserPermissions(selectedUserId || undefined);
   const updateUserPermissionsMutation = useUpdateUserPermissions();
   const [localPermissions, setLocalPermissions] = useState<UserPermission | null>(null);
-  const [localAllowedDivisionIds, setLocalAllowedDivisionIds] = useState<number[]>([]);
 
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
@@ -201,10 +199,6 @@ export default function SettingsPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-
-  // Divisions for access mapping
-  const { data: divisions = [] } = useDivisions();
 
   const {
     register,
@@ -302,10 +296,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (userPermissionsData) {
       setLocalPermissions(JSON.parse(JSON.stringify(userPermissionsData.permissions)));
-      setLocalAllowedDivisionIds([...userPermissionsData.allowedDivisionIds]);
     } else {
       setLocalPermissions(null);
-      setLocalAllowedDivisionIds([]);
     }
   }, [userPermissionsData]);
 
@@ -321,8 +313,7 @@ export default function SettingsPage() {
   const hasUnsavedPermissions =
     userPermissionsData != null &&
     localPermissions != null &&
-    (!permissionsFlagsEqual(localPermissions, userPermissionsData.permissions) ||
-      JSON.stringify([...localAllowedDivisionIds].sort()) !== JSON.stringify([...userPermissionsData.allowedDivisionIds].sort()));
+    (!permissionsFlagsEqual(localPermissions, userPermissionsData.permissions));
 
   const revertSoftware = useCallback(() => {
     setCompanyName(savedCompanyName);
@@ -340,7 +331,6 @@ export default function SettingsPage() {
   const revertPermissions = useCallback(() => {
     if (userPermissionsData) {
       setLocalPermissions(JSON.parse(JSON.stringify(userPermissionsData.permissions)));
-      setLocalAllowedDivisionIds([...userPermissionsData.allowedDivisionIds]);
     }
   }, [userPermissionsData]);
 
@@ -447,7 +437,6 @@ export default function SettingsPage() {
       updateUserPermissionsMutation.mutate({
         userId: selectedUserId,
         permissions: localPermissions,
-        allowedDivisionIds: localAllowedDivisionIds
       });
     }
   };
@@ -939,7 +928,7 @@ export default function SettingsPage() {
                                 <label className="flex items-center justify-between p-3 border border-secondary-100 rounded-lg hover:bg-secondary-50 cursor-pointer transition-colors">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900">View Master Data</p>
-                                    <p className="text-xs text-secondary-500">Browse items, machines, contractors etc.</p>
+                                    <p className="text-xs text-secondary-500">Browse items, locations, parties etc.</p>
                                   </div>
                                   <input
                                     type="checkbox"
@@ -1132,63 +1121,7 @@ export default function SettingsPage() {
                               </CardHeader>
                             </Card>
 
-                            {/* Module: Division Access */}
-                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-emerald-500 lg:col-span-3">
-                              <CardHeader className="bg-gradient-to-r from-emerald-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
-                                    <LayoutGrid className="w-5 h-5" />
-                                  </div>
-                                  <div>
-                                    <CardTitle className="text-base font-semibold text-primary-900">
-                                      Division Access
-                                    </CardTitle>
-                                    <p className="text-xs text-secondary-500 mt-0.5">Select which divisions this user can access. Admin role still sees all active divisions.</p>
-                                  </div>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                  {divisions.map((division) => {
-                                    const isChecked = isManagedUserAdmin || localAllowedDivisionIds.includes(division.id);
-                                    return (
-                                      <label
-                                        key={division.id}
-                                        className={cn(
-                                          "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all group",
-                                          isChecked
-                                            ? "border-emerald-200 bg-emerald-50/30 shadow-sm"
-                                            : "border-secondary-200 hover:border-emerald-200 hover:bg-emerald-50/30"
-                                        )}
-                                      >
-                                        <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-900 transition-colors">
-                                          {division.name}
-                                        </span>
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          disabled={isManagedUserAdmin}
-                                          onChange={(e) => {
-                                            if (isManagedUserAdmin) return;
-                                            if (e.target.checked) {
-                                              setLocalAllowedDivisionIds([...localAllowedDivisionIds, division.id]);
-                                            } else {
-                                              setLocalAllowedDivisionIds(localAllowedDivisionIds.filter(id => id !== division.id));
-                                            }
-                                          }}
-                                          className="w-4 h-4 rounded border-secondary-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
-                                        />
-                                      </label>
-                                    );
-                                  })}
-                                  {divisions.length === 0 && (
-                                    <div className="col-span-full py-8 text-center bg-secondary-50 rounded-xl border border-dashed border-secondary-200">
-                                      <p className="text-secondary-500 text-sm">No divisions configured in Division Master.</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
+                            {/* Division Access Card Removed */}
 
                           </div>
 

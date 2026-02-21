@@ -58,7 +58,7 @@ export default function ReportsPage() {
   return (
     <div className="p-8 space-y-10">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
           <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
             <BarChart3 className="w-10 h-10 text-primary-600" />
             Strategic Reports

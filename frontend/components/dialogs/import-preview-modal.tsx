@@ -12,7 +12,7 @@ import {
     Info,
     Loader2,
 } from "lucide-react";
-import { ValidationResult, ValidationEntry } from "@/types";
+import { ValidationResult } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ImportPreviewModalProps {
@@ -97,7 +97,7 @@ export function ImportPreviewModal({
         <Dialog isOpen={isOpen} onClose={onClose} title={title} size="3xl">
             <div className="flex flex-col h-[70vh]">
                 {/* Tabs Header */}
-                <div className="flex border-b border-secondary-200 mb-4 overflow-x-auto">
+                <div className="flex border-b border-secondary-200 mb-4 overflow-x-auto scrollbar-hide">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -110,7 +110,7 @@ export function ImportPreviewModal({
                             <tab.icon className="w-4 h-4" />
                             <span>{tab.label}</span>
                             <span
-                                className={`ml-1 px-2 py-0.5 rounded-full text-xs ${activeTab === tab.id
+                                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${activeTab === tab.id
                                     ? "bg-primary-100 text-primary-700"
                                     : "bg-secondary-100 text-secondary-600"
                                     }`}
@@ -137,16 +137,16 @@ export function ImportPreviewModal({
                                     <table className="w-full text-left text-sm">
                                         <thead className="sticky top-0 bg-white border-b border-secondary-200 shadow-sm z-10">
                                             <tr>
-                                                <th className="px-4 py-3 font-semibold text-text w-16">Row</th>
+                                                <th className="px-4 py-3 font-semibold text-secondary-900 w-16">Row</th>
                                                 {/* Dynamically render headers based on data in first record */}
                                                 {records[0].data &&
                                                     Object.keys(records[0].data).map((key) => (
-                                                        <th key={key} className="px-4 py-3 font-semibold text-text capitalize">
+                                                        <th key={key} className="px-4 py-3 font-semibold text-secondary-900 capitalize">
                                                             {key.replace(/([A-Z])/g, " $1")}
                                                         </th>
                                                     ))}
                                                 {(activeTab === "invalid" || activeTab === "duplicates" || activeTab === "alreadyExists") && (
-                                                    <th className="px-4 py-3 font-semibold text-text">Message</th>
+                                                    <th className="px-4 py-3 font-semibold text-secondary-900">Message</th>
                                                 )}
                                             </tr>
                                         </thead>
@@ -164,7 +164,7 @@ export function ImportPreviewModal({
                                                             </td>
                                                         ))}
                                                     {(activeTab === "invalid" || activeTab === "duplicates" || activeTab === "alreadyExists") && (
-                                                        <td className="px-4 py-3 text-red-600 italic flex items-center gap-1.5">
+                                                        <td className="px-4 py-3 text-red-600 italic flex items-center gap-1.5 font-medium">
                                                             <AlertCircle className="w-3.5 h-3.5" />
                                                             {entry.message}
                                                         </td>
@@ -180,7 +180,7 @@ export function ImportPreviewModal({
                                         <div className="text-center px-6">
                                             <XCircle className="w-16 h-16 mb-4 mx-auto text-red-400 opacity-50" />
                                             <h3 className="text-xl font-bold text-red-600 mb-2">Invalid Excel File</h3>
-                                            <p className="text-secondary-600 max-w-md">
+                                            <p className="text-secondary-600 max-w-md font-medium">
                                                 The imported file doesn't seem to be a valid excel file or is missing required columns.
                                                 Please check the file structure and try again.
                                             </p>
@@ -188,7 +188,7 @@ export function ImportPreviewModal({
                                     ) : (
                                         <>
                                             <Info className="w-12 h-12 mb-3 opacity-20" />
-                                            <p className="text-lg">No records found in this category</p>
+                                            <p className="text-lg font-medium">No records found in this category</p>
                                         </>
                                     )}
                                 </div>
@@ -199,19 +199,19 @@ export function ImportPreviewModal({
 
                 {/* Footer */}
                 <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-secondary-200 shadow-sm">
-                    <div className="text-sm text-secondary-600">
-                        Total records in file: <span className="font-bold text-text">{data.totalRows}</span>
-                        <span className="mx-2">|</span>
+                    <div className="text-sm text-secondary-600 font-medium">
+                        Total rows in file: <span className="font-bold text-secondary-900">{data.totalRows}</span>
+                        <span className="mx-2 text-secondary-300">|</span>
                         To be imported: <span className="font-bold text-green-600">{data.valid.length}</span>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-initial">
+                        <Button variant="ghost" onClick={onClose} className="flex-1 sm:flex-initial rounded-xl hover:bg-secondary-50">
                             Cancel
                         </Button>
                         <Button
                             onClick={onConfirm}
                             disabled={data.valid.length === 0 || isLoading}
-                            className="flex-1 sm:flex-initial bg-green-600 hover:bg-green-700 shadow-sm"
+                            className="flex-1 sm:flex-initial bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-600/20 active:scale-95 transition-all"
                         >
                             {isLoading ? (
                                 <>
@@ -221,7 +221,7 @@ export function ImportPreviewModal({
                             ) : (
                                 <>
                                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                                    Confirm & Import ({data.valid.length})
+                                    Process Import ({data.valid.length})
                                 </>
                             )}
                         </Button>

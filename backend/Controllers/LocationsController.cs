@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
+using net_backend.Services;
 
 namespace net_backend.Controllers
 {
@@ -10,8 +11,157 @@ namespace net_backend.Controllers
     [ApiController]
     public class LocationsController : BaseController
     {
-        public LocationsController(ApplicationDbContext context) : base(context)
+        private readonly IExcelService _excelService;
+        public LocationsController(ApplicationDbContext context, IExcelService excelService) : base(context)
         {
+            _excelService = excelService;
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> Export()
+        {
+            var locations = await _context.Locations
+                .Include(l => l.Company)
+                .OrderBy(l => l.Name)
+                .ToListAsync();
+            var data = locations.Select(l => new {
+                Name = l.Name,
+                Company = l.Company?.Name ?? "",
+                IsActive = l.IsActive ? "Yes" : "No",
+                CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+            });
+
+            var file = _excelService.GenerateExcel(data, "Locations");
+            return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "locations.xlsx");
+        }
+
+        [HttpPost("validate")]
+        public async Task<ActionResult<ApiResponse<ValidationResultDto<LocationImportDto>>>> Validate(IFormFile file)
+        {
+            if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<LocationImportDto>> { Success = false, Message = "No file uploaded" });
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var result = _excelService.ImportExcel<LocationImportDto>(stream);
+                var validation = await ValidateLocations(result.Data);
+                validation.TotalRows = result.TotalRows;
+                return Ok(new ApiResponse<ValidationResultDto<LocationImportDto>> { Data = validation });
+            }
+            catch (Exception ex) { return Ok(new ApiResponse<ValidationResultDto<LocationImportDto>> { Success = false, Message = ex.Message }); }
+        }
+
+        [HttpPost("import")]
+        public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
+        {
+            if (!await HasPermission("ManageMaster")) return Forbidden();
+
+            if (file == null || file.Length == 0)
+                return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
+
+            try
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var result = _excelService.ImportExcel<LocationImportDto>(stream);
+                    var validation = await ValidateLocations(result.Data);
+                    var newLocations = new List<Location>();
+
+                    var companies = await _context.Companies.ToDictionaryAsync(c => c.Name.ToLower(), c => c.Id);
+
+                    foreach (var validRow in validation.Valid)
+                    {
+                        if (companies.TryGetValue(validRow.Data.CompanyName.Trim().ToLower(), out int companyId))
+                        {
+                            newLocations.Add(new Location
+                            {
+                                Name = validRow.Data.Name.Trim(),
+                                CompanyId = companyId,
+                                IsActive = true,
+                                CreatedAt = DateTime.Now,
+                                UpdatedAt = DateTime.Now
+                            });
+                        }
+                    }
+
+                    if (newLocations.Any())
+                    {
+                        _context.Locations.AddRange(newLocations);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    var finalResult = new
+                    {
+                        imported = newLocations.Count,
+                        totalRows = result.TotalRows,
+                        errors = validation.Invalid.Select(e => new RowError { Row = e.Row, Message = e.Message ?? "" }).ToList()
+                    };
+
+                    return Ok(new ApiResponse<object> { Data = finalResult, Message = $"{newLocations.Count} locations imported successfully" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new ApiResponse<object> { Success = false, Message = $"Import failed: {ex.Message}" });
+            }
+        }
+
+        private async Task<ValidationResultDto<LocationImportDto>> ValidateLocations(List<ExcelRow<LocationImportDto>> rows)
+        {
+            var validation = new ValidationResultDto<LocationImportDto>();
+            var existingLocations = await _context.Locations
+                .Include(l => l.Company)
+                .Select(l => new { Name = l.Name.ToLower(), CompanyName = l.Company!.Name.ToLower() })
+                .ToListAsync();
+            var existingSet = new HashSet<string>(existingLocations.Select(l => l.Name + "|" + l.CompanyName));
+
+            var companies = await _context.Companies
+                .Select(c => c.Name.ToLower())
+                .ToListAsync();
+            var processedInFile = new HashSet<string>();
+
+            foreach (var row in rows)
+            {
+                var item = row.Data;
+                if (string.IsNullOrWhiteSpace(item.Name))
+                {
+                    validation.Invalid.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.CompanyName))
+                {
+                    validation.Invalid.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = "Company Name is mandatory" });
+                    continue;
+                }
+
+                var nameLower = item.Name.Trim().ToLower();
+                var companyLower = item.CompanyName.Trim().ToLower();
+                var compositeKey = nameLower + "|" + companyLower;
+
+                if (!companies.Contains(companyLower))
+                {
+                    validation.Invalid.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = $"Company '{item.CompanyName}' not found" });
+                    continue;
+                }
+
+                if (processedInFile.Contains(compositeKey))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name for this Company in file" });
+                    continue;
+                }
+
+                if (existingSet.Contains(compositeKey))
+                {
+                    validation.AlreadyExists.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
+                    processedInFile.Add(compositeKey);
+                    continue;
+                }
+
+                validation.Valid.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item });
+                processedInFile.Add(compositeKey);
+            }
+
+            return validation;
         }
 
         [HttpGet]
@@ -47,6 +197,9 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
+            if (await _context.Locations.AnyAsync(l => l.Name.ToLower() == location.Name.Trim().ToLower() && l.CompanyId == location.CompanyId))
+                return BadRequest(new ApiResponse<Location> { Success = false, Message = "Location already exists for this company" });
+
             location.CreatedAt = DateTime.Now;
             location.UpdatedAt = DateTime.Now;
             _context.Locations.Add(location);
@@ -56,16 +209,25 @@ namespace net_backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<Location>>> Update(int id, [FromBody] Location location)
+        public async Task<ActionResult<ApiResponse<Location>>> Update(int id, [FromBody] UpdateLocationRequest request)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
 
             var existing = await _context.Locations.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Location> { Success = false, Message = "Location not found" });
 
-            existing.Name = location.Name.Trim();
-            existing.CompanyId = location.CompanyId;
-            existing.IsActive = location.IsActive;
+            var newName = (request.Name ?? existing.Name).Trim();
+            var newCompanyId = request.CompanyId ?? existing.CompanyId;
+
+            if (request.Name != null || request.CompanyId != null)
+            {
+                if (await _context.Locations.AnyAsync(l => l.Id != id && l.Name.ToLower() == newName.ToLower() && l.CompanyId == newCompanyId))
+                    return BadRequest(new ApiResponse<Location> { Success = false, Message = "Location already exists for this company" });
+            }
+
+            if (request.Name != null) existing.Name = request.Name.Trim();
+            if (request.CompanyId != null && request.CompanyId > 0) existing.CompanyId = request.CompanyId.Value;
+            existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();

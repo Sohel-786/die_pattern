@@ -6,37 +6,36 @@ import {
     Package, Layers, ArrowRight
 } from "lucide-react";
 import api from "@/lib/api";
-import { Item, PiType, ProformaInvoice } from "@/types";
+import { Item, PurchaseIndentType, PurchaseIndent } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function CreatePIPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
-    const [type, setType] = useState<PiType>(PiType.New);
+    const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
     const [remarks, setRemarks] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
     const { data: items = [], isLoading } = useQuery<Item[]>({
-        queryKey: ["items"],
+        queryKey: ["items", "active"],
         queryFn: async () => {
-            const res = await api.get("/items");
+            const res = await api.get("/items/active");
             return res.data.data;
         },
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: any) => api.post("/proforma-invoices", data),
+        mutationFn: (data: any) => api.post("/purchase-indents", data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["proforma-invoices"] });
-            toast.success("Proforma Invoice created successfully");
-            router.push("/proforma-invoices");
+            queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            toast.success("Purchase Indent created successfully");
+            router.push("/purchase-indents");
         },
         onError: (err: any) => toast.error(err.response?.data?.message || "Creation failed")
     });
@@ -65,6 +64,13 @@ export default function CreatePIPage() {
         });
     };
 
+    const typeOptions = [
+        { label: "New", value: PurchaseIndentType.New },
+        { label: "Repair", value: PurchaseIndentType.Repair },
+        { label: "Correction", value: PurchaseIndentType.Correction },
+        { label: "Modification", value: PurchaseIndentType.Modification }
+    ];
+
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-10 pb-24">
             <div className="flex items-center justify-between">
@@ -76,13 +82,13 @@ export default function CreatePIPage() {
                     >
                         <ArrowLeft className="w-6 h-6 text-gray-400" />
                     </Button>
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                    <div>
                         <h1 className="text-4xl font-black text-gray-900 tracking-tight">Generate New Indent</h1>
                         <p className="text-gray-500 mt-1 font-semibold flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-primary-600"></span>
                             Submit a procurement or repair request
                         </p>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 
@@ -97,15 +103,15 @@ export default function CreatePIPage() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase">PI Purpose</label>
+                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase">Indent Purpose</label>
                                     <div className="flex gap-2 p-1.5 bg-secondary-50 rounded-2xl border border-gray-100">
-                                        {Object.values(PiType).map((t) => (
+                                        {typeOptions.map((opt) => (
                                             <button
-                                                key={t}
-                                                onClick={() => setType(t)}
-                                                className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${type === t ? 'bg-white shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                                key={opt.value}
+                                                onClick={() => setType(opt.value)}
+                                                className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${type === opt.value ? 'bg-white shadow-sm text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             >
-                                                {t.toUpperCase()}
+                                                {opt.label.toUpperCase()}
                                             </button>
                                         ))}
                                     </div>
@@ -131,43 +137,37 @@ export default function CreatePIPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <AnimatePresence mode="popLayout">
-                                    {selectedItems.length > 0 ? selectedItems.map((item, idx) => (
-                                        <motion.div
-                                            key={item.id}
-                                            layout
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className="flex items-center justify-between p-6 bg-secondary-50/50 rounded-3xl border border-gray-100 group hover:border-primary-200 transition-all"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-primary-600 shadow-sm">
-                                                    <Package className="w-6 h-6" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-black text-gray-900">{item.currentName}</p>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest uppercase">Main: {item.mainPartName}</p>
-                                                </div>
+                                {selectedItems.length > 0 ? selectedItems.map((item, idx) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center justify-between p-6 bg-secondary-50/50 rounded-3xl border border-gray-100 group hover:border-primary-200 transition-all"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-primary-600 shadow-sm">
+                                                <Package className="w-6 h-6" />
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => toggleItem(item.id)}
-                                                className="h-12 w-12 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </motion.div>
-                                    )) : (
-                                        <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl space-y-3">
-                                            <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
-                                                <Layers className="w-8 h-8 text-gray-300" />
+                                            <div>
+                                                <p className="font-black text-gray-900">{item.currentName}</p>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main: {item.mainPartName}</p>
                                             </div>
-                                            <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">No items selected yet</p>
                                         </div>
-                                    )}
-                                </AnimatePresence>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => toggleItem(item.id)}
+                                            className="h-12 w-12 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </Button>
+                                    </div>
+                                )) : (
+                                    <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl space-y-3">
+                                        <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                                            <Layers className="w-8 h-8 text-gray-300" />
+                                        </div>
+                                        <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">No items selected yet</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -192,7 +192,7 @@ export default function CreatePIPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-none">
                             {filteredItems.map((item) => (
                                 <button
                                     key={item.id}
@@ -208,7 +208,7 @@ export default function CreatePIPage() {
                                             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{item.itemTypeName}</p>
                                         </div>
                                     </div>
-                                    <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                    <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center transition-colors">
                                         <Plus className="w-4 h-4 text-gray-400" />
                                     </div>
                                 </button>
@@ -227,7 +227,7 @@ export default function CreatePIPage() {
                             <>
                                 <div className="flex flex-col items-start leading-none">
                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1.5 text-blue-100">Submit for Approval</span>
-                                    <span className="text-xl font-black">Generate PI</span>
+                                    <span className="text-xl font-black">Generate Indent</span>
                                 </div>
                                 <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition-transform" />
                             </>

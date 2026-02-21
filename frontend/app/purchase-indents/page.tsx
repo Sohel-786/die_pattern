@@ -79,7 +79,7 @@ export default function PurchaseIndentsPage() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <motion.div initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
                     <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-2">
                         Purchase Indents
                     </h1>
@@ -150,10 +150,10 @@ export default function PurchaseIndentsPage() {
                                     {filteredIndents.map((pi, idx) => (
                                         <motion.tr
                                             key={pi.id}
-                                            initial={{ opacity: 0, y: 10 }}
+                                            initial={{ opacity: 0, y: 0 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.03 }}
-                                            className="group border-b border-secondary-100 hover:bg-primary-50 transition-colors"
+                                            transition={{ delay: idx * 0.02, duration: 0.2 }}
+                                            className="group border-b border-gray-50 hover:bg-primary-50/30 transition-all cursor-default"
                                         >
                                             <TableCell className="py-4 pl-6">
                                                 <div className="flex items-center gap-3">

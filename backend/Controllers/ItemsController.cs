@@ -129,8 +129,8 @@ namespace net_backend.Controllers
             var existing = await _context.Items.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
-            existing.StatusId = dto.StatusId;
-            existing.DrawingNo = dto.DrawingNo;
+            if (dto.StatusId > 0) existing.StatusId = dto.StatusId;
+            if (dto.DrawingNo != null) existing.DrawingNo = dto.DrawingNo;
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
@@ -138,24 +138,60 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<Item> { Data = existing });
         }
 
-        [HttpPost("import-opening")]
-        public async Task<ActionResult<ApiResponse<object>>> ImportOpening(IFormFile file)
+        [HttpGet("export")]
+        public async Task<IActionResult> Export()
+        {
+            var items = await _context.Items
+                .Include(i => i.ItemType)
+                .Include(i => i.Material)
+                .Include(i => i.OwnerType)
+                .Include(i => i.Status)
+                .Include(i => i.CurrentLocation)
+                .Include(i => i.CurrentParty)
+                .ToListAsync();
+
+            var data = items.Select(i => new {
+                MainPartName = i.MainPartName,
+                CurrentName = i.CurrentName,
+                ItemType = i.ItemType?.Name,
+                DrawingNo = i.DrawingNo,
+                RevisionNo = i.RevisionNo,
+                Material = i.Material?.Name,
+                OwnerType = i.OwnerType?.Name,
+                Status = i.Status?.Name,
+                HolderType = i.CurrentHolderType.ToString(),
+                HolderName = i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name
+            });
+
+            var file = _excelService.GenerateExcel(data, "Inventory");
+            return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Inventory.xlsx");
+        }
+
+        [HttpPost("validate")]
+        public async Task<ActionResult<ApiResponse<ValidationResultDto<ItemImportDto>>>> Validate(IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest("No file uploaded");
+            using var stream = file.OpenReadStream();
+            var excelResult = _excelService.ImportExcel<ItemImportDto>(stream);
+            var validation = await ValidateImport(excelResult.Data);
+            validation.TotalRows = excelResult.TotalRows;
+            return Ok(new ApiResponse<ValidationResultDto<ItemImportDto>> { Data = validation });
+        }
+
+        [HttpPost("import")]
+        public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
             if (!await HasPermission("ManageMaster")) return Forbidden();
-
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
 
             using var stream = file.OpenReadStream();
             var excelResult = _excelService.ImportExcel<ItemImportDto>(stream);
-            
-            // Strict Validation
             var validation = await ValidateImport(excelResult.Data);
-            
+
             if (validation.Valid.Any())
             {
                 foreach (var row in validation.Valid)
                 {
-                    // Map names to IDs
                     var type = await _context.ItemTypes.FirstOrDefaultAsync(t => t.Name == row.Data.ItemType);
                     var material = await _context.Materials.FirstOrDefaultAsync(m => m.Name == row.Data.Material);
                     var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.OwnerType);
@@ -183,15 +219,16 @@ namespace net_backend.Controllers
                         CurrentLocationId = locationId,
                         CurrentPartyId = partyId,
                         CreatedAt = DateTime.Now,
-                        UpdatedAt = DateTime.Now
+                        UpdatedAt = DateTime.Now,
+                        IsActive = true
                     });
                 }
                 await _context.SaveChangesAsync();
             }
 
             return Ok(new ApiResponse<object> { 
-                Data = validation, 
-                Message = $"{validation.Valid.Count} records imported" 
+                Data = new { imported = validation.Valid.Count, totalRows = excelResult.TotalRows }, 
+                Message = $"{validation.Valid.Count} records imported successfully" 
             });
         }
 
@@ -211,11 +248,11 @@ namespace net_backend.Controllers
                 var errors = new List<string>();
 
                 if (string.IsNullOrEmpty(d.MainPartName)) errors.Add("Main Part Name is required");
-                if (existingNames.Contains(d.MainPartName.ToLower())) errors.Add("Main Part Name already exists");
-                if (!types.Contains(d.ItemType.ToLower())) errors.Add("Invalid Item Type");
-                if (!materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
-                if (!ownerTypes.Contains(d.OwnerType.ToLower())) errors.Add("Invalid Owner Type");
-                if (!statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
+                else if (existingNames.Contains(d.MainPartName.ToLower())) errors.Add("Main Part Name already exists");
+                
+                if (string.IsNullOrEmpty(d.ItemType) || !types.Contains(d.ItemType.ToLower())) errors.Add("Invalid Item Type");
+                if (string.IsNullOrEmpty(d.Material) || !materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
+                if (string.IsNullOrEmpty(d.Status) || !statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 
                 if (errors.Any())
                     result.Invalid.Add(new ValidationEntry<ItemImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });
