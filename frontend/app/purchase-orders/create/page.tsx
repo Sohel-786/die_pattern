@@ -11,6 +11,7 @@ import { PurchaseIndentItem, Party } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -120,14 +121,12 @@ export default function CreatePOPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <Building2 className="w-4 h-4 text-primary-500" /> Authorized Vendor
                                     </label>
-                                    <select
-                                        value={vendorId}
-                                        onChange={(e) => setVendorId(Number(e.target.value))}
-                                        className="w-full h-16 rounded-3xl bg-secondary-50/50 border-gray-200 text-base font-black px-6 focus:bg-white transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value={0}>Select Vendor Entity</option>
-                                        {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                                    </select>
+                                    <SearchableSelect
+                                        options={vendors.map(v => ({ value: v.id, label: v.name }))}
+                                        value={vendorId || ""}
+                                        onChange={(val) => setVendorId(Number(val))}
+                                        placeholder="Select Vendor Entity"
+                                    />
                                 </div>
                                 <div className="space-y-4">
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">

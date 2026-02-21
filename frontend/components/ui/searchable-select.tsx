@@ -175,7 +175,7 @@ export function SearchableSelect({
           error && "border-red-500",
         )}
       >
-        <span className={selectedLabel ? "text-text" : "text-secondary-500"}>
+        <span className={selectedLabel ? "text-slate-900 font-medium" : "text-secondary-500"}>
           {selectedLabel || placeholder}
         </span>
         <svg
@@ -205,7 +205,7 @@ export function SearchableSelect({
                   setHighlightIndex(0);
                 }}
                 placeholder={searchPlaceholder}
-                className="h-9 pl-8 border-secondary-200 bg-white"
+                className="h-9 pl-8 border-secondary-200 bg-white focus:ring-1 focus:ring-primary-500 shadow-sm font-medium"
                 onKeyDown={handleKeyDown}
                 role="combobox"
                 aria-autocomplete="list"
@@ -224,7 +224,7 @@ export function SearchableSelect({
             aria-label={label ?? placeholder}
           >
             {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-secondary-500 italic">No matches</li>
+              <li className="px-3 py-2 text-sm text-secondary-500 italic font-medium">No matches</li>
             ) : (
               filteredOptions.map((opt, index) => (
                 <li
@@ -234,15 +234,15 @@ export function SearchableSelect({
                   aria-selected={value === opt.value}
                   aria-disabled={opt.disabled}
                   className={cn(
-                    "px-3 py-2 text-sm transition-colors",
+                    "px-3 py-2 text-sm transition-colors font-medium",
                     opt.disabled
                       ? "cursor-not-allowed bg-secondary-50 text-secondary-400"
                       : "cursor-pointer",
                     !opt.disabled && value === opt.value
                       ? "bg-primary-100 text-primary-800"
                       : !opt.disabled && index === highlightIndex
-                        ? "bg-secondary-100 text-text outline-none"
-                        : !opt.disabled && "text-text hover:bg-secondary-50",
+                        ? "bg-secondary-100 text-slate-900 outline-none"
+                        : !opt.disabled && "text-slate-700 hover:bg-secondary-50",
                   )}
                   onClick={() => {
                     if (opt.disabled) return;
@@ -260,9 +260,8 @@ export function SearchableSelect({
       )}
 
       {error && (
-        <p className="text-sm text-red-600 mt-1" role="alert">{error}</p>
+        <p className="text-sm font-medium text-rose-500 mt-1" role="alert">{error}</p>
       )}
     </div>
   );
 }
-

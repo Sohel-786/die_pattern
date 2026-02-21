@@ -7,7 +7,8 @@ import { Party } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Download, Edit2, Ban, CheckCircle, Upload } from "lucide-react";
+import { Plus, Search, Edit2, Ban, CheckCircle } from "lucide-react";
+import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { toast } from "react-hot-toast";
 import { PartyDialog } from "@/components/masters/party-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
@@ -112,35 +113,13 @@ export default function PartiesPage() {
                     <p className="text-secondary-500 font-medium">Manage master data for vendors & external entities</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <input
-                        type="file"
-                        id="import-parties"
-                        className="hidden"
-                        accept=".xlsx,.xls"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImport(file);
-                            e.target.value = "";
-                        }}
+                    <ExportImportButtons
+                        onExport={handleExport}
+                        onImport={handleImport}
+                        exportLoading={exportLoading}
+                        importLoading={importLoading}
+                        inputId="parties"
                     />
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={handleExport}
-                        disabled={exportLoading}
-                    >
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={() => document.getElementById("import-parties")?.click()}
-                        disabled={importLoading}
-                    >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Import
-                    </Button>
                     <Button
                         onClick={handleAdd}
                         className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
@@ -187,7 +166,9 @@ export default function PartiesPage() {
                             <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
                                 <th className="px-4 py-3 font-semibold w-16 text-center">Sr.No</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Category / Type</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Contact Info</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">GST No</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                             </tr>
@@ -196,7 +177,7 @@ export default function PartiesPage() {
                             {isLoading ? (
                                 [1, 2, 3].map((i) => (
                                     <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(5).fill(0).map((_, j) => (
+                                        {Array(7).fill(0).map((_, j) => (
                                             <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
                                         ))}
                                     </tr>
@@ -210,11 +191,17 @@ export default function PartiesPage() {
                                         <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
                                         <td className="px-4 py-3">
                                             <div className="font-bold text-secondary-900 uppercase tracking-tight">{party.name}</div>
-                                            <div className="text-[10px] text-secondary-400 font-medium uppercase truncate max-w-[250px]">{party.address || "No address provided"}</div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="font-medium text-secondary-700">{party.phoneNumber || "No Phone"}</div>
-                                            <div className="text-[10px] text-secondary-500 italic">{party.email || "No Email"}</div>
+                                            <div className="font-medium text-secondary-700 text-xs">{party.partyCategory || "—"}</div>
+                                            <div className="text-[10px] text-secondary-400 font-medium uppercase">{party.customerType || "—"}</div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="font-medium text-secondary-700">{party.phoneNumber || "—"}</div>
+                                            <div className="text-[10px] text-secondary-500 italic">{party.email || "—"}</div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="font-medium text-secondary-700 text-xs">{party.gstNo || "—"}</div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${party.isActive
@@ -252,7 +239,7 @@ export default function PartiesPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center text-secondary-500 italic font-medium">
+                                    <td colSpan={7} className="py-12 text-center text-secondary-500 italic font-medium">
                                         No parties found matching criteria.
                                     </td>
                                 </tr>
@@ -270,6 +257,7 @@ export default function PartiesPage() {
                     setSelectedItem(null);
                 }}
                 party={selectedItem}
+                existingParties={parties}
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
             />

@@ -7,7 +7,8 @@ import { Status } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit2, Search, Ban, CheckCircle, Download, Upload } from "lucide-react";
+import { Plus, Edit2, Search, Ban, CheckCircle } from "lucide-react";
+import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { toast } from "react-hot-toast";
@@ -109,25 +110,13 @@ export default function StatusesPage() {
           <p className="text-secondary-500 font-medium">Define master data for item life-cycle states</p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={importFileRef}
-            className="hidden"
-            accept=".xlsx,.xls"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImport(file);
-              e.target.value = "";
-            }}
+          <ExportImportButtons
+            onExport={handleExport}
+            onImport={handleImport}
+            exportLoading={exportLoading}
+            importLoading={importLoading}
+            inputId="statuses"
           />
-          <Button variant="outline" onClick={handleExport} disabled={exportLoading} className="shadow-sm border-secondary-200">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" onClick={() => importFileRef.current?.click()} disabled={importLoading} className="shadow-sm border-secondary-200">
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
           <Button onClick={() => handleOpenForm()} className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold">
             <Plus className="w-4 h-4 mr-2" />
             Define Status

@@ -81,21 +81,23 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
 
-                    <div className="flex items-center py-2">
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <div className="relative">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only"
-                                    checked={isActive}
-                                    onChange={(e) => setValue("isActive", e.target.checked)}
-                                />
-                                <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
-                            </div>
-                            <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
-                        </label>
-                    </div>
+                    {!!item && (
+                        <div className="flex items-center py-2">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={isActive}
+                                        onChange={(e) => setValue("isActive", e.target.checked)}
+                                    />
+                                    <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
+                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                </div>
+                                <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t border-secondary-100 font-sans">

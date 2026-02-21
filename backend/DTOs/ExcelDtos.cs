@@ -2,16 +2,16 @@ namespace net_backend.DTOs
 {
     public class ItemImportDto
     {
-        public string MainPartName { get; set; } = string.Empty;
-        public string CurrentName { get; set; } = string.Empty;
-        public string ItemType { get; set; } = string.Empty;
+        public string PartName { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string AssetType { get; set; } = string.Empty;
         public string? DrawingNo { get; set; }
-        public string? RevisionNo { get; set; }
+        public string? Revision { get; set; }
         public string Material { get; set; } = string.Empty;
-        public string OwnerType { get; set; } = string.Empty;
+        public string Ownership { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
-        public string CurrentHolderType { get; set; } = string.Empty; // Location / Vendor
-        public string? CurrentHolderName { get; set; }
+        public string CustodianType { get; set; } = string.Empty; // Location / Vendor
+        public string? CustodianName { get; set; }
     }
 
     public class MasterImportDto
@@ -28,9 +28,14 @@ namespace net_backend.DTOs
     public class PartyImportDto
     {
         public string Name { get; set; } = string.Empty;
+        public string? PartyCategory { get; set; }
+        public string? CustomerType { get; set; }
+        public string? Address { get; set; }
+        public string? ContactPerson { get; set; }
         public string? PhoneNumber { get; set; }
         public string? Email { get; set; }
-        public string? Address { get; set; }
+        public string? GstNo { get; set; }
+        public DateTime? GstDate { get; set; }
     }
 
     public class RowError

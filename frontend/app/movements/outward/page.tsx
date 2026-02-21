@@ -11,6 +11,7 @@ import { Item, Party, HolderType, MovementType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -104,14 +105,12 @@ export default function OutwardEntryPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <Package className="w-4 h-4 text-rose-500" /> Item Unit
                                     </label>
-                                    <select
-                                        value={selectedItemId}
-                                        onChange={(e) => setSelectedItemId(Number(e.target.value))}
-                                        className="w-full h-18 rounded-3xl bg-secondary-50/50 border-gray-200 text-lg font-black px-8 focus:bg-white transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value={0}>Select Available Unit</option>
-                                        {items.map(i => <option key={i.id} value={i.id}>{i.currentName} (at {i.currentLocationName})</option>)}
-                                    </select>
+                                    <SearchableSelect
+                                        options={items.map(i => ({ value: i.id, label: `${i.currentName} (at ${i.currentLocationName})` }))}
+                                        value={selectedItemId || ""}
+                                        onChange={(val) => setSelectedItemId(Number(val))}
+                                        placeholder="Select Available Unit"
+                                    />
                                 </div>
                             </div>
 
@@ -125,14 +124,12 @@ export default function OutwardEntryPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <Users className="w-4 h-4 text-primary-500" /> Target Vendor / Party
                                     </label>
-                                    <select
-                                        value={targetPartyId}
-                                        onChange={(e) => setTargetPartyId(Number(e.target.value))}
-                                        className="w-full h-18 rounded-3xl bg-secondary-50/50 border-gray-200 text-lg font-black px-8 focus:bg-white transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value={0}>Select Target Vendor</option>
-                                        {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                                    </select>
+                                    <SearchableSelect
+                                        options={vendors.map(v => ({ value: v.id, label: v.name }))}
+                                        value={targetPartyId || ""}
+                                        onChange={(val) => setTargetPartyId(Number(val))}
+                                        placeholder="Select Target Vendor"
+                                    />
                                 </div>
                             </div>
                         </div>

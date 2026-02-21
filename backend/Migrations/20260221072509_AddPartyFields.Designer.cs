@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221072509_AddPartyFields")]
+    partial class AddPartyFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,7 +55,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("app_settings", (string)null);
+                    b.ToTable("app_settings");
                 });
 
             modelBuilder.Entity("net_backend.Models.AuditLog", b =>
@@ -94,7 +96,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("audit_logs", (string)null);
+                    b.ToTable("audit_logs");
                 });
 
             modelBuilder.Entity("net_backend.Models.Company", b =>
@@ -120,7 +122,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("companies", (string)null);
+                    b.ToTable("companies");
                 });
 
             modelBuilder.Entity("net_backend.Models.Item", b =>
@@ -192,7 +194,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.ToTable("items", (string)null);
+                    b.ToTable("items");
                 });
 
             modelBuilder.Entity("net_backend.Models.ItemChangeLog", b =>
@@ -241,7 +243,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("ItemId");
 
-                    b.ToTable("item_change_logs", (string)null);
+                    b.ToTable("item_change_logs");
                 });
 
             modelBuilder.Entity("net_backend.Models.ItemStatus", b =>
@@ -261,7 +263,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("item_statuses", (string)null);
+                    b.ToTable("item_statuses");
                 });
 
             modelBuilder.Entity("net_backend.Models.ItemType", b =>
@@ -281,7 +283,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("item_types", (string)null);
+                    b.ToTable("item_types");
                 });
 
             modelBuilder.Entity("net_backend.Models.Location", b =>
@@ -312,7 +314,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("CompanyId");
 
-                    b.ToTable("locations", (string)null);
+                    b.ToTable("locations");
                 });
 
             modelBuilder.Entity("net_backend.Models.Material", b =>
@@ -332,7 +334,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("materials", (string)null);
+                    b.ToTable("materials");
                 });
 
             modelBuilder.Entity("net_backend.Models.Movement", b =>
@@ -404,7 +406,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("ToPartyId");
 
-                    b.ToTable("movements", (string)null);
+                    b.ToTable("movements");
                 });
 
             modelBuilder.Entity("net_backend.Models.OwnerType", b =>
@@ -424,7 +426,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("owner_types", (string)null);
+                    b.ToTable("owner_types");
                 });
 
             modelBuilder.Entity("net_backend.Models.Party", b =>
@@ -480,7 +482,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("parties", (string)null);
+                    b.ToTable("parties");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseIndent", b =>
@@ -528,7 +530,7 @@ namespace net_backend.Migrations
                     b.HasIndex("PiNo")
                         .IsUnique();
 
-                    b.ToTable("purchase_indents", (string)null);
+                    b.ToTable("purchase_indents");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseIndentItem", b =>
@@ -551,7 +553,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("PurchaseIndentId");
 
-                    b.ToTable("purchase_indent_items", (string)null);
+                    b.ToTable("purchase_indent_items");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseOrder", b =>
@@ -610,7 +612,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("VendorId");
 
-                    b.ToTable("purchase_orders", (string)null);
+                    b.ToTable("purchase_orders");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseOrderItem", b =>
@@ -633,7 +635,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("PurchaseOrderId");
 
-                    b.ToTable("purchase_order_items", (string)null);
+                    b.ToTable("purchase_order_items");
                 });
 
             modelBuilder.Entity("net_backend.Models.QualityControl", b =>
@@ -665,7 +667,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("MovementId");
 
-                    b.ToTable("quality_controls", (string)null);
+                    b.ToTable("quality_controls");
                 });
 
             modelBuilder.Entity("net_backend.Models.User", b =>
@@ -715,7 +717,7 @@ namespace net_backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("net_backend.Models.UserPermission", b =>
@@ -794,7 +796,7 @@ namespace net_backend.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("user_permissions", (string)null);
+                    b.ToTable("user_permissions");
                 });
 
             modelBuilder.Entity("net_backend.Models.AuditLog", b =>

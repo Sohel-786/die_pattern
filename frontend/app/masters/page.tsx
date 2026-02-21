@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Download, Edit2, Ban, CheckCircle, Upload } from "lucide-react";
+import { Plus, Search, Edit2, Ban, CheckCircle } from "lucide-react";
+import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -132,35 +133,13 @@ export default function OtherMastersPage() {
                     <p className="text-secondary-500 font-medium">Manage supplementary parameters and metadata categories</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <input
-                        type="file"
-                        id="import-masters"
-                        className="hidden"
-                        accept=".xlsx,.xls"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImport(file);
-                            e.target.value = "";
-                        }}
+                    <ExportImportButtons
+                        onExport={handleExport}
+                        onImport={handleImport}
+                        exportLoading={exportLoading}
+                        importLoading={importLoading}
+                        inputId="masters"
                     />
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={handleExport}
-                        disabled={exportLoading}
-                    >
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={() => document.getElementById("import-masters")?.click()}
-                        disabled={importLoading}
-                    >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Import
-                    </Button>
                     <Button
                         onClick={handleAdd}
                         className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"

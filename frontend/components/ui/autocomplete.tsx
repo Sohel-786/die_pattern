@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "./input";
-import { Check } from "lucide-react";
 
 export interface AutocompleteProps {
     options: string[];
@@ -16,6 +15,7 @@ export interface AutocompleteProps {
     "aria-describedby"?: string;
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
+    disabled?: boolean;
 }
 
 export function Autocomplete({
@@ -29,6 +29,7 @@ export function Autocomplete({
     "aria-describedby": ariaDescribedby,
     onBlur,
     onKeyDown,
+    disabled = false,
 }: AutocompleteProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const [highlightIndex, setHighlightIndex] = React.useState(-1);
@@ -38,7 +39,7 @@ export function Autocomplete({
     const filteredOptions = React.useMemo(() => {
         if (!value) return options;
         const lower = value.toLowerCase();
-        // Show options that contain the search term, excluding exact match (no need to suggest what's already typed)
+        // Show options that contain the search term, excluding exact match
         return options.filter(
             (opt) => opt.toLowerCase().includes(lower) && opt.toLowerCase() !== lower
         );
@@ -115,16 +116,17 @@ export function Autocomplete({
                     setIsOpen(true);
                     setHighlightIndex(-1);
                 }}
-                onFocus={() => setIsOpen(true)}
+                onFocus={() => !disabled && setIsOpen(true)}
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 className={className}
                 aria-invalid={ariaInvalid}
                 aria-describedby={ariaDescribedby}
                 autoComplete="off"
+                disabled={disabled}
             />
             {isOpen && filteredOptions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white rounded-md border border-secondary-200 shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white rounded-md border border-secondary-200 shadow-lg max-h-48 overflow-auto">
                     <ul ref={listRef} role="listbox">
                         {filteredOptions.map((opt, index) => (
                             <li

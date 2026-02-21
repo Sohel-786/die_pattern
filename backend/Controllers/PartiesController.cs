@@ -25,9 +25,14 @@ namespace net_backend.Controllers
                 .ToListAsync();
             var data = parties.Select(p => new {
                 Name = p.Name,
+                PartyCategory = p.PartyCategory ?? "",
+                CustomerType = p.CustomerType ?? "",
+                Address = p.Address ?? "",
+                ContactPerson = p.ContactPerson ?? "",
                 PhoneNumber = p.PhoneNumber ?? "",
                 Email = p.Email ?? "",
-                Address = p.Address ?? "",
+                GstNo = p.GstNo ?? "",
+                GstDate = p.GstDate,
                 IsActive = p.IsActive ? "Yes" : "No",
                 CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm")
             });
@@ -72,9 +77,14 @@ namespace net_backend.Controllers
                         newParties.Add(new Party
                         {
                             Name = validRow.Data.Name.Trim(),
-                            PhoneNumber = validRow.Data.PhoneNumber,
+                            PartyCategory = validRow.Data.PartyCategory!,
+                            CustomerType = validRow.Data.CustomerType!,
+                            Address = validRow.Data.Address!,
+                            ContactPerson = validRow.Data.ContactPerson!,
+                            PhoneNumber = validRow.Data.PhoneNumber!,
                             Email = validRow.Data.Email,
-                            Address = validRow.Data.Address,
+                            GstNo = validRow.Data.GstNo!,
+                            GstDate = validRow.Data.GstDate,
                             IsActive = true,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
@@ -114,9 +124,12 @@ namespace net_backend.Controllers
             foreach (var row in rows)
             {
                 var item = row.Data;
-                if (string.IsNullOrWhiteSpace(item.Name))
+                if (string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.PartyCategory) || 
+                    string.IsNullOrWhiteSpace(item.CustomerType) || string.IsNullOrWhiteSpace(item.ContactPerson) || 
+                    string.IsNullOrWhiteSpace(item.PhoneNumber) || string.IsNullOrWhiteSpace(item.GstNo) || 
+                    string.IsNullOrWhiteSpace(item.Address))
                 {
-                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name, Category, Customer Type, Contact Person, Contact No., GST No., and Address are mandatory" });
                     continue;
                 }
 
@@ -169,6 +182,13 @@ namespace net_backend.Controllers
             if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == party.Name.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
 
+            if (string.IsNullOrWhiteSpace(party.PartyCategory) || string.IsNullOrWhiteSpace(party.CustomerType) ||
+                string.IsNullOrWhiteSpace(party.ContactPerson) || string.IsNullOrWhiteSpace(party.PhoneNumber) ||
+                string.IsNullOrWhiteSpace(party.GstNo) || string.IsNullOrWhiteSpace(party.Address))
+            {
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields must be provided" });
+            }
+
             party.CreatedAt = DateTime.Now;
             party.UpdatedAt = DateTime.Now;
             _context.Parties.Add(party);
@@ -191,9 +211,32 @@ namespace net_backend.Controllers
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
                 existing.Name = request.Name.Trim();
             }
-            if (request.PhoneNumber != null) existing.PhoneNumber = request.PhoneNumber;
+            if (request.PartyCategory != null) {
+                if (string.IsNullOrWhiteSpace(request.PartyCategory)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party Category cannot be empty" });
+                existing.PartyCategory = request.PartyCategory;
+            }
+            if (request.CustomerType != null) {
+                if (string.IsNullOrWhiteSpace(request.CustomerType)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Customer Type cannot be empty" });
+                existing.CustomerType = request.CustomerType;
+            }
+            if (request.Address != null) {
+                if (string.IsNullOrWhiteSpace(request.Address)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Address cannot be empty" });
+                existing.Address = request.Address;
+            }
+            if (request.ContactPerson != null) {
+                if (string.IsNullOrWhiteSpace(request.ContactPerson)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Contact Person cannot be empty" });
+                existing.ContactPerson = request.ContactPerson;
+            }
+            if (request.PhoneNumber != null) {
+                if (string.IsNullOrWhiteSpace(request.PhoneNumber)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Phone Number cannot be empty" });
+                existing.PhoneNumber = request.PhoneNumber;
+            }
+            if (request.GstNo != null) {
+                if (string.IsNullOrWhiteSpace(request.GstNo)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "GST No cannot be empty" });
+                existing.GstNo = request.GstNo;
+            }
             if (request.Email != null) existing.Email = request.Email;
-            if (request.Address != null) existing.Address = request.Address;
+            if (request.GstDate != null) existing.GstDate = request.GstDate;
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 

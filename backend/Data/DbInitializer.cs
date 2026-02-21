@@ -16,6 +16,42 @@ namespace net_backend.Data
             {
                 // Handle cases where database is already created but __EFMigrationsHistory is out of sync
                 Console.WriteLine($"Migration skipped or failed: {ex.Message}");
+                try {
+                    // Create history table if it doesn't exist
+                    context.Database.ExecuteSqlRaw(@"
+                        IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+                        CREATE TABLE [__EFMigrationsHistory] (
+                            [MigrationId] nvarchar(150) NOT NULL,
+                            [ProductVersion] nvarchar(32) NOT NULL,
+                            CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+                        );
+                    ");
+
+                    // Mark migrations as applied if the tables already exist
+                    context.Database.ExecuteSqlRaw(@"
+                        IF OBJECT_ID(N'[app_settings]', 'U') IS NOT NULL
+                        BEGIN
+                            IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260221042232_InitialCreate')
+                                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260221042232_InitialCreate', '6.0.35');
+                            
+                            IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260221072509_AddPartyFields')
+                                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260221072509_AddPartyFields', '6.0.35');
+                        END
+                    ");
+
+                    context.Database.ExecuteSqlRaw(@"
+                        IF COL_LENGTH('parties', 'AlternateNumber') IS NULL ALTER TABLE [parties] ADD [AlternateNumber] nvarchar(max) NULL;
+                        IF COL_LENGTH('parties', 'ContactPerson') IS NULL ALTER TABLE [parties] ADD [ContactPerson] nvarchar(max) NULL;
+                        IF COL_LENGTH('parties', 'CustomerType') IS NULL ALTER TABLE [parties] ADD [CustomerType] nvarchar(max) NULL;
+                        IF COL_LENGTH('parties', 'GstDate') IS NULL ALTER TABLE [parties] ADD [GstDate] datetime2 NULL;
+                        IF COL_LENGTH('parties', 'GstNo') IS NULL ALTER TABLE [parties] ADD [GstNo] nvarchar(max) NULL;
+                        IF COL_LENGTH('parties', 'PartyCategory') IS NULL ALTER TABLE [parties] ADD [PartyCategory] nvarchar(max) NULL;
+                        IF COL_LENGTH('parties', 'PartyCode') IS NULL ALTER TABLE [parties] ADD [PartyCode] nvarchar(max) NULL;
+                    ");
+                    Console.WriteLine("Manual patch and migration history synchronization applied successfully.");
+                } catch (Exception patchEx) {
+                    Console.WriteLine($"Patch failed: {patchEx.Message}");
+                }
             }
 
             // 1. Ensure Admin User Exists

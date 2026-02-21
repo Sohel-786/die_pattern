@@ -19,15 +19,48 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll(
+            [FromQuery] string? search,
+            [FromQuery] bool? isActive,
+            [FromQuery] int? itemTypeId,
+            [FromQuery] int? materialId,
+            [FromQuery] int? ownerTypeId,
+            [FromQuery] int? statusId)
         {
-            var data = await _context.Items
+            var query = _context.Items
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
                 .Include(p => p.CurrentParty)
+                .AsQueryable();
+
+            if (isActive.HasValue)
+                query = query.Where(p => p.IsActive == isActive.Value);
+
+            if (itemTypeId.HasValue && itemTypeId.Value > 0)
+                query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
+
+            if (materialId.HasValue && materialId.Value > 0)
+                query = query.Where(p => p.MaterialId == materialId.Value);
+
+            if (ownerTypeId.HasValue && ownerTypeId.Value > 0)
+                query = query.Where(p => p.OwnerTypeId == ownerTypeId.Value);
+
+            if (statusId.HasValue && statusId.Value > 0)
+                query = query.Where(p => p.StatusId == statusId.Value);
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(p => 
+                    p.MainPartName.ToLower().Contains(s) || 
+                    p.CurrentName.ToLower().Contains(s) || 
+                    (p.DrawingNo != null && p.DrawingNo.ToLower().Contains(s)));
+            }
+
+            var data = await query
                 .Select(p => new ItemDto
                 {
                     Id = p.Id,
@@ -62,6 +95,9 @@ namespace net_backend.Controllers
 
             if (await _context.Items.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique" });
+            
+            if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
             var item = new Item
             {
@@ -130,7 +166,12 @@ namespace net_backend.Controllers
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
             if (dto.StatusId > 0) existing.StatusId = dto.StatusId;
-            if (dto.DrawingNo != null) existing.DrawingNo = dto.DrawingNo;
+            if (dto.DrawingNo != null && dto.DrawingNo != existing.DrawingNo)
+            {
+                if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
+                    return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number already exists" });
+                existing.DrawingNo = dto.DrawingNo;
+            }
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
@@ -151,16 +192,16 @@ namespace net_backend.Controllers
                 .ToListAsync();
 
             var data = items.Select(i => new {
-                MainPartName = i.MainPartName,
-                CurrentName = i.CurrentName,
-                ItemType = i.ItemType?.Name,
+                PartName = i.MainPartName,
+                DisplayName = i.CurrentName,
+                AssetType = i.ItemType?.Name,
                 DrawingNo = i.DrawingNo,
-                RevisionNo = i.RevisionNo,
+                Revision = i.RevisionNo,
                 Material = i.Material?.Name,
-                OwnerType = i.OwnerType?.Name,
+                Ownership = i.OwnerType?.Name,
                 Status = i.Status?.Name,
-                HolderType = i.CurrentHolderType.ToString(),
-                HolderName = i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name
+                CustodianType = i.CurrentHolderType.ToString(),
+                CustodianName = i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name
             });
 
             var file = _excelService.GenerateExcel(data, "Inventory");
@@ -192,26 +233,26 @@ namespace net_backend.Controllers
             {
                 foreach (var row in validation.Valid)
                 {
-                    var type = await _context.ItemTypes.FirstOrDefaultAsync(t => t.Name == row.Data.ItemType);
+                    var type = await _context.ItemTypes.FirstOrDefaultAsync(t => t.Name == row.Data.AssetType);
                     var material = await _context.Materials.FirstOrDefaultAsync(m => m.Name == row.Data.Material);
-                    var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.OwnerType);
+                    var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.Ownership);
                     var status = await _context.ItemStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
                     
                     int? locationId = null;
                     int? partyId = null;
 
-                    if (row.Data.CurrentHolderType == "Location")
-                        locationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CurrentHolderName))?.Id;
+                    if (row.Data.CustodianType == "Location")
+                        locationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CustodianName))?.Id;
                     else
-                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.Name == row.Data.CurrentHolderName))?.Id;
+                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.Name == row.Data.CustodianName))?.Id;
 
                     _context.Items.Add(new Item
                     {
-                        MainPartName = row.Data.MainPartName,
-                        CurrentName = row.Data.CurrentName,
+                        MainPartName = row.Data.PartName,
+                        CurrentName = row.Data.DisplayName,
                         ItemTypeId = type?.Id ?? 0,
                         DrawingNo = row.Data.DrawingNo,
-                        RevisionNo = row.Data.RevisionNo,
+                        RevisionNo = row.Data.Revision,
                         MaterialId = material?.Id ?? 0,
                         OwnerTypeId = ownerType?.Id ?? 0,
                         StatusId = status?.Id ?? 0,
@@ -236,21 +277,39 @@ namespace net_backend.Controllers
         {
             var result = new ValidationResultDto<ItemImportDto>();
             var existingNames = await _context.Items.Select(p => p.MainPartName.ToLower()).ToListAsync();
+            var existingDrawingNos = await _context.Items
+                .Where(p => !string.IsNullOrEmpty(p.DrawingNo))
+                .Select(p => p.DrawingNo!.ToLower())
+                .ToListAsync();
             
             var types = await _context.ItemTypes.Select(t => t.Name.ToLower()).ToListAsync();
             var materials = await _context.Materials.Select(m => m.Name.ToLower()).ToListAsync();
             var ownerTypes = await _context.OwnerTypes.Select(o => o.Name.ToLower()).ToListAsync();
             var statuses = await _context.ItemStatuses.Select(s => s.Name.ToLower()).ToListAsync();
+            
+            var batchMainPartNames = new HashSet<string>();
+            var batchDrawingNos = new HashSet<string>();
 
             foreach (var row in rows)
             {
                 var d = row.Data;
                 var errors = new List<string>();
 
-                if (string.IsNullOrEmpty(d.MainPartName)) errors.Add("Main Part Name is required");
-                else if (existingNames.Contains(d.MainPartName.ToLower())) errors.Add("Main Part Name already exists");
+                var mainPartNameLower = d.PartName?.Trim().ToLower();
+                if (string.IsNullOrEmpty(d.PartName)) errors.Add("Part Name is required");
+                else if (existingNames.Contains(mainPartNameLower!) || batchMainPartNames.Contains(mainPartNameLower!)) errors.Add("Part Name already exists");
+                else batchMainPartNames.Add(mainPartNameLower!);
                 
-                if (string.IsNullOrEmpty(d.ItemType) || !types.Contains(d.ItemType.ToLower())) errors.Add("Invalid Item Type");
+                if (!string.IsNullOrEmpty(d.DrawingNo))
+                {
+                    var drawingNoLower = d.DrawingNo.Trim().ToLower();
+                    if (existingDrawingNos.Contains(drawingNoLower) || batchDrawingNos.Contains(drawingNoLower))
+                        errors.Add("Drawing Number already exists");
+                    else
+                        batchDrawingNos.Add(drawingNoLower);
+                }
+                
+                if (string.IsNullOrEmpty(d.AssetType) || !types.Contains(d.AssetType.ToLower())) errors.Add("Invalid Asset Type");
                 if (string.IsNullOrEmpty(d.Material) || !materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
                 if (string.IsNullOrEmpty(d.Status) || !statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 

@@ -3,14 +3,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, Search, History, Hammer, MapPin,
-    MoreVertical, Download,
-    Edit, Database, ShieldCheck, Upload, Ban, CheckCircle
+    MoreVertical,
+    Edit, Database, ShieldCheck, Ban, CheckCircle,
+    Filter, X
 } from "lucide-react";
+import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
+import { Label } from "@/components/ui/label";
 import { Item } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,10 +35,15 @@ export default function ItemsPage() {
     const [isChangeOpen, setIsChangeOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+    const [tabState, setTabState] = useState<"all" | "Die" | "Pattern">("all");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [materialFilter, setMaterialFilter] = useState<string>("all");
+    const [ownerFilter, setOwnerFilter] = useState<string>("all");
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<Item | null>(null);
 
     const queryClient = useQueryClient();
+    const debouncedSearch = useDebouncedValue(search, 400);
 
     const {
         handleExport,
@@ -47,10 +56,29 @@ export default function ItemsPage() {
         validationData,
     } = useMasterExportImport("items", ["items"]);
 
+    const { data: itemTypes = [] } = useQuery({ queryKey: ["item-types", "active"], queryFn: async () => (await api.get("/masters/item-types/active")).data.data });
+    const { data: materials = [] } = useQuery({ queryKey: ["materials", "active"], queryFn: async () => (await api.get("/masters/materials/active")).data.data });
+    const { data: statuses = [] } = useQuery({ queryKey: ["item-statuses", "active"], queryFn: async () => (await api.get("/masters/item-statuses/active")).data.data });
+    const { data: owners = [] } = useQuery({ queryKey: ["owner-types", "active"], queryFn: async () => (await api.get("/masters/owner-types/active")).data.data });
+
     const { data: items = [], isLoading } = useQuery<Item[]>({
-        queryKey: ["items"],
+        queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter],
         queryFn: async () => {
-            const res = await api.get("/items");
+            const params: any = {};
+            if (debouncedSearch) params.search = debouncedSearch;
+            if (activeFilter === "active") params.isActive = true;
+            if (activeFilter === "inactive") params.isActive = false;
+
+            if (tabState !== "all") {
+                const type = itemTypes.find((t: any) => t.name === tabState);
+                if (type) params.itemTypeId = type.id;
+            }
+
+            if (statusFilter !== "all") params.statusId = statusFilter;
+            if (materialFilter !== "all") params.materialId = materialFilter;
+            if (ownerFilter !== "all") params.ownerTypeId = ownerFilter;
+
+            const res = await api.get("/items", { params });
             return res.data.data;
         },
     });
@@ -121,91 +149,160 @@ export default function ItemsPage() {
         }
     };
 
-    const filteredItems = items.filter(i => {
-        const matchesSearch = i.mainPartName.toLowerCase().includes(search.toLowerCase()) ||
-            i.currentName.toLowerCase().includes(search.toLowerCase()) ||
-            i.drawingNo?.toLowerCase().includes(search.toLowerCase());
+    // We use the server-filtered items directly
+    const filteredItems = items;
 
-        const matchesFilter = activeFilter === "all"
-            ? true
-            : activeFilter === "active"
-                ? i.isActive
-                : !i.isActive;
+    const hasActiveFilters =
+        search.trim() !== "" ||
+        activeFilter !== "all" ||
+        statusFilter !== "all" ||
+        materialFilter !== "all" ||
+        ownerFilter !== "all";
 
-        return matchesSearch && matchesFilter;
-    });
+    const handleResetFilters = () => {
+        setSearch("");
+        setActiveFilter("all");
+        setStatusFilter("all");
+        setMaterialFilter("all");
+        setOwnerFilter("all");
+    };
 
     return (
         <div className="p-6 space-y-6 text-sans">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-secondary-900 tracking-tight mb-2">Pattern Inventory</h1>
-                    <p className="text-secondary-500 font-medium">Digital repository for engineering patterns and dies</p>
+                    <h1 className="text-3xl font-bold text-secondary-900 tracking-tight mb-2">Die & Pattern Masters</h1>
+                    <p className="text-secondary-500 font-medium">Systematic repository for engineering dies and pattern assets</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <input
-                        type="file"
-                        id="import-items"
-                        className="hidden"
-                        accept=".xlsx,.xls"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImport(file);
-                            e.target.value = "";
-                        }}
+                    <ExportImportButtons
+                        onExport={handleExport}
+                        onImport={handleImport}
+                        exportLoading={exportLoading}
+                        importLoading={importLoading}
+                        inputId="items"
                     />
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={handleExport}
-                        disabled={exportLoading}
-                    >
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="shadow-sm border-secondary-200"
-                        onClick={() => document.getElementById("import-items")?.click()}
-                        disabled={importLoading}
-                    >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Import
-                    </Button>
                     <Button
                         onClick={handleAdd}
                         className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Pattern
+                        Add Die/Pattern Master
                     </Button>
                 </div>
             </div>
 
-            <Card className="shadow-sm border-secondary-200 bg-white mb-6">
-                <div className="p-4 flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                        <Input
-                            placeholder="Search by name, part, or drawing..."
-                            className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+            {/* Tabs Navigation */}
+            <div className="flex items-center gap-1 p-1 bg-secondary-100/50 rounded-xl w-fit border border-secondary-200 shadow-inner">
+                <button
+                    onClick={() => setTabState("all")}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "all" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                >
+                    All Assets
+                </button>
+                <button
+                    onClick={() => setTabState("Die")}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "Die" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                >
+                    Dies
+                </button>
+                <button
+                    onClick={() => setTabState("Pattern")}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "Pattern" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                >
+                    Patterns
+                </button>
+            </div>
+
+            {/* Professional Filter Card - QC Tool Style */}
+            <Card className="shadow-sm border-secondary-200 bg-white overflow-visible">
+                <CardContent className="p-5">
+                    <div className="flex flex-col gap-6 overflow-visible">
+                        {/* Search & Header Row */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-secondary-200 bg-secondary-50 text-secondary-600"
+                                aria-hidden
+                            >
+                                <Filter className="h-4 w-4" />
+                            </div>
+                            <div className="relative flex-1 min-w-[200px] max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search by name, part, or drawing..."
+                                    className="pl-9 h-10 rounded-lg border-secondary-300 bg-white focus-visible:ring-2 focus-visible:ring-primary-500 text-sm font-medium"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            {hasActiveFilters && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleResetFilters}
+                                    className="shrink-0 h-9 px-3 text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900 font-bold"
+                                >
+                                    <X className="h-4 w-4 mr-1.5" />
+                                    Clear filters
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Filter Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-visible items-start">
+                            <div className="space-y-1.5">
+                                <Label className="text-sm font-medium text-secondary-700">Record Status</Label>
+                                <select
+                                    value={activeFilter}
+                                    onChange={(e) => setActiveFilter(e.target.value as any)}
+                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
+                                >
+                                    <option value="all">Active & Inactive</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="inactive">Inactive Only</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-sm font-medium text-secondary-700">Material</Label>
+                                <select
+                                    value={materialFilter}
+                                    onChange={(e) => setMaterialFilter(e.target.value)}
+                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
+                                >
+                                    <option value="all">All Materials</option>
+                                    {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-sm font-medium text-secondary-700">Condition Status</Label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
+                                >
+                                    <option value="all">All Statuses</option>
+                                    {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-sm font-medium text-secondary-700">Ownership</Label>
+                                <select
+                                    value={ownerFilter}
+                                    onChange={(e) => setOwnerFilter(e.target.value)}
+                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
+                                >
+                                    <option value="all">All Ownership</option>
+                                    {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-secondary-700">Display</span>
-                        <select
-                            value={activeFilter}
-                            onChange={(e) => setActiveFilter(e.target.value as any)}
-                            className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
-                        >
-                            <option value="all">All Records</option>
-                            <option value="active">Active Only</option>
-                            <option value="inactive">Inactive Only</option>
-                        </select>
-                    </div>
-                </div>
+                </CardContent>
             </Card>
 
             <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
@@ -219,11 +316,15 @@ export default function ItemsPage() {
                         <thead>
                             <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
                                 <th className="px-4 py-3 font-semibold text-center w-16 uppercase text-[10px] tracking-wider">Sr.No</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Pattern Identity</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Material & Type</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Engineering DNA</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Current Custody</th>
-                                <th className="px-4 py-3 font-semibold text-center uppercase text-[10px] tracking-wider">Status</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Part Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Display Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Asset Type</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Drawing No</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Revision</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Material</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Ownership</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Status</th>
+                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Custodian Info</th>
                                 <th className="px-4 py-3 font-semibold text-right uppercase text-[10px] tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -231,8 +332,8 @@ export default function ItemsPage() {
                             {isLoading ? (
                                 [1, 2, 3].map((i) => (
                                     <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(7).fill(0).map((_, j) => (
-                                            <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
+                                        {Array(11).fill(0).map((_, j) => (
+                                            <td key={j} className="px-4 py-3"><div className="h-4 bg-secondary-100 rounded-lg w-full" /></td>
                                         ))}
                                     </tr>
                                 ))
@@ -244,43 +345,50 @@ export default function ItemsPage() {
                                     >
                                         <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
                                         <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-secondary-900 group-hover:text-primary-700 transition-colors uppercase tracking-tight leading-none mb-1">{item.currentName}</span>
-                                                <span className="text-[10px] text-secondary-400 font-bold uppercase tracking-wider">{item.mainPartName}</span>
-                                            </div>
+                                            <span className="font-bold text-secondary-900 uppercase tracking-tight text-xs">{item.mainPartName}</span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-secondary-700 text-[10px] uppercase tracking-wide">{item.itemTypeName}</span>
-                                                <span className="text-[9px] text-secondary-500 font-bold mt-0.5 uppercase">{item.materialName}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="font-mono text-[10px] font-bold text-primary-600 bg-primary-100 px-2 py-0.5 rounded border border-primary-200 w-fit">{item.drawingNo || 'UNCLASSIFIED'}</span>
-                                                <span className="text-[9px] text-secondary-400 font-bold ml-1 uppercase">REV: {item.revisionNo || '00'}</span>
-                                            </div>
+                                            <span className="font-medium text-secondary-700 uppercase text-xs">{item.currentName}</span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[9px] font-bold uppercase text-secondary-400 leading-none">{item.currentHolderType}</span>
-                                                <span className="text-[10px] font-bold text-secondary-800 flex items-center gap-1.5 uppercase transition-colors group-hover:text-primary-700 truncate max-w-[150px]">
-                                                    <MapPin className="w-3.5 h-3.5 text-primary-500 shrink-0" />
-                                                    {item.currentLocationName || item.currentPartyName || 'IN TRANSIT'}
-                                                </span>
-                                            </div>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${item.itemTypeName === 'Die' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                                {item.itemTypeName}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="font-mono text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">
+                                                {item.drawingNo || 'N/A'}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${item.statusName?.toLowerCase().includes('avail')
+                                            <span className="text-[10px] font-bold text-secondary-500">{item.revisionNo || '00'}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-[10px] font-bold text-secondary-600 uppercase">{item.materialName}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-[10px] font-bold text-secondary-600 uppercase italic">{item.ownerTypeName}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col gap-1">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
                                                     ? 'bg-green-50 text-green-700 border-green-200'
-                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
                                                     }`}>
                                                     {item.statusName}
                                                 </span>
                                                 {!item.isActive && (
-                                                    <span className="text-[9px] text-red-600 font-bold uppercase">Inactive</span>
+                                                    <span className="text-[9px] text-red-500 font-bold uppercase text-center">Disabled</span>
                                                 )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-bold uppercase text-secondary-400">{item.currentHolderType}</span>
+                                                <span className="text-[10px] font-bold text-secondary-800 flex items-center gap-1 group-hover:text-primary-700 transition-colors">
+                                                    <MapPin className="w-3 h-3" />
+                                                    {item.currentLocationName || item.currentPartyName || 'UNKNOWN'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right">
@@ -313,8 +421,8 @@ export default function ItemsPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="py-12 text-center text-secondary-500 italic font-medium">
-                                        No patterns found matching criteria.
+                                    <td colSpan={11} className="py-12 text-center text-secondary-500 italic font-medium">
+                                        No assets found matching selected filters.
                                     </td>
                                 </tr>
                             )}
@@ -326,13 +434,11 @@ export default function ItemsPage() {
             <ItemDialog
                 key={dialogKey}
                 isOpen={isEntryOpen}
-                onClose={() => {
-                    setIsEntryOpen(false);
-                    setSelectedItem(null);
-                }}
+                onClose={() => setIsEntryOpen(false)}
                 item={selectedItem}
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
+                existingItems={items}
             />
 
             <ItemChangeDialog

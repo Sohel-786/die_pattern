@@ -71,9 +71,16 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
-        public string? PhoneNumber { get; set; }
-        public string? Email { get; set; }
+        public string? PartyCategory { get; set; }
+        public string? PartyCode { get; set; }
+        public string? CustomerType { get; set; }
         public string? Address { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? AlternateNumber { get; set; }
+        public string? Email { get; set; }
+        public string? GstNo { get; set; }
+        public DateTime? GstDate { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;

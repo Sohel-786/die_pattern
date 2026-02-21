@@ -17,12 +17,11 @@ import {
   Ban,
   CheckCircle,
   Image as ImageIcon,
-  Upload,
-  Download,
   Database,
   Box,
   MapPin
 } from "lucide-react";
+import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
@@ -152,16 +151,13 @@ export default function StoreItemsPage() {
               if (f) { handleImport(f); e.target.value = ""; }
             }} />
             {canImportExportMaster && (
-              <>
-                <Button variant="outline" onClick={() => importFileRef.current?.click()} disabled={importLoading} className="shadow-sm border-secondary-200">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import
-                </Button>
-                <Button variant="outline" onClick={handleExport} disabled={exportLoading} className="shadow-sm border-secondary-200">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-              </>
+              <ExportImportButtons
+                onExport={handleExport}
+                onImport={handleImport}
+                exportLoading={exportLoading}
+                importLoading={importLoading}
+                inputId="store-items"
+              />
             )}
             {canAddMaster && (
               <Button

@@ -118,6 +118,8 @@ namespace net_backend.Services
                                (propName == "itemtype" && (header == "type" || header == "itemtype")) ||
                                (propName == "drawingno" && (header == "drawing" || header == "drawingno")) ||
                                (propName == "revisionno" && (header == "revision" || header == "revisionno")) ||
+                               (propName == "email" && (header == "email" || header == "emailid")) ||
+                               (propName == "phonenumber" && (header == "phonenumber" || header == "phone" || header == "contactno" || header == "contactno1")) ||
                                (propName == "isactive" && (header == "status" || header == "active"));
                     });
                     

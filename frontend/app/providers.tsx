@@ -24,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider>
         <AuthLayout>{children}</AuthLayout>
       </ThemeProvider>
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
     </QueryClientProvider>
   );
 }

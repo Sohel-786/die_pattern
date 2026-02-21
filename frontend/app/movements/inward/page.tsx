@@ -11,6 +11,7 @@ import { PO, Location, HolderType, MovementType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -100,17 +101,15 @@ export default function InwardEntryPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <ShoppingCart className="w-4 h-4 text-primary-500" /> Purchase Order Number
                                     </label>
-                                    <select
-                                        value={selectedPoId}
-                                        onChange={(e) => {
-                                            setSelectedPoId(Number(e.target.value));
+                                    <SearchableSelect
+                                        options={orders.map(o => ({ value: o.id, label: `${o.poNo} - ${o.vendorName}` }))}
+                                        value={selectedPoId || ""}
+                                        onChange={(val) => {
+                                            setSelectedPoId(Number(val));
                                             setSelectedItemId(0);
                                         }}
-                                        className="w-full h-18 rounded-3xl bg-secondary-50/50 border-gray-200 text-lg font-black px-8 focus:bg-white transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value={0}>Select Active PO</option>
-                                        {orders.map(o => <option key={o.id} value={o.id}>{o.poNo} - {o.vendorName}</option>)}
-                                    </select>
+                                        placeholder="Select Active PO"
+                                    />
                                 </div>
                             </div>
 
@@ -124,19 +123,13 @@ export default function InwardEntryPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <Package className="w-4 h-4 text-emerald-500" /> Item Unit
                                     </label>
-                                    <select
+                                    <SearchableSelect
                                         disabled={!selectedPoId}
-                                        value={selectedItemId}
-                                        onChange={(e) => setSelectedItemId(Number(e.target.value))}
-                                        className="w-full h-18 rounded-3xl bg-secondary-50/50 border-gray-200 text-lg font-black px-8 focus:bg-white transition-all appearance-none cursor-pointer disabled:opacity-30"
-                                    >
-                                        <option value={0}>Select Unit from PO</option>
-                                        {selectedPo?.items.map(i => (
-                                            <option key={i.id} value={i.itemId}>
-                                                {i.currentName}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={(selectedPo?.items || []).map(i => ({ value: i.itemId, label: i.currentName }))}
+                                        value={selectedItemId || ""}
+                                        onChange={(val) => setSelectedItemId(Number(val))}
+                                        placeholder="Select Unit from PO"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -152,14 +145,12 @@ export default function InwardEntryPage() {
                                     <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
                                         <MapPin className="w-4 h-4 text-amber-500" /> Direct Inward Location
                                     </label>
-                                    <select
-                                        value={targetLocationId}
-                                        onChange={(e) => setTargetLocationId(Number(e.target.value))}
-                                        className="w-full h-18 rounded-3xl bg-secondary-50/50 border-gray-200 text-lg font-black px-8 focus:bg-white transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value={0}>Select Inspection Rack</option>
-                                        {locations.map(l => <option key={l.id} value={l.id}>{l.name} ({l.company?.name})</option>)}
-                                    </select>
+                                    <SearchableSelect
+                                        options={locations.map(l => ({ value: l.id, label: `${l.name} (${l.company?.name || ''})` }))}
+                                        value={targetLocationId || ""}
+                                        onChange={(val) => setTargetLocationId(Number(val))}
+                                        placeholder="Select Inspection Rack"
+                                    />
                                 </div>
                             </div>
 

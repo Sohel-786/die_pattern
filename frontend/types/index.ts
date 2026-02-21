@@ -80,9 +80,16 @@ export interface Location {
 export interface Party {
   id: number;
   name: string;
-  phoneNumber?: string;
-  email?: string;
+  partyCategory?: string;
+  partyCode?: string;
+  customerType?: string;
   address?: string;
+  contactPerson?: string;
+  phoneNumber?: string;
+  alternateNumber?: string;
+  email?: string;
+  gstNo?: string;
+  gstDate?: string;
   isActive: boolean;
 }
 
