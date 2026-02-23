@@ -16,12 +16,16 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
 
 export default function CreatePOPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const searchParams = useSearchParams();
+    const piIdsParam = searchParams.get('piIds');
+
     const [selectedPiItemIds, setSelectedPiItemIds] = useState<number[]>([]);
     const [vendorId, setVendorId] = useState<number>(0);
     const [rate, setRate] = useState<number>(0);
@@ -36,6 +40,22 @@ export default function CreatePOPage() {
             return res.data.data;
         },
     });
+
+    useEffect(() => {
+        if (piIdsParam && piItems.length > 0) {
+            const piIds = piIdsParam.split(',').map(Number);
+            const itemsToSelect = piItems
+                .filter(item => piIds.includes(item.purchaseIndentId))
+                .map(item => item.id);
+
+            if (itemsToSelect.length > 0) {
+                setSelectedPiItemIds(prev => {
+                    const combined = new Set([...prev, ...itemsToSelect]);
+                    return Array.from(combined);
+                });
+            }
+        }
+    }, [piIdsParam, piItems]);
 
     const { data: vendors = [], isLoading: loadingVendors } = useQuery<Party[]>({
         queryKey: ["parties", "active"],

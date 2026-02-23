@@ -29,6 +29,12 @@ namespace net_backend.Controllers
             }
         }
 
+        protected async Task<bool> IsAdmin()
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId);
+            return user?.Role == Role.ADMIN;
+        }
+
         protected async Task<bool> HasPermission(string permission)
         {
             var user = await _context.Users

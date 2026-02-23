@@ -11,6 +11,7 @@ namespace net_backend.DTOs
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<PurchaseIndentItemDto> Items { get; set; } = new();
     }
@@ -18,9 +19,12 @@ namespace net_backend.DTOs
     public class PurchaseIndentItemDto
     {
         public int Id { get; set; }
+        public int PurchaseIndentId { get; set; }
         public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? PoNo { get; set; }
         public bool IsInPO { get; set; } // Logic for visibility
     }
 

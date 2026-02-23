@@ -140,16 +140,16 @@ export default function ReturnsPage() {
   const watchedCompanyId = watch("companyId");
 
   const outwardOptions = useMemo(() => activeIssues.map(i => ({ value: i.id, label: i.issueNo || `Issue #${i.id}` })), [activeIssues]);
-  const missingItemOptions = useMemo(() => missingItems.map(i => ({ value: i.id, label: i.serialNumber ? `${i.itemName} (${i.serialNumber})` : i.itemName })), [missingItems]);
+  const missingItemOptions = useMemo(() => missingItems.map(i => ({ value: i.id, label: `${i.mainPartName} - ${i.currentName}` })), [missingItems]);
   const locationFormOptions = useMemo(() => {
     if (!watchedCompanyId) return [];
-    return filterLocations.filter(l => l.companyId === watchedCompanyId).map(l => ({ value: l.id, label: l.name }));
+    return filterLocations.filter((l: any) => l.companyId === watchedCompanyId).map((l: any) => ({ value: l.id, label: l.name }));
   }, [filterLocations, watchedCompanyId]);
 
   const filterOptions = useMemo(() => ({
     company: filterCompanies.map((c: any) => ({ value: c.id, label: c.name })),
     location: filterLocations.map((l: any) => ({ value: l.id, label: l.name })),
-    item: filterItems.map((i: any) => ({ value: i.id, label: i.serialNumber ? `${i.itemName} (${i.serialNumber})` : i.itemName })),
+    item: filterItems.map((i: any) => ({ value: i.id, label: `${i.mainPartName} - ${i.currentName}` })),
     condition: RETURN_CONDITIONS.map(c => ({ value: c, label: c })),
   }), [filterCompanies, filterLocations, filterItems]);
 
@@ -176,6 +176,7 @@ export default function ReturnsPage() {
   });
 
   const handleOpenForm = async (presetIssueId?: number) => {
+    setEditingReturn(null);
     reset({ entryMode: "from_outward", issueId: presetIssueId ?? 0, condition: "OK" });
     setImageFile(null);
     setImagePreview(null);
@@ -224,6 +225,20 @@ export default function ReturnsPage() {
       setInactiveTarget(null);
       toast.success("Inward marked inactive");
     });
+  };
+
+  const handleOpenEdit = (ret: Return) => {
+    setEditingReturn(ret);
+    reset({
+      entryMode: ret.issueId ? "from_outward" : "missing_item",
+      issueId: ret.issueId,
+      itemId: ret.itemId,
+      locationId: ret.locationId,
+      condition: ret.condition as any,
+      receivedBy: ret.receivedBy,
+      remarks: ret.remarks,
+    });
+    setIsFormOpen(true);
   };
 
   return (
@@ -374,7 +389,11 @@ export default function ReturnsPage() {
               <Label>Inward Photo *</Label>
               {!editingReturn ? (
                 <div className="space-y-4">
-                  <CameraPhotoInput onCapture={handleImageCapture} className="w-full aspect-video rounded-xl border-2 border-dashed border-secondary-200" />
+                  <CameraPhotoInput
+                    onCapture={handleImageCapture}
+                    previewUrl={imagePreview}
+                    className="w-full aspect-video rounded-xl border-2 border-dashed border-secondary-200"
+                  />
                   {imagePreview && (
                     <div className="relative rounded-xl overflow-hidden border">
                       <img src={imagePreview} className="w-full" />
@@ -394,7 +413,13 @@ export default function ReturnsPage() {
         </form>
       </Dialog>
 
-      {fullScreenImageSrc && <FullScreenImageViewer src={fullScreenImageSrc} onClose={() => setFullScreenImageSrc(null)} />}
+      {fullScreenImageSrc && (
+        <FullScreenImageViewer
+          isOpen={!!fullScreenImageSrc}
+          imageSrc={fullScreenImageSrc}
+          onClose={() => setFullScreenImageSrc(null)}
+        />
+      )}
     </div>
   );
 }

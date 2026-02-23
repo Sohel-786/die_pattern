@@ -8,16 +8,16 @@ export enum Role {
 }
 
 export enum PurchaseIndentStatus {
-  Pending = 0,
-  Approved = 1,
-  Rejected = 2
+  Pending = 'Pending',
+  Approved = 'Approved',
+  Rejected = 'Rejected'
 }
 
 export enum PurchaseIndentType {
-  New = 0,
-  Repair = 1,
-  Correction = 2,
-  Modification = 3
+  New = 'New',
+  Repair = 'Repair',
+  Correction = 'Correction',
+  Modification = 'Modification'
 }
 
 export enum PoStatus {
@@ -204,11 +204,13 @@ export interface PurchaseIndent {
   createdBy: number;
   creatorName: string;
   createdAt: string;
+  isActive: boolean;
   items: PurchaseIndentItem[];
 }
 
 export interface PurchaseIndentItem {
   id: number;
+  purchaseIndentId: number;
   itemId: number;
   mainPartName: string;
   currentName: string;

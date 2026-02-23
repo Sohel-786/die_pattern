@@ -36,6 +36,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
     const queryClient = useQueryClient();
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
     const [remarks, setRemarks] = useState("");
+    const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
     const [nextPiCode, setNextPiCode] = useState("");
     const [addingItemId, setAddingItemId] = useState<number | string>("");
 
@@ -44,10 +45,12 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
         if (indent && open) {
             setSelectedItemIds(indent.items.map(i => i.itemId));
             setRemarks(indent.remarks || "");
+            setType(indent.type); // Set type when editing
             setNextPiCode(indent.piNo);
         } else if (open) {
             setSelectedItemIds([]);
             setRemarks("");
+            setType(PurchaseIndentType.New); // Reset type for new indent
             setAddingItemId("");
             // Fetch next code for new indent
             api.get("/purchase-indents/next-code").then(res => {
@@ -101,7 +104,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
             return;
         }
         mutation.mutate({
-            type: PurchaseIndentType.New, // Default
+            type,
             remarks,
             itemIds: selectedItemIds
         });
@@ -145,6 +148,22 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                     </div>
                 </div>
 
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                        Indent Type
+                    </Label>
+                    <select
+                        className="w-full h-10 px-3 rounded-md border border-secondary-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
+                        value={type}
+                        onChange={(e) => setType(e.target.value as PurchaseIndentType)}
+                    >
+                        <option value={PurchaseIndentType.New}>New Procurement</option>
+                        <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
+                        <option value={PurchaseIndentType.Correction}>Engineering Correction</option>
+                        <option value={PurchaseIndentType.Modification}>Design Modification</option>
+                    </select>
+                </div>
+
                 <div className="space-y-4">
                     <div className="flex gap-2 items-end">
                         <div className="flex-1">
@@ -161,7 +180,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 gap-3 max-h-[350px] overflow-y-auto pr-2 py-1 custom-scrollbar">
                         <AnimatePresence mode="popLayout">
                             {selectedItems.length > 0 ? selectedItems.map((item) => (
                                 <motion.div
@@ -170,29 +189,33 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 10 }}
-                                    className="flex items-center justify-between p-3 bg-secondary-50 rounded-lg border border-secondary-200 group hover:border-primary-200 transition-all"
+                                    className="flex items-center justify-between p-3 bg-white rounded-xl border border-secondary-200 group hover:border-primary-300 hover:shadow-sm transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded bg-white border border-secondary-200 flex items-center justify-center text-primary-600 shadow-sm">
-                                            <Package className="w-4 h-4" />
+                                        <div className="h-9 w-9 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 shadow-sm group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                                            <Package className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-secondary-900 text-sm leading-tight">{item.currentName}</p>
-                                            <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest">{item.mainPartName}</p>
+                                            <p className="font-bold text-secondary-900 text-[13px] leading-tight">{item.currentName}</p>
+                                            <p className="text-[9px] font-black text-secondary-400 uppercase tracking-widest mt-0.5">{item.mainPartName}</p>
                                         </div>
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => removeItem(item.id)}
-                                        className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                                        className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-full"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </motion.div>
                             )) : (
-                                <div className="py-8 text-center border border-dashed border-secondary-200 rounded-lg bg-secondary-50/30">
-                                    <p className="text-secondary-400 font-medium text-sm italic">No items added to this indent yet.</p>
+                                <div className="py-12 text-center border-2 border-dashed border-secondary-100 rounded-2xl bg-secondary-50/20">
+                                    <div className="w-12 h-12 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-3 opacity-50">
+                                        <Package className="w-6 h-6 text-secondary-400" />
+                                    </div>
+                                    <p className="text-secondary-400 font-bold text-xs uppercase tracking-widest">No items selected yet</p>
+                                    <p className="text-secondary-300 text-[10px] mt-1">Search and select items above to add them to this indent.</p>
                                 </div>
                             )}
                         </AnimatePresence>

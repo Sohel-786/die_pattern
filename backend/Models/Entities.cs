@@ -174,6 +174,7 @@ namespace net_backend.Models
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         
