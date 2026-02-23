@@ -94,6 +94,22 @@ export function Autocomplete({
         onChange(option);
         setIsOpen(false);
         setHighlightIndex(-1);
+
+        // Professional touch: Move to next field after selection
+        setTimeout(() => {
+            const focusable = Array.from(
+                document.querySelectorAll(
+                    'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+            ) as HTMLElement[];
+            const currentInput = containerRef.current?.querySelector('input');
+            if (currentInput) {
+                const index = focusable.indexOf(currentInput);
+                if (index > -1 && index < focusable.length - 1) {
+                    focusable[index + 1].focus();
+                }
+            }
+        }, 50);
     };
 
     React.useEffect(() => {

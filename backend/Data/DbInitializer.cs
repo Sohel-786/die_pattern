@@ -40,7 +40,6 @@ namespace net_backend.Data
                     ");
 
                     context.Database.ExecuteSqlRaw(@"
-                        IF COL_LENGTH('parties', 'AlternateNumber') IS NULL ALTER TABLE [parties] ADD [AlternateNumber] nvarchar(max) NULL;
                         IF COL_LENGTH('parties', 'ContactPerson') IS NULL ALTER TABLE [parties] ADD [ContactPerson] nvarchar(max) NULL;
                         IF COL_LENGTH('parties', 'CustomerType') IS NULL ALTER TABLE [parties] ADD [CustomerType] nvarchar(max) NULL;
                         IF COL_LENGTH('parties', 'GstDate') IS NULL ALTER TABLE [parties] ADD [GstDate] datetime2 NULL;
@@ -83,17 +82,37 @@ namespace net_backend.Data
             
             adminPerm.ViewDashboard = true;
             adminPerm.ViewMaster = true;
-            adminPerm.ManageMaster = true;
+            
+            adminPerm.ManageItem = true;
+            adminPerm.ManageItemType = true;
+            adminPerm.ManageMaterial = true;
+            adminPerm.ManageItemStatus = true;
+            adminPerm.ManageOwnerType = true;
+            adminPerm.ManageParty = true;
+            adminPerm.ManageLocation = true;
+            adminPerm.ManageCompany = true;
+
             adminPerm.ViewPI = true;
             adminPerm.CreatePI = true;
+            adminPerm.EditPI = true;
             adminPerm.ApprovePI = true;
+
             adminPerm.ViewPO = true;
             adminPerm.CreatePO = true;
+            adminPerm.EditPO = true;
             adminPerm.ApprovePO = true;
+
+            adminPerm.ViewInward = true;
+            adminPerm.CreateInward = true;
+            adminPerm.EditInward = true;
+
+            adminPerm.ViewQC = true;
+            adminPerm.CreateQC = true;
+            adminPerm.EditQC = true;
+            adminPerm.ApproveQC = true;
+
             adminPerm.ViewMovement = true;
             adminPerm.CreateMovement = true;
-            adminPerm.ViewQC = true;
-            adminPerm.PerformQC = true;
             adminPerm.ManageChanges = true;
             adminPerm.RevertChanges = true;
             adminPerm.ViewReports = true;

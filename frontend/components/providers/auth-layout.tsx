@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { HorizontalNav } from '@/components/layout/horizontal-nav';
 import { User, UserPermission } from '@/types';
 import { SoftwareProfileDraftProvider } from '@/contexts/software-profile-draft-context';
 import { useCurrentUserPermissions } from '@/hooks/use-settings';
@@ -17,13 +18,14 @@ const SIDEBAR_WIDTH_COLLAPSED = 64;
 // Map route prefixes to required permission keys in UserPermission
 const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = {
   '/dashboard': 'viewDashboard',
-  '/companies': 'viewMaster',
-  '/locations': 'viewMaster',
-  '/parties': 'viewMaster',
+  '/companies': 'manageCompany',
+  '/locations': 'manageLocation',
+  '/parties': 'manageParty',
   '/masters': 'viewMaster',
-  '/pattern-dies': 'viewMaster',
+  '/items': 'manageItem',
   '/purchase-indents': 'viewPI',
   '/purchase-orders': 'viewPO',
+  '/inwards': 'viewInward',
   '/movements': 'viewMovement',
   '/quality-control': 'viewQC',
   '/reports': 'viewReports',
@@ -36,11 +38,14 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [navExpanded, setNavExpanded] = useState(true);
   const sideWidth = sidebarExpanded ? SIDEBAR_WIDTH_EXPANDED : SIDEBAR_WIDTH_COLLAPSED;
 
   const { data: permissions, isLoading: permissionsLoading } = useCurrentUserPermissions(
     pathname !== '/login' && !loading && !!user
   );
+
+  const isHorizontal = permissions?.navigationLayout === 'HORIZONTAL';
 
   useEffect(() => {
     const validateAndGetUser = async () => {
@@ -110,15 +115,21 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     return (
       <SoftwareProfileDraftProvider>
         <div className="min-h-screen bg-secondary-50">
-          <Sidebar
-            userRole={user.role}
-            currentUser={user}
-            expanded={sidebarExpanded}
-            onExpandChange={setSidebarExpanded}
-            sidebarWidth={sideWidth}
-          />
-          <div className="transition-[margin] duration-200 ease-in-out flex flex-col min-h-screen" style={{ marginLeft: sideWidth }}>
-            <Header user={user} isNavExpanded={true} onNavExpandChange={() => { }} />
+          {!isHorizontal && (
+            <Sidebar
+              userRole={user.role}
+              currentUser={user}
+              expanded={sidebarExpanded}
+              onExpandChange={setSidebarExpanded}
+              sidebarWidth={sideWidth}
+            />
+          )}
+          <div
+            className="transition-[margin] duration-200 ease-in-out flex flex-col min-h-screen"
+            style={{ marginLeft: isHorizontal ? 0 : sideWidth }}
+          >
+            <Header user={user} isNavExpanded={navExpanded} onNavExpandChange={setNavExpanded} />
+            {isHorizontal && <HorizontalNav isExpanded={navExpanded} />}
             <main className="flex-1 flex items-center justify-center p-6">
               <div className="text-center max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-red-100">
                 <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -138,18 +149,26 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <SoftwareProfileDraftProvider>
       <div className="min-h-screen bg-secondary-50">
-        <Sidebar
-          userRole={user.role}
-          currentUser={user}
-          expanded={sidebarExpanded}
-          onExpandChange={setSidebarExpanded}
-          sidebarWidth={sideWidth}
-        />
-        <div className="transition-[margin] duration-200 ease-in-out flex flex-col min-h-screen" style={{ marginLeft: sideWidth }}>
-          <Header user={user} isNavExpanded={true} onNavExpandChange={() => { }} />
+        {!isHorizontal && (
+          <Sidebar
+            userRole={user.role}
+            currentUser={user}
+            expanded={sidebarExpanded}
+            onExpandChange={setSidebarExpanded}
+            sidebarWidth={sideWidth}
+          />
+        )}
+        <div
+          className="transition-[margin] duration-200 ease-in-out relative z-0 flex flex-col min-h-screen"
+          style={{ marginLeft: isHorizontal ? 0 : sideWidth }}
+        >
+          <Header user={user} isNavExpanded={navExpanded} onNavExpandChange={setNavExpanded} />
+          {isHorizontal && <HorizontalNav isExpanded={navExpanded} />}
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </SoftwareProfileDraftProvider>
   );
 }
+
+

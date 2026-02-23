@@ -9,18 +9,16 @@ namespace net_backend.Controllers
 {
     [Route("users")]
     [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersController : BaseController
     {
-        private readonly ApplicationDbContext _context;
-
-        public UsersController(ApplicationDbContext context)
+        public UsersController(ApplicationDbContext context) : base(context)
         {
-            _context = context;
         }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<User>>>> GetAll()
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             var users = await _context.Users.ToListAsync();
             return Ok(new ApiResponse<IEnumerable<User>> { Data = users });
         }
@@ -28,6 +26,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<User>>> GetById(int id)
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             
             if (user == null) return NotFound();
@@ -37,6 +36,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<User>>> Create([FromBody] CreateUserRequest request)
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return Conflict(new ApiResponse<User> { Success = false, Message = "Username already exists" });
 
@@ -82,6 +82,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<User>>> Update(int id, [FromBody] UpdateUserRequest request)
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             
             if (user == null) return NotFound();
@@ -127,6 +128,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}/permissions")]
         public async Task<ActionResult<ApiResponse<UserPermission>>> GetPermissions(int id)
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             var permission = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == id);
             if (permission == null)
             {
@@ -141,23 +143,44 @@ namespace net_backend.Controllers
         [HttpPut("{id}/permissions")]
         public async Task<ActionResult<ApiResponse<UserPermission>>> UpdatePermissions(int id, [FromBody] UserPermission request)
         {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
             var permission = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == id);
             if (permission == null) return NotFound();
 
             // Update all boolean flags
             permission.ViewDashboard = request.ViewDashboard;
             permission.ViewMaster = request.ViewMaster;
-            permission.ManageMaster = request.ManageMaster;
+            permission.ManageItem = request.ManageItem;
+            permission.ManageItemType = request.ManageItemType;
+            permission.ManageMaterial = request.ManageMaterial;
+            permission.ManageItemStatus = request.ManageItemStatus;
+            permission.ManageOwnerType = request.ManageOwnerType;
+            permission.ManageParty = request.ManageParty;
+            permission.ManageLocation = request.ManageLocation;
+            permission.ManageCompany = request.ManageCompany;
+
             permission.ViewPI = request.ViewPI;
             permission.CreatePI = request.CreatePI;
+            permission.EditPI = request.EditPI;
             permission.ApprovePI = request.ApprovePI;
+
             permission.ViewPO = request.ViewPO;
             permission.CreatePO = request.CreatePO;
+            permission.EditPO = request.EditPO;
             permission.ApprovePO = request.ApprovePO;
+
+            permission.ViewInward = request.ViewInward;
+            permission.CreateInward = request.CreateInward;
+            permission.EditInward = request.EditInward;
+            
+            permission.ViewQC = request.ViewQC;
+            permission.CreateQC = request.CreateQC;
+            permission.EditQC = request.EditQC;
+            permission.ApproveQC = request.ApproveQC;
+
             permission.ViewMovement = request.ViewMovement;
             permission.CreateMovement = request.CreateMovement;
-            permission.ViewQC = request.ViewQC;
-            permission.PerformQC = request.PerformQC;
+            
             permission.ManageChanges = request.ManageChanges;
             permission.RevertChanges = request.RevertChanges;
             permission.ViewReports = request.ViewReports;

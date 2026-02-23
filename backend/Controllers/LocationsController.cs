@@ -20,6 +20,8 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
+            if (!await HasPermission("ManageLocation")) return Forbidden();
+
             var locations = await _context.Locations
                 .Include(l => l.Company)
                 .OrderBy(l => l.Name)
@@ -53,7 +55,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageLocation")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -167,6 +169,8 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetAll()
         {
+            if (!await HasPermission("ManageLocation")) return Forbidden();
+
             var locations = await _context.Locations
                 .Include(l => l.Company)
                 .Select(l => new {
@@ -195,7 +199,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Location>>> Create([FromBody] Location location)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageLocation")) return Forbidden();
 
             if (await _context.Locations.AnyAsync(l => l.Name.ToLower() == location.Name.Trim().ToLower() && l.CompanyId == location.CompanyId))
                 return BadRequest(new ApiResponse<Location> { Success = false, Message = "Location already exists for this company" });
@@ -211,7 +215,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Location>>> Update(int id, [FromBody] UpdateLocationRequest request)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageLocation")) return Forbidden();
 
             var existing = await _context.Locations.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Location> { Success = false, Message = "Location not found" });
@@ -237,7 +241,7 @@ namespace net_backend.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageLocation")) return Forbidden();
 
             var location = await _context.Locations.FindAsync(id);
             if (location == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Location not found" });

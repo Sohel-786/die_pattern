@@ -14,8 +14,26 @@ import { CompanyDialog } from "@/components/masters/company-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 export default function CompaniesPage() {
+  const { data: permissions } = useCurrentUserPermissions();
+  const canManage = permissions?.manageCompany ?? false;
+
+  if (permissions && !permissions.viewMaster) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+        <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Search className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+          <p className="text-secondary-500 font-medium">You don't have the required master-level clearance to view companies.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Company | null>(null);
   const [search, setSearch] = useState("");
@@ -111,20 +129,24 @@ export default function CompaniesPage() {
           <p className="text-secondary-500 font-medium">Manage master data for various companies</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportImportButtons
-            onExport={handleExport}
-            onImport={handleImport}
-            exportLoading={exportLoading}
-            importLoading={importLoading}
-            inputId="companies"
-          />
-          <Button
-            onClick={handleAdd}
-            className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Company
-          </Button>
+          {canManage && (
+            <ExportImportButtons
+              onExport={handleExport}
+              onImport={handleImport}
+              exportLoading={exportLoading}
+              importLoading={importLoading}
+              inputId="companies"
+            />
+          )}
+          {canManage && (
+            <Button
+              onClick={handleAdd}
+              className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Company
+            </Button>
+          )}
         </div>
       </div>
 
@@ -199,26 +221,30 @@ export default function CompaniesPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(company)}
-                          className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleStatus(company)}
-                          className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${company.isActive
-                            ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
-                            : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                            }`}
-                          title={company.isActive ? "Deactivate" : "Activate"}
-                        >
-                          {company.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                        </Button>
+                        {canManage && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(company)}
+                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {canManage && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleStatus(company)}
+                            className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${company.isActive
+                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
+                              : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                              }`}
+                            title={company.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {company.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

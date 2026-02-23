@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
+using net_backend.DTOs;
 using net_backend.Models;
 
 namespace net_backend.Controllers
@@ -16,6 +17,7 @@ namespace net_backend.Controllers
         [HttpGet("metrics")]
         public async Task<ActionResult<ApiResponse<object>>> GetMetrics()
         {
+            if (!await HasPermission("ViewDashboard")) return Forbidden();
             var totalItems = await _context.Items.CountAsync(p => p.IsActive);
             var itemsAtVendor = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Vendor && p.IsActive);
             var itemsAtLocation = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Location && p.IsActive);

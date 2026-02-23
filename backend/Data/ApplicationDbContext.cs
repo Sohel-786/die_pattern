@@ -9,25 +9,25 @@ namespace net_backend.Data
         {
         }
 
-        public DbSet<AppSettings> AppSettings { get; set; }
-        public DbSet<AuditLog> AuditLogs { get; set; }
-        public DbSet<Company> Companies { get; set; }
-        public DbSet<Location> Locations { get; set; }
-        public DbSet<Party> Parties { get; set; }
-        public DbSet<ItemType> ItemTypes { get; set; }
-        public DbSet<ItemStatus> ItemStatuses { get; set; }
-        public DbSet<Material> Materials { get; set; }
-        public DbSet<OwnerType> OwnerTypes { get; set; }
-        public DbSet<Item> Items { get; set; }
-        public DbSet<PurchaseIndent> PurchaseIndents { get; set; }
-        public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; }
-        public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
-        public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
-        public DbSet<Movement> Movements { get; set; }
-        public DbSet<QualityControl> QualityControls { get; set; }
-        public DbSet<ItemChangeLog> ItemChangeLogs { get; set; }
-        public DbSet<User> Users { get; set; }
-        public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<AppSettings> AppSettings { get; set; } = default!;
+        public DbSet<AuditLog> AuditLogs { get; set; } = default!;
+        public DbSet<Company> Companies { get; set; } = default!;
+        public DbSet<Location> Locations { get; set; } = default!;
+        public DbSet<Party> Parties { get; set; } = default!;
+        public DbSet<ItemType> ItemTypes { get; set; } = default!;
+        public DbSet<ItemStatus> ItemStatuses { get; set; } = default!;
+        public DbSet<Material> Materials { get; set; } = default!;
+        public DbSet<OwnerType> OwnerTypes { get; set; } = default!;
+        public DbSet<Item> Items { get; set; } = default!;
+        public DbSet<PurchaseIndent> PurchaseIndents { get; set; } = default!;
+        public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; } = default!;
+        public DbSet<PurchaseOrder> PurchaseOrders { get; set; } = default!;
+        public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; } = default!;
+        public DbSet<Movement> Movements { get; set; } = default!;
+        public DbSet<QualityControl> QualityControls { get; set; } = default!;
+        public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
+        public DbSet<User> Users { get; set; } = default!;
+        public DbSet<UserPermission> UserPermissions { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

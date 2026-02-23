@@ -4,13 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ArrowLeft, Search, Plus, Trash2, Save, ShoppingCart,
     Package, Layers, ArrowRight, Building2, IndianRupee,
-    Calendar as CalendarIcon, FileDown, Paperclip
+    Calendar as CalendarIcon, FileDown, Paperclip, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
 import { PurchaseIndentItem, Party } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -85,209 +87,194 @@ export default function CreatePOPage() {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] mx-auto space-y-12 pb-32">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-8">
+        <div className="p-4 bg-secondary-50/30 min-h-screen pb-20">
+            <div className="max-w-[1400px] mx-auto space-y-4">
+                <div className="flex items-center gap-4 mb-2">
                     <Button
                         variant="ghost"
                         onClick={() => router.back()}
-                        className="h-16 w-16 rounded-[2rem] bg-white shadow-xl border border-gray-100 flex items-center justify-center hover:bg-secondary-50 transition-all hover:scale-110 active:scale-95"
+                        className="h-10 w-10 rounded-lg bg-white shadow-sm border border-secondary-200 flex items-center justify-center hover:bg-secondary-50 transition-all"
                     >
-                        <ArrowLeft className="w-8 h-8 text-gray-400" />
+                        <ArrowLeft className="w-5 h-5 text-secondary-500" />
                     </Button>
                     <div>
-                        <h1 className="text-5xl font-black text-gray-900 tracking-tighter">Issue Work Order</h1>
-                        <p className="text-gray-400 mt-2 font-bold text-lg flex items-center gap-3">
-                            <span className="h-3 w-3 rounded-full bg-primary-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></span>
-                            Assigning approved purchase indents to vendor for production/repair
-                        </p>
+                        <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Issue Work Order</h1>
+                        <p className="text-secondary-500 text-sm">Convert approved indents into production purchase orders</p>
                     </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
-                {/* Left: Configuration & Selected Summary */}
-                <div className="xl:col-span-8 space-y-10">
-                    <div className="bg-white rounded-[3.5rem] p-12 shadow-2xl shadow-black/5 border border-gray-100 space-y-12 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl -z-10"></div>
-
-                        <div className="space-y-8">
-                            <h3 className="text-xs font-black text-primary-600 uppercase tracking-[0.2em] flex items-center gap-4">
-                                <div className="h-2 w-2 rounded-full bg-primary-600"></div>
-                                Order Specification
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                                <div className="space-y-4">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Building2 className="w-4 h-4 text-primary-500" /> Authorized Vendor
-                                    </label>
-                                    <SearchableSelect
-                                        options={vendors.map(v => ({ value: v.id, label: v.name }))}
-                                        value={vendorId || ""}
-                                        onChange={(val) => setVendorId(Number(val))}
-                                        placeholder="Select Vendor Entity"
-                                    />
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <IndianRupee className="w-4 h-4 text-emerald-500" /> Commercial Quote
-                                    </label>
-                                    <div className="relative">
-                                        <IndianRupee className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <Input
-                                            type="number"
-                                            value={rate}
-                                            onChange={(e) => setRate(Number(e.target.value))}
-                                            className="pl-12 rounded-3xl h-16 bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-black text-lg"
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Panel: Configuration */}
+                    <div className="lg:col-span-8 space-y-6">
+                        <Card className="border-secondary-200 shadow-sm overflow-hidden">
+                            <div className="p-6 bg-white border-b border-secondary-100 italic">
+                                <h3 className="text-xs font-bold text-primary-600 uppercase tracking-widest flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-primary-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
+                                    Order Specification
+                                </h3>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Vendor Entity</Label>
+                                        <SearchableSelect
+                                            options={vendors.map(v => ({ value: v.id, label: v.name }))}
+                                            value={vendorId || ""}
+                                            onChange={(val) => setVendorId(Number(val))}
+                                            placeholder="Select Vendor..."
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Commercial Quote</Label>
+                                        <div className="relative">
+                                            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                            <Input
+                                                type="number"
+                                                value={rate}
+                                                onChange={(e) => setRate(Number(e.target.value))}
+                                                className="pl-9 h-10 border-secondary-200 focus:border-primary-500 transition-all font-bold text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Delivery Target</Label>
+                                        <div className="relative">
+                                            <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                            <Input
+                                                type="date"
+                                                value={deliveryDate}
+                                                onChange={(e) => setDeliveryDate(e.target.value)}
+                                                className="pl-9 h-10 border-secondary-200 focus:border-primary-500 transition-all font-bold text-sm"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <CalendarIcon className="w-4 h-4 text-indigo-500" /> Delivery Target
-                                    </label>
-                                    <Input
-                                        type="date"
-                                        value={deliveryDate}
-                                        onChange={(e) => setDeliveryDate(e.target.value)}
-                                        className="rounded-3xl h-16 bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-black"
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Contractual Terms / Remarks</Label>
+                                    <Textarea
+                                        value={remarks}
+                                        onChange={(e) => setRemarks(e.target.value)}
+                                        className="min-h-[100px] border-secondary-200 focus:border-primary-500 transition-all font-medium p-4 text-sm"
+                                        placeholder="Special instructions, quality criteria, or terms of delivery..."
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-4 pt-4 border-t border-gray-50 mt-10">
-                                <label className="text-sm font-black text-gray-700 ml-1 uppercase">Contractual Terms / Remarks</label>
-                                <Textarea
-                                    value={remarks}
-                                    onChange={(e) => setRemarks(e.target.value)}
-                                    className="rounded-[2rem] min-h-[140px] bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-bold p-8 leading-relaxed"
-                                    placeholder="Specify special instructions, quality criteria, or terms of delivery..."
-                                />
-                            </div>
-                        </div>
+                        </Card>
 
-                        <div className="space-y-8 pt-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-black text-primary-600 uppercase tracking-[0.2em] flex items-center gap-4">
-                                    <div className="h-2 w-2 rounded-full bg-primary-600"></div>
-                                    Consolidated Items ({selectedPiItemIds.length})
+                        <Card className="border-secondary-200 shadow-sm overflow-hidden">
+                            <div className="p-6 bg-white border-b border-secondary-100 flex items-center justify-between">
+                                <h3 className="text-xs font-bold text-secondary-900 uppercase tracking-widest flex items-center gap-2">
+                                    <Layers className="w-4 h-4 text-primary-500" />
+                                    Selected Items ({selectedPiItemIds.length})
                                 </h3>
                             </div>
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <AnimatePresence mode="popLayout">
+                                        {selectedItems.length > 0 ? selectedItems.map((item) => (
+                                            <motion.div
+                                                key={item.id}
+                                                layout
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                className="flex items-center justify-between p-4 bg-white rounded-xl border border-secondary-200 hover:border-primary-200 hover:shadow-md transition-all group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
+                                                        <Package className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-secondary-900 text-[11px] uppercase leading-tight">{item.currentName}</p>
+                                                        <p className="text-[9px] font-bold text-secondary-400 uppercase tracking-wider italic">Ref: {item.piNo || 'GEN-IND'}</p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => toggleItem(item.id)}
+                                                    className="h-8 w-8 text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all rounded-lg"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </motion.div>
+                                        )) : (
+                                            <div className="col-span-full py-16 text-center border-2 border-dashed border-secondary-100 rounded-2xl bg-secondary-50/20">
+                                                <Layers className="w-10 h-10 text-secondary-200 mx-auto mb-3" />
+                                                <p className="text-secondary-400 font-bold uppercase text-[10px] tracking-widest">No items selected yet</p>
+                                            </div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {selectedItems.length > 0 ? selectedItems.map((item, idx) => (
-                                    <div
+                    {/* Right Panel: Registry */}
+                    <div className="lg:col-span-4 space-y-4">
+                        <Card className="border-secondary-200 shadow-sm overflow-hidden h-[calc(100vh-200px)] flex flex-col sticky top-4">
+                            <div className="p-6 bg-secondary-900 text-white space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <ShoppingCart className="w-4 h-4 text-primary-400" />
+                                        Indent Registry
+                                    </h3>
+                                    <span className="bg-primary-600 px-2 py-0.5 rounded text-[9px] font-bold">{piItems.length}</span>
+                                </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                    <Input
+                                        placeholder="Search indents..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="h-10 pl-10 border-none bg-white/10 focus:bg-white/20 text-white text-sm font-medium placeholder:text-secondary-500 rounded-lg"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
+                                {filteredPiItems.map((item) => (
+                                    <button
                                         key={item.id}
-                                        className="flex items-center justify-between p-7 bg-white rounded-[2.5rem] border-2 border-gray-100 shadow-sm group hover:border-primary-400 hover:shadow-xl hover:shadow-primary/5 transition-all relative"
+                                        onClick={() => toggleItem(item.id)}
+                                        className="w-full flex items-center justify-between p-4 rounded-xl border border-secondary-100 hover:border-primary-100 hover:bg-primary-50/50 transition-all text-left bg-white group"
                                     >
-                                        <div className="flex items-center gap-5">
-                                            <div className="h-14 w-14 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 group-hover:scale-110 transition-transform">
-                                                <Package className="w-7 h-7" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 bg-secondary-50 rounded-lg flex items-center justify-center text-secondary-400 group-hover:scale-110 transition-transform">
+                                                <Package className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p className="font-black text-gray-900 text-base">{item.currentName}</p>
-                                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.1em] mt-1 italic">Linked Purchase Indent: {item.piNo || 'GEN001'}</p>
+                                                <p className="text-[11px] font-bold text-secondary-800 leading-tight block truncate w-40">{item.currentName}</p>
+                                                <p className="text-[9px] font-bold text-secondary-400 uppercase mt-0.5">{item.mainPartName}</p>
                                             </div>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => toggleItem(item.id)}
-                                            className="h-12 w-12 rounded-2xl text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
-                                        >
-                                            <Trash2 className="w-6 h-6" />
-                                        </Button>
-                                    </div>
-                                )) : (
-                                    <div className="col-span-full py-32 text-center border-4 border-dashed border-gray-50 rounded-[3rem] space-y-6 bg-secondary-50/20">
-                                        <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-gray-100">
-                                            <Layers className="w-10 h-10 text-gray-200" />
+                                        <div className="h-7 w-7 rounded-lg bg-secondary-50 border border-secondary-100 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
+                                            <Plus className="w-4 h-4 text-secondary-300 group-hover:text-white" />
                                         </div>
-                                        <div>
-                                            <p className="text-gray-900 font-black text-xl">Allocation Stack Empty</p>
-                                            <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Pull items from the Purchase Indent registry to proceed</p>
-                                        </div>
+                                    </button>
+                                ))}
+                                {filteredPiItems.length === 0 && (
+                                    <div className="py-20 text-center opacity-40">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-secondary-400">Registry Empty</p>
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Right: Indent Registry Selector */}
-                <div className="xl:col-span-4 space-y-8">
-                    <div className="bg-white rounded-[3rem] shadow-2xl shadow-black/10 border border-gray-100 overflow-hidden flex flex-col h-[850px] sticky top-8">
-                        <div className="p-10 border-b border-gray-50 flex flex-col gap-8 bg-secondary-100/30">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-black text-gray-900 uppercase tracking-[0.2em] flex items-center gap-3">
-                                    <ShoppingCart className="w-5 h-5 text-primary-600" />
-                                    Purchase Indent Registry
-                                </h3>
-                                <span className="text-primary-800 bg-primary-100 px-4 py-1.5 rounded-full text-[10px] font-black border border-primary-200">{piItems.length} APPROVED ITEMS</span>
-                            </div>
-                            <div className="relative">
-                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-                                <Input
-                                    placeholder="Find approved purchase indent items..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-16 h-18 rounded-[2rem] border-none bg-white shadow-xl font-black text-base placeholder:font-bold"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 space-y-3 scrollbar-hide">
-                            {filteredPiItems.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => toggleItem(item.id)}
-                                    className="w-full flex items-center justify-between p-6 rounded-[2.5rem] border-2 border-transparent hover:border-primary-100 hover:bg-primary-50/50 transition-all text-left bg-secondary-50/20 group animate-in fade-in slide-in-from-right-2 duration-300"
+                            <div className="p-6 bg-white border-t border-secondary-100">
+                                <Button
+                                    onClick={handleCreate}
+                                    disabled={createMutation.isPending || selectedPiItemIds.length === 0 || !vendorId}
+                                    className="w-full h-12 bg-secondary-900 hover:bg-black text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-between px-6"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center text-gray-400 border-2 border-gray-50 shadow-sm group-hover:scale-105 transition-transform">
-                                            <Package className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <p className="text-base font-black text-gray-800 leading-tight break-words max-w-[200px]">{item.currentName}</p>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">MAIN: {item.mainPartName}</p>
-                                        </div>
-                                    </div>
-                                    <div className="h-10 w-10 rounded-2xl bg-white border border-gray-100 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all shadow-sm">
-                                        <Plus className="w-5 h-5 text-gray-300 group-hover:text-white" />
-                                    </div>
-                                </button>
-                            ))}
-                            {filteredPiItems.length === 0 && (
-                                <div className="p-20 text-center opacity-40 grayscale">
-                                    <Paperclip className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                                    <p className="text-xs font-black uppercase tracking-widest">No available Purchase Indents</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-10 bg-gray-900 border-t border-gray-800">
-                            <Button
-                                onClick={handleCreate}
-                                disabled={createMutation.isPending || selectedPiItemIds.length === 0 || !vendorId}
-                                className="w-full h-24 rounded-[2.5rem] bg-primary-600 hover:bg-primary-700 text-white shadow-2xl shadow-primary/40 flex items-center justify-center gap-6 group transition-all relative overflow-hidden active:scale-95"
-                            >
-                                {createMutation.isPending ? (
-                                    <div className="flex items-center gap-4">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-white border-t-transparent shadow-lg"></div>
-                                        <span className="text-2xl font-black uppercase tracking-tighter">Issuing Order...</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex flex-col items-start leading-none text-left">
-                                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-60 mb-2 text-primary-200">Execution Phase</span>
-                                            <span className="text-3xl font-black tracking-tighter">Finalize Order</span>
-                                        </div>
-                                        <div className="h-16 w-16 rounded-[1.5rem] bg-primary-500/50 flex items-center justify-center group-hover:bg-white transition-colors">
-                                            <ArrowRight className="w-8 h-8 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
-                                        </div>
-                                    </>
-                                )}
-                            </Button>
-                        </div>
+                                    <span className="text-sm uppercase tracking-wider">Issue Order</span>
+                                    {createMutation.isPending ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <ArrowRight className="w-4 h-4" />
+                                    )}
+                                </Button>
+                            </div>
+                        </Card>
                     </div>
                 </div>
             </div>

@@ -104,28 +104,24 @@ namespace net_backend.Controllers
             var permissions = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == userId);
             if (permissions == null)
             {
-                permissions = new UserPermission { UserId = userId };
+                permissions = CreateDefaultPermissions(userId, targetUser.Role);
             }
 
             return Ok(new ApiResponse<object> { 
-                Data = permissions
+                Data = new {
+                    Permissions = permissions
+                }
             });
         }
 
         [HttpPut("permissions/user/{userId}")]
-        public async Task<ActionResult<ApiResponse<object>>> UpdatePermissions(int userId, [FromBody] UserPermission updatedPerms)
+        public async Task<ActionResult<ApiResponse<object>>> UpdatePermissions(int userId, [FromBody] UpdateUserPermissionsRequest request)
         {
-            if (!await CheckPermission("ManageUsers")) // or AccessSettings
+            if (!await CheckPermission("ManageUsers"))
                 return Forbidden();
 
-            // Note: accepting UserPermission directly as body simplifies things if DTO matches
-            // Ideally should use a DTO, but for now we reusing the model or the request object from previous code if compatible.
-            // Previous code used UpdateUserPermissionsRequest which had Permissions property.
-            // Let's assume the frontend sends the UserPermission object directly or wrapped. 
-            // Previous controller expected { permissions: {...}, allowedDivisionIds: [...] }
-            // If we want to keep frontend compatibility we might need to adjust, but since I am refactoring backend significantly, 
-            // I'll assume frontend sends just the permission object or I should look at `UpdateUserPermissionsRequest` again.
-            // UpdateUserPermissionsRequest has `UserPermission? Permissions`.
+            if (request.Permissions == null)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Permissions data is required" });
 
             var targetUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             
@@ -142,25 +138,43 @@ namespace net_backend.Controllers
                 _context.UserPermissions.Add(permissions);
             }
 
-            // Update fields manually to ensure security and validity
+            var updatedPerms = request.Permissions;
+
+            // Update fields manually
             permissions.ViewDashboard = updatedPerms.ViewDashboard;
             
             permissions.ViewMaster = updatedPerms.ViewMaster;
-            permissions.ManageMaster = updatedPerms.ManageMaster;
+            permissions.ManageItem = updatedPerms.ManageItem;
+            permissions.ManageItemType = updatedPerms.ManageItemType;
+            permissions.ManageMaterial = updatedPerms.ManageMaterial;
+            permissions.ManageItemStatus = updatedPerms.ManageItemStatus;
+            permissions.ManageOwnerType = updatedPerms.ManageOwnerType;
+            permissions.ManageParty = updatedPerms.ManageParty;
+            permissions.ManageLocation = updatedPerms.ManageLocation;
+            permissions.ManageCompany = updatedPerms.ManageCompany;
             
             permissions.ViewPI = updatedPerms.ViewPI;
             permissions.CreatePI = updatedPerms.CreatePI;
+            permissions.EditPI = updatedPerms.EditPI;
             permissions.ApprovePI = updatedPerms.ApprovePI;
             
             permissions.ViewPO = updatedPerms.ViewPO;
             permissions.CreatePO = updatedPerms.CreatePO;
+            permissions.EditPO = updatedPerms.EditPO;
             permissions.ApprovePO = updatedPerms.ApprovePO;
+
+            permissions.ViewInward = updatedPerms.ViewInward;
+            permissions.CreateInward = updatedPerms.CreateInward;
+            permissions.EditInward = updatedPerms.EditInward;
             
+            permissions.ViewQC = updatedPerms.ViewQC;
+            permissions.CreateQC = updatedPerms.CreateQC;
+            permissions.EditQC = updatedPerms.EditQC;
+            permissions.ApproveQC = updatedPerms.ApproveQC;
+
             permissions.ViewMovement = updatedPerms.ViewMovement;
             permissions.CreateMovement = updatedPerms.CreateMovement;
             
-            permissions.ViewQC = updatedPerms.ViewQC;
-            permissions.PerformQC = updatedPerms.PerformQC;
             permissions.ManageChanges = updatedPerms.ManageChanges;
             permissions.RevertChanges = updatedPerms.RevertChanges;
             
@@ -169,6 +183,8 @@ namespace net_backend.Controllers
             permissions.ManageUsers = updatedPerms.ManageUsers;
             permissions.AccessSettings = updatedPerms.AccessSettings;
             
+            permissions.NavigationLayout = updatedPerms.NavigationLayout;
+
             permissions.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -224,7 +240,7 @@ namespace net_backend.Controllers
             
             // Sys admin fallback
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (role == nameof(Role.ADMIN)) return true; // Assuming Role enum has ADMIN
+            if (role == nameof(Role.ADMIN)) return true;
 
             if (permissions == null) return false;
 
@@ -232,17 +248,31 @@ namespace net_backend.Controllers
             {
                 "ViewDashboard" => permissions.ViewDashboard,
                 "ViewMaster" => permissions.ViewMaster,
-                "ManageMaster" => permissions.ManageMaster,
+                "ManageItem" => permissions.ManageItem,
+                "ManageItemType" => permissions.ManageItemType,
+                "ManageMaterial" => permissions.ManageMaterial,
+                "ManageItemStatus" => permissions.ManageItemStatus,
+                "ManageOwnerType" => permissions.ManageOwnerType,
+                "ManageParty" => permissions.ManageParty,
+                "ManageLocation" => permissions.ManageLocation,
+                "ManageCompany" => permissions.ManageCompany,
                 "ViewPI" => permissions.ViewPI,
                 "CreatePI" => permissions.CreatePI,
+                "EditPI" => permissions.EditPI,
                 "ApprovePI" => permissions.ApprovePI,
                 "ViewPO" => permissions.ViewPO,
                 "CreatePO" => permissions.CreatePO,
+                "EditPO" => permissions.EditPO,
                 "ApprovePO" => permissions.ApprovePO,
+                "ViewInward" => permissions.ViewInward,
+                "CreateInward" => permissions.CreateInward,
+                "EditInward" => permissions.EditInward,
+                "ViewQC" => permissions.ViewQC,
+                "CreateQC" => permissions.CreateQC,
+                "EditQC" => permissions.EditQC,
+                "ApproveQC" => permissions.ApproveQC,
                 "ViewMovement" => permissions.ViewMovement,
                 "CreateMovement" => permissions.CreateMovement,
-                "ViewQC" => permissions.ViewQC,
-                "PerformQC" => permissions.PerformQC,
                 "ManageChanges" => permissions.ManageChanges,
                 "RevertChanges" => permissions.RevertChanges,
                 "ViewReports" => permissions.ViewReports,
@@ -265,17 +295,36 @@ namespace net_backend.Controllers
             {
                 perm.ViewDashboard = true;
                 perm.ViewMaster = true;
-                perm.ManageMaster = true;
+                perm.ManageItem = true;
+                perm.ManageItemType = true;
+                perm.ManageMaterial = true;
+                perm.ManageItemStatus = true;
+                perm.ManageOwnerType = true;
+                perm.ManageParty = true;
+                perm.ManageLocation = true;
+                perm.ManageCompany = true;
+
                 perm.ViewPI = true;
                 perm.CreatePI = true;
+                perm.EditPI = true;
                 perm.ApprovePI = true;
+
                 perm.ViewPO = true;
                 perm.CreatePO = true;
+                perm.EditPO = true;
                 perm.ApprovePO = true;
+
+                perm.ViewInward = true;
+                perm.CreateInward = true;
+                perm.EditInward = true;
+
+                perm.ViewQC = true;
+                perm.CreateQC = true;
+                perm.EditQC = true;
+                perm.ApproveQC = true;
+
                 perm.ViewMovement = true;
                 perm.CreateMovement = true;
-                perm.ViewQC = true;
-                perm.PerformQC = true; // Admin can do QC?
                 perm.ManageChanges = true;
                 perm.RevertChanges = true;
                 perm.ViewReports = true;
@@ -286,23 +335,43 @@ namespace net_backend.Controllers
             {
                 perm.ViewDashboard = true;
                 perm.ViewMaster = true;
-                perm.ManageMaster = true;
+                perm.ManageItem = true;
+                perm.ManageItemType = true;
+                perm.ManageMaterial = true;
+                perm.ManageItemStatus = true;
+                perm.ManageOwnerType = true;
+                perm.ManageParty = true;
+                perm.ManageLocation = true;
+                perm.ManageCompany = true;
+
                 perm.ViewPI = true;
                 perm.CreatePI = true;
+                perm.EditPI = true;
+
                 perm.ViewPO = true;
+                perm.CreatePO = true;
+                perm.EditPO = true;
+
+                perm.ViewInward = true;
+                perm.CreateInward = true;
+
+                perm.ViewQC = true;
+                perm.CreateQC = true;
+                perm.EditQC = true;
+
                 perm.ViewMovement = true;
                 perm.CreateMovement = true;
-                perm.ViewQC = true;
-                perm.PerformQC = true;
                 perm.ViewReports = true;
             }
             else
             {
-                // Basic User
                 perm.ViewDashboard = true;
                 perm.ViewMaster = true;
-                perm.ViewMovement = true;
+                perm.ViewPI = true;
+                perm.ViewPO = true;
+                perm.ViewInward = true;
                 perm.ViewQC = true;
+                perm.ViewMovement = true;
             }
 
             return perm;

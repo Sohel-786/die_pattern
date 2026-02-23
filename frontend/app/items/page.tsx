@@ -2,9 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Plus, Search, History, Hammer, MapPin,
-    MoreVertical,
-    Edit, Database, ShieldCheck, Ban, CheckCircle,
+    Plus, Search, Hammer, MapPin,
+    Edit2, Database, Ban, CheckCircle,
     Filter, X
 } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
@@ -28,8 +27,12 @@ import { ItemChangeDialog } from "@/components/masters/item-change-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 export default function ItemsPage() {
+    const { data: permissions } = useCurrentUserPermissions();
+    const canManage = permissions?.manageItem;
+
     const [search, setSearch] = useState("");
     const [isEntryOpen, setIsEntryOpen] = useState(false);
     const [isChangeOpen, setIsChangeOpen] = useState(false);
@@ -60,6 +63,17 @@ export default function ItemsPage() {
     const { data: materials = [] } = useQuery({ queryKey: ["materials", "active"], queryFn: async () => (await api.get("/masters/materials/active")).data.data });
     const { data: statuses = [] } = useQuery({ queryKey: ["item-statuses", "active"], queryFn: async () => (await api.get("/masters/item-statuses/active")).data.data });
     const { data: owners = [] } = useQuery({ queryKey: ["owner-types", "active"], queryFn: async () => (await api.get("/masters/owner-types/active")).data.data });
+
+    if (permissions && !permissions.viewMaster) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-secondary-900">Access Denied</h2>
+                    <p className="text-secondary-500">You don't have permission to view Die & Pattern Masters.</p>
+                </div>
+            </div>
+        );
+    }
 
     const { data: items = [], isLoading } = useQuery<Item[]>({
         queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter],
@@ -175,20 +189,24 @@ export default function ItemsPage() {
                     <p className="text-secondary-500 font-medium">Systematic repository for engineering dies and pattern assets</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <ExportImportButtons
-                        onExport={handleExport}
-                        onImport={handleImport}
-                        exportLoading={exportLoading}
-                        importLoading={importLoading}
-                        inputId="items"
-                    />
-                    <Button
-                        onClick={handleAdd}
-                        className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Die/Pattern Master
-                    </Button>
+                    {canManage && (
+                        <ExportImportButtons
+                            onExport={handleExport}
+                            onImport={handleImport}
+                            exportLoading={exportLoading}
+                            importLoading={importLoading}
+                            inputId="items"
+                        />
+                    )}
+                    {canManage && (
+                        <button
+                            onClick={handleAdd}
+                            className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold px-4 py-2 rounded-lg flex items-center transition-colors"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Die/Pattern Master
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -214,126 +232,101 @@ export default function ItemsPage() {
                 </button>
             </div>
 
-            {/* Professional Filter Card - QC Tool Style */}
-            <Card className="shadow-sm border-secondary-200 bg-white overflow-visible">
-                <CardContent className="p-5">
-                    <div className="flex flex-col gap-6 overflow-visible">
-                        {/* Search & Header Row */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <div
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-secondary-200 bg-secondary-50 text-secondary-600"
-                                aria-hidden
-                            >
-                                <Filter className="h-4 w-4" />
-                            </div>
-                            <div className="relative flex-1 min-w-[200px] max-w-md">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search by name, part, or drawing..."
-                                    className="pl-9 h-10 rounded-lg border-secondary-300 bg-white focus-visible:ring-2 focus-visible:ring-primary-500 text-sm font-medium"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                            </div>
-                            {hasActiveFilters && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleResetFilters}
-                                    className="shrink-0 h-9 px-3 text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900 font-bold"
-                                >
-                                    <X className="h-4 w-4 mr-1.5" />
-                                    Clear filters
-                                </Button>
-                            )}
+            {/* Standard Master Filter Card */}
+            <Card className="shadow-sm border-secondary-200 bg-white mb-6">
+                <div className="p-4 flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input
+                                placeholder="Search by name, part, or drawing..."
+                                className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
                         </div>
-
-                        {/* Filter Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-visible items-start">
-                            <div className="space-y-1.5">
-                                <Label className="text-sm font-medium text-secondary-700">Record Status</Label>
-                                <select
-                                    value={activeFilter}
-                                    onChange={(e) => setActiveFilter(e.target.value as any)}
-                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
-                                >
-                                    <option value="all">Active & Inactive</option>
-                                    <option value="active">Active Only</option>
-                                    <option value="inactive">Inactive Only</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label className="text-sm font-medium text-secondary-700">Material</Label>
-                                <select
-                                    value={materialFilter}
-                                    onChange={(e) => setMaterialFilter(e.target.value)}
-                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
-                                >
-                                    <option value="all">All Materials</option>
-                                    {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label className="text-sm font-medium text-secondary-700">Condition Status</Label>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
-                                >
-                                    <option value="all">All Statuses</option>
-                                    {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label className="text-sm font-medium text-secondary-700">Ownership</Label>
-                                <select
-                                    value={ownerFilter}
-                                    onChange={(e) => setOwnerFilter(e.target.value)}
-                                    className="w-full h-10 rounded-lg border border-secondary-200 bg-white px-3 text-sm focus:ring-primary-500 font-medium cursor-pointer"
-                                >
-                                    <option value="all">All Ownership</option>
-                                    {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                                </select>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-secondary-700">Filter</span>
+                            <select
+                                value={activeFilter}
+                                onChange={(e) => setActiveFilter(e.target.value as any)}
+                                className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
+                            >
+                                <option value="all">All Records</option>
+                                <option value="active">Active Only</option>
+                                <option value="inactive">Inactive Only</option>
+                            </select>
                         </div>
                     </div>
-                </CardContent>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-secondary-100 pt-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Material</label>
+                            <select
+                                value={materialFilter}
+                                onChange={(e) => setMaterialFilter(e.target.value)}
+                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                            >
+                                <option value="all">All Materials</option>
+                                {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Condition Status</label>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                            >
+                                <option value="all">All Statuses</option>
+                                {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Ownership</label>
+                            <select
+                                value={ownerFilter}
+                                onChange={(e) => setOwnerFilter(e.target.value)}
+                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                            >
+                                <option value="all">All Ownership</option>
+                                {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </Card>
 
             <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
                 <div className="px-6 py-4 border-b border-secondary-100 flex items-center justify-between">
                     <h3 className="text-lg font-bold text-secondary-900">
-                        Pattern Repository ({filteredItems.length})
+                        {tabState === 'all' ? 'All Assets' : tabState === 'Die' ? 'Dies Repository' : 'Patterns Repository'} ({filteredItems.length})
                     </h3>
                 </div>
-                <div className="table-container">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
+                <div className="table-container overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
                         <thead>
                             <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                                <th className="px-4 py-3 font-semibold text-center w-16 uppercase text-[10px] tracking-wider">Sr.No</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Part Name</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Display Name</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Asset Type</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Drawing No</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Revision</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Material</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Ownership</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Status</th>
-                                <th className="px-4 py-3 font-semibold uppercase text-[10px] tracking-wider">Custodian Info</th>
-                                <th className="px-4 py-3 font-semibold text-right uppercase text-[10px] tracking-wider">Actions</th>
+                                <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Part Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Display Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Asset Type</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Drawing Number</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Revision</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Material</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Ownership</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Custodian Type</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Custodian Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 [1, 2, 3].map((i) => (
                                     <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(11).fill(0).map((_, j) => (
-                                            <td key={j} className="px-4 py-3"><div className="h-4 bg-secondary-100 rounded-lg w-full" /></td>
+                                        {Array(12).fill(0).map((_, j) => (
+                                            <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
                                         ))}
                                     </tr>
                                 ))
@@ -341,87 +334,77 @@ export default function ItemsPage() {
                                 filteredItems.map((item, idx) => (
                                     <tr
                                         key={item.id}
-                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group"
+                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
                                     >
-                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-bold text-secondary-900 uppercase tracking-tight text-xs">{item.mainPartName}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-medium text-secondary-700 uppercase text-xs">{item.currentName}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${item.itemTypeName === 'Die' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                        <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
+                                        <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight text-[11px]">{item.mainPartName}</td>
+                                        <td className="px-4 py-3 text-secondary-700 uppercase font-bold text-[11px]">{item.currentName || "—"}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.itemTypeName === 'Die' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                                                 {item.itemTypeName}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-mono text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">
-                                                {item.drawingNo || 'N/A'}
-                                            </span>
-                                        </td>
+                                        <td className="px-4 py-3 font-bold text-secondary-700 uppercase text-[11px]">{item.drawingNo || 'N/A'}</td>
+                                        <td className="px-4 py-3 text-center text-secondary-700 font-bold text-[11px]">{item.revisionNo || '00'}</td>
+                                        <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.materialName}</td>
+                                        <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.ownerTypeName}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className="text-[10px] font-bold text-secondary-500">{item.revisionNo || '00'}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-[10px] font-bold text-secondary-600 uppercase">{item.materialName}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-[10px] font-bold text-secondary-600 uppercase italic">{item.ownerTypeName}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col gap-1">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
                                                     ? 'bg-green-50 text-green-700 border-green-200'
                                                     : 'bg-rose-50 text-rose-700 border-rose-200'
                                                     }`}>
                                                     {item.statusName}
                                                 </span>
                                                 {!item.isActive && (
-                                                    <span className="text-[9px] text-red-500 font-bold uppercase text-center">Disabled</span>
+                                                    <span className="text-[9px] text-red-600 font-bold uppercase px-1.5 py-0.5 bg-red-50 rounded border border-red-100">Inactive</span>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] font-bold uppercase text-secondary-400">{item.currentHolderType}</span>
-                                                <span className="text-[10px] font-bold text-secondary-800 flex items-center gap-1 group-hover:text-primary-700 transition-colors">
-                                                    <MapPin className="w-3 h-3" />
-                                                    {item.currentLocationName || item.currentPartyName || 'UNKNOWN'}
-                                                </span>
-                                            </div>
+                                        <td className="px-4 py-3 text-[11px] font-bold text-secondary-700 uppercase">{item.currentHolderType}</td>
+                                        <td className="px-4 py-3 text-[11px] font-bold text-secondary-700 uppercase flex items-center gap-1.5">
+                                            {item.currentHolderType === 'Location' ? (
+                                                <Database className="w-3.5 h-3.5 text-secondary-300" />
+                                            ) : (
+                                                <MapPin className="w-3.5 h-3.5 text-secondary-300" />
+                                            )}
+                                            {item.currentLocationName || item.currentPartyName || 'UNKNOWN'}
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-white border hover:border-secondary-100 transition-all"><MoreVertical className="w-4 h-4 text-secondary-500" /></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-xl border-secondary-200 shadow-xl p-1 w-56 bg-white">
-                                                    <DropdownMenuItem onClick={() => handleEdit(item)} className="rounded-lg gap-2 cursor-pointer font-bold text-xs text-secondary-700 hover:text-primary-600 hover:bg-primary-50">
-                                                        <Edit className="w-3.5 h-3.5 text-blue-500" />
-                                                        Review Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleChangeProcess(item)} className="rounded-lg gap-2 cursor-pointer font-bold text-xs text-secondary-700 hover:text-amber-700 hover:bg-amber-50">
-                                                        <Hammer className="w-3.5 h-3.5 text-amber-500" />
-                                                        Change Process
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer font-bold text-xs text-secondary-700 hover:text-primary-600 hover:bg-primary-50">
-                                                        <History className="w-3.5 h-3.5 text-indigo-500" />
-                                                        View Asset Timeline
-                                                    </DropdownMenuItem>
-                                                    <div className="h-px bg-secondary-100 my-1" />
-                                                    <DropdownMenuItem onClick={() => toggleStatus(item)} className={`rounded-lg gap-2 cursor-pointer font-bold text-xs ${item.isActive ? 'text-rose-600 hover:bg-rose-50' : 'text-green-600 hover:bg-green-50'}`}>
-                                                        {item.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                                                        {item.isActive ? 'Mark Inactive' : 'Mark Active'}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {canManage && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(item)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                        title="Edit Asset"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+
+                                                {canManage && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => toggleStatus(item)}
+                                                        className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
+                                                            ? 'text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100'
+                                                            : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                                                            }`}
+                                                        title={item.isActive ? "Deactivate" : "Activate"}
+                                                    >
+                                                        {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={11} className="py-12 text-center text-secondary-500 italic font-medium">
+                                    <td colSpan={12} className="py-16 text-center text-secondary-400 italic font-medium">
                                         No assets found matching selected filters.
                                     </td>
                                 </tr>
@@ -429,7 +412,7 @@ export default function ItemsPage() {
                         </tbody>
                     </table>
                 </div>
-            </Card>
+            </Card >
 
             <ItemDialog
                 key={dialogKey}
@@ -490,6 +473,6 @@ export default function ItemsPage() {
                 isLoading={importLoading}
                 title="Import Inventory Preview"
             />
-        </div>
+        </div >
     );
 }

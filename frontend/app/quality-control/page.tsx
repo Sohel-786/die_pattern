@@ -3,9 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ClipboardCheck, Search, ShieldCheck, ShieldAlert,
-    History, Eye, CheckCircle2, XCircle, MoreVertical,
-    ArrowDownLeft, RotateCcw, Package, Clock, User,
-    CheckCircle, MessageSquare, Info
+    Package, Clock, CheckCircle, XCircle,
+    ArrowDownLeft, RotateCcw, Info, MessageSquare, Eye, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
 import { Movement, MovementType } from "@/types";
@@ -21,22 +20,38 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
     Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle
+    DialogContent
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 export default function QualityControlPage() {
+    const { data: permissions } = useCurrentUserPermissions();
     const [search, setSearch] = useState("");
     const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
     const [isInspectionOpen, setIsInspectionOpen] = useState(false);
     const [remarks, setRemarks] = useState("");
     const queryClient = useQueryClient();
+
+    if (permissions && !permissions.viewQC) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <ClipboardCheck className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+                    <p className="text-secondary-500 font-medium">You don't have the required clearance to view quality certifications.</p>
+                </div>
+            </div>
+        );
+    }
 
     const { data: pending = [], isLoading } = useQuery<Movement[]>({
         queryKey: ["quality-control", "pending"],
@@ -67,180 +82,188 @@ export default function QualityControlPage() {
     };
 
     const filteredPending = pending.filter(m =>
-        m.itemName?.toLowerCase().includes(search.toLowerCase()) ||
-        m.toName?.toLowerCase().includes(search.toLowerCase())
+        m.item?.currentName.toLowerCase().includes(search.toLowerCase()) ||
+        m.toLocation?.name.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
-        <div className="p-8 space-y-10">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
-                        <ClipboardCheck className="w-10 h-10 text-primary-600" />
-                        Quality Certification
-                    </h1>
-                    <p className="text-gray-500 mt-2 font-semibold text-lg">Verify material integrity for incoming components</p>
-                </motion.div>
+        <div className="p-4 space-y-4 bg-secondary-50/30 min-h-screen">
+            <div className="flex justify-between items-center mb-2">
+                <div>
+                    <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Quality Certification</h1>
+                    <p className="text-secondary-500 text-sm">Verify material integrity for incoming components</p>
+                </div>
+                <div className="bg-white px-4 py-2 rounded-lg border border-secondary-200 shadow-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary-600" />
+                    <span className="text-xs font-bold text-secondary-900">{pending.length} Pending Inspection</span>
+                </div>
+            </div>
 
-                <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="px-6 py-3 bg-primary-50 rounded-xl flex items-center gap-3 border border-primary-100">
-                        <Clock className="w-5 h-5 text-primary-600" />
-                        <span className="text-sm font-black text-primary-700">{pending.length} ITEMS WAITING</span>
+            <Card className="border-secondary-200 shadow-sm overflow-hidden">
+                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center">
+                    <div className="relative flex-1 min-w-[300px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <Input
+                            placeholder="Search by component or location..."
+                            className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-secondary-500 hover:text-primary-600 font-bold text-xs uppercase tracking-wider"
+                        onClick={() => setSearch("")}
+                    >
+                        Clear Filter
+                    </Button>
                 </div>
-            </div>
 
-            <div className="relative max-w-2xl bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-                <Search className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-                <Input
-                    placeholder="Search by component or target zone..."
-                    className="pl-16 h-16 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-base font-bold placeholder:text-gray-300"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
-
-            {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-40 gap-4">
-                    <div className="animate-spin rounded-full h-16 w-16 border-[6px] border-primary-50 border-t-primary-600 shadow-sm"></div>
-                    <p className="font-black text-gray-400 uppercase text-xs tracking-[0.2em]">Inspecting Registry...</p>
-                </div>
-            ) : (
-                <div className="bg-white rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden border border-gray-100">
+                <div className="overflow-x-auto">
                     <Table>
-                        <TableHeader className="bg-secondary-50/80">
-                            <TableRow className="border-none">
-                                <TableHead className="font-black text-gray-900 py-8 pl-10 uppercase tracking-wider text-xs">Origin Entry</TableHead>
-                                <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs">Component Unit</TableHead>
-                                <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs">Quarantine Zone</TableHead>
-                                <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs">Arrival Log</TableHead>
-                                <TableHead className="w-[200px] pr-10"></TableHead>
+                        <TableHeader>
+                            <TableRow className="bg-primary-50 border-secondary-100 divide-x divide-secondary-100">
+                                <TableHead className="w-16 h-11 text-center font-bold text-primary-900 uppercase tracking-tight text-[11px]">Sr.No</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Entry Type</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Component Unit</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Quarantine Zone</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Arrival Log</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px] text-right pr-6">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <AnimatePresence>
-                                {filteredPending.map((m, idx) => (
-                                    <motion.tr
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i} className="animate-pulse">
+                                        <TableCell colSpan={6} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredPending.length > 0 ? (
+                                filteredPending.map((m, idx) => (
+                                    <TableRow
                                         key={m.id}
-                                        initial={{ opacity: 0, y: 4 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.02, duration: 0.2 }}
-                                        className="group border-b border-gray-50 hover:bg-amber-50/20 transition-colors"
+                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans whitespace-nowrap"
                                     >
-                                        <TableCell className="py-8 pl-10">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${m.type === MovementType.Inward ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'} border border-current opacity-30`}>
-                                                    {m.type === MovementType.Inward ? <ArrowDownLeft className="w-5 h-5" /> : <RotateCcw className="w-5 h-5" />}
+                                        <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`h-8 w-8 rounded bg-white border border-secondary-200 flex items-center justify-center ${m.type === MovementType.Inward ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    {m.type === MovementType.Inward ? <ArrowDownLeft className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
                                                 </div>
-                                                <p className="font-black text-gray-700 tracking-tight">{m.type.toUpperCase()}</p>
+                                                <span className="font-bold text-secondary-900 text-[11px] uppercase">{m.type}</span>
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 shadow-inner">
-                                                    <Package className="w-6 h-6" />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-9 w-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 border border-indigo-100">
+                                                    <Package className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-black text-gray-900 text-base leading-tight">{m.itemName}</p>
-                                                    <p className="text-[10px] font-black text-gray-300 uppercase mt-1 tracking-widest">UNIT-ID: {m.itemId}</p>
+                                                    <p className="font-bold text-secondary-900 text-[11px] uppercase leading-tight">{m.item?.currentName}</p>
+                                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-tight italic">{m.item?.mainPartName}</p>
                                                 </div>
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2 text-sm font-black text-gray-700">
-                                                <ShieldAlert className="w-4 h-4 text-amber-500" />
-                                                {m.toName}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1.5 font-bold text-secondary-700 text-[11px] uppercase">
+                                                <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                                                {m.toLocation?.name}
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-black text-gray-700">{format(new Date(m.createdAt), 'dd MMM yyyy')}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase">{format(new Date(m.createdAt), 'hh:mm a')}</p>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-bold text-secondary-900 capitalize">{format(new Date(m.createdAt), 'dd MMM yyyy')}</span>
+                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">{format(new Date(m.createdAt), 'hh:mm a')}</span>
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="pr-10 text-right">
-                                            <Button
-                                                onClick={() => handleInspect(m)}
-                                                className="h-12 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center gap-2"
-                                            >
-                                                <ShieldCheck className="w-4 h-4" /> Perform QC
-                                            </Button>
-                                        </TableCell>
-                                    </motion.tr>
-                                ))}
-                            </AnimatePresence>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            {permissions?.createQC && (
+                                                <Button
+                                                    onClick={() => handleInspect(m)}
+                                                    className="h-8 px-4 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm transition-all"
+                                                >
+                                                    Perform QC
+                                                </Button>
+                                            )}
+                                        </td>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
+                                        No items awaiting quality certification.
+                                    </td>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
-                    {filteredPending.length === 0 && (
-                        <div className="p-32 text-center space-y-4">
-                            <div className="h-24 w-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-100">
-                                <CheckCircle2 className="w-12 h-12" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-gray-900">Quarantine Vault Empty</h3>
-                                <p className="text-gray-500 font-semibold uppercase text-[10px] tracking-widest">All incoming items have been certified</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
-            )}
+            </Card>
 
             {/* QC Inspection Dialog */}
-            <Dialog isOpen={isInspectionOpen} onClose={() => setIsInspectionOpen(false)} title="QC Inspection" size="xl" hideHeader>
-                <DialogContent className="sm:max-w-[500px] rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
-                    <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-8">
-                        <div className="flex items-center gap-4 text-white">
-                            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl">
-                                <ShieldCheck className="w-8 h-8" />
+            <Dialog
+                isOpen={isInspectionOpen}
+                onClose={() => setIsInspectionOpen(false)}
+                title="Quality Inspection"
+                hideHeader={true}
+                size="md"
+                className="bg-white overflow-hidden shadow-2xl rounded-2xl"
+            >
+                <div className="flex flex-col h-full">
+                    <div className="bg-primary-600 p-6 text-white">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                <ShieldCheck className="w-7 h-7 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black tracking-tighter">Material Certification</h2>
-                                <p className="text-amber-100/80 font-bold text-sm">Inspecting: {selectedMovement?.itemName}</p>
+                                <h2 className="text-xl font-bold tracking-tight">Quality Verification</h2>
+                                <p className="text-primary-100 text-xs font-medium uppercase tracking-wider">{selectedMovement?.item?.currentName}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-10 space-y-8">
-                        <div className="bg-secondary-50/50 rounded-3xl p-6 border border-gray-100 flex items-start gap-4">
-                            <div className="h-10 w-10 shrink-0 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm text-amber-500">
-                                <Info className="w-5 h-5" />
-                            </div>
-                            <p className="text-xs font-bold text-gray-500 leading-relaxed uppercase tracking-wide pt-1">
-                                Please verify visual integrity, dimensional accuracy, and documentation before releasing this unit from quarantine.
+                    <div className="p-8 space-y-6 flex-1">
+                        <div className="flex items-start gap-4 p-4 bg-secondary-50 border border-secondary-100 rounded-xl">
+                            <Info className="w-5 h-5 text-primary-500 mt-0.5" />
+                            <p className="text-xs text-secondary-600 font-medium leading-relaxed">
+                                Please confirm visual integrity, dimensional compliance and documentation accuracy before certification.
                             </p>
                         </div>
 
-                        <div className="space-y-4">
-                            <label className="text-sm font-black text-gray-700 ml-1 uppercase tracking-tight flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-primary-500" /> Inspection Findings
-                            </label>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider ml-1">Inspection Findings</Label>
                             <Textarea
                                 value={remarks}
                                 onChange={(e) => setRemarks(e.target.value)}
-                                className="rounded-[2rem] min-h-[120px] bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-bold p-6 leading-relaxed"
-                                placeholder="Enter detailed inspection notes..."
+                                className="min-h-[120px] border-secondary-200 focus:border-primary-500 transition-all font-medium text-sm p-4"
+                                placeholder="Enter detailed inspection notes or findings..."
                             />
                         </div>
 
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 pt-4">
                             <Button
                                 onClick={() => performMutation.mutate({ movementId: selectedMovement!.id, isApproved: false, remarks })}
                                 disabled={performMutation.isPending}
                                 variant="outline"
-                                className="flex-1 h-14 rounded-2xl border-2 border-rose-100 text-rose-500 font-extrabold hover:bg-rose-50 transition-all flex items-center gap-2"
+                                className="flex-1 h-12 border-rose-200 text-rose-600 font-bold hover:bg-rose-50"
                             >
-                                <XCircle className="w-5 h-5" /> REJECT
+                                <XCircle className="w-4 h-4 mr-2" /> REJECT
                             </Button>
                             <Button
                                 onClick={() => performMutation.mutate({ movementId: selectedMovement!.id, isApproved: true, remarks })}
                                 disabled={performMutation.isPending}
-                                className="flex-[1.5] h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-xl shadow-emerald-600/20 transition-all flex items-center gap-2"
+                                className="flex-[1.5] h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg"
                             >
-                                {performMutation.isPending ? "PROCESSING..." : <><CheckCircle className="w-5 h-5" /> APPROVE & RELEASE</>}
+                                {performMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                ) : (
+                                    <><CheckCircle className="w-4 h-4 mr-2" /> APPROVE & RELEASE</>
+                                )}
                             </Button>
                         </div>
                     </div>
-                </DialogContent>
+                </div>
             </Dialog>
         </div>
     );

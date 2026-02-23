@@ -50,7 +50,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItemStatus")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
 
             try
@@ -124,7 +124,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<ItemStatus>>> Create([FromBody] ItemStatus item)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItemStatus")) return Forbidden();
             
             if (await _context.ItemStatuses.AnyAsync(x => x.Name.ToLower() == item.Name.Trim().ToLower()))
                 return BadRequest(new ApiResponse<ItemStatus> { Success = false, Message = "Status name already exists" });
@@ -138,7 +138,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<ItemStatus>>> Update(int id, [FromBody] UpdateMasterRequest request)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItemStatus")) return Forbidden();
             var existing = await _context.ItemStatuses.FindAsync(id);
             if (existing == null) return NotFound();
             
@@ -157,7 +157,7 @@ namespace net_backend.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItemStatus")) return Forbidden();
             var item = await _context.ItemStatuses.FindAsync(id);
             if (item == null) return NotFound();
             _context.ItemStatuses.Remove(item);

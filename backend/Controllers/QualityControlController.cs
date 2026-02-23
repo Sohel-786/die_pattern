@@ -41,7 +41,7 @@ namespace net_backend.Controllers
         [HttpPost("perform")]
         public async Task<ActionResult<ApiResponse<bool>>> Perform([FromBody] QCDto dto)
         {
-            if (!await HasPermission("PerformQC")) return Forbidden();
+            if (!await HasPermission("CreateQC")) return Forbidden();
 
             var movement = await _context.Movements
                 .Include(m => m.Item)

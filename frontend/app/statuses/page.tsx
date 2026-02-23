@@ -30,7 +30,18 @@ export default function StatusesPage() {
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const { data: permissions } = useCurrentUserPermissions();
-  const canManageMaster = permissions?.manageMaster ?? false;
+  const canManageStatus = permissions?.manageItemStatus ?? false;
+
+  if (permissions && !permissions.viewMaster) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center font-sans">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-secondary-900 border-b border-primary-100 pb-2 mb-2">Access Denied</h2>
+          <p className="text-secondary-500 font-medium">You don't have permission to view functional statuses.</p>
+        </div>
+      </div>
+    );
+  }
 
   const {
     handleExport,
@@ -110,17 +121,21 @@ export default function StatusesPage() {
           <p className="text-secondary-500 font-medium">Define master data for item life-cycle states</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportImportButtons
-            onExport={handleExport}
-            onImport={handleImport}
-            exportLoading={exportLoading}
-            importLoading={importLoading}
-            inputId="statuses"
-          />
-          <Button onClick={() => handleOpenForm()} className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold">
-            <Plus className="w-4 h-4 mr-2" />
-            Define Status
-          </Button>
+          {canManageStatus && (
+            <ExportImportButtons
+              onExport={handleExport}
+              onImport={handleImport}
+              exportLoading={exportLoading}
+              importLoading={importLoading}
+              inputId="statuses"
+            />
+          )}
+          {canManageStatus && (
+            <Button onClick={() => handleOpenForm()} className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold">
+              <Plus className="w-4 h-4 mr-2" />
+              Define Status
+            </Button>
+          )}
         </div>
       </div>
 
@@ -190,26 +205,30 @@ export default function StatusesPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenForm(status)}
-                          className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => status.isActive ? setInactiveTarget(status) : toggleActiveMutation.mutate({ id: status.id, isActive: true })}
-                          className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${status.isActive
-                            ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
-                            : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                            }`}
-                          title={status.isActive ? "Deactivate" : "Activate"}
-                        >
-                          {status.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                        </Button>
+                        {canManageStatus && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenForm(status)}
+                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {canManageStatus && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => status.isActive ? setInactiveTarget(status) : toggleActiveMutation.mutate({ id: status.id, isActive: true })}
+                            className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${status.isActive
+                              ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
+                              : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                              }`}
+                            title={status.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {status.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

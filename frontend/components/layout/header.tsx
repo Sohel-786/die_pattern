@@ -4,7 +4,7 @@ import { User } from '@/types';
 import { Avatar } from '@/components/ui/avatar';
 import { useAppSettings, useCurrentUserPermissions } from '@/hooks/use-settings';
 import { useSoftwareProfileDraft } from '@/contexts/software-profile-draft-context';
-import { Building2, ChevronDown, ChevronUp, LogOut, LayoutGrid } from 'lucide-react';
+import { LogOut, Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLogout } from '@/hooks/use-auth-mutations';
 import { Button } from '@/components/ui/button';
 
@@ -25,7 +25,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
     (appSettings?.companyLogo ? `${API_BASE}/storage/${appSettings.companyLogo}` : null);
   const hasLogo = Boolean(logoUrl);
 
-  const isHorizontal = false;
+  const isHorizontal = permissions?.navigationLayout === 'HORIZONTAL';
 
   const logoutMutation = useLogout();
   const handleLogout = () => {

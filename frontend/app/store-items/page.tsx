@@ -19,7 +19,8 @@ import {
   Image as ImageIcon,
   Database,
   Box,
-  MapPin
+  MapPin,
+  LayoutDashboard
 } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
@@ -56,9 +57,23 @@ export default function StoreItemsPage() {
   const isAdmin = currentUser?.role === Role.QC_ADMIN;
 
   const { data: permissions } = useCurrentUserPermissions();
-  const canAddMaster = permissions?.manageMaster ?? false;
-  const canEditMaster = permissions?.manageMaster ?? false;
-  const canImportExportMaster = permissions?.manageMaster ?? false;
+  const canAddMaster = permissions?.manageItem ?? false;
+  const canEditMaster = permissions?.manageItem ?? false;
+  const canImportExportMaster = permissions?.manageItem ?? false;
+
+  if (permissions && !permissions.viewMaster) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+        <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <LayoutDashboard className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+          <p className="text-secondary-500 font-medium">You don't have the required master-level clearance to view store assets.</p>
+        </div>
+      </div>
+    );
+  }
 
   const {
     handleExport,

@@ -21,6 +21,8 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
+            if (!await HasPermission("ManageCompany")) return Forbidden();
+
             var companies = await _context.Companies
                 .OrderBy(c => c.Name)
                 .ToListAsync();
@@ -52,7 +54,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageCompany")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -140,6 +142,8 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<Company>>>> GetAll()
         {
+            if (!await HasPermission("ManageCompany")) return Forbidden();
+
             var companies = await _context.Companies
                 .OrderBy(c => c.Name)
                 .ToListAsync();
@@ -167,7 +171,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Company>>> Create([FromBody] Company company)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageCompany")) return Forbidden();
 
             if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == company.Name.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
@@ -183,7 +187,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Company>>> Update(int id, [FromBody] UpdateCompanyRequest request)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageCompany")) return Forbidden();
 
             var existing = await _context.Companies.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Company> { Success = false, Message = "Company not found" });
@@ -204,7 +208,7 @@ namespace net_backend.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageCompany")) return Forbidden();
 
             var company = await _context.Companies.FindAsync(id);
             if (company == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Company not found" });

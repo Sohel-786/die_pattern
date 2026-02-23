@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260223071408_AddGranularPermissions")]
+    partial class AddGranularPermissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -794,10 +796,6 @@ namespace net_backend.Migrations
 
                     b.Property<bool>("ManageUsers")
                         .HasColumnType("bit");
-
-                    b.Property<string>("NavigationLayout")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("RevertChanges")
                         .HasColumnType("bit");

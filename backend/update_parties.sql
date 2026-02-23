@@ -1,8 +1,8 @@
 ﻿BEGIN TRANSACTION;
 GO
 
-ALTER TABLE [parties] ADD [AlternateNumber] nvarchar(max) NULL;
 GO
+
 
 ALTER TABLE [parties] ADD [ContactPerson] nvarchar(max) NULL;
 GO

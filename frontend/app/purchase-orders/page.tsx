@@ -24,14 +24,34 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import Link from "next/link";
 
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
+
 export default function PurchaseOrdersPage() {
+    const { data: permissions } = useCurrentUserPermissions();
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+
+    if (permissions && !permissions.viewPO) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <ShoppingCart className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+                    <p className="text-secondary-500 font-medium">You don't have the required clearance to view purchase orders.</p>
+                </div>
+            </div>
+        );
+    }
     const queryClient = useQueryClient();
 
     const { data: orders = [], isLoading } = useQuery<PO[]>({
@@ -54,178 +74,174 @@ export default function PurchaseOrdersPage() {
     const getStatusBadge = (status: PoStatus) => {
         switch (status) {
             case PoStatus.Approved:
-                return <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-100 flex items-center gap-1.5 w-fit"><CheckCircle className="w-3 h-3" /> Approved</span>;
+                return <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-green-200">Approved</span>;
             case PoStatus.Rejected:
-                return <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-rose-100 flex items-center gap-1.5 w-fit"><XCircle className="w-3 h-3" /> Rejected</span>;
+                return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-rose-200">Rejected</span>;
             default:
-                return <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 flex items-center gap-1.5 w-fit"><Clock className="w-3 h-3" /> Pending</span>;
+                return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Pending</span>;
         }
     };
 
-    const filteredOrders = orders.filter(po =>
-        po.poNo.toLowerCase().includes(search.toLowerCase()) ||
-        po.vendorName?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredOrders = orders.filter(po => {
+        const matchesSearch = po.poNo.toLowerCase().includes(search.toLowerCase()) ||
+            po.vendorName?.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus = statusFilter === "All" || po.status.toString() === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     return (
-        <div className="p-8 space-y-8">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <ShoppingCart className="w-10 h-10 text-primary-600" />
-                        Purchase Orders
-                    </h1>
-                    <p className="text-gray-500 mt-2 font-semibold text-lg">Official procurement and repair work orders</p>
-                </motion.div>
-
-                <Link href="/purchase-orders/create">
-                    <Button className="rounded-[2rem] h-16 px-10 bg-primary-600 hover:bg-primary-700 text-white font-black shadow-2xl shadow-primary/25 transition-all active:scale-[0.98]">
-                        <Plus className="w-6 h-6 mr-3" />
-                        Issue New PO
-                    </Button>
-                </Link>
+        <div className="p-4 space-y-4 bg-secondary-50/30 min-h-screen">
+            <div className="flex justify-between items-center mb-2">
+                <div>
+                    <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Purchase Orders</h1>
+                    <p className="text-secondary-500 text-sm">Official procurement and repair work orders</p>
+                </div>
+                {permissions?.createPO && (
+                    <Link href="/purchase-orders/create">
+                        <Button className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Issue New PO
+                        </Button>
+                    </Link>
+                )}
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-6 items-stretch justify-between bg-white p-6 rounded-[2.5rem] shadow-xl shadow-black/5 border border-gray-100">
-                <div className="relative flex-1">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-                    <Input
-                        placeholder="Search by PO Number or Vendor name..."
-                        className="pl-16 h-16 rounded-2xl border-none bg-secondary-50/50 focus:bg-white transition-all text-base font-bold placeholder:text-gray-400"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-                <div className="flex gap-4">
-                    <Button variant="outline" className="h-16 px-6 rounded-2xl border-2 border-gray-100 font-bold hover:bg-secondary-50">
-                        <Filter className="w-5 h-5 mr-3 text-primary-600" /> Filter
-                    </Button>
-                </div>
-            </div>
-
-            {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-40 space-y-4">
-                    <div className="animate-spin rounded-full h-16 w-16 border-[6px] border-primary-100 border-t-primary-600"></div>
-                    <p className="font-black text-gray-400 uppercase text-xs tracking-widest">Compiling Orders...</p>
-                </div>
-            ) : (
-                <div className="bg-white rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden border border-gray-100">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-secondary-50/80">
-                                <TableRow className="border-none">
-                                    <TableHead className="font-black text-gray-900 py-8 pl-10 uppercase tracking-wider text-xs">Order Identity</TableHead>
-                                    <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs">Vendor Allocation</TableHead>
-                                    <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs text-center">Procurement Value</TableHead>
-                                    <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs">Delivery Deadline</TableHead>
-                                    <TableHead className="font-black text-gray-900 uppercase tracking-wider text-xs text-center">Status</TableHead>
-                                    <TableHead className="w-[80px] pr-10"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <AnimatePresence>
-                                    {filteredOrders.map((po, idx) => (
-                                        <motion.tr
-                                            key={po.id}
-                                            initial={{ opacity: 0, y: 4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.02, duration: 0.2 }}
-                                            className="group border-b border-gray-50 hover:bg-primary-50/30 transition-all cursor-default"
-                                        >
-                                            <TableCell className="py-8 pl-10">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="h-14 w-14 rounded-2xl bg-indigo-50 border-2 border-indigo-100 flex items-center justify-center text-indigo-600 relative overflow-hidden group-hover:border-indigo-400 transition-colors">
-                                                        <ShoppingCart className="w-7 h-7" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-gray-900 text-xl tracking-tight leading-none mb-1.5">{po.poNo}</p>
-                                                        <p className="text-[10px] text-gray-400 font-extrabold uppercase flex items-center gap-1.5">
-                                                            <Calendar className="w-3.5 h-3.5" /> ISSUED: {format(new Date(po.createdAt), 'dd MMM yyyy')}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 border border-amber-100">
-                                                        <Building2 className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-black text-gray-800 leading-tight">{po.vendorName}</p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase">{po.items.length} LINE ITEMS</p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-secondary-50 rounded-2xl border border-gray-100 font-black text-gray-700">
-                                                    <IndianRupee className="w-4 h-4 text-emerald-600" />
-                                                    {po.rate?.toLocaleString() ?? 'NO QUOTE'}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {po.deliveryDate ? (
-                                                    <div className="space-y-1">
-                                                        <p className="text-sm font-black text-gray-700">{format(new Date(po.deliveryDate), 'dd MMM yyyy')}</p>
-                                                        <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-primary-500 w-1/2"></div>
-                                                        </div>
-                                                    </div>
-                                                ) : <span className="text-xs text-gray-300 font-bold italic tracking-wider uppercase">TBD</span>}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex justify-center">
-                                                    {getStatusBadge(po.status)}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="pr-10 text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-white hover:shadow-xl"><MoreVertical className="w-6 h-6 text-gray-400" /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="rounded-[2.5rem] border-gray-50 shadow-2xl p-4 w-72 mt-2">
-                                                        <div className="px-5 py-4 border-b border-gray-50 mb-3 bg-secondary-50/50 rounded-2xl">
-                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Contextual Actions</p>
-                                                            <p className="text-xs font-bold text-gray-900">{po.poNo}</p>
-                                                        </div>
-                                                        <DropdownMenuItem className="rounded-2xl gap-4 cursor-pointer py-4 px-5 font-black text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors">
-                                                            <Eye className="w-6 h-6 text-gray-400" /> View Specification
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem className="rounded-2xl gap-4 cursor-pointer py-4 px-5 font-black text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                                                            <FileDown className="w-6 h-6 text-indigo-400" /> Download PDF
-                                                        </DropdownMenuItem>
-                                                        {po.status === PoStatus.Pending && (
-                                                            <DropdownMenuItem
-                                                                onClick={() => approveMutation.mutate(po.id)}
-                                                                className="rounded-2xl gap-4 cursor-pointer py-4 px-5 font-black text-emerald-600 bg-emerald-50/50 hover:bg-emerald-100 mt-2"
-                                                            >
-                                                                <CheckCircle className="w-6 h-6" /> Formal Approval
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </motion.tr>
-                                    ))}
-                                </AnimatePresence>
-                            </TableBody>
-                        </Table>
+            <Card className="border-secondary-200 shadow-sm overflow-hidden">
+                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center">
+                    <div className="relative flex-1 min-w-[300px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <Input
+                            placeholder="Search by PO No or Vendor..."
+                            className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
                     </div>
-                    {filteredOrders.length === 0 && (
-                        <div className="p-32 text-center space-y-6">
-                            <div className="h-32 w-32 bg-secondary-50 rounded-full flex items-center justify-center mx-auto border-4 border-white shadow-inner">
-                                <ShoppingCart className="w-12 h-12 text-gray-200" />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-black text-gray-900">No Orders Generated</h3>
-                                <p className="text-gray-500 font-semibold text-lg max-w-sm mx-auto">Active purchase orders will appear here after they are issued to vendors.</p>
-                            </div>
-                            <Link href="/purchase-orders/create">
-                                <Button variant="outline" className="h-14 rounded-2xl px-8 border-2 border-gray-100 font-black hover:bg-secondary-50">Issue First PO</Button>
-                            </Link>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Status</Label>
+                        <select
+                            className="h-10 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 w-40"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="All">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-secondary-500 hover:text-primary-600 font-bold text-xs uppercase tracking-wider"
+                        onClick={() => { setSearch(""); setStatusFilter("All"); }}
+                    >
+                        Clear Filters
+                    </Button>
                 </div>
-            )}
+
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-primary-50 border-secondary-100 divide-x divide-secondary-100">
+                                <TableHead className="w-16 h-11 text-center font-bold text-primary-900 uppercase tracking-tight text-[11px]">Sr.No</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Order Details</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Vendor / Items</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Valuation</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px] text-center">Status</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px] text-right pr-6">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i} className="animate-pulse">
+                                        <TableCell colSpan={6} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredOrders.length > 0 ? (
+                                filteredOrders.map((po, idx) => (
+                                    <TableRow
+                                        key={po.id}
+                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans whitespace-nowrap"
+                                    >
+                                        <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-secondary-900 text-[11px] uppercase">{po.poNo}</span>
+                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">{format(new Date(po.createdAt), 'dd MMM yyyy')}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-1.5 font-bold text-secondary-700 text-[11px] uppercase">
+                                                    <Building2 className="w-3.5 h-3.5 text-secondary-400" />
+                                                    {po.vendorName}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-primary-600 uppercase italic">
+                                                    {po.items.length} Line Items
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-[11px] font-bold text-secondary-900 flex items-center">
+                                                    <IndianRupee className="w-3 h-3 mr-0.5" />
+                                                    {po.rate?.toLocaleString() || '0.00'}
+                                                </span>
+                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">
+                                                    {po.deliveryDate ? `Due: ${format(new Date(po.deliveryDate), 'dd MMM')}` : 'TBD'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {getStatusBadge(po.status)}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-secondary-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-indigo-100 rounded-lg transition-all"
+                                                    title="Download Order"
+                                                >
+                                                    <FileDown className="w-4 h-4" />
+                                                </Button>
+                                                {po.status === PoStatus.Pending && permissions?.approvePO && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => approveMutation.mutate(po.id)}
+                                                        className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 border border-transparent hover:border-green-100 rounded-lg transition-all"
+                                                        title="Approve Order"
+                                                    >
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
+                                        No purchase orders found matching parameters.
+                                    </td>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </Card>
         </div>
     );
 }
+

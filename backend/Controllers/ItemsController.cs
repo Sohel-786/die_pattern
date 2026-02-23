@@ -27,6 +27,8 @@ namespace net_backend.Controllers
             [FromQuery] int? ownerTypeId,
             [FromQuery] int? statusId)
         {
+            if (!await HasPermission("ManageItem")) return Forbidden();
+
             var query = _context.Items
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
@@ -88,15 +90,53 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }
 
+        [HttpGet("active")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetActive()
+        {
+            var data = await _context.Items
+                .Include(p => p.ItemType)
+                .Include(p => p.Material)
+                .Include(p => p.OwnerType)
+                .Include(p => p.Status)
+                .Include(p => p.CurrentLocation)
+                .Include(p => p.CurrentParty)
+                .Where(p => p.IsActive && !string.IsNullOrEmpty(p.DrawingNo))
+                .Select(p => new ItemDto
+                {
+                    Id = p.Id,
+                    MainPartName = p.MainPartName,
+                    CurrentName = p.CurrentName,
+                    ItemTypeId = p.ItemTypeId,
+                    ItemTypeName = p.ItemType!.Name,
+                    DrawingNo = p.DrawingNo,
+                    RevisionNo = p.RevisionNo,
+                    MaterialId = p.MaterialId,
+                    MaterialName = p.Material!.Name,
+                    OwnerTypeId = p.OwnerTypeId,
+                    OwnerTypeName = p.OwnerType!.Name,
+                    StatusId = p.StatusId,
+                    StatusName = p.Status!.Name,
+                    CurrentHolderType = p.CurrentHolderType,
+                    CurrentLocationId = p.CurrentLocationId,
+                    CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
+                    CurrentPartyId = p.CurrentPartyId,
+                    CurrentPartyName = p.CurrentParty != null ? p.CurrentParty.Name : null,
+                    IsActive = p.IsActive
+                })
+                .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
+        }
+
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Item>>> Create([FromBody] CreateItemDto dto)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItem")) return Forbidden();
 
             if (await _context.Items.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique" });
             
-            if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
+            if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
             var item = new Item
@@ -158,7 +198,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Item>>> Update(int id, [FromBody] UpdateItemDto dto)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItem")) return Forbidden();
 
             if (id != dto.Id) return BadRequest(new ApiResponse<Item> { Success = false, Message = "ID mismatch" });
 
@@ -168,7 +208,7 @@ namespace net_backend.Controllers
             if (dto.StatusId > 0) existing.StatusId = dto.StatusId;
             if (dto.DrawingNo != null && dto.DrawingNo != existing.DrawingNo)
             {
-                if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
+                if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                     return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number already exists" });
                 existing.DrawingNo = dto.DrawingNo;
             }
@@ -182,6 +222,8 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
+            if (!await HasPermission("ManageItem")) return Forbidden();
+
             var items = await _context.Items
                 .Include(i => i.ItemType)
                 .Include(i => i.Material)
@@ -204,8 +246,8 @@ namespace net_backend.Controllers
                 CustodianName = i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name
             });
 
-            var file = _excelService.GenerateExcel(data, "Inventory");
-            return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Inventory.xlsx");
+            var file = _excelService.GenerateExcel(data, "Die Pattern Masters");
+            return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "die_pattern_masters.xlsx");
         }
 
         [HttpPost("validate")]
@@ -222,7 +264,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageItem")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
 
             using var stream = file.OpenReadStream();
@@ -248,15 +290,15 @@ namespace net_backend.Controllers
 
                     _context.Items.Add(new Item
                     {
-                        MainPartName = row.Data.PartName,
-                        CurrentName = row.Data.DisplayName,
+                        MainPartName = row.Data.PartName.Trim(),
+                        CurrentName = !string.IsNullOrEmpty(row.Data.DisplayName) ? row.Data.DisplayName.Trim() : row.Data.PartName.Trim(),
                         ItemTypeId = type?.Id ?? 0,
-                        DrawingNo = row.Data.DrawingNo,
-                        RevisionNo = row.Data.Revision,
+                        DrawingNo = row.Data.DrawingNo?.Trim(),
+                        RevisionNo = row.Data.Revision?.Trim() ?? "0",
                         MaterialId = material?.Id ?? 0,
                         OwnerTypeId = ownerType?.Id ?? 0,
                         StatusId = status?.Id ?? 0,
-                        CurrentHolderType = row.Data.CurrentHolderType == "Location" ? HolderType.Location : HolderType.Vendor,
+                        CurrentHolderType = row.Data.CustodianType.Equals("Location", StringComparison.OrdinalIgnoreCase) ? HolderType.Location : HolderType.Vendor,
                         CurrentLocationId = locationId,
                         CurrentPartyId = partyId,
                         CreatedAt = DateTime.Now,
@@ -290,15 +332,27 @@ namespace net_backend.Controllers
             var batchMainPartNames = new HashSet<string>();
             var batchDrawingNos = new HashSet<string>();
 
+            // Fetch lookup data for validation
+            var locationNames = await _context.Locations.Select(l => l.Name.ToLower()).ToListAsync();
+            var partyNames = await _context.Parties.Select(p => p.Name.ToLower()).ToListAsync();
+
             foreach (var row in rows)
             {
                 var d = row.Data;
                 var errors = new List<string>();
 
-                var mainPartNameLower = d.PartName?.Trim().ToLower();
-                if (string.IsNullOrEmpty(d.PartName)) errors.Add("Part Name is required");
-                else if (existingNames.Contains(mainPartNameLower!) || batchMainPartNames.Contains(mainPartNameLower!)) errors.Add("Part Name already exists");
-                else batchMainPartNames.Add(mainPartNameLower!);
+                if (string.IsNullOrEmpty(d.PartName)) 
+                {
+                    errors.Add("Part Name is required");
+                }
+                else 
+                {
+                    var mainPartNameLower = d.PartName.Trim().ToLower();
+                    if (existingNames.Contains(mainPartNameLower) || batchMainPartNames.Contains(mainPartNameLower)) 
+                        errors.Add("Part Name already exists");
+                    else 
+                        batchMainPartNames.Add(mainPartNameLower);
+                }
                 
                 if (!string.IsNullOrEmpty(d.DrawingNo))
                 {
@@ -311,7 +365,34 @@ namespace net_backend.Controllers
                 
                 if (string.IsNullOrEmpty(d.AssetType) || !types.Contains(d.AssetType.ToLower())) errors.Add("Invalid Asset Type");
                 if (string.IsNullOrEmpty(d.Material) || !materials.Contains(d.Material.ToLower())) errors.Add("Invalid Material");
+                if (string.IsNullOrEmpty(d.Ownership) || !ownerTypes.Contains(d.Ownership.ToLower())) errors.Add("Invalid Ownership");
                 if (string.IsNullOrEmpty(d.Status) || !statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
+
+                // Custodian Validation
+                if (string.IsNullOrEmpty(d.CustodianType))
+                {
+                    errors.Add("Custodian Type is required (Location / Vendor)");
+                }
+                else
+                {
+                    var cType = d.CustodianType.Trim().ToLower();
+                    if (cType != "location" && cType != "vendor")
+                    {
+                        errors.Add("Custodian Type must be 'Location' or 'Vendor'");
+                    }
+                    else if (string.IsNullOrEmpty(d.CustodianName))
+                    {
+                        errors.Add("Custodian Name is required");
+                    }
+                    else
+                    {
+                        var cName = d.CustodianName.Trim().ToLower();
+                        if (cType == "location" && !locationNames.Contains(cName))
+                            errors.Add($"Location '{d.CustodianName}' not found");
+                        else if (cType == "vendor" && !partyNames.Contains(cName))
+                            errors.Add($"Vendor/Party '{d.CustodianName}' not found");
+                    }
+                }
 
                 if (errors.Any())
                     result.Invalid.Add(new ValidationEntry<ItemImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });

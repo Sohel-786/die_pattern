@@ -20,6 +20,8 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
+            if (!await HasPermission("ManageParty")) return Forbidden();
+
             var parties = await _context.Parties
                 .OrderBy(p => p.Name)
                 .ToListAsync();
@@ -59,7 +61,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageParty")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -158,6 +160,8 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll()
         {
+            if (!await HasPermission("ManageParty")) return Forbidden();
+
             var parties = await _context.Parties
                 .OrderBy(p => p.Name)
                 .ToListAsync();
@@ -177,7 +181,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Party>>> Create([FromBody] Party party)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageParty")) return Forbidden();
 
             if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == party.Name.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
@@ -200,7 +204,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] UpdatePartyRequest request)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageParty")) return Forbidden();
 
             var existing = await _context.Parties.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found" });
@@ -247,7 +251,7 @@ namespace net_backend.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
-            if (!await HasPermission("ManageMaster")) return Forbidden();
+            if (!await HasPermission("ManageParty")) return Forbidden();
 
             var party = await _context.Parties.FindAsync(id);
             if (party == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Party not found" });

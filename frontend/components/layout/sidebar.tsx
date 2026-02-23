@@ -183,69 +183,49 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                   </button>
                   {openMenus.master && (
                     <div className="pl-1 mt-0.5 space-y-0.5">
-                      {renderSubMenuItem("/companies", "Company Master", Building2)}
-                      {renderSubMenuItem("/locations", "Location Master", MapPin)}
-                      {renderSubMenuItem("/parties", "Party Master", Users)}
+                      {permissions?.manageCompany && renderSubMenuItem("/companies", "Company Master", Building2)}
+                      {permissions?.manageLocation && renderSubMenuItem("/locations", "Location Master", MapPin)}
+                      {permissions?.manageParty && renderSubMenuItem("/parties", "Party Master", Users)}
                       {renderSubMenuItem("/masters", "Other Masters", Layers)}
-                      {renderSubMenuItem("/items", "Item Entry", Package)}
+                      {permissions?.manageItem && renderSubMenuItem("/items", "Item Entry", Package)}
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
-                  {renderMenuItem("/items", "Items", Package)}
+                  {permissions?.manageItem && renderMenuItem("/items", "Items", Package)}
                 </div>
               )}
             </div>
           )}
 
-          {/* PI Module */}
-          {permissions?.viewPI && renderMenuItem("/purchase-indents", "Purchase Indent", FileText)}
-
-          {/* Order Module */}
-          {permissions?.viewPO && (
-            <div className="pt-1">
-              {showFullSidebar ? (
-                <>
-                  <button onClick={() => toggleMenu('order')} className={sectionHeaderClass}>
-                    <div className="flex items-center gap-1">
-                      <ShoppingCart className="w-4 h-4 text-secondary-500" />
-                      <SidebarText show={showFullSidebar} className="-ml-1">Order Module</SidebarText>
-                    </div>
-                    {openMenus.order ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  </button>
-                  {openMenus.order && (
-                    <div className="pl-1 mt-0.5 space-y-0.5">
-                      {renderSubMenuItem("/purchase-orders/create", "Create PO", ShoppingCart)}
-                      {renderSubMenuItem("/purchase-orders", "PO List", ClipboardCheck)}
-                    </div>
-                  )}
-                </>
-              ) : renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
-            </div>
-          )}
-
-          {/* Transaction Entry */}
-          {permissions?.viewMovement && (
+          {/* Transactions Section */}
+          {(permissions?.viewPI || permissions?.viewPO || permissions?.viewMovement) && (
             <div className="pt-1">
               {showFullSidebar ? (
                 <>
                   <button onClick={() => toggleMenu('transaction')} className={sectionHeaderClass}>
                     <div className="flex items-center gap-1">
                       <ArrowLeftRight className="w-4 h-4 text-secondary-500" />
-                      <SidebarText show={showFullSidebar} className="-ml-1">Transaction Entry</SidebarText>
+                      <SidebarText show={showFullSidebar} className="-ml-1">Transactions</SidebarText>
                     </div>
                     {openMenus.transaction ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </button>
                   {openMenus.transaction && (
                     <div className="pl-1 mt-0.5 space-y-0.5">
-                      {renderSubMenuItem("/movements/outward", "Outward Entry", ArrowLeftRight)}
-                      {renderSubMenuItem("/movements/inward", "Inward Entry", ArrowLeftRight)}
-                      {renderSubMenuItem("/movements/system-return", "System Return", ArrowLeftRight)}
+                      {permissions?.viewPI && renderSubMenuItem("/purchase-indents", "Purchase Indent (PI)", FileText)}
+                      {permissions?.viewPO && renderSubMenuItem("/purchase-orders", "Purchase Order (PO)", ShoppingCart)}
+                      {permissions?.viewInward && renderSubMenuItem("/inwards", "Inward Entry", ArrowLeftRight)}
                     </div>
                   )}
                 </>
-              ) : renderMenuItem("/movements", "Movements", ArrowLeftRight)}
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-1">
+                  {renderMenuItem("/purchase-indents", "PI", FileText)}
+                  {renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
+                  {renderMenuItem("/inwards", "Inward", ArrowLeftRight)}
+                </div>
+              )}
             </div>
           )}
 

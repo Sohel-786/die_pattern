@@ -77,7 +77,6 @@ namespace net_backend.Models
         public string? Address { get; set; }
         public string? ContactPerson { get; set; }
         public string? PhoneNumber { get; set; }
-        public string? AlternateNumber { get; set; }
         public string? Email { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
@@ -350,33 +349,53 @@ namespace net_backend.Models
         
         // Master Permissions
         public bool ViewMaster { get; set; } = false;
-        public bool ManageMaster { get; set; } = false; // Add/Edit/Delete
+        public bool ManageItem { get; set; } = false;
+        public bool ManageItemType { get; set; } = false;
+        public bool ManageMaterial { get; set; } = false;
+        public bool ManageItemStatus { get; set; } = false;
+        public bool ManageOwnerType { get; set; } = false;
+        public bool ManageParty { get; set; } = false;
+        public bool ManageLocation { get; set; } = false;
+        public bool ManageCompany { get; set; } = false;
 
-        // PI Permissions
+        // Transactional Modules
+        // Purchase Indent (PI)
         public bool ViewPI { get; set; } = false;
         public bool CreatePI { get; set; } = false;
+        public bool EditPI { get; set; } = false;
         public bool ApprovePI { get; set; } = false;
 
-        // PO Permissions
+        // Purchase Order (PO)
         public bool ViewPO { get; set; } = false;
         public bool CreatePO { get; set; } = false;
+        public bool EditPO { get; set; } = false;
         public bool ApprovePO { get; set; } = false;
 
-        // Movement Permissions
+        // Inward Entry
+        public bool ViewInward { get; set; } = false;
+        public bool CreateInward { get; set; } = false;
+        public bool EditInward { get; set; } = false;
+        
+        // Quality Control (QC)
+        public bool ViewQC { get; set; } = false;
+        public bool CreateQC { get; set; } = false; // Add inspection result
+        public bool EditQC { get; set; } = false;
+        public bool ApproveQC { get; set; } = false;
+
+        // General Movement (Stock Transfer etc)
         public bool ViewMovement { get; set; } = false;
         public bool CreateMovement { get; set; } = false;
         
-        // QC Permissions
-        public bool ViewQC { get; set; } = false;
-        public bool PerformQC { get; set; } = false;
-
-        // Change Control
+        // Audit & History
         public bool ManageChanges { get; set; } = false;
-        public bool RevertChanges { get; set; } = false; // Admin only
+        public bool RevertChanges { get; set; } = false;
 
         public bool ViewReports { get; set; } = false;
         public bool ManageUsers { get; set; } = false;
         public bool AccessSettings { get; set; } = false;
+
+        // UI Preferences
+        public string NavigationLayout { get; set; } = "SIDEBAR"; // SIDEBAR | HORIZONTAL
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;

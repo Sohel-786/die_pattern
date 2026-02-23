@@ -46,17 +46,31 @@ namespace net_backend.Controllers
             {
                 "ViewDashboard" => p.ViewDashboard,
                 "ViewMaster" => p.ViewMaster,
-                "ManageMaster" => p.ManageMaster,
+                "ManageItem" => p.ManageItem,
+                "ManageItemType" => p.ManageItemType,
+                "ManageMaterial" => p.ManageMaterial,
+                "ManageItemStatus" => p.ManageItemStatus,
+                "ManageOwnerType" => p.ManageOwnerType,
+                "ManageParty" => p.ManageParty,
+                "ManageLocation" => p.ManageLocation,
+                "ManageCompany" => p.ManageCompany,
                 "ViewPI" => p.ViewPI,
                 "CreatePI" => p.CreatePI,
+                "EditPI" => p.EditPI,
                 "ApprovePI" => p.ApprovePI,
                 "ViewPO" => p.ViewPO,
                 "CreatePO" => p.CreatePO,
+                "EditPO" => p.EditPO,
                 "ApprovePO" => p.ApprovePO,
+                "ViewInward" => p.ViewInward,
+                "CreateInward" => p.CreateInward,
+                "EditInward" => p.EditInward,
+                "ViewQC" => p.ViewQC,
+                "CreateQC" => p.CreateQC,
+                "EditQC" => p.EditQC,
+                "ApproveQC" => p.ApproveQC,
                 "ViewMovement" => p.ViewMovement,
                 "CreateMovement" => p.CreateMovement,
-                "ViewQC" => p.ViewQC,
-                "PerformQC" => p.PerformQC,
                 "ManageChanges" => p.ManageChanges,
                 "RevertChanges" => p.RevertChanges,
                 "ViewReports" => p.ViewReports,
@@ -70,12 +84,5 @@ namespace net_backend.Controllers
         {
             return StatusCode(403, new { success = false, message = "Access denied: Missing required permission." });
         }
-    }
-
-    public class ApiResponse<T>
-    {
-        public bool Success { get; set; } = true;
-        public T? Data { get; set; }
-        public string? Message { get; set; }
     }
 }

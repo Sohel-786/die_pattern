@@ -60,18 +60,50 @@ export function SearchableSelect({
     ? options.find((o) => o.value === value)?.label ?? ""
     : "";
 
+  const lastInteractionRef = useRef<"click" | "key" | "tab" | "select" | null>(null);
+
+  const focusNext = () => {
+    const focusable = Array.from(
+      document.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ) as HTMLElement[];
+    const index = focusable.indexOf(triggerRef.current!);
+    if (index > -1 && index < focusable.length - 1) {
+      focusable[index + 1].focus();
+    }
+  };
+
+  const selectOption = (opt: SearchableSelectOption) => {
+    if (opt.disabled) return;
+    lastInteractionRef.current = "select";
+    onChange(opt.value);
+    setIsOpen(false);
+    // Professional touch: Move to next field after selection
+    setTimeout(() => focusNext(), 50);
+  };
+
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
       setHighlightIndex(0);
-      // Use a slightly longer delay to ensure the input is mounted even in slow rendering conditions
+      lastInteractionRef.current = null;
       const timer = setTimeout(() => searchInputRef.current?.focus(), 50);
       return () => clearTimeout(timer);
     } else {
-      // Return focus to the trigger button when closing
-      // but only if focus was inside the component
-      if (document.activeElement && containerRef.current?.contains(document.activeElement)) {
-        triggerRef.current?.focus();
+      // Return focus to the trigger button when closing, 
+      // UNLESS it was closed by Tabbing away, selection (which handles its own focus), 
+      // or focus already moved elsewhere
+      if (lastInteractionRef.current !== "tab" && lastInteractionRef.current !== "select") {
+        const timeout = setTimeout(() => {
+          if (
+            document.activeElement === document.body ||
+            containerRef.current?.contains(document.activeElement)
+          ) {
+            triggerRef.current?.focus();
+          }
+        }, 10);
+        return () => clearTimeout(timeout);
       }
     }
   }, [isOpen]);
@@ -100,7 +132,10 @@ export function SearchableSelect({
       }
     };
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        lastInteractionRef.current = "key";
+        setIsOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -131,17 +166,15 @@ export function SearchableSelect({
       case "Enter":
         e.preventDefault();
         const opt = filteredOptions[highlightIndex];
-        if (opt && !opt.disabled) {
-          onChange(opt.value);
-          setIsOpen(false);
-        }
+        if (opt) selectOption(opt);
         break;
       case "Escape":
         e.preventDefault();
+        lastInteractionRef.current = "key";
         setIsOpen(false);
         break;
       case "Tab":
-        // Allow Tab to move focus out but close the dropdown
+        lastInteractionRef.current = "tab";
         setIsOpen(false);
         break;
     }
@@ -245,9 +278,7 @@ export function SearchableSelect({
                         : !opt.disabled && "text-slate-700 hover:bg-secondary-50",
                   )}
                   onClick={() => {
-                    if (opt.disabled) return;
-                    onChange(opt.value);
-                    setIsOpen(false);
+                    selectOption(opt);
                   }}
                   onMouseEnter={() => !opt.disabled && setHighlightIndex(index)}
                 >

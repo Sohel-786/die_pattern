@@ -21,6 +21,7 @@ namespace net_backend.Controllers
         [HttpGet("inventory-status")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetInventoryStatus()
         {
+            if (!await HasPermission("ViewReports")) return Forbidden();
             var data = await _context.Items
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
@@ -46,6 +47,7 @@ namespace net_backend.Controllers
         [HttpGet("movement-ledger")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetMovementLedger()
         {
+            if (!await HasPermission("ViewReports")) return Forbidden();
             var data = await _context.Movements
                 .Include(m => m.Item)
                 .Include(m => m.FromLocation)
@@ -75,6 +77,7 @@ namespace net_backend.Controllers
         [HttpGet("qc-summary")]
         public async Task<ActionResult<ApiResponse<object>>> GetQCSummary()
         {
+            if (!await HasPermission("ViewReports")) return Forbidden();
             var total = await _context.QualityControls.CountAsync();
             var approved = await _context.QualityControls.CountAsync(q => q.IsApproved);
             var rejected = total - approved;

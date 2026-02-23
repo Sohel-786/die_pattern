@@ -6,7 +6,10 @@ import {
     LayoutDashboard, Package, FileText,
     ShoppingCart, ArrowLeftRight, ClipboardCheck,
     BarChart3, Settings, Shield as ShieldIcon,
-    CheckCircle2, AlertTriangle, Users, ArrowUpRight
+    CheckCircle2, AlertTriangle, Users, ArrowUpRight,
+    Building2, MapPin, Layers, History, RotateCcw,
+    Search, CheckSquare, Edit, Activity, Plus,
+    ArrowDownLeft
 } from "lucide-react";
 import api from "@/lib/api";
 import { UserPermission } from "@/types";
@@ -129,46 +132,75 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="col-span-full mb-4">
-                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Base Level Access</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <PermissionToggle label="Global Dashboard" checked={permissions?.viewDashboard || false} onChange={(v) => updatePermission('viewDashboard', v)} icon={LayoutDashboard} description="Entry level visualization" />
-                                    <PermissionToggle label="Intelligence Reports" checked={permissions?.viewReports || false} onChange={(v) => updatePermission('viewReports', v)} icon={BarChart3} description="Analytical data export" />
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Intelligence & Reporting</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <PermissionToggle label="Strategic Dashboard" checked={permissions?.viewDashboard || false} onChange={(v) => updatePermission('viewDashboard', v)} icon={LayoutDashboard} description="Global visualization of metrics" />
+                                    <PermissionToggle label="Operational Reports" checked={permissions?.viewReports || false} onChange={(v) => updatePermission('viewReports', v)} icon={BarChart3} description="Exportable analytical datasets" />
                                 </div>
                             </div>
 
                             <div className="col-span-full mt-8">
-                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Registry & Master Logic</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Registry & Asset Repository</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <PermissionToggle label="View Registry" checked={permissions?.viewMaster || false} onChange={(v) => updatePermission('viewMaster', v)} icon={Package} description="Read-only access to masters" />
-                                    <PermissionToggle label="Modify Registry" checked={permissions?.manageMaster || false} onChange={(v) => updatePermission('manageMaster', v)} icon={Settings} description="Add/Edit master nodes" />
+                                    <PermissionToggle label="Manage Items" checked={permissions?.manageItem || false} onChange={(v) => updatePermission('manageItem', v)} icon={Layers} description="Configure Die/Pattern masters" />
+                                    <PermissionToggle label="Manage Types" checked={permissions?.manageItemType || false} onChange={(v) => updatePermission('manageItemType', v)} icon={Search} description="Control asset classification" />
+                                    <PermissionToggle label="Manage Materials" checked={permissions?.manageMaterial || false} onChange={(v) => updatePermission('manageMaterial', v)} icon={Layers} description="Material composition registry" />
+                                    <PermissionToggle label="Manage Status" checked={permissions?.manageItemStatus || false} onChange={(v) => updatePermission('manageItemStatus', v)} icon={Activity} description="Asset lifecycle states" />
+                                    <PermissionToggle label="Manage Location" checked={permissions?.manageLocation || false} onChange={(v) => updatePermission('manageLocation', v)} icon={MapPin} description="Site & Storage hierarchy" />
+                                    <PermissionToggle label="Manage Party" checked={permissions?.manageParty || false} onChange={(v) => updatePermission('manageParty', v)} icon={Users} description="Vendor & Client interaction" />
+                                    <PermissionToggle label="Manage Company" checked={permissions?.manageCompany || false} onChange={(v) => updatePermission('manageCompany', v)} icon={Building2} description="Organization entity control" />
                                 </div>
                             </div>
 
                             <div className="col-span-full mt-8">
-                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Procurement Pipeline</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <PermissionToggle label="View PI" checked={permissions?.viewPI || false} onChange={(v) => updatePermission('viewPI', v)} icon={FileText} description="Monitor purchase indents" />
-                                    <PermissionToggle label="Create PI" checked={permissions?.createPI || false} onChange={(v) => updatePermission('createPI', v)} icon={CheckCircle2} description="Initiate procurement requests" />
-                                    <PermissionToggle label="View PO" checked={permissions?.viewPO || false} onChange={(v) => updatePermission('viewPO', v)} icon={ShoppingCart} description="Monitor purchase orders" />
-                                    <PermissionToggle label="Create PO" checked={permissions?.createPO || false} onChange={(v) => updatePermission('createPO', v)} icon={ShieldCheck} description="Vendor contract allocation" />
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Procurement Pipeline (PI)</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <PermissionToggle label="View PI" checked={permissions?.viewPI || false} onChange={(v) => updatePermission('viewPI', v)} icon={FileText} description="Monitor Indents" />
+                                    <PermissionToggle label="Create PI" checked={permissions?.createPI || false} onChange={(v) => updatePermission('createPI', v)} icon={Plus} description="Initiate Indent" />
+                                    <PermissionToggle label="Edit PI" checked={permissions?.editPI || false} onChange={(v) => updatePermission('editPI', v)} icon={Edit} description="Modify Indent" />
+                                    <PermissionToggle label="Approve PI" checked={permissions?.approvePI || false} onChange={(v) => updatePermission('approvePI', v)} icon={ShieldCheck} description="Authorize Indent" />
                                 </div>
                             </div>
 
                             <div className="col-span-full mt-8">
-                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Logistics & Certification</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <PermissionToggle label="Transit Gate" checked={permissions?.viewMovement || false} onChange={(v) => updatePermission('viewMovement', v)} icon={ArrowLeftRight} description="View movement history" />
-                                    <PermissionToggle label="Process Gate" checked={permissions?.createMovement || false} onChange={(v) => updatePermission('createMovement', v)} icon={ArrowUpRight} description="Record inward/outward flow" />
-                                    <PermissionToggle label="QC Station" checked={permissions?.viewQC || false} onChange={(v) => updatePermission('viewQC', v)} icon={ClipboardCheck} description="Audit inspection entries" />
-                                    <PermissionToggle label="Certify Logic" checked={permissions?.performQC || false} onChange={(v) => updatePermission('performQC', v)} icon={ShieldAlert} description="Execute QC release/block" />
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Purchase Control (PO)</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <PermissionToggle label="View PO" checked={permissions?.viewPO || false} onChange={(v) => updatePermission('viewPO', v)} icon={ShoppingCart} description="Monitor Orders" />
+                                    <PermissionToggle label="Create PO" checked={permissions?.createPO || false} onChange={(v) => updatePermission('createPO', v)} icon={Plus} description="Generate Order" />
+                                    <PermissionToggle label="Edit PO" checked={permissions?.editPO || false} onChange={(v) => updatePermission('editPO', v)} icon={Edit} description="Modify Order" />
+                                    <PermissionToggle label="Approve PO" checked={permissions?.approvePO || false} onChange={(v) => updatePermission('approvePO', v)} icon={ShieldCheck} description="Authorize Order" />
                                 </div>
                             </div>
 
                             <div className="col-span-full mt-8">
-                                <h3 className="text-xs font-black text-rose-500/30 uppercase tracking-[0.3em] border-b border-rose-50 pb-4 mb-8">High Authority Operations</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <PermissionToggle label="Access Settings" checked={permissions?.accessSettings || false} onChange={(v) => updatePermission('accessSettings', v)} icon={Settings} description="Global system configuration" />
-                                    <PermissionToggle label="Identity Gov" checked={permissions?.manageUsers || false} onChange={(v) => updatePermission('manageUsers', v)} icon={Users} description="Provision/Revoke users" />
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Logistics & Inward Flow</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <PermissionToggle label="View Inwards" checked={permissions?.viewInward || false} onChange={(v) => updatePermission('viewInward', v)} icon={ArrowDownLeft} description="Monitor arrivals" />
+                                    <PermissionToggle label="Record Inward" checked={permissions?.createInward || false} onChange={(v) => updatePermission('createInward', v)} icon={Plus} description="Process receipts" />
+                                    <PermissionToggle label="Edit Inward" checked={permissions?.editInward || false} onChange={(v) => updatePermission('editInward', v)} icon={Edit} description="Correction logic" />
+                                    <PermissionToggle label="Transit View" checked={permissions?.viewMovement || false} onChange={(v) => updatePermission('viewMovement', v)} icon={ArrowLeftRight} description="Logistics history" />
+                                    <PermissionToggle label="Record Transit" checked={permissions?.createMovement || false} onChange={(v) => updatePermission('createMovement', v)} icon={ArrowUpRight} description="Execute movements" />
+                                </div>
+                            </div>
+
+                            <div className="col-span-full mt-8">
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Quality Assurance (QC)</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <PermissionToggle label="Audit Station" checked={permissions?.viewQC || false} onChange={(v) => updatePermission('viewQC', v)} icon={ClipboardCheck} description="View inspections" />
+                                    <PermissionToggle label="Record Audit" checked={permissions?.createQC || false} onChange={(v) => updatePermission('createQC', v)} icon={Plus} description="Execute assessment" />
+                                    <PermissionToggle label="Refine Audit" checked={permissions?.editQC || false} onChange={(v) => updatePermission('editQC', v)} icon={Edit} description="Modify assessment" />
+                                    <PermissionToggle label="Certify Logic" checked={permissions?.approveQC || false} onChange={(v) => updatePermission('approveQC', v)} icon={ShieldAlert} description="Final authorization" />
+                                </div>
+                            </div>
+
+                            <div className="col-span-full mt-8">
+                                <h3 className="text-xs font-black text-rose-500/30 uppercase tracking-[0.3em] border-b border-rose-50 pb-4 mb-8">Administrative Override</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <PermissionToggle label="System Config" checked={permissions?.accessSettings || false} onChange={(v) => updatePermission('accessSettings', v)} icon={Settings} description="Global parameters" />
+                                    <PermissionToggle label="Identity Gov" checked={permissions?.manageUsers || false} onChange={(v) => updatePermission('manageUsers', v)} icon={Users} description="Personnel control" />
+                                    <PermissionToggle label="Change History" checked={permissions?.manageChanges || false} onChange={(v) => updatePermission('manageChanges', v)} icon={History} description="Audit trail oversight" />
+                                    <PermissionToggle label="Strategic Revert" checked={permissions?.revertChanges || false} onChange={(v) => updatePermission('revertChanges', v)} icon={RotateCcw} description="Rollback capabilities" />
                                 </div>
                             </div>
                         </div>

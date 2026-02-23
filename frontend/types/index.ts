@@ -86,7 +86,6 @@ export interface Party {
   address?: string;
   contactPerson?: string;
   phoneNumber?: string;
-  alternateNumber?: string;
   email?: string;
   gstNo?: string;
   gstDate?: string;
@@ -243,15 +242,30 @@ export interface Movement {
   id: number;
   type: MovementType;
   itemId: number;
-  itemName?: string;
+  item?: Item;
+  transactionNo?: string;
   fromType: HolderType;
-  fromName?: string;
+  fromLocationId?: number;
+  fromLocation?: Location;
+  fromPartyId?: number;
+  fromParty?: Party;
   toType: HolderType;
-  toName?: string;
+  toLocationId?: number;
+  toLocation?: Location;
+  toPartyId?: number;
+  toParty?: Party;
+  toLocationName?: string;
   remarks?: string;
   reason?: string;
+  purchaseOrderId?: number;
+  purchaseOrder?: PO;
   isQCPending: boolean;
   isQCApproved: boolean;
+  createdBy: number;
+  // Flattened display fields from backend DTO
+  itemName?: string;
+  fromName?: string;
+  toName?: string;
   createdAt: string;
 }
 
@@ -272,23 +286,47 @@ export interface UserPermission {
   id: number;
   userId: number;
   viewDashboard: boolean;
+
+  // Master Permissions
   viewMaster: boolean;
-  manageMaster: boolean;
+  manageItem: boolean;
+  manageItemType: boolean;
+  manageMaterial: boolean;
+  manageItemStatus: boolean;
+  manageOwnerType: boolean;
+  manageParty: boolean;
+  manageLocation: boolean;
+  manageCompany: boolean;
+
+  // Transactional
   viewPI: boolean;
   createPI: boolean;
+  editPI: boolean;
   approvePI: boolean;
+
   viewPO: boolean;
   createPO: boolean;
+  editPO: boolean;
   approvePO: boolean;
+
+  viewInward: boolean;
+  createInward: boolean;
+  editInward: boolean;
+
+  viewQC: boolean;
+  createQC: boolean;
+  editQC: boolean;
+  approveQC: boolean;
+
   viewMovement: boolean;
   createMovement: boolean;
-  viewQC: boolean;
-  performQC: boolean;
+
   manageChanges: boolean;
   revertChanges: boolean;
   viewReports: boolean;
   manageUsers: boolean;
   accessSettings: boolean;
+  navigationLayout: 'SIDEBAR' | 'HORIZONTAL';
 }
 
 export interface AppSettings {
