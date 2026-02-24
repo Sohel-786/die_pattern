@@ -31,6 +31,9 @@ namespace net_backend.DTOs
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
         public string? ItemTypeName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string? MaterialName { get; set; }
         public string? PoNo { get; set; }
         public bool IsInPO { get; set; } // Logic for visibility
     }
@@ -49,16 +52,20 @@ namespace net_backend.DTOs
         public string PoNo { get; set; } = string.Empty;
         public int VendorId { get; set; }
         public string? VendorName { get; set; }
-        public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public string? QuotationUrl { get; set; }
+        public string? QuotationNo { get; set; }
         public List<string> QuotationUrls { get; set; } = new();
         public GstType? GstType { get; set; }
         public decimal? GstPercent { get; set; }
+        /// <summary>Sum of Rate for all items (one unit per die/pattern)</summary>
+        public decimal Subtotal { get; set; }
+        /// <summary>GST amount if GstType and GstPercent set, else null</summary>
         public decimal? GstAmount { get; set; }
-        public decimal? TotalAmount { get; set; }
+        /// <summary>Subtotal + GstAmount (or Subtotal if no GST)</summary>
+        public decimal TotalAmount { get; set; }
         public PoStatus Status { get; set; }
         public string? Remarks { get; set; }
+        public string? PurchaseType { get; set; } // Added
         public DateTime CreatedAt { get; set; }
         public string? CreatorName { get; set; }
         public int? ApprovedBy { get; set; }
@@ -74,20 +81,37 @@ namespace net_backend.DTOs
         public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string? MaterialName { get; set; }
         public string? PiNo { get; set; }
+        public decimal Rate { get; set; }
+        /// <summary>Line amount = Rate (one unit per die/pattern, before GST)</summary>
+        public decimal LineAmount => Math.Round(Rate, 2);
+    }
+
+    /// <summary>Per-item input for PO creation/update. Each die/pattern has its own rate.</summary>
+    public class CreatePOItemDto
+    {
+        public int PurchaseIndentItemId { get; set; }
+        public decimal Rate { get; set; }
     }
 
     public class CreatePODto
     {
         public int VendorId { get; set; }
-        public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public string? QuotationUrl { get; set; }
+        public string? QuotationNo { get; set; }
         public List<string>? QuotationUrls { get; set; }
         public GstType? GstType { get; set; }
         public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
-        public List<int> PurchaseIndentItemIds { get; set; } = new();
+        public string? PurchaseType { get; set; }
+        /// <summary>Designated approver (Authorized By).</summary>
+        public int? ApprovedBy { get; set; }
+        /// <summary>Items with per-item rates. Final total = sum(item.Rate), then GST applied if selected.</summary>
+        public List<CreatePOItemDto> Items { get; set; } = new();
     }
 
     public static class QuotationUrlsHelper

@@ -57,8 +57,12 @@ namespace net_backend.Data
                 .HasIndex(i => i.InwardNo)
                 .IsUnique();
 
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .Property(poi => poi.Rate)
+                .HasColumnType("decimal(18,2)");
+
             modelBuilder.Entity<PurchaseOrder>()
-                .Property(p => p.Rate)
+                .Property(p => p.GstPercent)
                 .HasColumnType("decimal(18,2)");
 
             // Relationships
@@ -146,7 +150,7 @@ namespace net_backend.Data
 
             modelBuilder.Entity<InwardLine>()
                 .HasOne(l => l.Movement)
-                .WithMany()
+                .WithMany(m => m.Lines)
                 .HasForeignKey(l => l.MovementId)
                 .OnDelete(DeleteBehavior.SetNull);
 

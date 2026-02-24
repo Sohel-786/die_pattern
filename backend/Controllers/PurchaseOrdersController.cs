@@ -27,22 +27,22 @@ namespace net_backend.Controllers
             dto.PoNo = po.PoNo;
             dto.VendorId = po.VendorId;
             dto.VendorName = po.Vendor?.Name;
-            dto.Rate = po.Rate;
             dto.DeliveryDate = po.DeliveryDate;
-            dto.QuotationUrl = po.QuotationUrl;
+            dto.QuotationNo = po.QuotationNo;
             dto.QuotationUrls = QuotationUrlsHelper.FromJson(po.QuotationUrlsJson);
             dto.GstType = po.GstType.HasValue ? (GstType)po.GstType.Value : null;
             dto.GstPercent = po.GstPercent;
-            decimal rate = po.Rate ?? 0;
-            if (po.GstPercent.HasValue && po.GstPercent.Value > 0)
+            decimal subtotal = po.Items.Sum(i => i.Rate);
+            dto.Subtotal = Math.Round(subtotal, 2);
+            if (po.GstType.HasValue && po.GstPercent.HasValue && po.GstPercent.Value > 0)
             {
-                dto.GstAmount = Math.Round(rate * po.GstPercent.Value / 100, 2);
-                dto.TotalAmount = Math.Round(rate + dto.GstAmount.Value, 2);
+                dto.GstAmount = Math.Round(subtotal * po.GstPercent.Value / 100, 2);
+                dto.TotalAmount = Math.Round(subtotal + dto.GstAmount.Value, 2);
             }
             else
             {
                 dto.GstAmount = null;
-                dto.TotalAmount = rate;
+                dto.TotalAmount = dto.Subtotal;
             }
             dto.Status = po.Status;
             dto.Remarks = po.Remarks;
@@ -51,6 +51,14 @@ namespace net_backend.Controllers
             dto.ApprovedBy = po.ApprovedBy;
             dto.ApproverName = po.Approver != null ? po.Approver.FirstName + " " + po.Approver.LastName : null;
             dto.ApprovedAt = po.ApprovedAt;
+            dto.PurchaseType = po.PurchaseType;
+        }
+
+        [HttpGet("next-code")]
+        public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
+        {
+            var code = await _codeGenerator.GenerateCode("PO");
+            return Ok(new ApiResponse<string> { Data = code });
         }
 
         /// <summary>Approved PI items that can be selected for this PO: not in any PO, or already in this PO (for edit).</summary>
@@ -75,33 +83,61 @@ namespace net_backend.Controllers
                     PurchaseIndentId = pii.PurchaseIndentId,
                     ItemId = pii.ItemId,
                     MainPartName = pii.Item!.MainPartName,
-                    CurrentName = pii.Item.CurrentName
+                    CurrentName = pii.Item.CurrentName,
+                    ItemTypeName = pii.Item.ItemType != null ? pii.Item.ItemType.Name : "N/A",
+                    DrawingNo = pii.Item.DrawingNo,
+                    RevisionNo = pii.Item.RevisionNo,
+                    MaterialName = pii.Item.Material != null ? pii.Item.Material.Name : "N/A"
                 })
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<PurchaseIndentItemDto>> { Data = items });
         }
 
         [HttpPost("upload-quotation")]
-        public async Task<ActionResult<ApiResponse<object>>> UploadQuotation([FromForm] IFormFile file)
+        public async Task<ActionResult<ApiResponse<object>>> UploadQuotation([FromForm] IFormFile? file)
         {
             if (!await HasPermission("CreatePO")) return Forbidden();
-            if (file == null || file.Length == 0)
+
+            // Support both "file" and "file" from FormData (some clients send different names)
+            var uploadFile = file ?? Request.Form.Files?.FirstOrDefault(f => f.Name == "file" || f.Length > 0);
+            if (uploadFile == null || uploadFile.Length == 0)
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded." });
 
+            const long maxBytes = 20 * 1024 * 1024; // 20 MB
+            if (uploadFile.Length > maxBytes)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
+
             var allowed = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg" };
-            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
             if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "Allowed types: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG." });
 
-            var dir = Path.Combine(_env.ContentRootPath ?? Directory.GetCurrentDirectory(), "wwwroot", "storage", "po-quotations");
-            Directory.CreateDirectory(dir);
-            var fileName = $"{Guid.NewGuid()}{ext}";
-            var filePath = Path.Combine(dir, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-                await file.CopyToAsync(stream);
+            try
+            {
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var dir = Path.Combine(root, "wwwroot", "storage", "po-quotations");
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
 
-            var url = $"/storage/po-quotations/{fileName}";
-            return Ok(new ApiResponse<object> { Data = new { url } });
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
+                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
+
+                await using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    await uploadFile.CopyToAsync(stream);
+
+                var url = $"/storage/po-quotations/{fileName}";
+                return Ok(new ApiResponse<object> { Data = new { url } });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Access denied to storage folder." });
+            }
+            catch (IOException ex)
+            {
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "File save failed: " + ex.Message });
+            }
         }
 
         [HttpGet]
@@ -128,9 +164,8 @@ namespace net_backend.Controllers
                     PoNo = p.PoNo,
                     VendorId = p.VendorId,
                     VendorName = p.Vendor != null ? p.Vendor.Name : "Unknown",
-                    Rate = p.Rate,
                     DeliveryDate = p.DeliveryDate,
-                    QuotationUrl = p.QuotationUrl,
+                    QuotationNo = p.QuotationNo,
                     Status = p.Status,
                     Remarks = p.Remarks,
                     CreatedAt = p.CreatedAt,
@@ -145,7 +180,12 @@ namespace net_backend.Controllers
                         ItemId = i.PurchaseIndentItem!.ItemId,
                         MainPartName = i.PurchaseIndentItem!.Item!.MainPartName,
                         CurrentName = i.PurchaseIndentItem.Item.CurrentName,
-                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo
+                        ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
+                        DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
+                        RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
+                        MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
+                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                        Rate = i.Rate
                     }).ToList()
                 };
                 MapToDto(p, dto);
@@ -160,32 +200,41 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("CreatePO")) return Forbidden();
 
-            var itemIds = dto.PurchaseIndentItemIds?.Distinct().ToList() ?? new List<int>();
-            if (itemIds.Count == 0) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "At least one item is required." });
+            var items = dto.Items?.Where(i => i.PurchaseIndentItemId > 0).ToList() ?? new List<CreatePOItemDto>();
+            if (items.Count == 0) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "At least one item with rate is required." });
+
+            var piItemIds = items.Select(i => i.PurchaseIndentItemId).Distinct().ToList();
+            if (piItemIds.Count != items.Count)
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Duplicate die/pattern in the same PO is not allowed." });
 
             var alreadyInPo = await _context.PurchaseOrderItems
-                .AnyAsync(poi => itemIds.Contains(poi.PurchaseIndentItemId));
+                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId));
             if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO." });
 
             var po = new PurchaseOrder
             {
                 PoNo = await _codeGenerator.GenerateCode("PO"),
                 VendorId = dto.VendorId,
-                Rate = dto.Rate,
                 DeliveryDate = dto.DeliveryDate,
-                QuotationUrl = dto.QuotationUrl,
+                QuotationNo = dto.QuotationNo,
                 QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls ?? new List<string>()),
                 GstType = dto.GstType.HasValue ? (int)dto.GstType.Value : null,
                 GstPercent = dto.GstPercent,
                 Remarks = dto.Remarks,
+                PurchaseType = dto.PurchaseType,
+                ApprovedBy = dto.ApprovedBy,
                 CreatedBy = CurrentUserId,
                 Status = PoStatus.Draft,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
 
-            foreach (var piItemId in itemIds)
-                po.Items.Add(new PurchaseOrderItem { PurchaseIndentItemId = piItemId });
+            foreach (var it in items)
+                po.Items.Add(new PurchaseOrderItem
+                {
+                    PurchaseIndentItemId = it.PurchaseIndentItemId,
+                    Rate = it.Rate
+                });
 
             _context.PurchaseOrders.Add(po);
             await _context.SaveChangesAsync();
@@ -216,9 +265,8 @@ namespace net_backend.Controllers
                 PoNo = po.PoNo,
                 VendorId = po.VendorId,
                 VendorName = po.Vendor?.Name,
-                Rate = po.Rate,
                 DeliveryDate = po.DeliveryDate,
-                QuotationUrl = po.QuotationUrl,
+                QuotationNo = po.QuotationNo,
                 Status = po.Status,
                 Remarks = po.Remarks,
                 CreatedAt = po.CreatedAt,
@@ -233,7 +281,12 @@ namespace net_backend.Controllers
                     ItemId = i.PurchaseIndentItem!.ItemId,
                     MainPartName = i.PurchaseIndentItem.Item!.MainPartName,
                     CurrentName = i.PurchaseIndentItem.Item.CurrentName,
-                    PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo
+                    ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
+                    DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
+                    RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
+                    MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
+                    PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                    Rate = i.Rate
                 }).ToList()
             };
             MapToDto(po, dto);
@@ -250,27 +303,36 @@ namespace net_backend.Controllers
             if (po.Status != PoStatus.Pending && po.Status != PoStatus.Draft)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft or pending POs can be edited." });
 
-            var itemIds = dto.PurchaseIndentItemIds?.Distinct().ToList() ?? new List<int>();
-            if (itemIds.Count == 0) return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
+            var items = dto.Items?.Where(i => i.PurchaseIndentItemId > 0).ToList() ?? new List<CreatePOItemDto>();
+            if (items.Count == 0) return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item with rate is required." });
+
+            var piItemIds = items.Select(i => i.PurchaseIndentItemId).Distinct().ToList();
+            if (piItemIds.Count != items.Count)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Duplicate die/pattern in the same PO is not allowed." });
 
             var alreadyInOtherPo = await _context.PurchaseOrderItems
-                .AnyAsync(poi => itemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrderId != id);
+                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrderId != id);
             if (alreadyInOtherPo)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items are already in another PO." });
 
             po.VendorId = dto.VendorId;
-            po.Rate = dto.Rate;
             po.DeliveryDate = dto.DeliveryDate;
-            po.QuotationUrl = dto.QuotationUrl;
+            po.QuotationNo = dto.QuotationNo;
             po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls ?? new List<string>());
             po.GstType = dto.GstType.HasValue ? (int)dto.GstType.Value : null;
             po.GstPercent = dto.GstPercent;
             po.Remarks = dto.Remarks;
+            po.PurchaseType = dto.PurchaseType;
+            po.ApprovedBy = dto.ApprovedBy;
             po.UpdatedAt = DateTime.Now;
 
             _context.PurchaseOrderItems.RemoveRange(po.Items);
-            foreach (var piItemId in itemIds)
-                po.Items.Add(new PurchaseOrderItem { PurchaseIndentItemId = piItemId });
+            foreach (var it in items)
+                po.Items.Add(new PurchaseOrderItem
+                {
+                    PurchaseIndentItemId = it.PurchaseIndentItemId,
+                    Rate = it.Rate
+                });
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });

@@ -71,6 +71,9 @@ namespace net_backend.Controllers
                         MainPartName = i.Item!.MainPartName,
                         CurrentName = i.Item.CurrentName,
                         ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
+                        DrawingNo = i.Item.DrawingNo,
+                        RevisionNo = i.Item.RevisionNo,
+                        MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
                         PoNo = _context.PurchaseOrderItems
                             .Where(poi => poi.PurchaseIndentItemId == i.Id)
                             .Select(poi => poi.PurchaseOrder!.PoNo)
@@ -272,6 +275,9 @@ namespace net_backend.Controllers
                     MainPartName = i.Item!.MainPartName,
                     CurrentName = i.Item.CurrentName,
                     ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
+                    DrawingNo = i.Item.DrawingNo,
+                    RevisionNo = i.Item.RevisionNo,
+                    MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
                     PoNo = _context.PurchaseOrderItems
                         .Where(poi => poi.PurchaseIndentItemId == i.Id)
                         .Select(poi => poi.PurchaseOrder!.PoNo)
@@ -298,7 +304,11 @@ namespace net_backend.Controllers
                     PurchaseIndentId = pii.PurchaseIndentId,
                     ItemId = pii.ItemId,
                     MainPartName = pii.Item!.MainPartName,
-                    CurrentName = pii.Item.CurrentName
+                    CurrentName = pii.Item.CurrentName,
+                    ItemTypeName = pii.Item.ItemType != null ? pii.Item.ItemType.Name : "N/A",
+                    DrawingNo = pii.Item.DrawingNo,
+                    RevisionNo = pii.Item.RevisionNo,
+                    MaterialName = pii.Item.Material != null ? pii.Item.Material.Name : "N/A"
                 })
                 .ToListAsync();
 

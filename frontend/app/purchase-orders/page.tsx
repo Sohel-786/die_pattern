@@ -2,9 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Plus, Search, ShoppingCart, CheckCircle, Clock,
-    XCircle, Filter, User, Calendar, MoreVertical,
-    Eye, Building2, IndianRupee, FileDown, Printer, Send, Edit2
+    Plus, Search, ShoppingCart, CheckCircle,
+    Eye, Building2, IndianRupee, Printer, Send, Edit2
 } from "lucide-react";
 import api from "@/lib/api";
 import { PO, PoStatus } from "@/types";
@@ -18,23 +17,15 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import Link from "next/link";
 
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
-import { PurchaseOrderEditDialog } from "@/components/purchase-orders/purchase-order-edit-dialog";
+import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
 
 export default function PurchaseOrdersPage() {
@@ -44,7 +35,8 @@ export default function PurchaseOrdersPage() {
     const [previewPOId, setPreviewPOId] = useState<number | null>(null);
     const [approveTarget, setApproveTarget] = useState<PO | null>(null);
     const [submitTarget, setSubmitTarget] = useState<PO | null>(null);
-    const [editPOId, setEditPOId] = useState<number | null>(null);
+    const [poDialogOpen, setPoDialogOpen] = useState(false);
+    const [editPO, setEditPO] = useState<PO | null>(null);
 
     if (permissions && !permissions.viewPO) {
         return (
@@ -118,12 +110,13 @@ export default function PurchaseOrdersPage() {
                     <p className="text-secondary-500 text-sm">Official procurement and repair work orders</p>
                 </div>
                 {permissions?.createPO && (
-                    <Link href="/purchase-orders/create">
-                        <Button className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Issue New PO
-                        </Button>
-                    </Link>
+                    <Button
+                        onClick={() => { setEditPO(null); setPoDialogOpen(true); }}
+                        className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Issue New PO
+                    </Button>
                 )}
             </div>
 
@@ -209,7 +202,7 @@ export default function PurchaseOrdersPage() {
                                             <div className="flex flex-col">
                                                 <span className="text-[11px] font-bold text-secondary-900 flex items-center">
                                                     <IndianRupee className="w-3 h-3 mr-0.5" />
-                                                    {po.rate?.toLocaleString() || '0.00'}
+                                                    {(po.totalAmount ?? po.subtotal ?? 0).toLocaleString()}
                                                 </span>
                                                 <span className="text-[10px] text-secondary-400 font-bold uppercase">
                                                     {po.deliveryDate ? `Due: ${format(new Date(po.deliveryDate), 'dd MMM')}` : 'TBD'}
@@ -245,7 +238,7 @@ export default function PurchaseOrdersPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => setEditPOId(po.id)}
+                                                        onClick={() => { setEditPO(po); setPoDialogOpen(true); }}
                                                         className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
                                                         title="Edit PO"
                                                     >
@@ -294,11 +287,12 @@ export default function PurchaseOrdersPage() {
                 <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
             )}
 
-            {editPOId != null && (
-                <PurchaseOrderEditDialog
-                    poId={editPOId}
-                    onClose={() => setEditPOId(null)}
-                    onSaved={() => { queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }); setEditPOId(null); }}
+            {poDialogOpen && (
+                <PurchaseOrderDialog
+                    open={poDialogOpen}
+                    onOpenChange={setPoDialogOpen}
+                    po={editPO ?? undefined}
+                    onPreviewRequest={(poId) => setPreviewPOId(poId)}
                 />
             )}
 

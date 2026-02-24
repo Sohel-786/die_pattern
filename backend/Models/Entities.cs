@@ -212,13 +212,13 @@ namespace net_backend.Models
         [Required]
         public string PoNo { get; set; } = string.Empty;
         public int VendorId { get; set; }
-        public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public string? QuotationUrl { get; set; }
+        public string? QuotationNo { get; set; }
         /// <summary>JSON array of quotation file URLs for multiple uploads.</summary>
         public string? QuotationUrlsJson { get; set; }
         public int? GstType { get; set; } // 0=CGST_SGST, 1=IGST, 2=UGST
         public decimal? GstPercent { get; set; }
+        public string? PurchaseType { get; set; } = "Regular"; // Regular, Urgent, Critical
         public PoStatus Status { get; set; } = PoStatus.Draft;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
@@ -242,6 +242,8 @@ namespace net_backend.Models
         public int Id { get; set; }
         public int PurchaseOrderId { get; set; }
         public int PurchaseIndentItemId { get; set; }
+        /// <summary>Per-item rate in INR. Each die/pattern has its own rate (one unit per item).</summary>
+        public decimal Rate { get; set; }
 
         [ForeignKey("PurchaseOrderId")]
         public virtual PurchaseOrder? PurchaseOrder { get; set; }
@@ -354,6 +356,7 @@ namespace net_backend.Models
         public virtual Inward? Inward { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
+        public virtual ICollection<InwardLine> Lines { get; set; } = new List<InwardLine>();
     }
 
     [Table("quality_controls")]

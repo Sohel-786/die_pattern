@@ -28,6 +28,8 @@ export enum PoStatus {
   Draft = 'Draft',
 }
 
+export type PurchaseType = 'Regular' | 'Urgent' | 'Critical';
+
 export enum GstType {
   CGST_SGST = 'CGST_SGST',
   IGST = 'IGST',
@@ -250,6 +252,9 @@ export interface PurchaseIndentItem {
   mainPartName: string;
   currentName: string;
   itemTypeName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  materialName?: string;
   isInPO?: boolean;
   piNo?: string;
 }
@@ -259,16 +264,17 @@ export interface PO {
   poNo: string;
   vendorId: number;
   vendorName?: string;
-  rate?: number;
   deliveryDate?: string;
-  quotationUrl?: string;
+  quotationNo?: string;
   quotationUrls?: string[];
   gstType?: GstType | null;
   gstPercent?: number | null;
+  subtotal?: number;
   gstAmount?: number | null;
-  totalAmount?: number | null;
+  totalAmount?: number;
   status: PoStatus;
   remarks?: string;
+  purchaseType?: PurchaseType;
   creatorName?: string;
   approvedBy?: number | null;
   approverName?: string | null;
@@ -283,7 +289,18 @@ export interface POItem {
   itemId: number;
   mainPartName: string;
   currentName: string;
+  itemTypeName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  materialName?: string;
   piNo: string;
+  rate: number;
+  lineAmount?: number; // same as rate (one unit per die/pattern)
+}
+
+export interface CreatePOItem {
+  purchaseIndentItemId: number;
+  rate: number;
 }
 
 export interface Movement {

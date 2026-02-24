@@ -13,7 +13,7 @@ interface DialogProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
   /** Optional class for the overlay (e.g. z-[1100] for nested dialogs to appear above baseline z-1000) */
   overlayClassName?: string;
   /** When false, content area uses overflow-hidden and flex column; use for forms with internal scroll + sticky footer */
@@ -183,6 +183,7 @@ export function Dialog({
     xl: "max-w-4xl",
     "2xl": "max-w-6xl",
     "3xl": "max-w-7xl",
+    full: "w-[90vw] h-[90vh] max-w-none max-h-[90vh]",
   };
 
   const dialogContent = (

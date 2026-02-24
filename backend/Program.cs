@@ -97,20 +97,40 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed Database
+// Apply pending migrations, schema fix (for PO item rates), and seed database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
+        // Apply any pending migrations on startup (creates DB if missing, runs new migrations)
+        context.Database.Migrate();
+
+        // Ensure purchase_order_items has Rate (fallback if migration did not run)
+        EnsurePOItemSchema(context);
+
         DbInitializer.Initialize(context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        throw;
     }
 }
 
 app.Run();
+
+static void EnsurePOItemSchema(ApplicationDbContext context)
+{
+    try
+    {
+        // Add Rate to purchase_order_items if missing (migrations handle moving PO-level rate to items and dropping Rate from purchase_orders)
+        context.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('purchase_order_items') AND name = 'Rate')
+                ALTER TABLE purchase_order_items ADD Rate DECIMAL(18,2) NOT NULL DEFAULT 0;
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct, or table may not exist yet */ }
+}

@@ -63,47 +63,46 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
               <p className="text-sm font-semibold text-secondary-600 mt-1">{po.poNo}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-6 text-sm">
-              <div className="flex">
-                <span className="font-bold text-secondary-500 w-28">PO No.</span>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 text-sm">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Order No</span>
                 <span className="font-bold text-secondary-900">{po.poNo}</span>
               </div>
-              <div className="flex">
-                <span className="font-bold text-secondary-500 w-28">Date</span>
-                <span className="font-medium text-secondary-800">{format(new Date(po.createdAt), "dd MMM yyyy")}</span>
+              <div className="flex flex-col gap-1 text-right">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Date of Issue</span>
+                <span className="font-bold text-secondary-900">{format(new Date(po.createdAt), "dd MMM yyyy")}</span>
               </div>
-              <div className="flex">
-                <span className="font-bold text-secondary-500 w-28">Vendor</span>
-                <span className="font-medium text-secondary-800">{po.vendorName ?? "—"}</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Work Priority</span>
+                <span className="font-bold text-primary-600 uppercase italic">{po.purchaseType || "Regular"}</span>
               </div>
-              <div className="flex">
-                <span className="font-bold text-secondary-500 w-28">Delivery</span>
-                <span className="font-medium text-secondary-800">{po.deliveryDate ? format(new Date(po.deliveryDate), "dd MMM yyyy") : "—"}</span>
+              <div className="flex flex-col gap-1 text-right">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Expected Delivery</span>
+                <span className="font-bold text-secondary-900">{po.deliveryDate ? format(new Date(po.deliveryDate), "dd MMM yyyy") : "TBD"}</span>
               </div>
-              <div className="flex">
-                <span className="font-bold text-secondary-500 w-28">Rate</span>
-                <span className="font-medium text-secondary-800">{po.rate != null ? `₹ ${Number(po.rate).toLocaleString()}` : "—"}</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Supplier / Vendor</span>
+                <span className="font-bold text-secondary-900">{po.vendorName ?? "—"}</span>
               </div>
-              {po.gstType != null && (
-                <>
-                  <div className="flex">
-                    <span className="font-bold text-secondary-500 w-28">GST type</span>
-                    <span className="font-medium text-secondary-800">{po.gstType === GstType.CGST_SGST ? "CGST + SGST" : po.gstType === GstType.IGST ? "IGST" : po.gstType === GstType.UGST ? "UGST" : po.gstType}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="font-bold text-secondary-500 w-28">GST %</span>
-                    <span className="font-medium text-secondary-800">{po.gstPercent ?? "—"}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="font-bold text-secondary-500 w-28">GST amount</span>
-                    <span className="font-medium text-secondary-800">{po.gstAmount != null ? `₹ ${Number(po.gstAmount).toLocaleString()}` : "—"}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="font-bold text-secondary-500 w-28">Total</span>
-                    <span className="font-bold text-secondary-900">{po.totalAmount != null ? `₹ ${Number(po.totalAmount).toLocaleString()}` : "—"}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex flex-col gap-1 text-right">
+                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Quotation Ref No</span>
+                <span className="font-bold text-secondary-900 uppercase">{po.quotationNo || "N/A"}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6 mb-8 py-4 border-y border-secondary-100 italic">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">Taxable Value</span>
+                <span className="text-lg font-bold text-secondary-900 tracking-tight">₹ {po.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex flex-col text-center">
+                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">GST ({po.gstPercent}%)</span>
+                <span className="text-lg font-bold text-secondary-900 tracking-tight">₹ {po.gstAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">PO Grand Total</span>
+                <span className="text-xl font-black text-primary-700 tracking-tighter">₹ {po.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
             </div>
             {(po.quotationUrls?.length ?? 0) > 0 && (
               <div className="mb-6 p-4 bg-secondary-50 rounded-lg border border-secondary-100">
@@ -123,25 +122,45 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
               </div>
             )}
 
-            <div className="border border-secondary-200 rounded-lg overflow-hidden mb-6">
-              <table className="w-full text-sm">
+            <div className="border border-secondary-200 rounded-2xl overflow-hidden mb-8 shadow-sm">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-secondary-100 border-b border-secondary-200">
-                    <th className="text-left py-3 px-4 font-black text-secondary-700 uppercase w-12">#</th>
-                    <th className="text-left py-3 px-4 font-black text-secondary-700 uppercase">Main Part Name</th>
-                    <th className="text-left py-3 px-4 font-black text-secondary-700 uppercase">Current Name</th>
-                    <th className="text-left py-3 px-4 font-black text-secondary-700 uppercase">PI Ref</th>
+                  <tr className="bg-secondary-50 border-b border-secondary-200">
+                    <th className="text-left py-4 px-6 font-black text-secondary-500 uppercase tracking-widest w-12">#</th>
+                    <th className="text-left py-4 px-6 font-black text-secondary-500 uppercase tracking-widest">Nomenclature & Technical Specs</th>
+                    <th className="text-right py-4 px-4 font-black text-secondary-500 uppercase tracking-widest w-28">Rate (₹)</th>
+                    <th className="text-right py-4 px-6 font-black text-secondary-500 uppercase tracking-widest w-32">Amount (₹)</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {po.items?.map((item: { id: number; mainPartName?: string; currentName?: string; piNo?: string }, idx: number) => (
-                    <tr key={item.id} className="border-b border-secondary-100 last:border-0">
-                      <td className="py-2.5 px-4 font-medium text-secondary-600">{idx + 1}</td>
-                      <td className="py-2.5 px-4 font-semibold text-secondary-900">{item.mainPartName ?? "—"}</td>
-                      <td className="py-2.5 px-4 font-medium text-secondary-800">{item.currentName ?? "—"}</td>
-                      <td className="py-2.5 px-4 text-secondary-600">{item.piNo ?? "—"}</td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-secondary-100">
+                  {po.items?.map((item: any, idx: number) => {
+                    const rate = item.rate ?? 0;
+                    return (
+                      <tr key={item.id} className="hover:bg-secondary-50/50 transition-colors">
+                        <td className="py-4 px-6 font-bold text-secondary-400">{idx + 1}</td>
+                        <td className="py-4 px-6">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-black text-secondary-900 uppercase">{item.currentName ?? "—"}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-tight">{item.mainPartName ?? "—"}</span>
+                              <span className="text-[10px] text-primary-600 font-black italic uppercase">{item.materialName}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold text-secondary-400">
+                              <span className="uppercase">DWG: {item.drawingNo || "N/A"}</span>
+                              <span>•</span>
+                              <span className="uppercase">REV: {item.revisionNo || "0"}</span>
+                              <span>•</span>
+                              <span className="uppercase">PI Reference: {item.piNo || "—"}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right font-bold text-secondary-600 tabular-nums">{rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td className="py-4 px-6 text-right font-black text-secondary-900 tabular-nums">
+                          {rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -172,7 +191,8 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
         )}
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           body * { visibility: hidden !important; }
           #po-document, #po-document * { visibility: visible !important; }

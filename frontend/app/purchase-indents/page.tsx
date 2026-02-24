@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
 import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
+import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
@@ -57,6 +58,8 @@ export default function PurchaseIndentsPage() {
     const [approvalTarget, setApprovalTarget] = useState<{ pi: PurchaseIndent, action: 'approve' | 'reject' } | null>(null);
     const [submitTarget, setSubmitTarget] = useState<PurchaseIndent | null>(null);
     const [previewPIId, setPreviewPIId] = useState<number | null>(null);
+    const [poDialogOpen, setPoDialogOpen] = useState(false);
+    const [preSelectedPiItemIds, setPreSelectedPiItemIds] = useState<number[]>([]);
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const router = useRouter();
@@ -159,9 +162,11 @@ export default function PurchaseIndentsPage() {
 
     const handleCreatePO = () => {
         if (selectedPIIds.length === 0) return;
-        // Redirect to PO creation with selected PI IDs
-        // Assuming PO creation page can handle multiple PI IDs via query param or state
-        router.push(`/purchase-orders/create?action=create&piIds=${selectedPIIds.join(',')}`);
+        const piItemIds = indents
+            .filter((pi) => selectedPIIds.includes(pi.id) && pi.status === PurchaseIndentStatus.Approved)
+            .flatMap((pi) => pi.items.filter((i) => !i.isInPO).map((i) => i.id));
+        setPreSelectedPiItemIds(piItemIds);
+        setPoDialogOpen(true);
     };
 
     const toggleSelection = (id: number, status: PurchaseIndentStatus) => {
@@ -594,6 +599,18 @@ export default function PurchaseIndentsPage() {
                 <PurchaseIndentPreviewModal
                     piId={previewPIId}
                     onClose={() => setPreviewPIId(null)}
+                />
+            )}
+
+            {/* PO Create from selected PIs */}
+            {poDialogOpen && (
+                <PurchaseOrderDialog
+                    open={poDialogOpen}
+                    onOpenChange={(open) => {
+                        setPoDialogOpen(open);
+                        if (!open) setPreSelectedPiItemIds([]);
+                    }}
+                    preSelectedPiItemIds={preSelectedPiItemIds}
                 />
             )}
         </div>
