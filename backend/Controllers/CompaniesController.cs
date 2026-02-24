@@ -166,6 +166,42 @@ namespace net_backend.Controllers
             return validation;
         }
 
+        [HttpPost("upload-logo")]
+        public async Task<ActionResult<ApiResponse<object>>> UploadLogo([FromForm] IFormFile? file)
+        {
+            if (!await HasPermission("ManageCompany")) return Forbidden();
+
+            var uploadFile = file ?? Request.Form.Files?.FirstOrDefault(f => f.Name == "file" || f.Name == "logo" || f.Length > 0);
+            if (uploadFile == null || uploadFile.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded." });
+
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Only image files (jpg, png, gif, webp) are allowed." });
+
+            const long maxBytes = 5 * 1024 * 1024; // 5 MB
+            if (uploadFile.Length > maxBytes)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 5 MB." });
+
+            try
+            {
+                var root = Directory.GetCurrentDirectory();
+                var dir = Path.Combine(root, "wwwroot", "storage", "company-logos");
+                Directory.CreateDirectory(dir);
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.Combine(dir, fileName);
+                await using (var stream = new FileStream(filePath, FileMode.Create))
+                    await uploadFile.CopyToAsync(stream);
+                var url = $"/storage/company-logos/{fileName}";
+                return Ok(new ApiResponse<object> { Data = new { logoUrl = url }, Message = "Logo uploaded." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = ex.Message });
+            }
+        }
+
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
         {

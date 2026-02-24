@@ -9,13 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect } from "react";
-import { Save, X, Building2, MapPin, FileDigit, Phone, Mail } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Save, X, Building2, MapPin, FileDigit, Phone, Mail, ImagePlus, Trash2 } from "lucide-react";
+import api from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const schema = z.object({
     name: z.string().min(1, "Company name is required"),
     address: z.string().min(1, "Address is required"),
     gstNo: z.string().min(1, "GST number is required"),
+    logoUrl: z.string().optional(),
     pan: z.string().optional(),
     state: z.string().optional(),
     city: z.string().optional(),
@@ -49,6 +52,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
             name: "",
             address: "",
             gstNo: "",
+            logoUrl: "",
             pan: "",
             state: "",
             city: "",
@@ -60,6 +64,12 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
     });
 
     const isActive = watch("isActive");
+    const logoUrl = watch("logoUrl");
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [logoUploading, setLogoUploading] = useState(false);
+    const [dragActive, setDragActive] = useState(false);
+
+    const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") : "";
 
     useEffect(() => {
         if (item && isOpen) {
@@ -67,6 +77,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 name: item.name,
                 address: item.address ?? "",
                 gstNo: item.gstNo ?? "",
+                logoUrl: item.logoUrl ?? "",
                 pan: item.pan ?? "",
                 state: item.state ?? "",
                 city: item.city ?? "",
@@ -80,6 +91,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 name: "",
                 address: "",
                 gstNo: "",
+                logoUrl: "",
                 pan: "",
                 state: "",
                 city: "",
@@ -91,17 +103,56 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         }
     }, [item, reset, isOpen]);
 
+    const uploadLogo = async (file: File) => {
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select an image file (jpg, png, gif, webp).");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be under 5 MB.");
+            return;
+        }
+        setLogoUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await api.post("/companies/upload-logo", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            const data = res.data as Record<string, unknown>;
+            const url = (data?.data as Record<string, unknown> | undefined)?.logoUrl as string | undefined;
+            if (url) {
+                setValue("logoUrl", url);
+                toast.success("Logo uploaded.");
+            } else toast.error(res.data?.message || "Upload failed.");
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Logo upload failed.");
+        } finally {
+            setLogoUploading(false);
+        }
+    };
+
+    const handleLogoDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragActive(false);
+        const file = e.dataTransfer.files?.[0];
+        if (file) uploadLogo(file);
+    };
+
+    const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) uploadLogo(file);
+        e.target.value = "";
+    };
+
+    const dialogTitle = item ? "Update Company Information" : "Register New Company";
+
     return (
-        <Dialog
-            isOpen={isOpen}
-            onClose={onClose}
-            title={item ? "Update Company Information" : "Register New Company"}
-            size="2xl"
-        >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 min-w-0 flex flex-col">
-                <div className="space-y-5 min-w-0 pb-2">
-                        <div className="space-y-2 min-w-0">
-                        <Label htmlFor="company-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+        <Dialog isOpen={isOpen} onClose={onClose} title={dialogTitle} size="2xl">
+            <form onSubmit={handleSubmit(onSubmit)} className="min-w-0 flex flex-col max-h-[85vh] overflow-hidden space-y-6 px-1">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 min-w-0 flex-shrink-0">
+                    <div className="sm:col-span-8 space-y-1.5 min-w-0">
+                        <Label htmlFor="company-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">
                             Legal Company Name <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
@@ -109,149 +160,120 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                             <Input
                                 id="company-name"
                                 {...register("name")}
-                                className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
                                 placeholder="e.g. Aira Euro Automation Pvt Ltd"
                             />
                         </div>
-                        {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
+                        {errors.name && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.name.message}</p>}
                     </div>
-
-                    <div className="space-y-2 min-w-0 pb-1">
-                        <Label htmlFor="company-address" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Address <span className="text-red-500">*</span>
-                        </Label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-secondary-400" />
-                            <Textarea
-                                id="company-address"
-                                {...register("address")}
-                                rows={3}
-                                className="pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium resize-none min-h-[80px]"
-                                placeholder="Plot no., Estate, Road, Area, City, Pincode"
-                            />
+                    <div className="sm:col-span-4 space-y-1.5 min-w-0">
+                        <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Logo</Label>
+                        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleLogoSelect} />
+                        <div
+                            onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                            onDragLeave={() => setDragActive(false)}
+                            onDrop={handleLogoDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${
+                                dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
+                            } ${logoUploading ? "pointer-events-none opacity-70" : ""}`}
+                        >
+                            {logoUrl ? (
+                                <>
+                                    <img src={`${apiBase}${logoUrl}`} alt="Logo" className="max-h-12 max-w-[90%] w-auto object-contain" />
+                                    {!logoUploading && (
+                                        <Button type="button" variant="ghost" size="sm" className="absolute top-0.5 right-0.5 h-6 w-6 p-0 rounded-full bg-white/95 shadow border border-secondary-200 text-rose-500 hover:bg-rose-50" onClick={(e) => { e.stopPropagation(); setValue("logoUrl", ""); }}>
+                                            <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center gap-0.5 text-secondary-500">
+                                    {logoUploading ? <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /> : <ImagePlus className="w-6 h-6 text-secondary-400" />}
+                                    <span className="text-[10px] font-medium leading-tight">{logoUploading ? "Uploading..." : "Click or drop"}</span>
+                                </div>
+                            )}
                         </div>
-                        {errors.address && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.address.message}</p>}
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 pt-1">
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                GST Number <span className="text-red-500">*</span>
-                            </Label>
+                <div className="space-y-1.5 min-w-0 flex-shrink-0">
+                    <Label htmlFor="company-address" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Address <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-secondary-400" />
+                        <Textarea
+                            id="company-address"
+                            {...register("address")}
+                            rows={2}
+                            className="pl-10 py-2 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium resize-none min-h-[52px]"
+                            placeholder="Plot no., Estate, Road, Area, City, Pincode"
+                        />
+                    </div>
+                    {errors.address && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.address.message}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0 pb-1">
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Number <span className="text-red-500">*</span></Label>
                             <div className="relative">
                                 <FileDigit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input
-                                    id="company-gst"
-                                    {...register("gstNo")}
-                                    className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                    placeholder="e.g. 24AAFCA0525L1ZY"
-                                />
+                                <Input id="company-gst" {...register("gstNo")} className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 24AAFCA0525L1ZY" />
                             </div>
-                            {errors.gstNo && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.gstNo.message}</p>}
+                            {errors.gstNo && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.gstNo.message}</p>}
                         </div>
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-pan" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                PAN (optional)
-                            </Label>
-                            <Input
-                                id="company-pan"
-                                {...register("pan")}
-                                className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. AAFCA1234A"
-                            />
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-pan" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">PAN (optional)</Label>
+                            <Input id="company-pan" {...register("pan")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. AAFCA1234A" />
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-state" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                State
-                            </Label>
-                            <Input
-                                id="company-state"
-                                {...register("state")}
-                                className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. Gujarat"
-                            />
+                    <div className="grid grid-cols-3 gap-4 min-w-0 flex-shrink-0 pt-2">
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-state" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">State</Label>
+                            <Input id="company-state" {...register("state")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Gujarat" />
                         </div>
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-city" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                City
-                            </Label>
-                            <Input
-                                id="company-city"
-                                {...register("city")}
-                                className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. Ahmedabad"
-                            />
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-city" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">City</Label>
+                            <Input id="company-city" {...register("city")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Ahmedabad" />
                         </div>
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Pincode
-                            </Label>
-                            <Input
-                                id="company-pincode"
-                                {...register("pincode")}
-                                className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="e.g. 382405"
-                            />
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Pincode</Label>
+                            <Input id="company-pincode" {...register("pincode")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 382405" />
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-phone" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Phone
-                            </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0">
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-phone" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Phone</Label>
                             <div className="relative">
                                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input
-                                    id="company-phone"
-                                    {...register("phone")}
-                                    type="tel"
-                                    className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                    placeholder="e.g. +91 98765 43210"
-                                />
+                                <Input id="company-phone" {...register("phone")} type="tel" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. +91 98765 43210" />
                             </div>
                         </div>
-                        <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-email" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Email
-                            </Label>
+                        <div className="space-y-1.5 min-w-0">
+                            <Label htmlFor="company-email" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Email</Label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input
-                                    id="company-email"
-                                    {...register("email")}
-                                    type="email"
-                                    className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                    placeholder="e.g. info@company.com"
-                                />
+                                <Input id="company-email" {...register("email")} type="email" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. info@company.com" />
                             </div>
-                            {errors.email && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.email.message}</p>}
+                            {errors.email && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.email.message}</p>}
                         </div>
                     </div>
 
                     {!!item && (
-                        <div className="flex items-center py-2">
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="flex items-center flex-shrink-0 pt-1">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" className="sr-only" checked={isActive} onChange={(e) => setValue("isActive", e.target.checked)} />
                                 <div className="relative">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only"
-                                        checked={isActive}
-                                        onChange={(e) => setValue("isActive", e.target.checked)}
-                                    />
-                                    <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}></div>
-                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? "translate-x-5" : "translate-x-0"} shadow-sm`}></div>
+                                    <div className={`w-9 h-4 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}></div>
+                                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? "translate-x-5" : "translate-x-0"}`}></div>
                                 </div>
-                                <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                                <span className="text-xs font-bold text-secondary-700 select-none">Active</span>
                             </label>
                         </div>
                     )}
-                </div>
 
-                <div className="flex gap-3 pt-4 border-t border-secondary-100">
+                <div className="flex gap-3 pt-4 mt-2 border-t border-secondary-100 flex-shrink-0">
                     <Button
                         type="submit"
                         disabled={isLoading}
