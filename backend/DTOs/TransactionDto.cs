@@ -27,6 +27,7 @@ namespace net_backend.DTOs
     {
         public int Id { get; set; }
         public int PurchaseIndentId { get; set; }
+        public string? PiNo { get; set; }
         public int ItemId { get; set; }
         public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }

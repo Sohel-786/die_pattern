@@ -67,6 +67,7 @@ namespace net_backend.Controllers
                     {
                         Id = i.Id,
                         PurchaseIndentId = i.PurchaseIndentId,
+                        PiNo = p.PiNo,
                         ItemId = i.ItemId,
                         MainPartName = i.Item!.MainPartName,
                         CurrentName = i.Item.CurrentName,
@@ -302,6 +303,7 @@ namespace net_backend.Controllers
                 {
                     Id = pii.Id,
                     PurchaseIndentId = pii.PurchaseIndentId,
+                    PiNo = pii.PurchaseIndent != null ? pii.PurchaseIndent.PiNo : null,
                     ItemId = pii.ItemId,
                     MainPartName = pii.Item!.MainPartName,
                     CurrentName = pii.Item.CurrentName,

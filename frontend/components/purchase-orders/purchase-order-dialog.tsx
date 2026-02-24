@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Trash2, Save, Loader2, Calendar, Upload,
-  Plus, ShieldCheck,
+  Save, Loader2, Calendar, Upload, Plus, ShieldCheck, Eye, X,
 } from "lucide-react";
 import api from "@/lib/api";
 import {
@@ -23,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PiSelectionDialog } from "./pi-selection-dialog";
+import { QuotationViewerModal } from "./quotation-viewer-modal";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,8 @@ export interface POGridItem {
   rate: number;
   gstPercent: number;
   sourcePiId?: number;
+  /** If false, item is not included in this PO (stays in PI, excluded from totals and payload) */
+  included?: boolean;
   drawingNo?: string;
   revisionNo?: string;
   materialName?: string;
@@ -69,7 +71,8 @@ export function PurchaseOrderDialog({
   const [purchaseType, setPurchaseType] = useState<PurchaseType>("Regular");
   const [gstType, setGstType] = useState<GstType | "">("");
   const [uploading, setUploading] = useState(false);
-  const [itemsDisplayMap, setItemsDisplayMap] = useState<Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string }>>({});
+  const [viewQuotationUrl, setViewQuotationUrl] = useState<string | null>(null);
+  const [itemsDisplayMap, setItemsDisplayMap] = useState<Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }>>({});
 
   const { data: poData, isLoading: loadingPO } = useQuery<PO>({
     queryKey: ["purchase-order", po?.id],
@@ -142,10 +145,11 @@ export function PurchaseOrderDialog({
         rate: i.rate ?? 0,
         gstPercent: poData.gstPercent || 18,
         sourcePiId: 0,
+        included: true,
       }));
       setItems(mappedItems);
 
-      const dMap: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string }> = {};
+      const dMap: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }> = {};
       poData.items.forEach((i) => {
         dMap[i.purchaseIndentItemId] = {
           currentName: i.currentName ?? "",
@@ -154,6 +158,7 @@ export function PurchaseOrderDialog({
           revisionNo: i.revisionNo,
           materialName: i.materialName,
           itemTypeName: i.itemTypeName,
+          piNo: i.piNo,
         };
       });
       setItemsDisplayMap(dMap);
@@ -180,7 +185,7 @@ export function PurchaseOrderDialog({
     const ids = preSelectedPiItemIds;
     const preselected = piItemsAvailable
       .filter((p) => ids.includes(p.id))
-      .map((p) => ({ purchaseIndentItemId: p.id, rate: 0, gstPercent: 18 } as POGridItem));
+      .map((p) => ({ purchaseIndentItemId: p.id, rate: 0, gstPercent: 18, included: true } as POGridItem));
     if (preselected.length === 0) return;
     setItems((prev) => (prev.length === 0 ? preselected : prev));
     setItemsDisplayMap((prev) => {
@@ -193,6 +198,7 @@ export function PurchaseOrderDialog({
           revisionNo: p.revisionNo,
           materialName: p.materialName,
           itemTypeName: p.itemTypeName,
+          piNo: p.piNo,
         };
       });
       return next;
@@ -222,19 +228,30 @@ export function PurchaseOrderDialog({
 
   const mutation = isEditing ? updateMutation : createMutation;
 
+  const ALLOWED_QUOTATION_EXT = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"];
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length || uploading) return;
+    const valid: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const ext = "." + (files[i].name.split(".").pop() || "").toLowerCase();
+      if (ALLOWED_QUOTATION_EXT.includes(ext)) valid.push(files[i]);
+    }
+    if (valid.length === 0) {
+      toast.error("Only PDF and images (PNG, JPG, JPEG, GIF, WEBP) are allowed.");
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     try {
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < valid.length; i++) {
         const form = new FormData();
-        form.append("file", files[i], files[i].name);
+        form.append("file", valid[i], valid[i].name);
         const res = await api.post("/purchase-orders/upload-quotation", form);
         const url = res.data?.data?.url;
         if (url) setQuotationUrls((prev) => [...prev, url]);
       }
-      if (files.length > 0) toast.success("File(s) uploaded.");
+      if (valid.length > 0) toast.success("File(s) uploaded.");
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || "Upload failed");
     } finally {
@@ -243,13 +260,12 @@ export function PurchaseOrderDialog({
     }
   };
 
-  const removeItem = (purchaseIndentItemId: number) => {
-    setItems((prev) => prev.filter((i) => i.purchaseIndentItemId !== purchaseIndentItemId));
+  const removeQuotationFile = (index: number) => {
+    setQuotationUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const removePiAndItsItems = (piId: number) => {
-    setSelectedPiIds((prev) => prev.filter((id) => id !== piId));
-    setItems((prev) => prev.filter((i) => i.sourcePiId !== piId));
+  const toggleItemIncluded = (purchaseIndentItemId: number) => {
+    setItems((prev) => prev.map((i) => (i.purchaseIndentItemId === purchaseIndentItemId ? { ...i, included: !(i.included !== false) } : i)));
   };
 
   const updateItemRate = (purchaseIndentItemId: number, rate: number) => {
@@ -272,8 +288,9 @@ export function PurchaseOrderDialog({
         rate: 0,
         gstPercent: 18,
         sourcePiId: pi.id,
+        included: true,
       }));
-    const displayUpdates: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string }> = {};
+    const displayUpdates: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }> = {};
     (pi.items || []).forEach((it) => {
       displayUpdates[it.id] = {
         currentName: it.currentName ?? "",
@@ -282,6 +299,7 @@ export function PurchaseOrderDialog({
         revisionNo: it.revisionNo,
         materialName: it.materialName,
         itemTypeName: it.itemTypeName,
+        piNo: pi.piNo,
       };
     });
     setSelectedPiIds((prev) => (prev.includes(pi.id) ? prev : [...prev, pi.id]));
@@ -300,34 +318,55 @@ export function PurchaseOrderDialog({
     setIsPiSelectionOpen(false);
   };
 
-  const totalTaxable = items.reduce((sum, i) => sum + (i.rate ?? 0), 0);
-  const totalGst = items.reduce((sum, i) => sum + ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100, 0);
+  const includedItems = items.filter((i) => i.included !== false);
+  const totalTaxable = includedItems.reduce((sum, i) => sum + (i.rate ?? 0), 0);
+  const totalGst = includedItems.reduce((sum, i) => sum + ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100, 0);
   const finalAmount = totalTaxable + totalGst;
+
+  const isValid =
+    !!vendorId &&
+    quotationNo.trim() !== "" &&
+    quotationUrls.length >= 1 &&
+    deliveryDate.trim() !== "" &&
+    includedItems.length >= 1 &&
+    includedItems.some((i) => (i.rate ?? 0) > 0);
 
   const handleSubmit = () => {
     if (!vendorId) {
       toast.error("Please select Party Name");
       return;
     }
-    if (items.length === 0) {
-      toast.error("Add at least one item (use Add PI).");
+    if (quotationNo.trim() === "") {
+      toast.error("Quotation Number is required");
       return;
     }
-    const itemsWithRate = items.filter((i) => (i.rate ?? 0) > 0);
+    if (quotationUrls.length === 0) {
+      toast.error("At least one quotation file must be uploaded");
+      return;
+    }
+    if (deliveryDate.trim() === "") {
+      toast.error("Delivery Date is required");
+      return;
+    }
+    if (includedItems.length === 0) {
+      toast.error("At least one item must be included in the PO (check the box).");
+      return;
+    }
+    const itemsWithRate = includedItems.filter((i) => (i.rate ?? 0) > 0);
     if (itemsWithRate.length === 0) {
-      toast.error("Enter rate for at least one item");
+      toast.error("Enter rate for at least one included item");
       return;
     }
     const payload = {
       vendorId,
       deliveryDate: deliveryDate || null,
       remarks: remarks || undefined,
-      quotationNo: quotationNo || undefined,
+      quotationNo: quotationNo.trim() || undefined,
       quotationUrls: quotationUrls.length ? quotationUrls : undefined,
       purchaseType,
       gstType: gstType || undefined,
       gstPercent: gstPercent || undefined,
-      items: items.map((i) => ({ purchaseIndentItemId: i.purchaseIndentItemId, rate: i.rate ?? 0 })),
+      items: includedItems.map((i) => ({ purchaseIndentItemId: i.purchaseIndentItemId, rate: i.rate ?? 0 })),
     };
     mutation.mutate(payload);
   };
@@ -346,6 +385,7 @@ export function PurchaseOrderDialog({
           revisionNo: piItem.revisionNo,
           materialName: piItem.materialName,
           itemTypeName: piItem.itemTypeName,
+          piNo: piItem.piNo,
         }
       : { currentName: "—", mainPartName: "—" };
   };
@@ -410,7 +450,7 @@ export function PurchaseOrderDialog({
 
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-4">
-                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number</Label>
+                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number *</Label>
                   <Input
                     placeholder="Supplier quote ref"
                     value={quotationNo}
@@ -418,58 +458,68 @@ export function PurchaseOrderDialog({
                     className="h-9 mt-0.5 border-secondary-200 text-sm"
                   />
                 </div>
-                <div className="col-span-4">
-                  <Label className="text-xs font-semibold text-secondary-600">Quotation Upload</Label>
-                  <div className="mt-0.5 relative flex items-center justify-center h-9 px-4 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 cursor-pointer transition-colors">
-                    <Upload className="w-4 h-4 text-secondary-400 mr-2" />
-                    <span className="text-xs font-medium text-secondary-600">
-                      {uploading ? "Uploading..." : quotationUrls.length > 0 ? `${quotationUrls.length} file(s)` : "Drag & drop or click"}
-                    </span>
-                    <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileSelect} disabled={uploading} />
+                <div className="col-span-4 flex flex-col">
+                  <Label className="text-xs font-semibold text-secondary-600">Quotation Upload *</Label>
+                  <div className="mt-0.5 flex items-center gap-2 h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors">
+                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0 h-full">
+                      <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
+                      <span className="text-xs font-medium text-secondary-600 whitespace-nowrap">
+                        {uploading ? "Uploading..." : "PDF / Images"}
+                      </span>
+                      <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                    </label>
+                    {quotationUrls.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                        {quotationUrls.map((fileUrl, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 rounded-md bg-primary-100/80 text-primary-800 text-[11px] font-medium pl-2 pr-1 py-0.5 max-w-full"
+                          >
+                            <span className="truncate max-w-[80px]">{fileUrl.split("/").pop() || `File ${idx + 1}`}</span>
+                            <button type="button" onClick={() => setViewQuotationUrl(fileUrl)} className="p-0.5 rounded hover:bg-primary-200/80 shrink-0" title="View">
+                              <Eye className="w-3 h-3" />
+                            </button>
+                            <button type="button" onClick={() => removeQuotationFile(idx)} className="p-0.5 rounded hover:bg-rose-200/80 text-rose-600 shrink-0" title="Remove">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                  {quotationUrls.length === 0 && !uploading && <p className="text-[10px] text-secondary-500 mt-0.5">PDF or images only. At least one file required.</p>}
                 </div>
-                <div className="col-span-4 flex items-end gap-2">
-                  <Button type="button" onClick={() => setIsPiSelectionOpen(true)} className="h-9 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2">
+                <div className="col-span-4">
+                  <Label className="text-xs font-semibold text-secondary-600 invisible">Add PI</Label>
+                  <Button type="button" onClick={() => setIsPiSelectionOpen(true)} className="h-9 w-full sm:w-auto px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2 mt-0.5">
                     <Plus className="w-4 h-4" />
                     Add PI
                   </Button>
-                  {selectedPiIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {selectedPiIds.map((id) => (
-                        <span
-                          key={id}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-xs font-medium"
-                        >
-                          PI-{id}
-                          <button type="button" onClick={() => removePiAndItsItems(id)} className="hover:text-rose-600">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Items table: only this area scrolls */}
+              {/* Items table: only this area scrolls; horizontal scroll for long content */}
               <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden">
-                <div className="flex-1 min-h-0 overflow-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead className="sticky top-0 bg-secondary-50 border-b border-secondary-200 z-10">
+                <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
+                  <table className="w-full border-collapse text-sm min-w-[900px]">
+                    <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
                       <tr>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide">Name</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide w-24">Type</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide">Drawing No. / Rev</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide">Material</th>
-                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide w-20">GST %</th>
-                        <th className="text-right py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide w-28">Unit Rate (₹)</th>
-                        <th className="text-right py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide w-24">Tax</th>
-                        <th className="text-right py-2.5 px-3 font-semibold text-secondary-600 uppercase tracking-wide w-28">Total</th>
-                        <th className="w-10 px-2" />
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-10">Include</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PI No.</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Type</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Drawing No. / Rev</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Material</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">GST %</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[8rem]">Unit Rate (₹)</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Tax</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-secondary-100">
+                    <tbody className="divide-y divide-secondary-100 bg-white">
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="py-12 text-center text-secondary-500 text-sm">
+                          <td colSpan={10} className="py-12 text-center text-secondary-500 text-sm">
                             No items. Click &quot;Add PI&quot; to add approved purchase indents.
                           </td>
                         </tr>
@@ -478,22 +528,33 @@ export function PurchaseOrderDialog({
                           const display = getItemDisplay(i.purchaseIndentItemId);
                           const tax = ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100;
                           const total = (i.rate ?? 0) + tax;
+                          const included = i.included !== false;
                           return (
-                            <tr key={i.purchaseIndentItemId} className="hover:bg-primary-50/30 group">
+                            <tr key={i.purchaseIndentItemId} className={cn("hover:bg-primary-50/30", !included && "opacity-60 bg-secondary-50/50")}>
+                              <td className="py-2.5 px-3 align-middle">
+                                <input
+                                  type="checkbox"
+                                  checked={included}
+                                  onChange={() => toggleItemIncluded(i.purchaseIndentItemId)}
+                                  className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                                  title={included ? "Include in PO" : "Exclude from PO"}
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-secondary-700 font-medium whitespace-nowrap">{display.piNo ?? "—"}</td>
                               <td className="py-2.5 px-3">
-                                <div className="flex flex-col">
-                                  <span className="font-semibold text-secondary-900">{display.currentName}</span>
-                                  <span className="text-xs text-secondary-500">{display.mainPartName}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-semibold text-secondary-900 truncate">{display.currentName}</span>
+                                  <span className="text-xs text-secondary-500 truncate">{display.mainPartName}</span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-secondary-700">{display.itemTypeName ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-secondary-700 whitespace-nowrap">{display.itemTypeName ?? "—"}</td>
                               <td className="py-2.5 px-3">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-secondary-800">{display.drawingNo ?? "N/A"}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-medium text-secondary-800 truncate">{display.drawingNo ?? "N/A"}</span>
                                   <span className="text-xs text-secondary-500">R{display.revisionNo ?? "0"}</span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-secondary-700">{display.materialName ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-secondary-700 whitespace-nowrap">{display.materialName ?? "—"}</td>
                               <td className="py-2.5 px-3 text-center">
                                 <Input
                                   type="number"
@@ -502,22 +563,18 @@ export function PurchaseOrderDialog({
                                   className="h-8 w-16 text-center text-sm border-secondary-200 rounded"
                                 />
                               </td>
-                              <td className="py-2.5 px-3 text-right">
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap min-w-[100px]">
                                 <Input
                                   type="number"
+                                  inputMode="decimal"
                                   value={i.rate || ""}
                                   onChange={(e) => updateItemRate(i.purchaseIndentItemId, parseFloat(e.target.value) || 0)}
-                                  className="h-8 w-24 text-right text-sm border-secondary-200 rounded"
+                                  className="h-8 w-36 min-w-[8rem] text-center text-sm border-secondary-200 rounded mx-auto"
                                   placeholder="0"
                                 />
                               </td>
-                              <td className="py-2.5 px-3 text-right text-secondary-600 tabular-nums">₹ {tax.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-right font-semibold text-secondary-900 tabular-nums">₹ {total.toFixed(2)}</td>
-                              <td className="py-2.5 px-2">
-                                <button type="button" onClick={() => removeItem(i.purchaseIndentItemId)} className="p-1.5 text-secondary-400 hover:text-rose-600 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
+                              <td className="py-2.5 px-3 text-center text-secondary-600 tabular-nums whitespace-nowrap min-w-[100px]">₹ {tax.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-center font-semibold text-secondary-900 tabular-nums whitespace-nowrap min-w-[100px]">₹ {total.toFixed(2)}</td>
                             </tr>
                           );
                         })
@@ -544,7 +601,7 @@ export function PurchaseOrderDialog({
             <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-6">
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
-                  <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date</Label>
+                  <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date *</Label>
                   <Input
                     type="date"
                     value={deliveryDate}
@@ -571,7 +628,7 @@ export function PurchaseOrderDialog({
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={mutation.isPending || !vendorId || items.length === 0}
+                  disabled={mutation.isPending || !isValid}
                   className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
                 >
                   {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
@@ -590,6 +647,7 @@ export function PurchaseOrderDialog({
         selectedPiIds={selectedPiIds}
         onSelectPIs={handleSelectPIs}
       />
+      <QuotationViewerModal isOpen={!!viewQuotationUrl} onClose={() => setViewQuotationUrl(null)} url={viewQuotationUrl} />
     </Dialog>
   );
 }

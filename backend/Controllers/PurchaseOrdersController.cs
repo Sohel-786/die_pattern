@@ -81,6 +81,7 @@ namespace net_backend.Controllers
                 {
                     Id = pii.Id,
                     PurchaseIndentId = pii.PurchaseIndentId,
+                    PiNo = pii.PurchaseIndent != null ? pii.PurchaseIndent.PiNo : null,
                     ItemId = pii.ItemId,
                     MainPartName = pii.Item!.MainPartName,
                     CurrentName = pii.Item.CurrentName,
@@ -107,10 +108,10 @@ namespace net_backend.Controllers
             if (uploadFile.Length > maxBytes)
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
 
-            var allowed = new[] { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg" };
+            var allowed = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp" };
             var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
             if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
-                return BadRequest(new ApiResponse<object> { Success = false, Message = "Allowed types: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG." });
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Only PDF and image files (PNG, JPG, JPEG, GIF, WEBP) are allowed." });
 
             try
             {
