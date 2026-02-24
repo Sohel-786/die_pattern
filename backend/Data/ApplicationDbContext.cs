@@ -23,6 +23,9 @@ namespace net_backend.Data
         public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; } = default!;
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; } = default!;
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; } = default!;
+        public DbSet<JobWork> JobWorks { get; set; } = default!;
+        public DbSet<Inward> Inwards { get; set; } = default!;
+        public DbSet<InwardLine> InwardLines { get; set; } = default!;
         public DbSet<Movement> Movements { get; set; } = default!;
         public DbSet<QualityControl> QualityControls { get; set; } = default!;
         public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
@@ -46,6 +49,14 @@ namespace net_backend.Data
                 .HasIndex(p => p.PoNo)
                 .IsUnique();
 
+            modelBuilder.Entity<JobWork>()
+                .HasIndex(j => j.JobWorkNo)
+                .IsUnique();
+
+            modelBuilder.Entity<Inward>()
+                .HasIndex(i => i.InwardNo)
+                .IsUnique();
+
             modelBuilder.Entity<PurchaseOrder>()
                 .Property(p => p.Rate)
                 .HasColumnType("decimal(18,2)");
@@ -55,6 +66,12 @@ namespace net_backend.Data
                 .HasOne(l => l.Company)
                 .WithMany(c => c.Locations)
                 .HasForeignKey(l => l.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseIndent>()
+                .HasOne(pi => pi.Location)
+                .WithMany()
+                .HasForeignKey(pi => pi.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Item>()
@@ -69,6 +86,10 @@ namespace net_backend.Data
                 .HasForeignKey(pii => pii.PurchaseIndentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<PurchaseIndentItem>()
+                .HasIndex(pii => new { pii.PurchaseIndentId, pii.ItemId })
+                .IsUnique();
+
             modelBuilder.Entity<PurchaseOrderItem>()
                 .HasOne(poi => poi.PurchaseOrder)
                 .WithMany(po => po.Items)
@@ -81,10 +102,64 @@ namespace net_backend.Data
                 .HasForeignKey(poi => poi.PurchaseIndentItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<JobWork>()
+                .HasOne(j => j.Item)
+                .WithMany()
+                .HasForeignKey(j => j.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<JobWork>()
+                .HasOne(j => j.Creator)
+                .WithMany()
+                .HasForeignKey(j => j.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Inward>()
+                .HasOne(i => i.Location)
+                .WithMany()
+                .HasForeignKey(i => i.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Inward>()
+                .HasOne(i => i.Vendor)
+                .WithMany()
+                .HasForeignKey(i => i.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Inward>()
+                .HasOne(i => i.Creator)
+                .WithMany()
+                .HasForeignKey(i => i.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InwardLine>()
+                .HasOne(l => l.Inward)
+                .WithMany(i => i.Lines)
+                .HasForeignKey(l => l.InwardId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<InwardLine>()
+                .HasOne(l => l.Item)
+                .WithMany()
+                .HasForeignKey(l => l.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InwardLine>()
+                .HasOne(l => l.Movement)
+                .WithMany()
+                .HasForeignKey(l => l.MovementId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<Movement>()
                 .HasOne(m => m.Item)
                 .WithMany()
                 .HasForeignKey(m => m.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Movement>()
+                .HasOne(m => m.Inward)
+                .WithMany()
+                .HasForeignKey(m => m.InwardId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<QualityControl>()

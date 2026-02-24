@@ -5,13 +5,14 @@ import {
     Plus, Search, FileText, CheckCircle, Clock,
     XCircle, Filter, ChevronRight, User, Calendar,
     MoreVertical, Eye, Ban, Minus, ChevronDown, ChevronUp,
-    CheckSquare, Square, ShoppingCart, Edit2
+    CheckSquare, Square, ShoppingCart, Edit2, Send, Printer, FileCheck
 } from "lucide-react";
 import api from "@/lib/api";
 import { PurchaseIndent, PurchaseIndentStatus, PurchaseIndentItem, PurchaseIndentType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
+import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
@@ -54,6 +55,8 @@ export default function PurchaseIndentsPage() {
     const [selectedPIIds, setSelectedPIIds] = useState<number[]>([]);
     const [inactiveTarget, setInactiveTarget] = useState<PurchaseIndent | null>(null);
     const [approvalTarget, setApprovalTarget] = useState<{ pi: PurchaseIndent, action: 'approve' | 'reject' } | null>(null);
+    const [submitTarget, setSubmitTarget] = useState<PurchaseIndent | null>(null);
+    const [previewPIId, setPreviewPIId] = useState<number | null>(null);
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const router = useRouter();
@@ -102,6 +105,16 @@ export default function PurchaseIndentsPage() {
         onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed")
     });
 
+    const submitMutation = useMutation({
+        mutationFn: (id: number) => api.post(`/purchase-indents/${id}/submit`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            toast.success("Indent submitted for approval");
+            setSubmitTarget(null);
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message || "Submit failed")
+    });
+
     const toggleActiveMutation = useMutation({
         mutationFn: (id: number) => api.put(`/purchase-indents/${id}/toggle-status`),
         onSuccess: () => {
@@ -114,12 +127,15 @@ export default function PurchaseIndentsPage() {
 
     const getStatusBadge = (status: PurchaseIndentStatus) => {
         switch (status) {
+            case PurchaseIndentStatus.Draft:
+                return <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-slate-200">Draft</span>;
             case PurchaseIndentStatus.Approved:
                 return <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-green-200">Approved</span>;
             case PurchaseIndentStatus.Rejected:
                 return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-rose-200">Rejected</span>;
+            case PurchaseIndentStatus.Pending:
             default:
-                return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Approval Pending</span>;
+                return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Pending</span>;
         }
     };
 
@@ -130,6 +146,7 @@ export default function PurchaseIndentsPage() {
         let matchesStatus = true;
         if (statusFilter !== "All") {
             const statusMap: Record<string, PurchaseIndentStatus> = {
+                "Draft": PurchaseIndentStatus.Draft,
                 "Pending": PurchaseIndentStatus.Pending,
                 "Approved": PurchaseIndentStatus.Approved,
                 "Rejected": PurchaseIndentStatus.Rejected
@@ -200,8 +217,8 @@ export default function PurchaseIndentsPage() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="flex bg-secondary-100 p-1 rounded-xl gap-1">
-                        {["All", "Pending", "Approved", "Rejected"].map((status) => (
+                    <div className="flex bg-secondary-100 p-1 rounded-xl gap-1 flex-wrap">
+                        {["All", "Draft", "Pending", "Approved", "Rejected"].map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
@@ -339,7 +356,16 @@ export default function PurchaseIndentsPage() {
                                             )}
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {pi.status === PurchaseIndentStatus.Pending && permissions?.editPI && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setPreviewPIId(pi.id)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    {(pi.status === PurchaseIndentStatus.Draft || pi.status === PurchaseIndentStatus.Pending) && permissions?.editPI && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -351,6 +377,28 @@ export default function PurchaseIndentsPage() {
                                                             title="Edit Indent"
                                                         >
                                                             <Edit2 className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
+                                                    {pi.status === PurchaseIndentStatus.Draft && permissions?.createPI && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setSubmitTarget(pi)}
+                                                            className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                            title="Submit for Approval"
+                                                        >
+                                                            <Send className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
+                                                    {pi.status === PurchaseIndentStatus.Approved && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setPreviewPIId(pi.id)}
+                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all"
+                                                            title="Preview / Print"
+                                                        >
+                                                            <Printer className="w-4 h-4" />
                                                         </Button>
                                                     )}
 
@@ -477,6 +525,30 @@ export default function PurchaseIndentsPage() {
                 </div>
             </Dialog>
 
+            {/* Submit for Approval Confirmation */}
+            <Dialog
+                isOpen={!!submitTarget}
+                onClose={() => setSubmitTarget(null)}
+                title="Submit for Approval"
+                size="sm"
+            >
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600">
+                        Submit indent <span className="font-bold text-secondary-900">{submitTarget?.piNo}</span> for approval? It will move to Pending status and become eligible for approval.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setSubmitTarget(null)} className="flex-1 font-bold">Cancel</Button>
+                        <Button
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                            onClick={() => submitTarget && submitMutation.mutate(submitTarget.id)}
+                            disabled={submitMutation.isPending}
+                        >
+                            {submitMutation.isPending ? "Submitting..." : "Submit for Approval"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
+
             {/* Approve / Reject Confirmation */}
             <Dialog
                 isOpen={!!approvalTarget}
@@ -516,6 +588,14 @@ export default function PurchaseIndentsPage() {
                     </div>
                 </div>
             </Dialog>
+
+            {/* PI Preview (full-screen document viewer + print) */}
+            {previewPIId != null && (
+                <PurchaseIndentPreviewModal
+                    piId={previewPIId}
+                    onClose={() => setPreviewPIId(null)}
+                />
+            )}
         </div>
     );
 }

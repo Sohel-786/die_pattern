@@ -53,10 +53,30 @@ namespace net_backend.Controllers
             var item = await _context.Items.FindAsync(dto.ItemId);
             if (item == null) return NotFound("Item not found");
 
-            // Business Rule: One holder at a time
-            // Mandatory reason for SystemReturn
-            if (dto.Type == MovementType.SystemReturn && string.IsNullOrEmpty(dto.Reason))
-                return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Reason is mandatory for System Return" });
+            // No direct Vendor → Vendor transfer
+            if (item.CurrentHolderType == HolderType.Vendor && dto.ToType == HolderType.Vendor)
+                return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Vendor to Vendor transfer is not allowed." });
+
+            if (dto.Type == MovementType.SystemReturn && string.IsNullOrWhiteSpace(dto.Reason))
+                return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Reason is mandatory for System Return." });
+
+            if (dto.Type == MovementType.Outward)
+            {
+                // Issue to Vendor: item must be at Location
+                if (item.CurrentHolderType != HolderType.Location)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Cannot issue: item is not at a location (already at vendor or invalid state)." });
+                if (dto.ToType != HolderType.Vendor)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Outward (Issue) must be to Vendor." });
+            }
+
+            if (dto.Type == MovementType.Inward || dto.Type == MovementType.SystemReturn)
+            {
+                // Receive from Vendor / System Return: item must be at Vendor
+                if (item.CurrentHolderType != HolderType.Vendor)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Cannot receive: item is not at vendor (must be issued first)." });
+                if (dto.ToType != HolderType.Location)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Inward/System Return must be to Location." });
+            }
 
             var movement = new Movement
             {

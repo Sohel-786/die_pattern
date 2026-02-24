@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ClipboardCheck, Search, ShieldCheck, ShieldAlert,
     Package, Clock, CheckCircle, XCircle,
-    ArrowDownLeft, RotateCcw, Info, MessageSquare, Eye, Loader2
+    ArrowDownLeft, RotateCcw, Info, MessageSquare, Eye, Loader2,
+    FileText, Truck, Briefcase
 } from "lucide-react";
 import api from "@/lib/api";
-import { Movement, MovementType } from "@/types";
+import { Movement, MovementType, InwardSourceType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,9 +32,17 @@ import { Label } from "@/components/ui/label";
 
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
+const SOURCE_TABS: { value: "" | InwardSourceType; label: string }[] = [
+    { value: "", label: "All" },
+    { value: InwardSourceType.PO, label: "PO" },
+    { value: InwardSourceType.OutwardReturn, label: "Outward Return" },
+    { value: InwardSourceType.JobWork, label: "Job Work" },
+];
+
 export default function QualityControlPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const [search, setSearch] = useState("");
+    const [sourceTab, setSourceTab] = useState<"" | InwardSourceType>("");
     const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
     const [isInspectionOpen, setIsInspectionOpen] = useState(false);
     const [remarks, setRemarks] = useState("");
@@ -54,9 +63,10 @@ export default function QualityControlPage() {
     }
 
     const { data: pending = [], isLoading } = useQuery<Movement[]>({
-        queryKey: ["quality-control", "pending"],
+        queryKey: ["quality-control", "pending", sourceTab],
         queryFn: async () => {
-            const res = await api.get("/quality-control/pending");
+            const params = sourceTab !== "" ? `?sourceType=${sourceTab}` : "";
+            const res = await api.get("/quality-control/pending" + params);
             return res.data.data;
         },
     });
@@ -82,8 +92,10 @@ export default function QualityControlPage() {
     };
 
     const filteredPending = pending.filter(m =>
-        m.item?.currentName.toLowerCase().includes(search.toLowerCase()) ||
-        m.toLocation?.name.toLowerCase().includes(search.toLowerCase())
+        (m.itemName ?? m.item?.currentName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (m.toName ?? m.toLocation?.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (m.inwardNo ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (m.sourceRefDisplay ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -101,10 +113,23 @@ export default function QualityControlPage() {
 
             <Card className="border-secondary-200 shadow-sm overflow-hidden">
                 <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center">
-                    <div className="relative flex-1 min-w-[300px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {SOURCE_TABS.map((tab) => (
+                            <Button
+                                key={tab.value === "" ? "all" : tab.value}
+                                variant={sourceTab === tab.value ? "default" : "ghost"}
+                                size="sm"
+                                className={sourceTab === tab.value ? "bg-primary-600 text-white font-bold" : "text-secondary-600 hover:text-primary-600 font-bold"}
+                                onClick={() => setSourceTab(tab.value)}
+                            >
+                                {tab.label}
+                            </Button>
+                        ))}
+                    </div>
+                    <div className="relative flex-1 min-w-[220px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
                         <Input
-                            placeholder="Search by component or location..."
+                            placeholder="Search by item, location, Inward No, Ref..."
                             className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -125,6 +150,7 @@ export default function QualityControlPage() {
                         <TableHeader>
                             <TableRow className="bg-primary-50 border-secondary-100 divide-x divide-secondary-100">
                                 <TableHead className="w-16 h-11 text-center font-bold text-primary-900 uppercase tracking-tight text-[11px]">Sr.No</TableHead>
+                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Source / Ref</TableHead>
                                 <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Entry Type</TableHead>
                                 <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Component Unit</TableHead>
                                 <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Quarantine Zone</TableHead>
@@ -136,7 +162,7 @@ export default function QualityControlPage() {
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={6} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
+                                        <TableCell colSpan={7} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredPending.length > 0 ? (
@@ -147,8 +173,14 @@ export default function QualityControlPage() {
                                     >
                                         <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
                                         <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-primary-600 text-[11px] uppercase">{m.inwardNo ?? "—"}</span>
+                                                <span className="text-[10px] text-secondary-500 font-bold uppercase">{m.sourceRefDisplay ?? "—"}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className={`h-8 w-8 rounded bg-white border border-secondary-200 flex items-center justify-center ${m.type === MovementType.Inward ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                <div className={`h-8 w-8 rounded bg-white border border-secondary-200 flex items-center justify-center ${m.type === MovementType.Inward ? "text-emerald-600" : "text-amber-600"}`}>
                                                     {m.type === MovementType.Inward ? <ArrowDownLeft className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
                                                 </div>
                                                 <span className="font-bold text-secondary-900 text-[11px] uppercase">{m.type}</span>
@@ -160,21 +192,21 @@ export default function QualityControlPage() {
                                                     <Package className="w-4 h-4" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-secondary-900 text-[11px] uppercase leading-tight">{m.item?.currentName}</p>
-                                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-tight italic">{m.item?.mainPartName}</p>
+                                                    <p className="font-bold text-secondary-900 text-[11px] uppercase leading-tight">{m.itemName ?? m.item?.currentName}</p>
+                                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-tight italic">{m.mainPartName ?? m.item?.mainPartName}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1.5 font-bold text-secondary-700 text-[11px] uppercase">
                                                 <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                                                {m.toLocation?.name}
+                                                {m.toName ?? m.toLocation?.name}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-secondary-900 capitalize">{format(new Date(m.createdAt), 'dd MMM yyyy')}</span>
-                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">{format(new Date(m.createdAt), 'hh:mm a')}</span>
+                                                <span className="text-[11px] font-bold text-secondary-900 capitalize">{format(new Date(m.createdAt), "dd MMM yyyy")}</span>
+                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">{format(new Date(m.createdAt), "hh:mm a")}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right">
@@ -191,7 +223,7 @@ export default function QualityControlPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
+                                    <td colSpan={7} className="py-16 text-center text-secondary-400 italic font-medium">
                                         No items awaiting quality certification.
                                     </td>
                                 </TableRow>
@@ -218,7 +250,7 @@ export default function QualityControlPage() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold tracking-tight">Quality Verification</h2>
-                                <p className="text-primary-100 text-xs font-medium uppercase tracking-wider">{selectedMovement?.item?.currentName}</p>
+                                <p className="text-primary-100 text-xs font-medium uppercase tracking-wider">{selectedMovement?.itemName ?? selectedMovement?.item?.currentName}</p>
                             </div>
                         </div>
                     </div>

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, Search, ShoppingCart, CheckCircle, Clock,
     XCircle, Filter, User, Calendar, MoreVertical,
-    Eye, Building2, IndianRupee, FileDown
+    Eye, Building2, IndianRupee, FileDown, Printer, Send, Edit2
 } from "lucide-react";
 import api from "@/lib/api";
 import { PO, PoStatus } from "@/types";
@@ -33,11 +33,18 @@ import { format } from "date-fns";
 import Link from "next/link";
 
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
+import { PurchaseOrderEditDialog } from "@/components/purchase-orders/purchase-order-edit-dialog";
+import { Dialog } from "@/components/ui/dialog";
 
 export default function PurchaseOrdersPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
+    const [previewPOId, setPreviewPOId] = useState<number | null>(null);
+    const [approveTarget, setApproveTarget] = useState<PO | null>(null);
+    const [submitTarget, setSubmitTarget] = useState<PO | null>(null);
+    const [editPOId, setEditPOId] = useState<number | null>(null);
 
     if (permissions && !permissions.viewPO) {
         return (
@@ -67,16 +74,30 @@ export default function PurchaseOrdersPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
             toast.success("Order approved successfully");
+            setApproveTarget(null);
         },
         onError: (err: any) => toast.error(err.response?.data?.message || "Approval failed")
     });
 
+    const submitMutation = useMutation({
+        mutationFn: (id: number) => api.post(`/purchase-orders/${id}/submit`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+            toast.success("PO submitted for approval");
+            setSubmitTarget(null);
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message || "Submit failed")
+    });
+
     const getStatusBadge = (status: PoStatus) => {
         switch (status) {
+            case PoStatus.Draft:
+                return <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-slate-200">Draft</span>;
             case PoStatus.Approved:
                 return <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-green-200">Approved</span>;
             case PoStatus.Rejected:
                 return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-rose-200">Rejected</span>;
+            case PoStatus.Pending:
             default:
                 return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Pending</span>;
         }
@@ -85,7 +106,7 @@ export default function PurchaseOrdersPage() {
     const filteredOrders = orders.filter(po => {
         const matchesSearch = po.poNo.toLowerCase().includes(search.toLowerCase()) ||
             po.vendorName?.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === "All" || po.status.toString() === statusFilter;
+        const matchesStatus = statusFilter === "All" || (typeof po.status === "string" ? po.status === statusFilter : String(po.status) === statusFilter);
         return matchesSearch && matchesStatus;
     });
 
@@ -125,6 +146,7 @@ export default function PurchaseOrdersPage() {
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
                             <option value="All">All Status</option>
+                            <option value="Draft">Draft</option>
                             <option value="Pending">Pending</option>
                             <option value="Approved">Approved</option>
                             <option value="Rejected">Rejected</option>
@@ -202,24 +224,50 @@ export default function PurchaseOrdersPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
+                                                    onClick={() => setPreviewPOId(po.id)}
                                                     className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                    title="View Details"
+                                                    title="Preview"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 text-secondary-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-indigo-100 rounded-lg transition-all"
-                                                    title="Download Order"
-                                                >
-                                                    <FileDown className="w-4 h-4" />
-                                                </Button>
+                                                {po.status === PoStatus.Approved && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setPreviewPOId(po.id)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
+                                                        title="Print"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                                {(po.status === PoStatus.Draft || po.status === PoStatus.Pending) && permissions?.editPO && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setEditPOId(po.id)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
+                                                        title="Edit PO"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                                {po.status === PoStatus.Draft && permissions?.createPO && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setSubmitTarget(po)}
+                                                        className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                        title="Submit for Approval"
+                                                    >
+                                                        <Send className="w-4 h-4" />
+                                                    </Button>
+                                                )}
                                                 {po.status === PoStatus.Pending && permissions?.approvePO && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => approveMutation.mutate(po.id)}
+                                                        onClick={() => setApproveTarget(po)}
                                                         className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 border border-transparent hover:border-green-100 rounded-lg transition-all"
                                                         title="Approve Order"
                                                     >
@@ -241,6 +289,55 @@ export default function PurchaseOrdersPage() {
                     </Table>
                 </div>
             </Card>
+
+            {previewPOId != null && (
+                <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
+            )}
+
+            {editPOId != null && (
+                <PurchaseOrderEditDialog
+                    poId={editPOId}
+                    onClose={() => setEditPOId(null)}
+                    onSaved={() => { queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }); setEditPOId(null); }}
+                />
+            )}
+
+            <Dialog isOpen={!!submitTarget} onClose={() => setSubmitTarget(null)} title="Submit for Approval" size="sm">
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600">
+                        Submit PO <span className="font-bold text-secondary-900">{submitTarget?.poNo}</span> for approval? It will move to Pending status.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setSubmitTarget(null)} className="flex-1 font-bold">Cancel</Button>
+                        <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={() => submitTarget && submitMutation.mutate(submitTarget.id)} disabled={submitMutation.isPending}>
+                            {submitMutation.isPending ? "Submitting..." : "Submit for Approval"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
+
+            <Dialog
+                isOpen={!!approveTarget}
+                onClose={() => setApproveTarget(null)}
+                title="Approve Purchase Order"
+                size="sm"
+            >
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600">
+                        Approve PO <span className="font-bold text-secondary-900">{approveTarget?.poNo}</span>? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setApproveTarget(null)} className="flex-1 font-bold">Cancel</Button>
+                        <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+                            onClick={() => approveTarget && approveMutation.mutate(approveTarget.id)}
+                            disabled={approveMutation.isPending}
+                        >
+                            {approveMutation.isPending ? "Processing..." : "Confirm Approve"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 }

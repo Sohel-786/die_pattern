@@ -10,7 +10,8 @@ export enum Role {
 export enum PurchaseIndentStatus {
   Pending = 'Pending',
   Approved = 'Approved',
-  Rejected = 'Rejected'
+  Rejected = 'Rejected',
+  Draft = 'Draft'
 }
 
 export enum PurchaseIndentType {
@@ -24,12 +25,36 @@ export enum PoStatus {
   Pending = 'Pending',
   Approved = 'Approved',
   Rejected = 'Rejected',
+  Draft = 'Draft',
+}
+
+export enum GstType {
+  CGST_SGST = 'CGST_SGST',
+  IGST = 'IGST',
+  UGST = 'UGST',
 }
 
 export enum MovementType {
   Outward = 'Outward',
   Inward = 'Inward',
   SystemReturn = 'SystemReturn',
+}
+
+export enum InwardSourceType {
+  PO = 0,
+  OutwardReturn = 1,
+  JobWork = 2,
+}
+
+export enum InwardStatus {
+  Draft = 0,
+  Submitted = 1,
+}
+
+export enum JobWorkStatus {
+  Pending = 0,
+  InTransit = 1,
+  Completed = 2,
 }
 
 export enum ItemStatus {
@@ -66,6 +91,10 @@ export interface User {
 export interface Company {
   id: number;
   name: string;
+  address?: string | null;
+  logoUrl?: string | null;
+  gstNo?: string | null;
+  gstDate?: string | null;
   isActive: boolean;
 }
 
@@ -198,11 +227,17 @@ export interface Item {
 export interface PurchaseIndent {
   id: number;
   piNo: string;
+  locationId?: number | null;
+  locationName?: string | null;
+  companyName?: string | null;
   type: PurchaseIndentType;
   status: PurchaseIndentStatus;
   remarks?: string;
   createdBy: number;
   creatorName: string;
+  approvedBy?: number | null;
+  approverName?: string | null;
+  approvedAt?: string | null;
   createdAt: string;
   isActive: boolean;
   items: PurchaseIndentItem[];
@@ -214,6 +249,7 @@ export interface PurchaseIndentItem {
   itemId: number;
   mainPartName: string;
   currentName: string;
+  itemTypeName?: string;
   isInPO?: boolean;
   piNo?: string;
 }
@@ -226,7 +262,17 @@ export interface PO {
   rate?: number;
   deliveryDate?: string;
   quotationUrl?: string;
+  quotationUrls?: string[];
+  gstType?: GstType | null;
+  gstPercent?: number | null;
+  gstAmount?: number | null;
+  totalAmount?: number | null;
   status: PoStatus;
+  remarks?: string;
+  creatorName?: string;
+  approvedBy?: number | null;
+  approverName?: string | null;
+  approvedAt?: string | null;
   items: POItem[];
   createdAt: string;
 }
@@ -261,13 +307,75 @@ export interface Movement {
   reason?: string;
   purchaseOrderId?: number;
   purchaseOrder?: PO;
+  inwardId?: number | null;
+  inwardNo?: string | null;
+  sourceType?: InwardSourceType | null;
+  sourceRefDisplay?: string | null;
   isQCPending: boolean;
   isQCApproved: boolean;
   createdBy: number;
   // Flattened display fields from backend DTO
   itemName?: string;
+  mainPartName?: string;
   fromName?: string;
   toName?: string;
+  poNo?: string;
+  createdAt: string;
+}
+
+export interface Inward {
+  id: number;
+  inwardNo: string;
+  inwardDate: string;
+  sourceType: InwardSourceType;
+  sourceRefId: number;
+  sourceRefDisplay?: string;
+  locationId: number;
+  locationName?: string;
+  vendorId?: number | null;
+  vendorName?: string | null;
+  remarks?: string | null;
+  status: InwardStatus;
+  createdBy: number;
+  creatorName?: string | null;
+  createdAt: string;
+  lines: InwardLine[];
+}
+
+export interface InwardLine {
+  id: number;
+  inwardId: number;
+  itemId: number;
+  itemName?: string;
+  mainPartName?: string;
+  quantity: number;
+  movementId?: number | null;
+  isQCPending: boolean;
+  isQCApproved: boolean;
+}
+
+export interface CreateInwardDto {
+  inwardDate?: string;
+  sourceType: InwardSourceType;
+  sourceRefId: number;
+  locationId: number;
+  vendorId?: number | null;
+  remarks?: string | null;
+  lines: CreateInwardLineDto[];
+}
+
+export interface CreateInwardLineDto {
+  itemId: number;
+  quantity: number;
+}
+
+export interface JobWork {
+  id: number;
+  jobWorkNo: string;
+  itemId: number;
+  itemName?: string;
+  description?: string | null;
+  status: JobWorkStatus;
   createdAt: string;
 }
 

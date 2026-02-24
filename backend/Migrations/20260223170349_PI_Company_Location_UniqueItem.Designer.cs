@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260223170349_PI_Company_Location_UniqueItem")]
+    partial class PI_Company_Location_UniqueItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -595,20 +597,11 @@ namespace net_backend.Migrations
                     b.Property<DateTime?>("DeliveryDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("GstPercent")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("GstType")
-                        .HasColumnType("int");
-
                     b.Property<string>("PoNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("QuotationUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("QuotationUrlsJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Rate")

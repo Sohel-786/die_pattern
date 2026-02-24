@@ -41,9 +41,22 @@ export default function InwardEntryPage() {
     });
 
     const mutation = useMutation({
-        mutationFn: (data: any) => api.post("/movements/inward", data),
+        mutationFn: async (data: { purchaseOrderId: number; itemId: number; toLocationId: number; remarks?: string }) => {
+            const createRes = await api.post("/inwards", {
+                sourceType: 0, // PO
+                sourceRefId: data.purchaseOrderId,
+                locationId: data.toLocationId,
+                remarks: data.remarks,
+                lines: [{ itemId: data.itemId, quantity: 1 }]
+            });
+            const id = createRes.data?.data?.id;
+            if (!id) throw new Error("Inward create failed");
+            await api.post(`/inwards/${id}/submit`);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["movements"] });
+            queryClient.invalidateQueries({ queryKey: ["inwards"] });
+            queryClient.invalidateQueries({ queryKey: ["quality-control"] });
             queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Item received and sent for QC");
             router.push("/inwards");

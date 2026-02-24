@@ -17,16 +17,26 @@ namespace net_backend.Models
 
     public enum PurchaseIndentStatus
     {
-        Pending,
-        Approved,
-        Rejected
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2,
+        Draft = 3
     }
 
     public enum PoStatus
     {
-        Pending,
-        Approved,
-        Rejected
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2,
+        Draft = 3
+    }
+
+    /// <summary>Indian GST types for PO calculation.</summary>
+    public enum GstType
+    {
+        CGST_SGST,
+        IGST,
+        UGST
     }
 
     public enum MovementType
@@ -34,6 +44,27 @@ namespace net_backend.Models
         Outward,
         Inward,
         SystemReturn
+    }
+
+    /// <summary>Source of an Inward document: PO, return from vendor (Outward), or Job Work.</summary>
+    public enum InwardSourceType
+    {
+        PO,
+        OutwardReturn,
+        JobWork
+    }
+
+    public enum InwardStatus
+    {
+        Draft = 0,
+        Submitted = 1
+    }
+
+    public enum JobWorkStatus
+    {
+        Pending = 0,
+        InTransit = 1,
+        Completed = 2
     }
 
     public enum HolderType

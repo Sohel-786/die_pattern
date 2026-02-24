@@ -42,6 +42,16 @@ namespace net_backend.Services
                 count = await _context.Movements.CountAsync(m => m.Type == Models.MovementType.Inward);
                 prefix = "MOV-INW";
             }
+            else if (type == "INWARD")
+            {
+                count = await _context.Inwards.CountAsync();
+                return $"INW-{count + 1:D4}";
+            }
+            else if (type == "JW")
+            {
+                count = await _context.JobWorks.CountAsync();
+                return $"JW-{count + 1:D4}";
+            }
 
             return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
         }

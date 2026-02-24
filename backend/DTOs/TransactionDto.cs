@@ -1,3 +1,4 @@
+using System.Text.Json;
 using net_backend.Models;
 
 namespace net_backend.DTOs
@@ -6,11 +7,17 @@ namespace net_backend.DTOs
     {
         public int Id { get; set; }
         public string PiNo { get; set; } = string.Empty;
+        public int? LocationId { get; set; }
+        public string? LocationName { get; set; }
+        public string? CompanyName { get; set; }
         public PurchaseIndentType Type { get; set; }
         public PurchaseIndentStatus Status { get; set; }
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
+        public int? ApprovedBy { get; set; }
+        public string? ApproverName { get; set; }
+        public DateTime? ApprovedAt { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<PurchaseIndentItemDto> Items { get; set; } = new();
@@ -30,6 +37,7 @@ namespace net_backend.DTOs
 
     public class CreatePurchaseIndentDto
     {
+        public int? LocationId { get; set; }
         public PurchaseIndentType Type { get; set; }
         public string? Remarks { get; set; }
         public List<int> ItemIds { get; set; } = new();
@@ -44,9 +52,18 @@ namespace net_backend.DTOs
         public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationUrl { get; set; }
+        public List<string> QuotationUrls { get; set; } = new();
+        public GstType? GstType { get; set; }
+        public decimal? GstPercent { get; set; }
+        public decimal? GstAmount { get; set; }
+        public decimal? TotalAmount { get; set; }
         public PoStatus Status { get; set; }
         public string? Remarks { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? CreatorName { get; set; }
+        public int? ApprovedBy { get; set; }
+        public string? ApproverName { get; set; }
+        public DateTime? ApprovedAt { get; set; }
         public List<POItemDto> Items { get; set; } = new();
     }
 
@@ -66,8 +83,26 @@ namespace net_backend.DTOs
         public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationUrl { get; set; }
+        public List<string>? QuotationUrls { get; set; }
+        public GstType? GstType { get; set; }
+        public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
         public List<int> PurchaseIndentItemIds { get; set; } = new();
+    }
+
+    public static class QuotationUrlsHelper
+    {
+        public static List<string> FromJson(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+            try { return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>(); }
+            catch { return new List<string>(); }
+        }
+        public static string ToJson(List<string>? list)
+        {
+            if (list == null || list.Count == 0) return null!;
+            return JsonSerializer.Serialize(list);
+        }
     }
 
     public class MovementDto
@@ -76,12 +111,19 @@ namespace net_backend.DTOs
         public MovementType Type { get; set; }
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
+        public string? MainPartName { get; set; }
         public HolderType FromType { get; set; }
         public string? FromName { get; set; }
         public HolderType ToType { get; set; }
         public string? ToName { get; set; }
         public string? Remarks { get; set; }
         public string? Reason { get; set; }
+        public int? PurchaseOrderId { get; set; }
+        public string? PoNo { get; set; }
+        public int? InwardId { get; set; }
+        public string? InwardNo { get; set; }
+        public InwardSourceType? SourceType { get; set; }
+        public string? SourceRefDisplay { get; set; }
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -104,5 +146,77 @@ namespace net_backend.DTOs
         public int MovementId { get; set; }
         public bool IsApproved { get; set; }
         public string? Remarks { get; set; }
+    }
+
+    public class InwardDto
+    {
+        public int Id { get; set; }
+        public string InwardNo { get; set; } = string.Empty;
+        public DateTime InwardDate { get; set; }
+        public InwardSourceType SourceType { get; set; }
+        public int SourceRefId { get; set; }
+        public string? SourceRefDisplay { get; set; }
+        public int LocationId { get; set; }
+        public string? LocationName { get; set; }
+        public int? VendorId { get; set; }
+        public string? VendorName { get; set; }
+        public string? Remarks { get; set; }
+        public InwardStatus Status { get; set; }
+        public int CreatedBy { get; set; }
+        public string? CreatorName { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<InwardLineDto> Lines { get; set; } = new();
+    }
+
+    public class InwardLineDto
+    {
+        public int Id { get; set; }
+        public int InwardId { get; set; }
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
+        public string? MainPartName { get; set; }
+        public int Quantity { get; set; }
+        public int? MovementId { get; set; }
+        public bool IsQCPending { get; set; }
+        public bool IsQCApproved { get; set; }
+    }
+
+    public class CreateInwardDto
+    {
+        public DateTime? InwardDate { get; set; }
+        public InwardSourceType SourceType { get; set; }
+        public int SourceRefId { get; set; }
+        public int LocationId { get; set; }
+        public int? VendorId { get; set; }
+        public string? Remarks { get; set; }
+        public List<CreateInwardLineDto> Lines { get; set; } = new();
+    }
+
+    public class CreateInwardLineDto
+    {
+        public int ItemId { get; set; }
+        public int Quantity { get; set; } = 1;
+    }
+
+    public class JobWorkDto
+    {
+        public int Id { get; set; }
+        public string JobWorkNo { get; set; } = string.Empty;
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
+        public string? Description { get; set; }
+        public JobWorkStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class CreateJobWorkDto
+    {
+        public int ItemId { get; set; }
+        public string? Description { get; set; }
+    }
+
+    public class UpdateJobWorkStatusDto
+    {
+        public JobWorkStatus Status { get; set; }
     }
 }

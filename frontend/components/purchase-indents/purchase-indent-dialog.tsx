@@ -9,6 +9,7 @@ import {
 import api from "@/lib/api";
 import {
     Item,
+    Location,
     PurchaseIndent,
     PurchaseIndentType,
 } from "@/types";
@@ -39,20 +40,22 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
     const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
     const [nextPiCode, setNextPiCode] = useState("");
     const [addingItemId, setAddingItemId] = useState<number | string>("");
+    const [locationId, setLocationId] = useState<number | "">("");
 
     // Initialize state when editing
     useEffect(() => {
         if (indent && open) {
             setSelectedItemIds(indent.items.map(i => i.itemId));
             setRemarks(indent.remarks || "");
-            setType(indent.type); // Set type when editing
+            setType(indent.type);
             setNextPiCode(indent.piNo);
+            setLocationId(indent.locationId ?? "");
         } else if (open) {
             setSelectedItemIds([]);
             setRemarks("");
-            setType(PurchaseIndentType.New); // Reset type for new indent
+            setType(PurchaseIndentType.New);
             setAddingItemId("");
-            // Fetch next code for new indent
+            setLocationId("");
             api.get("/purchase-indents/next-code").then(res => {
                 setNextPiCode(res.data.data);
             }).catch(() => {
@@ -65,6 +68,15 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
         queryKey: ["items"],
         queryFn: async () => {
             const res = await api.get("/items");
+            return res.data.data;
+        },
+        enabled: open
+    });
+
+    const { data: locations = [] } = useQuery<Location[]>({
+        queryKey: ["locations", "active"],
+        queryFn: async () => {
+            const res = await api.get("/locations/active");
             return res.data.data;
         },
         enabled: open
@@ -104,6 +116,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
             return;
         }
         mutation.mutate({
+            locationId: locationId === "" ? undefined : locationId,
             type,
             remarks,
             itemIds: selectedItemIds
@@ -148,20 +161,37 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                        Indent Type
-                    </Label>
-                    <select
-                        className="w-full h-10 px-3 rounded-md border border-secondary-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
-                        value={type}
-                        onChange={(e) => setType(e.target.value as PurchaseIndentType)}
-                    >
-                        <option value={PurchaseIndentType.New}>New Procurement</option>
-                        <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
-                        <option value={PurchaseIndentType.Correction}>Engineering Correction</option>
-                        <option value={PurchaseIndentType.Modification}>Design Modification</option>
-                    </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Location (optional)
+                        </Label>
+                        <select
+                            className="w-full h-10 px-3 rounded-md border border-secondary-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10"
+                            value={locationId}
+                            onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
+                        >
+                            <option value="">— Select Location —</option>
+                            {locations.map((loc) => (
+                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                            Indent Type
+                        </Label>
+                        <select
+                            className="w-full h-10 px-3 rounded-md border border-secondary-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 transition-all"
+                            value={type}
+                            onChange={(e) => setType(e.target.value as PurchaseIndentType)}
+                        >
+                            <option value={PurchaseIndentType.New}>New Procurement</option>
+                            <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
+                            <option value={PurchaseIndentType.Correction}>Engineering Correction</option>
+                            <option value={PurchaseIndentType.Modification}>Design Modification</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div className="space-y-4">
@@ -245,7 +275,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                         ) : (
                             <Save className="w-4 h-4 mr-2" />
                         )}
-                        {isEditing ? "Update Indent" : "Save Indent"}
+                        {isEditing ? "Update Indent" : "Save as Draft"}
                     </Button>
                     <Button
                         type="button"

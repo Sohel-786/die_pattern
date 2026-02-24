@@ -198,6 +198,10 @@ namespace net_backend.Controllers
                     return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
                 existing.Name = request.Name.Trim();
             }
+            if (request.Address != null) existing.Address = request.Address;
+            if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
+            if (request.GstNo != null) existing.GstNo = request.GstNo;
+            if (request.GstDate.HasValue) existing.GstDate = request.GstDate;
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 

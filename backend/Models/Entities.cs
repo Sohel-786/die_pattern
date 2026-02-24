@@ -43,6 +43,10 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public string? LogoUrl { get; set; }
+        public string? GstNo { get; set; }
+        public DateTime? GstDate { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
@@ -168,8 +172,9 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string PiNo { get; set; } = string.Empty;
+        public int? LocationId { get; set; }
         public PurchaseIndentType Type { get; set; }
-        public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Pending;
+        public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Draft;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
@@ -182,6 +187,8 @@ namespace net_backend.Models
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
         public virtual ICollection<PurchaseIndentItem> Items { get; set; } = new List<PurchaseIndentItem>();
     }
 
@@ -208,7 +215,11 @@ namespace net_backend.Models
         public decimal? Rate { get; set; }
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationUrl { get; set; }
-        public PoStatus Status { get; set; } = PoStatus.Pending;
+        /// <summary>JSON array of quotation file URLs for multiple uploads.</summary>
+        public string? QuotationUrlsJson { get; set; }
+        public int? GstType { get; set; } // 0=CGST_SGST, 1=IGST, 2=UGST
+        public decimal? GstPercent { get; set; }
+        public PoStatus Status { get; set; } = PoStatus.Draft;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
@@ -238,6 +249,68 @@ namespace net_backend.Models
         public virtual PurchaseIndentItem? PurchaseIndentItem { get; set; }
     }
 
+    [Table("job_works")]
+    public class JobWork
+    {
+        public int Id { get; set; }
+        [Required]
+        public string JobWorkNo { get; set; } = string.Empty;
+        public int ItemId { get; set; }
+        public string? Description { get; set; }
+        public JobWorkStatus Status { get; set; } = JobWorkStatus.Pending;
+        public int CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
+        [ForeignKey("CreatedBy")]
+        public virtual User? Creator { get; set; }
+    }
+
+    [Table("inwards")]
+    public class Inward
+    {
+        public int Id { get; set; }
+        [Required]
+        public string InwardNo { get; set; } = string.Empty;
+        public DateTime InwardDate { get; set; } = DateTime.Now;
+        public InwardSourceType SourceType { get; set; }
+        public int SourceRefId { get; set; }
+        public int LocationId { get; set; }
+        public int? VendorId { get; set; }
+        public string? Remarks { get; set; }
+        public InwardStatus Status { get; set; } = InwardStatus.Draft;
+        public int CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+        [ForeignKey("VendorId")]
+        public virtual Party? Vendor { get; set; }
+        [ForeignKey("CreatedBy")]
+        public virtual User? Creator { get; set; }
+        public virtual ICollection<InwardLine> Lines { get; set; } = new List<InwardLine>();
+    }
+
+    [Table("inward_lines")]
+    public class InwardLine
+    {
+        public int Id { get; set; }
+        public int InwardId { get; set; }
+        public int ItemId { get; set; }
+        public int Quantity { get; set; } = 1;
+        public int? MovementId { get; set; }
+
+        [ForeignKey("InwardId")]
+        public virtual Inward? Inward { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
+        [ForeignKey("MovementId")]
+        public virtual Movement? Movement { get; set; }
+    }
+
     [Table("movements")]
     public class Movement
     {
@@ -257,6 +330,7 @@ namespace net_backend.Models
         public string? Reason { get; set; } // Mandatory for SystemReturn
         
         public int? PurchaseOrderId { get; set; }
+        public int? InwardId { get; set; }
         
         public bool IsQCPending { get; set; } = false;
         public bool IsQCApproved { get; set; } = false;
@@ -276,6 +350,8 @@ namespace net_backend.Models
         public virtual Party? ToParty { get; set; }
         [ForeignKey("PurchaseOrderId")]
         public virtual PurchaseOrder? PurchaseOrder { get; set; }
+        [ForeignKey("InwardId")]
+        public virtual Inward? Inward { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
     }

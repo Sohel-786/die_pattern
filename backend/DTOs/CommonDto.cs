@@ -11,6 +11,10 @@ namespace net_backend.DTOs
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public string? LogoUrl { get; set; }
+        public string? GstNo { get; set; }
+        public DateTime? GstDate { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -43,6 +47,10 @@ namespace net_backend.DTOs
     public class UpdateCompanyRequest
     {
         public string? Name { get; set; }
+        public string? Address { get; set; }
+        public string? LogoUrl { get; set; }
+        public string? GstNo { get; set; }
+        public DateTime? GstDate { get; set; }
         public bool IsActive { get; set; }
     }
 

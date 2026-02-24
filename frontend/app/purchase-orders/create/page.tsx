@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ArrowLeft, Search, Plus, Trash2, Save, ShoppingCart,
     Package, Layers, ArrowRight, Building2, IndianRupee,
-    Calendar as CalendarIcon, FileDown, Paperclip, Loader2
+    Calendar as CalendarIcon, Paperclip, Loader2, Upload, X
 } from "lucide-react";
 import api from "@/lib/api";
-import { PurchaseIndentItem, Party } from "@/types";
+import { PurchaseIndentItem, Party, GstType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +32,10 @@ export default function CreatePOPage() {
     const [deliveryDate, setDeliveryDate] = useState("");
     const [remarks, setRemarks] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [gstType, setGstType] = useState<GstType | "">("");
+    const [gstPercent, setGstPercent] = useState<number>(18);
+    const [quotationUrls, setQuotationUrls] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
 
     const { data: piItems = [], isLoading: loadingItems } = useQuery<PurchaseIndentItem[]>({
         queryKey: ["purchase-indents", "approved-items"],
@@ -70,7 +74,7 @@ export default function CreatePOPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
             queryClient.invalidateQueries({ queryKey: ["purchase-indents", "approved-items"] });
-            toast.success("Purchase Order issued successfully");
+            toast.success("Purchase Order saved as draft");
             router.push("/purchase-orders");
         },
         onError: (err: any) => toast.error(err.response?.data?.message || "Creation failed")
@@ -88,6 +92,35 @@ export default function CreatePOPage() {
         setSelectedPiItemIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     };
 
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files?.length) return;
+        setUploading(true);
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const form = new FormData();
+                form.append("file", files[i]);
+                const res = await api.post("/purchase-orders/upload-quotation", form, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                const url = res.data?.data?.url;
+                if (url) setQuotationUrls((prev) => [...prev, url]);
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Upload failed");
+        } finally {
+            setUploading(false);
+            e.target.value = "";
+        }
+    };
+
+    const removeQuotation = (index: number) => {
+        setQuotationUrls((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const gstAmount = rate && gstPercent != null ? Math.round((rate * gstPercent) / 100 * 100) / 100 : 0;
+    const totalAmount = rate != null ? (gstAmount + rate) : 0;
+
     const handleCreate = () => {
         if (selectedPiItemIds.length === 0) {
             toast.error("Please select at least one item from purchase indents");
@@ -99,9 +132,12 @@ export default function CreatePOPage() {
         }
         createMutation.mutate({
             vendorId,
-            rate,
-            deliveryDate,
-            remarks,
+            rate: rate || undefined,
+            deliveryDate: deliveryDate || undefined,
+            remarks: remarks || undefined,
+            quotationUrls: quotationUrls.length ? quotationUrls : undefined,
+            gstType: gstType || undefined,
+            gstPercent: gstPercent ?? undefined,
             purchaseIndentItemIds: selectedPiItemIds
         });
     };
@@ -167,6 +203,56 @@ export default function CreatePOPage() {
                                                 className="pl-9 h-10 border-secondary-200 focus:border-primary-500 transition-all font-bold text-sm"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">GST Type</Label>
+                                        <select
+                                            className="w-full h-10 px-3 rounded-md border border-secondary-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10"
+                                            value={gstType}
+                                            onChange={(e) => setGstType(e.target.value as GstType | "")}
+                                        >
+                                            <option value="">— Select —</option>
+                                            <option value={GstType.CGST_SGST}>CGST + SGST</option>
+                                            <option value={GstType.IGST}>IGST</option>
+                                            <option value={GstType.UGST}>UGST</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">GST %</Label>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={0.01}
+                                            value={gstPercent}
+                                            onChange={(e) => setGstPercent(Number(e.target.value) || 0)}
+                                            className="h-10 border-secondary-200 focus:border-primary-500 font-bold text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Taxable · GST · Total</Label>
+                                        <div className="h-10 px-3 flex items-center gap-2 text-sm font-bold text-secondary-700 bg-secondary-50 rounded-md border border-secondary-200">
+                                            <span>₹ {rate?.toLocaleString() ?? "0"}</span>
+                                            <span className="text-primary-600">+ ₹ {gstAmount.toLocaleString()}</span>
+                                            <span>= ₹ {totalAmount.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider ml-1">Quotation attachments</Label>
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-secondary-200 bg-white hover:bg-secondary-50 text-sm font-medium text-secondary-700">
+                                            <Upload className="w-4 h-4" />
+                                            {uploading ? "Uploading..." : "Add file(s)"}
+                                            <input type="file" className="sr-only" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" multiple onChange={handleFileSelect} disabled={uploading} />
+                                        </label>
+                                        {quotationUrls.map((url, i) => (
+                                            <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 bg-secondary-100 rounded text-xs font-medium text-secondary-700">
+                                                {url.split("/").pop()?.slice(0, 20)}…
+                                                <button type="button" onClick={() => removeQuotation(i)} className="p-0.5 hover:bg-secondary-200 rounded"><X className="w-3 h-3" /></button>
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -286,7 +372,7 @@ export default function CreatePOPage() {
                                     disabled={createMutation.isPending || selectedPiItemIds.length === 0 || !vendorId}
                                     className="w-full h-12 bg-secondary-900 hover:bg-black text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-between px-6"
                                 >
-                                    <span className="text-sm uppercase tracking-wider">Issue Order</span>
+                                    <span className="text-sm uppercase tracking-wider">Save as Draft</span>
                                     {createMutation.isPending ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (

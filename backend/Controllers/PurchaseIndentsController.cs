@@ -32,6 +32,9 @@ namespace net_backend.Controllers
             var query = _context.PurchaseIndents
                 .OrderByDescending(p => p.CreatedAt)
                 .Include(p => p.Creator)
+                .Include(p => p.Approver)
+                .Include(p => p.Location)
+                    .ThenInclude(l => l!.Company)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.ItemType)
@@ -47,11 +50,17 @@ namespace net_backend.Controllers
                 {
                     Id = p.Id,
                     PiNo = p.PiNo,
+                    LocationId = p.LocationId,
+                    LocationName = p.Location != null ? p.Location.Name : null,
+                    CompanyName = p.Location != null && p.Location.Company != null ? p.Location.Company.Name : null,
                     Type = p.Type,
                     Status = p.Status,
                     Remarks = p.Remarks,
                     CreatedBy = p.CreatedBy,
                     CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
+                    ApprovedBy = p.ApprovedBy,
+                    ApproverName = p.Approver != null ? p.Approver.FirstName + " " + p.Approver.LastName : null,
+                    ApprovedAt = p.ApprovedAt,
                     IsActive = p.IsActive,
                     CreatedAt = p.CreatedAt,
                     Items = p.Items.Select(i => new PurchaseIndentItemDto
@@ -79,18 +88,26 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("CreatePI")) return Forbidden();
 
+            var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
+            if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
+                return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "Duplicate die/pattern in the same PI is not allowed." });
+
+            if (itemIds.Count == 0)
+                return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "At least one item is required." });
+
             var pi = new PurchaseIndent
             {
                 PiNo = await _codeGenerator.GenerateCode("PI"),
+                LocationId = dto.LocationId,
                 Type = dto.Type,
                 Remarks = dto.Remarks,
                 CreatedBy = CurrentUserId,
-                Status = PurchaseIndentStatus.Pending,
+                Status = PurchaseIndentStatus.Draft,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
 
-            foreach (var itemId in dto.ItemIds)
+            foreach (var itemId in itemIds)
             {
                 pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
             }
@@ -111,22 +128,46 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (pi == null) return NotFound();
-            if (pi.Status != PurchaseIndentStatus.Pending)
+            if (pi.Status != PurchaseIndentStatus.Draft && pi.Status != PurchaseIndentStatus.Pending)
             {
-                return BadRequest(new ApiResponse<bool> { Message = "Only pending indents can be edited" });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft or pending indents can be edited." });
             }
 
+            var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
+            if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Duplicate die/pattern in the same PI is not allowed." });
+            if (itemIds.Count == 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
+
+            pi.LocationId = dto.LocationId;
             pi.Type = dto.Type;
             pi.Remarks = dto.Remarks;
             pi.UpdatedAt = DateTime.Now;
 
-            // Update items
             _context.PurchaseIndentItems.RemoveRange(pi.Items);
-            foreach (var itemId in dto.ItemIds)
+            foreach (var itemId in itemIds)
             {
                 pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
             }
 
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        [HttpPost("{id}/submit")]
+        public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
+        {
+            if (!await HasPermission("CreatePI")) return Forbidden();
+
+            var pi = await _context.PurchaseIndents.FindAsync(id);
+            if (pi == null) return NotFound();
+            if (pi.Status != PurchaseIndentStatus.Draft)
+            {
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft indents can be submitted for approval." });
+            }
+
+            pi.Status = PurchaseIndentStatus.Pending;
+            pi.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });
         }
@@ -138,6 +179,10 @@ namespace net_backend.Controllers
 
             var pi = await _context.PurchaseIndents.FindAsync(id);
             if (pi == null) return NotFound();
+            if (pi.Status != PurchaseIndentStatus.Pending)
+            {
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be approved." });
+            }
 
             pi.Status = PurchaseIndentStatus.Approved;
             pi.ApprovedBy = CurrentUserId;
@@ -155,8 +200,14 @@ namespace net_backend.Controllers
 
             var pi = await _context.PurchaseIndents.FindAsync(id);
             if (pi == null) return NotFound();
+            if (pi.Status != PurchaseIndentStatus.Pending)
+            {
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be rejected." });
+            }
 
             pi.Status = PurchaseIndentStatus.Rejected;
+            pi.ApprovedBy = null;
+            pi.ApprovedAt = null;
             pi.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -178,6 +229,59 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = pi.IsActive });
         }
         
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApiResponse<PurchaseIndentDto>>> GetById(int id)
+        {
+            var pi = await _context.PurchaseIndents
+                .Include(p => p.Creator)
+                .Include(p => p.Approver)
+                .Include(p => p.Location)
+                    .ThenInclude(l => l!.Company)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.ItemType)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (pi == null) return NotFound();
+            var isAdmin = await IsAdmin();
+            if (!isAdmin && !pi.IsActive)
+                return NotFound();
+
+            var dto = new PurchaseIndentDto
+            {
+                Id = pi.Id,
+                PiNo = pi.PiNo,
+                LocationId = pi.LocationId,
+                LocationName = pi.Location?.Name,
+                CompanyName = pi.Location?.Company?.Name,
+                Type = pi.Type,
+                Status = pi.Status,
+                Remarks = pi.Remarks,
+                CreatedBy = pi.CreatedBy,
+                CreatorName = pi.Creator != null ? pi.Creator.FirstName + " " + pi.Creator.LastName : "Unknown",
+                ApprovedBy = pi.ApprovedBy,
+                ApproverName = pi.Approver != null ? pi.Approver.FirstName + " " + pi.Approver.LastName : null,
+                ApprovedAt = pi.ApprovedAt,
+                IsActive = pi.IsActive,
+                CreatedAt = pi.CreatedAt,
+                Items = pi.Items.Select(i => new PurchaseIndentItemDto
+                {
+                    Id = i.Id,
+                    PurchaseIndentId = i.PurchaseIndentId,
+                    ItemId = i.ItemId,
+                    MainPartName = i.Item!.MainPartName,
+                    CurrentName = i.Item.CurrentName,
+                    ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
+                    PoNo = _context.PurchaseOrderItems
+                        .Where(poi => poi.PurchaseIndentItemId == i.Id)
+                        .Select(poi => poi.PurchaseOrder!.PoNo)
+                        .FirstOrDefault() ?? "-",
+                    IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
+                }).ToList()
+            };
+            return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });
+        }
+
         [HttpGet("approved-items")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItems()
         {
