@@ -94,6 +94,12 @@ export interface Company {
   id: number;
   name: string;
   address?: string | null;
+  pan?: string | null;
+  state?: string | null;
+  city?: string | null;
+  pincode?: string | null;
+  phone?: string | null;
+  email?: string | null;
   logoUrl?: string | null;
   gstNo?: string | null;
   gstDate?: string | null;

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace net_backend.Models
 {
@@ -44,6 +45,18 @@ namespace net_backend.Models
         [Required]
         public string Name { get; set; } = string.Empty;
         public string? Address { get; set; }
+        [MaxLength(50)]
+        public string? Pan { get; set; }
+        [MaxLength(100)]
+        public string? State { get; set; }
+        [MaxLength(100)]
+        public string? City { get; set; }
+        [MaxLength(20)]
+        public string? Pincode { get; set; }
+        [MaxLength(30)]
+        public string? Phone { get; set; }
+        [MaxLength(255)]
+        public string? Email { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
@@ -51,6 +64,7 @@ namespace net_backend.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [JsonIgnore]
         public virtual ICollection<Location> Locations { get; set; } = new List<Location>();
     }
 

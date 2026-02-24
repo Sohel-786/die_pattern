@@ -112,7 +112,11 @@ export default function CompaniesPage() {
   };
 
   const filteredCompanies = companies.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchLower) ||
+      (c.gstNo?.toLowerCase().includes(searchLower) ?? false) ||
+      (c.address?.toLowerCase().includes(searchLower) ?? false);
     const matchesFilter = activeFilter === "all"
       ? true
       : activeFilter === "active"
@@ -155,7 +159,7 @@ export default function CompaniesPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
             <Input
-              placeholder="Search by name..."
+              placeholder="Search by name, address or GST..."
               className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

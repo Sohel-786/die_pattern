@@ -12,6 +12,12 @@ namespace net_backend.DTOs
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Address { get; set; }
+        public string? Pan { get; set; }
+        public string? State { get; set; }
+        public string? City { get; set; }
+        public string? Pincode { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
@@ -23,6 +29,16 @@ namespace net_backend.DTOs
     public class CreateCompanyRequest
     {
         public string Name { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string GstNo { get; set; } = string.Empty;
+        public string? Pan { get; set; }
+        public string? State { get; set; }
+        public string? City { get; set; }
+        public string? Pincode { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? LogoUrl { get; set; }
+        public DateTime? GstDate { get; set; }
         public bool? IsActive { get; set; }
     }
 
@@ -48,6 +64,12 @@ namespace net_backend.DTOs
     {
         public string? Name { get; set; }
         public string? Address { get; set; }
+        public string? Pan { get; set; }
+        public string? State { get; set; }
+        public string? City { get; set; }
+        public string? Pincode { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }

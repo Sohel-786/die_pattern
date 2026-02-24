@@ -27,7 +27,15 @@ namespace net_backend.Controllers
                 .OrderBy(c => c.Name)
                 .ToListAsync();
             var data = companies.Select(c => new {
-                Name = c.Name,
+                c.Name,
+                c.Address,
+                c.GstNo,
+                c.Pan,
+                c.State,
+                c.City,
+                c.Pincode,
+                c.Phone,
+                c.Email,
                 IsActive = c.IsActive ? "Yes" : "No",
                 CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm")
             });
@@ -37,18 +45,18 @@ namespace net_backend.Controllers
         }
 
         [HttpPost("validate")]
-        public async Task<ActionResult<ApiResponse<ValidationResultDto<MasterImportDto>>>> Validate(IFormFile file)
+        public async Task<ActionResult<ApiResponse<ValidationResultDto<CompanyImportDto>>>> Validate(IFormFile file)
         {
-            if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<MasterImportDto>> { Success = false, Message = "No file uploaded" });
+            if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<CompanyImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
                 using var stream = file.OpenReadStream();
-                var result = _excelService.ImportExcel<MasterImportDto>(stream);
+                var result = _excelService.ImportExcel<CompanyImportDto>(stream);
                 var validation = await ValidateCompanies(result.Data);
                 validation.TotalRows = result.TotalRows;
-                return Ok(new ApiResponse<ValidationResultDto<MasterImportDto>> { Data = validation });
+                return Ok(new ApiResponse<ValidationResultDto<CompanyImportDto>> { Data = validation });
             }
-            catch (Exception ex) { return Ok(new ApiResponse<ValidationResultDto<MasterImportDto>> { Success = false, Message = ex.Message }); }
+            catch (Exception ex) { return Ok(new ApiResponse<ValidationResultDto<CompanyImportDto>> { Success = false, Message = ex.Message }); }
         }
 
         [HttpPost("import")]
@@ -63,15 +71,24 @@ namespace net_backend.Controllers
             {
                 using (var stream = file.OpenReadStream())
                 {
-                    var result = _excelService.ImportExcel<MasterImportDto>(stream);
+                    var result = _excelService.ImportExcel<CompanyImportDto>(stream);
                     var validation = await ValidateCompanies(result.Data);
                     var newCompanies = new List<Company>();
 
                     foreach (var validRow in validation.Valid)
                     {
+                        var d = validRow.Data;
                         newCompanies.Add(new Company
                         {
-                            Name = validRow.Data.Name.Trim(),
+                            Name = d.Name.Trim(),
+                            Address = d.Address?.Trim(),
+                            GstNo = d.GstNo?.Trim(),
+                            Pan = d.Pan?.Trim(),
+                            State = d.State?.Trim(),
+                            City = d.City?.Trim(),
+                            Pincode = d.Pincode?.Trim(),
+                            Phone = d.Phone?.Trim(),
+                            Email = d.Email?.Trim(),
                             IsActive = true,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
@@ -100,9 +117,9 @@ namespace net_backend.Controllers
             }
         }
 
-        private async Task<ValidationResultDto<MasterImportDto>> ValidateCompanies(List<ExcelRow<MasterImportDto>> rows)
+        private async Task<ValidationResultDto<CompanyImportDto>> ValidateCompanies(List<ExcelRow<CompanyImportDto>> rows)
         {
-            var validation = new ValidationResultDto<MasterImportDto>();
+            var validation = new ValidationResultDto<CompanyImportDto>();
             var existingNames = await _context.Companies
                 .Select(c => c.Name.ToLower())
                 .ToListAsync();
@@ -113,7 +130,17 @@ namespace net_backend.Controllers
                 var item = row.Data;
                 if (string.IsNullOrWhiteSpace(item.Name))
                 {
-                    validation.Invalid.Add(new ValidationEntry<MasterImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(item.Address))
+                {
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Address is mandatory" });
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(item.GstNo))
+                {
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "GST number is mandatory" });
                     continue;
                 }
 
@@ -121,18 +148,18 @@ namespace net_backend.Controllers
 
                 if (processedInFile.Contains(nameLower))
                 {
-                    validation.Duplicates.Add(new ValidationEntry<MasterImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name in file" });
+                    validation.Duplicates.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name in file" });
                     continue;
                 }
 
                 if (existingNames.Contains(nameLower))
                 {
-                    validation.AlreadyExists.Add(new ValidationEntry<MasterImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
+                    validation.AlreadyExists.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
                     processedInFile.Add(nameLower);
                     continue;
                 }
 
-                validation.Valid.Add(new ValidationEntry<MasterImportDto> { Row = row.RowNumber, Data = item });
+                validation.Valid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item });
                 processedInFile.Add(nameLower);
             }
 
@@ -140,73 +167,191 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Company>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
 
             var companies = await _context.Companies
                 .OrderBy(c => c.Name)
+                .Select(c => new CompanyDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Address = c.Address,
+                    Pan = c.Pan,
+                    State = c.State,
+                    City = c.City,
+                    Pincode = c.Pincode,
+                    Phone = c.Phone,
+                    Email = c.Email,
+                    LogoUrl = c.LogoUrl,
+                    GstNo = c.GstNo,
+                    GstDate = c.GstDate,
+                    IsActive = c.IsActive,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Company>> { Data = companies });
+            return Ok(new ApiResponse<IEnumerable<CompanyDto>> { Data = companies });
         }
 
         [HttpGet("active")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Company>>>> GetActive()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetActive()
         {
             var companies = await _context.Companies
                 .Where(c => c.IsActive)
                 .OrderBy(c => c.Name)
+                .Select(c => new CompanyDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Address = c.Address,
+                    Pan = c.Pan,
+                    State = c.State,
+                    City = c.City,
+                    Pincode = c.Pincode,
+                    Phone = c.Phone,
+                    Email = c.Email,
+                    LogoUrl = c.LogoUrl,
+                    GstNo = c.GstNo,
+                    GstDate = c.GstDate,
+                    IsActive = c.IsActive,
+                    CreatedAt = c.CreatedAt,
+                    UpdatedAt = c.UpdatedAt
+                })
                 .ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Company>> { Data = companies });
+            return Ok(new ApiResponse<IEnumerable<CompanyDto>> { Data = companies });
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<Company>>> GetById(int id)
+        public async Task<ActionResult<ApiResponse<CompanyDto>>> GetById(int id)
         {
             var company = await _context.Companies.FindAsync(id);
-            if (company == null) return NotFound(new ApiResponse<Company> { Success = false, Message = "Company not found" });
-            return Ok(new ApiResponse<Company> { Data = company });
+            if (company == null) return NotFound(new ApiResponse<CompanyDto> { Success = false, Message = "Company not found" });
+            var dto = new CompanyDto
+            {
+                Id = company.Id,
+                Name = company.Name,
+                Address = company.Address,
+                Pan = company.Pan,
+                State = company.State,
+                City = company.City,
+                Pincode = company.Pincode,
+                Phone = company.Phone,
+                Email = company.Email,
+                LogoUrl = company.LogoUrl,
+                GstNo = company.GstNo,
+                GstDate = company.GstDate,
+                IsActive = company.IsActive,
+                CreatedAt = company.CreatedAt,
+                UpdatedAt = company.UpdatedAt
+            };
+            return Ok(new ApiResponse<CompanyDto> { Data = dto });
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<Company>>> Create([FromBody] Company company)
+        public async Task<ActionResult<ApiResponse<CompanyDto>>> Create([FromBody] CreateCompanyRequest request)
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
 
-            if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == company.Name.Trim().ToLower()))
-                return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name is required" });
+            if (string.IsNullOrWhiteSpace(request.Address))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Address is required" });
+            if (string.IsNullOrWhiteSpace(request.GstNo))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "GST number is required" });
 
-            company.CreatedAt = DateTime.Now;
-            company.UpdatedAt = DateTime.Now;
+            if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == request.Name.Trim().ToLower()))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name already exists" });
+
+            var company = new Company
+            {
+                Name = request.Name.Trim(),
+                Address = request.Address.Trim(),
+                GstNo = request.GstNo.Trim(),
+                Pan = request.Pan?.Trim(),
+                State = request.State?.Trim(),
+                City = request.City?.Trim(),
+                Pincode = request.Pincode?.Trim(),
+                Phone = request.Phone?.Trim(),
+                Email = request.Email?.Trim(),
+                LogoUrl = request.LogoUrl?.Trim(),
+                GstDate = request.GstDate,
+                IsActive = request.IsActive ?? true,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
-            return StatusCode(201, new ApiResponse<Company> { Data = company });
+            var dto = new CompanyDto
+            {
+                Id = company.Id,
+                Name = company.Name,
+                Address = company.Address,
+                Pan = company.Pan,
+                State = company.State,
+                City = company.City,
+                Pincode = company.Pincode,
+                Phone = company.Phone,
+                Email = company.Email,
+                LogoUrl = company.LogoUrl,
+                GstNo = company.GstNo,
+                GstDate = company.GstDate,
+                IsActive = company.IsActive,
+                CreatedAt = company.CreatedAt,
+                UpdatedAt = company.UpdatedAt
+            };
+            return StatusCode(201, new ApiResponse<CompanyDto> { Data = dto });
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<ApiResponse<Company>>> Update(int id, [FromBody] UpdateCompanyRequest request)
+        public async Task<ActionResult<ApiResponse<CompanyDto>>> Update(int id, [FromBody] UpdateCompanyRequest request)
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
 
             var existing = await _context.Companies.FindAsync(id);
-            if (existing == null) return NotFound(new ApiResponse<Company> { Success = false, Message = "Company not found" });
+            if (existing == null) return NotFound(new ApiResponse<CompanyDto> { Success = false, Message = "Company not found" });
 
             if (request.Name != null)
             {
                 if (await _context.Companies.AnyAsync(c => c.Id != id && c.Name.ToLower() == request.Name.Trim().ToLower()))
-                    return BadRequest(new ApiResponse<Company> { Success = false, Message = "Company name already exists" });
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name already exists" });
                 existing.Name = request.Name.Trim();
             }
-            if (request.Address != null) existing.Address = request.Address;
+            if (request.Address != null) existing.Address = request.Address.Trim();
+            if (request.GstNo != null) existing.GstNo = request.GstNo.Trim();
+            if (request.Pan != null) existing.Pan = request.Pan.Trim();
+            if (request.State != null) existing.State = request.State.Trim();
+            if (request.City != null) existing.City = request.City.Trim();
+            if (request.Pincode != null) existing.Pincode = request.Pincode.Trim();
+            if (request.Phone != null) existing.Phone = request.Phone.Trim();
+            if (request.Email != null) existing.Email = request.Email.Trim();
             if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
-            if (request.GstNo != null) existing.GstNo = request.GstNo;
             if (request.GstDate.HasValue) existing.GstDate = request.GstDate;
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<Company> { Data = existing });
+            var dto = new CompanyDto
+            {
+                Id = existing.Id,
+                Name = existing.Name,
+                Address = existing.Address,
+                Pan = existing.Pan,
+                State = existing.State,
+                City = existing.City,
+                Pincode = existing.Pincode,
+                Phone = existing.Phone,
+                Email = existing.Email,
+                LogoUrl = existing.LogoUrl,
+                GstNo = existing.GstNo,
+                GstDate = existing.GstDate,
+                IsActive = existing.IsActive,
+                CreatedAt = existing.CreatedAt,
+                UpdatedAt = existing.UpdatedAt
+            };
+            return Ok(new ApiResponse<CompanyDto> { Data = dto });
         }
 
         [HttpDelete("{id}")]

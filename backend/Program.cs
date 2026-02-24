@@ -110,6 +110,9 @@ using (var scope = app.Services.CreateScope())
         // Ensure purchase_order_items has Rate (fallback if migration did not run)
         EnsurePOItemSchema(context);
 
+        // Ensure companies has new master fields (fallback if AddCompanyMasterFields migration did not run)
+        EnsureCompanyMasterFieldsSchema(context);
+
         DbInitializer.Initialize(context);
     }
     catch (Exception ex)
@@ -133,4 +136,29 @@ static void EnsurePOItemSchema(ApplicationDbContext context)
         ");
     }
     catch (Exception) { /* Schema may already be correct, or table may not exist yet */ }
+}
+
+static void EnsureCompanyMasterFieldsSchema(ApplicationDbContext context)
+{
+    try
+    {
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[companies]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Pan')
+                    ALTER TABLE [dbo].[companies] ADD [Pan] nvarchar(50) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'State')
+                    ALTER TABLE [dbo].[companies] ADD [State] nvarchar(100) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'City')
+                    ALTER TABLE [dbo].[companies] ADD [City] nvarchar(100) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Pincode')
+                    ALTER TABLE [dbo].[companies] ADD [Pincode] nvarchar(20) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Phone')
+                    ALTER TABLE [dbo].[companies] ADD [Phone] nvarchar(30) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Email')
+                    ALTER TABLE [dbo].[companies] ADD [Email] nvarchar(255) NULL;
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct */ }
 }
