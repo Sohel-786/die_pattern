@@ -21,6 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICodeGeneratorService, CodeGeneratorService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
+builder.Services.AddScoped<IItemStateService, ItemStateService>();
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -101,6 +102,8 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var env = services.GetRequiredService<IWebHostEnvironment>();
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
@@ -114,12 +117,14 @@ using (var scope = app.Services.CreateScope())
         EnsureCompanyMasterFieldsSchema(context);
 
         DbInitializer.Initialize(context);
+        logger.LogInformation("Database migrations and seeding completed.");
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-        throw;
+        if (env.IsProduction())
+            throw;
+        logger.LogWarning("Continuing without database in Development. Set ConnectionStrings:DefaultConnection (e.g. LocalDB) and ensure SQL Server/LocalDB is running, then restart.");
     }
 }
 

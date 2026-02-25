@@ -67,22 +67,23 @@ namespace net_backend.Controllers
                 return Unauthorized(new ApiResponse<UserPermission> { Success = false, Message = "User ID not found" });
             }
 
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound(new ApiResponse<UserPermission> { Success = false, Message = "User not found" });
+
+            // ADMIN always receives full permissions so UI (e.g. Approve PO) shows correctly regardless of DB row
+            if (user.Role == Role.ADMIN)
+            {
+                var adminPerms = CreateDefaultPermissions(userId, Role.ADMIN);
+                return Ok(new ApiResponse<UserPermission> { Success = true, Data = adminPerms });
+            }
+
             var permissions = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == userId);
-            
-            // If no permissions found, create default based on role
             if (permissions == null)
             {
-                var user = await _context.Users.FindAsync(userId);
-                if (user != null)
-                {
-                    permissions = CreateDefaultPermissions(user.Id, user.Role);
-                    _context.UserPermissions.Add(permissions);
-                    await _context.SaveChangesAsync();
-                }
-                else
-                {
-                    return NotFound(new ApiResponse<UserPermission> { Success = false, Message = "User not found" });
-                }
+                permissions = CreateDefaultPermissions(user.Id, user.Role);
+                _context.UserPermissions.Add(permissions);
+                await _context.SaveChangesAsync();
             }
 
             return Ok(new ApiResponse<UserPermission> { Success = true, Data = permissions });

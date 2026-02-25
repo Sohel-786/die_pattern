@@ -36,7 +36,8 @@ namespace net_backend.DTOs
         public string? RevisionNo { get; set; }
         public string? MaterialName { get; set; }
         public string? PoNo { get; set; }
-        public bool IsInPO { get; set; } // Logic for visibility
+        public int? PoId { get; set; }
+        public bool IsInPO { get; set; }
     }
 
     public class CreatePurchaseIndentDto
@@ -72,6 +73,7 @@ namespace net_backend.DTOs
         public int? ApprovedBy { get; set; }
         public string? ApproverName { get; set; }
         public DateTime? ApprovedAt { get; set; }
+        public bool IsActive { get; set; } = true;
         public List<POItemDto> Items { get; set; } = new();
     }
 

@@ -263,6 +263,8 @@ export interface PurchaseIndentItem {
   materialName?: string;
   isInPO?: boolean;
   piNo?: string;
+  poNo?: string;
+  poId?: number | null;
 }
 
 export interface PO {
@@ -287,6 +289,7 @@ export interface PO {
   approvedAt?: string | null;
   items: POItem[];
   createdAt: string;
+  isActive?: boolean;
 }
 
 export interface POItem {

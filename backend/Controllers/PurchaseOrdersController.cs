@@ -52,6 +52,7 @@ namespace net_backend.Controllers
             dto.ApproverName = po.Approver != null ? po.Approver.FirstName + " " + po.Approver.LastName : null;
             dto.ApprovedAt = po.ApprovedAt;
             dto.PurchaseType = po.PurchaseType;
+            dto.IsActive = po.IsActive;
         }
 
         [HttpGet("next-code")]
@@ -61,20 +62,19 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<string> { Data = code });
         }
 
-        /// <summary>Approved PI items that can be selected for this PO: not in any PO, or already in this PO (for edit).</summary>
+        /// <summary>Approved PI items that can be selected for this PO: not in any active PO, or already in this PO (for edit).</summary>
         [HttpGet("approved-items-for-edit")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItemsForEdit([FromQuery] int? poId)
         {
-            var inAnyPo = _context.PurchaseOrderItems.Select(poi => poi.PurchaseIndentItemId);
             var query = _context.PurchaseIndentItems
                 .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
                 .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && pii.PurchaseIndent.IsActive);
 
             if (poId.HasValue)
-                query = query.Where(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id) || _context.PurchaseOrderItems.Any(poi => poi.PurchaseOrderId == poId && poi.PurchaseIndentItemId == pii.Id));
+                query = query.Where(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) || _context.PurchaseOrderItems.Any(poi => poi.PurchaseOrderId == poId && poi.PurchaseIndentItemId == pii.Id));
             else
-                query = query.Where(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id));
+                query = query.Where(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive));
 
             var items = await query
                 .Select(pii => new PurchaseIndentItemDto
@@ -141,10 +141,102 @@ namespace net_backend.Controllers
             }
         }
 
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetAll()
+        /// <summary>Delete a quotation file from storage. Called when user removes a file in PO edit mode.</summary>
+        [HttpDelete("quotation")]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteQuotation([FromQuery] string? url)
         {
-            var list = await _context.PurchaseOrders
+            if (!await HasPermission("EditPO") && !await HasPermission("CreatePO")) return Forbidden();
+            if (string.IsNullOrWhiteSpace(url))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Quotation URL is required." });
+
+            var decoded = Uri.UnescapeDataString(url.Trim());
+            if (!decoded.StartsWith("/storage/po-quotations/", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid quotation path." });
+
+            var fileName = Path.GetFileName(decoded);
+            if (string.IsNullOrEmpty(fileName) || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid file name." });
+
+            try
+            {
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var dir = Path.Combine(root, "wwwroot", "storage", "po-quotations");
+                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
+                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid path." });
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Access denied to storage." });
+            }
+            catch (IOException ex)
+            {
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Delete failed: " + ex.Message });
+            }
+        }
+
+        /// <summary>Set PO to inactive. Fails if any inward has been done from this PO.</summary>
+        [HttpPatch("{id}/inactive")]
+        public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
+        {
+            if (!await HasPermission("EditPO")) return Forbidden();
+
+            var po = await _context.PurchaseOrders.FindAsync(id);
+            if (po == null) return NotFound();
+
+            var hasInward = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == id);
+            if (hasInward)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this PO have been inwarded. Inactive is allowed only when no inward has been done against this PO." });
+
+            po.IsActive = false;
+            po.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        /// <summary>Set PO to active. Fails if any of this PO's PI items are now in another active PO.</summary>
+        [HttpPatch("{id}/active")]
+        public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
+        {
+            if (!await HasPermission("EditPO")) return Forbidden();
+
+            var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            if (po == null) return NotFound();
+
+            foreach (var poi in po.Items)
+            {
+                var inOtherActivePo = await _context.PurchaseOrderItems
+                    .AnyAsync(x => x.PurchaseIndentItemId == poi.PurchaseIndentItemId && x.PurchaseOrderId != id && x.PurchaseOrder != null && x.PurchaseOrder.IsActive);
+                if (inOtherActivePo)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot reactivate: one or more items from this PO have been used in another active PO. Reactivation is allowed only when none of its PI items are in any other PO." });
+            }
+
+            po.IsActive = true;
+            po.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetAll(
+            [FromQuery] string? search,
+            [FromQuery] string? status,
+            [FromQuery] DateTime? poDateFrom,
+            [FromQuery] DateTime? poDateTo,
+            [FromQuery] string? vendorIds,
+            [FromQuery] string? purchaseType,
+            [FromQuery] DateTime? deliveryDateFrom,
+            [FromQuery] DateTime? deliveryDateTo,
+            [FromQuery] string? itemIds,
+            [FromQuery] decimal? rateMin,
+            [FromQuery] decimal? rateMax)
+        {
+            var query = _context.PurchaseOrders
                 .Include(p => p.Vendor)
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
@@ -154,8 +246,49 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.PurchaseIndent)
-                .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
+                .AsQueryable();
+
+            var searchTrim = (search ?? "").Trim();
+            if (!string.IsNullOrEmpty(searchTrim))
+            {
+                searchTrim = searchTrim.ToLowerInvariant();
+                query = query.Where(p =>
+                    p.PoNo.ToLower().Contains(searchTrim) ||
+                    (p.Vendor != null && p.Vendor.Name != null && p.Vendor.Name.ToLower().Contains(searchTrim)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PoStatus>(status, true, out var statusEnum))
+                query = query.Where(p => p.Status == statusEnum);
+
+            if (poDateFrom.HasValue)
+                query = query.Where(p => p.CreatedAt.Date >= poDateFrom.Value.Date);
+            if (poDateTo.HasValue)
+                query = query.Where(p => p.CreatedAt.Date <= poDateTo.Value.Date);
+
+            var vendorIdList = (vendorIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
+            if (vendorIdList.Count > 0)
+                query = query.Where(p => vendorIdList.Contains(p.VendorId));
+
+            if (!string.IsNullOrWhiteSpace(purchaseType))
+                query = query.Where(p => p.PurchaseType == purchaseType);
+
+            if (deliveryDateFrom.HasValue)
+                query = query.Where(p => p.DeliveryDate != null && p.DeliveryDate.Value.Date >= deliveryDateFrom.Value.Date);
+            if (deliveryDateTo.HasValue)
+                query = query.Where(p => p.DeliveryDate != null && p.DeliveryDate.Value.Date <= deliveryDateTo.Value.Date);
+
+            var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
+            if (itemIdList.Count > 0)
+                query = query.Where(p => p.Items.Any(i => i.PurchaseIndentItem != null && itemIdList.Contains(i.PurchaseIndentItem.ItemId)));
+
+            if (rateMin.HasValue)
+                query = query.Where(p => p.Items.Any(i => i.Rate >= rateMin.Value));
+            if (rateMax.HasValue)
+                query = query.Where(p => p.Items.Any(i => i.Rate <= rateMax.Value));
+
+            var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
 
             var data = list.Select(p =>
             {
@@ -225,7 +358,7 @@ namespace net_backend.Controllers
                 PurchaseType = dto.PurchaseType,
                 ApprovedBy = dto.ApprovedBy,
                 CreatedBy = CurrentUserId,
-                Status = PoStatus.Draft,
+                Status = PoStatus.Pending,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };

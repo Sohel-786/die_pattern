@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
+import { registerDialog } from "@/lib/dialog-stack";
 
 export interface FullScreenImageViewerProps {
   isOpen: boolean;
@@ -17,6 +19,15 @@ export function FullScreenImageViewer({
   imageSrc,
   alt = "Image",
 }: FullScreenImageViewerProps) {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      return registerDialog(() => onCloseRef.current());
+    }
+  }, [isOpen]);
+
   if (!imageSrc) return null;
 
   return (

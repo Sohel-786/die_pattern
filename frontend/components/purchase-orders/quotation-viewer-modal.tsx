@@ -1,45 +1,67 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 interface QuotationViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** URL path e.g. /storage/po-quotations/xxx.pdf */
+  /** URL path e.g. /storage/po-quotations/xxx.pdf or blob URL for pending files */
   url: string | null;
+  /** When url is a blob (pending file), pass file name for type detection */
+  fileName?: string | null;
 }
 
-function isPdf(url: string): boolean {
-  const path = url.split("?")[0];
-  return path.toLowerCase().endsWith(".pdf");
+function isPdf(url: string, fileName?: string | null): boolean {
+  const name = (fileName ?? url).split("?")[0];
+  return name.toLowerCase().endsWith(".pdf");
 }
 
-function isImage(url: string): boolean {
-  const path = url.split("?")[0].toLowerCase();
-  return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].some((ext) => path.endsWith(ext));
+function isImage(url: string, fileName?: string | null): boolean {
+  const name = (fileName ?? url).split("?")[0].toLowerCase();
+  return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].some((ext) => name.endsWith(ext));
 }
 
-export function QuotationViewerModal({ isOpen, onClose, url }: QuotationViewerModalProps) {
+export function QuotationViewerModal({ isOpen, onClose, url, fileName }: QuotationViewerModalProps) {
   if (!url) return null;
 
-  const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-  const showPdf = isPdf(url);
-  const showImage = isImage(url);
+  const fullUrl = url.startsWith("http") || url.startsWith("blob:") ? url : `${API_BASE}${url}`;
+  const showPdf = isPdf(url, fileName);
+  const showImage = isImage(url, fileName);
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    onCloseRef.current();
+  }, []);
 
   useEffect(() => {
-    if (!isOpen || !showPdf) return;
+    if (isOpen) {
+      return registerDialog(handleClose);
+    }
+  }, [isOpen, handleClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (isTopDialog(handleClose)) {
+          onClose();
+        }
+      }
     };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [isOpen, showPdf, onClose]);
+    window.addEventListener("keydown", handleEsc, true);
+    return () => window.removeEventListener("keydown", handleEsc, true);
+  }, [isOpen, handleClose, onClose]);
 
   if (showImage) {
     return (
@@ -61,7 +83,7 @@ export function QuotationViewerModal({ isOpen, onClose, url }: QuotationViewerMo
         aria-label="View quotation PDF"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
-          <span className="text-sm font-medium text-white truncate max-w-[60%]">{url.split("/").pop() || "Quotation"}</span>
+          <span className="text-sm font-medium text-white truncate max-w-[60%]">{fileName || url.split("/").pop() || "Quotation"}</span>
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg" title="Close (Esc)">
             <X className="h-5 w-5" />
           </Button>
@@ -79,7 +101,7 @@ export function QuotationViewerModal({ isOpen, onClose, url }: QuotationViewerMo
     const fallbackContent = (
       <div className="fixed inset-0 z-[2000] flex flex-col bg-black/95" role="dialog" aria-modal="true">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
-          <span className="text-sm font-medium text-white truncate">{url.split("/").pop() || "Quotation"}</span>
+          <span className="text-sm font-medium text-white truncate">{fileName || url.split("/").pop() || "Quotation"}</span>
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg">
             <X className="h-5 w-5" />
           </Button>

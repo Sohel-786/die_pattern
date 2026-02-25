@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Printer, Loader2 } from "lucide-react";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import { PurchaseIndent, PurchaseIndentStatus, PurchaseIndentType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,31 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
     },
     enabled: !!piId,
   });
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    onCloseRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (piId) {
+      return registerDialog(handleClose);
+    }
+  }, [piId, handleClose]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isTopDialog(handleClose)) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [handleClose, onClose]);
 
   const handlePrint = () => {
     window.print();
@@ -169,7 +196,8 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
         )}
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           body * { visibility: hidden !important; }
           #pi-document, #pi-document * { visibility: visible !important; }

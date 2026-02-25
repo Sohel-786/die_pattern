@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PiSelectionDialog } from "./pi-selection-dialog";
-import { QuotationViewerModal } from "./quotation-viewer-modal";
+import { QuotationListDialog } from "./quotation-list-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,9 @@ export function PurchaseOrderDialog({
   const [remarks, setRemarks] = useState("");
   const [gstPercent, setGstPercent] = useState<number>(18);
   const [quotationUrls, setQuotationUrls] = useState<string[]>([]);
+  const [pendingQuotationFiles, setPendingQuotationFiles] = useState<File[]>([]);
+  const [quotationUrlsToDelete, setQuotationUrlsToDelete] = useState<string[]>([]);
+  const [quotationListDialogOpen, setQuotationListDialogOpen] = useState(false);
   const [items, setItems] = useState<POGridItem[]>([]);
   const [selectedPiIds, setSelectedPiIds] = useState<number[]>([]);
   const [isPiSelectionOpen, setIsPiSelectionOpen] = useState(false);
@@ -71,7 +74,6 @@ export function PurchaseOrderDialog({
   const [purchaseType, setPurchaseType] = useState<PurchaseType>("Regular");
   const [gstType, setGstType] = useState<GstType | "">("");
   const [uploading, setUploading] = useState(false);
-  const [viewQuotationUrl, setViewQuotationUrl] = useState<string | null>(null);
   const [itemsDisplayMap, setItemsDisplayMap] = useState<Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }>>({});
 
   const { data: poData, isLoading: loadingPO } = useQuery<PO>({
@@ -136,6 +138,8 @@ export function PurchaseOrderDialog({
       setRemarks(poData.remarks || "");
       setGstPercent(poData.gstPercent || 18);
       setQuotationUrls(poData.quotationUrls || []);
+      setPendingQuotationFiles([]);
+      setQuotationUrlsToDelete([]);
       setQuotationNo(poData.quotationNo || "");
       setPurchaseType((poData.purchaseType as PurchaseType) || "Regular");
       setGstType(poData.gstType ?? "");
@@ -169,6 +173,8 @@ export function PurchaseOrderDialog({
       setRemarks("");
       setGstPercent(18);
       setQuotationUrls([]);
+      setPendingQuotationFiles([]);
+      setQuotationUrlsToDelete([]);
       setItems([]);
       setSelectedPiIds([]);
       setItemsDisplayMap({});
@@ -229,9 +235,9 @@ export function PurchaseOrderDialog({
   const mutation = isEditing ? updateMutation : createMutation;
 
   const ALLOWED_QUOTATION_EXT = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"];
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files?.length || uploading) return;
+    if (!files?.length) return;
     const valid: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const ext = "." + (files[i].name.split(".").pop() || "").toLowerCase();
@@ -242,27 +248,19 @@ export function PurchaseOrderDialog({
       e.target.value = "";
       return;
     }
-    setUploading(true);
-    try {
-      for (let i = 0; i < valid.length; i++) {
-        const form = new FormData();
-        form.append("file", valid[i], valid[i].name);
-        const res = await api.post("/purchase-orders/upload-quotation", form);
-        const url = res.data?.data?.url;
-        if (url) setQuotationUrls((prev) => [...prev, url]);
-      }
-      if (valid.length > 0) toast.success("File(s) uploaded.");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || "Upload failed");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
+    setPendingQuotationFiles((prev) => [...prev, ...valid]);
+    toast.success("File(s) added. They will be uploaded when you save the PO.");
+    e.target.value = "";
   };
 
-  const removeQuotationFile = (index: number) => {
-    setQuotationUrls((prev) => prev.filter((_, i) => i !== index));
+  const removeQuotationUrl = (url: string) => {
+    setQuotationUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
   };
+  const removePendingQuotation = (index: number) => {
+    setPendingQuotationFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const effectiveQuotationCount = quotationUrls.filter((u) => !quotationUrlsToDelete.includes(u)).length + pendingQuotationFiles.length;
 
   const toggleItemIncluded = (purchaseIndentItemId: number) => {
     setItems((prev) => prev.map((i) => (i.purchaseIndentItemId === purchaseIndentItemId ? { ...i, included: !(i.included !== false) } : i)));
@@ -318,6 +316,22 @@ export function PurchaseOrderDialog({
     setIsPiSelectionOpen(false);
   };
 
+  const removePiFromSelection = (piId: number) => {
+    const itemIdsToRemove = items.filter((i) => i.sourcePiId === piId).map((i) => i.purchaseIndentItemId);
+    setSelectedPiIds((prev) => prev.filter((id) => id !== piId));
+    setItems((prev) => prev.filter((i) => i.sourcePiId !== piId));
+    setItemsDisplayMap((prev) => {
+      const next = { ...prev };
+      itemIdsToRemove.forEach((id) => delete next[id]);
+      return next;
+    });
+  };
+
+  const selectedPIsForDisplay = useMemo(
+    () => approvedPIs.filter((p) => selectedPiIds.includes(p.id)),
+    [approvedPIs, selectedPiIds]
+  );
+
   const includedItems = items.filter((i) => i.included !== false);
   const totalTaxable = includedItems.reduce((sum, i) => sum + (i.rate ?? 0), 0);
   const totalGst = includedItems.reduce((sum, i) => sum + ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100, 0);
@@ -326,12 +340,12 @@ export function PurchaseOrderDialog({
   const isValid =
     !!vendorId &&
     quotationNo.trim() !== "" &&
-    quotationUrls.length >= 1 &&
+    effectiveQuotationCount >= 1 &&
     deliveryDate.trim() !== "" &&
     includedItems.length >= 1 &&
     includedItems.some((i) => (i.rate ?? 0) > 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!vendorId) {
       toast.error("Please select Party Name");
       return;
@@ -340,8 +354,8 @@ export function PurchaseOrderDialog({
       toast.error("Quotation Number is required");
       return;
     }
-    if (quotationUrls.length === 0) {
-      toast.error("At least one quotation file must be uploaded");
+    if (effectiveQuotationCount === 0) {
+      toast.error("At least one quotation file is required (add files and save)");
       return;
     }
     if (deliveryDate.trim() === "") {
@@ -357,18 +371,45 @@ export function PurchaseOrderDialog({
       toast.error("Enter rate for at least one included item");
       return;
     }
-    const payload = {
-      vendorId,
-      deliveryDate: deliveryDate || null,
-      remarks: remarks || undefined,
-      quotationNo: quotationNo.trim() || undefined,
-      quotationUrls: quotationUrls.length ? quotationUrls : undefined,
-      purchaseType,
-      gstType: gstType || undefined,
-      gstPercent: gstPercent || undefined,
-      items: includedItems.map((i) => ({ purchaseIndentItemId: i.purchaseIndentItemId, rate: i.rate ?? 0 })),
-    };
-    mutation.mutate(payload);
+    setUploading(true);
+    try {
+      const keptUrls = quotationUrls.filter((u) => !quotationUrlsToDelete.includes(u));
+      const newUrls: string[] = [];
+      for (let i = 0; i < pendingQuotationFiles.length; i++) {
+        const form = new FormData();
+        form.append("file", pendingQuotationFiles[i], pendingQuotationFiles[i].name);
+        const res = await api.post("/purchase-orders/upload-quotation", form);
+        const url = res.data?.data?.url;
+        if (url) newUrls.push(url);
+      }
+      for (const url of quotationUrlsToDelete) {
+        try {
+          await api.delete("/purchase-orders/quotation", { params: { url } });
+        } catch {
+          // best-effort delete
+        }
+      }
+      const finalQuotationUrls = [...keptUrls, ...newUrls];
+      const payload = {
+        vendorId,
+        deliveryDate: deliveryDate || null,
+        remarks: remarks || undefined,
+        quotationNo: quotationNo.trim() || undefined,
+        quotationUrls: finalQuotationUrls.length ? finalQuotationUrls : undefined,
+        purchaseType,
+        gstType: gstType || undefined,
+        gstPercent: gstPercent || undefined,
+        items: includedItems.map((i) => ({ purchaseIndentItemId: i.purchaseIndentItemId, rate: i.rate ?? 0 })),
+      };
+      await mutation.mutateAsync(payload);
+      setQuotationUrls(finalQuotationUrls);
+      setPendingQuotationFiles([]);
+      setQuotationUrlsToDelete([]);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Upload or save failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const selectedVendor = vendors.find((v) => v.id === vendorId);
@@ -449,7 +490,7 @@ export function PurchaseOrderDialog({
               </div>
 
               <div className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-4">
+                <div className="col-span-3">
                   <Label className="text-xs font-semibold text-secondary-600">Quotation Number *</Label>
                   <Input
                     placeholder="Supplier quote ref"
@@ -458,45 +499,70 @@ export function PurchaseOrderDialog({
                     className="h-9 mt-0.5 border-secondary-200 text-sm"
                   />
                 </div>
-                <div className="col-span-4 flex flex-col">
-                  <Label className="text-xs font-semibold text-secondary-600">Quotation Upload *</Label>
-                  <div className="mt-0.5 flex items-center gap-2 h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors">
-                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0 h-full">
-                      <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
-                      <span className="text-xs font-medium text-secondary-600 whitespace-nowrap">
-                        {uploading ? "Uploading..." : "PDF / Images"}
-                      </span>
-                      <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
-                    </label>
-                    {quotationUrls.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-                        {quotationUrls.map((fileUrl, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center gap-1 rounded-md bg-primary-100/80 text-primary-800 text-[11px] font-medium pl-2 pr-1 py-0.5 max-w-full"
-                          >
-                            <span className="truncate max-w-[80px]">{fileUrl.split("/").pop() || `File ${idx + 1}`}</span>
-                            <button type="button" onClick={() => setViewQuotationUrl(fileUrl)} className="p-0.5 rounded hover:bg-primary-200/80 shrink-0" title="View">
-                              <Eye className="w-3 h-3" />
-                            </button>
-                            <button type="button" onClick={() => removeQuotationFile(idx)} className="p-0.5 rounded hover:bg-rose-200/80 text-rose-600 shrink-0" title="Remove">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                <div className="col-span-9 flex items-end gap-2 flex-wrap">
+                  <div className="w-48 min-w-0">
+                    <Label className="text-xs font-semibold text-secondary-600">Quotation Upload *</Label>
+                    <div className="mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors">
+                      <label className="flex items-center gap-1.5 cursor-pointer shrink-0 h-full py-1 w-full">
+                        <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
+                        <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
+                          {uploading ? "Saving..." : effectiveQuotationCount === 0 ? "PDF / Images" : "PDF / Images"}
+                        </span>
+                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                      </label>
+                    </div>
                   </div>
-                  {quotationUrls.length === 0 && !uploading && <p className="text-[10px] text-secondary-500 mt-0.5">PDF or images only. At least one file required.</p>}
-                </div>
-                <div className="col-span-4">
-                  <Label className="text-xs font-semibold text-secondary-600 invisible">Add PI</Label>
-                  <Button type="button" onClick={() => setIsPiSelectionOpen(true)} className="h-9 w-full sm:w-auto px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2 mt-0.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 shrink-0"
+                    onClick={() => setQuotationListDialogOpen(true)}
+                    disabled={effectiveQuotationCount === 0}
+                  >
+                    View ({effectiveQuotationCount})
+                  </Button>
+                  <Button type="button" onClick={() => setIsPiSelectionOpen(true)} className="h-9 shrink-0 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2">
                     <Plus className="w-4 h-4" />
                     Add PI
                   </Button>
                 </div>
               </div>
+              <QuotationListDialog
+                open={quotationListDialogOpen}
+                onClose={() => setQuotationListDialogOpen(false)}
+                urls={quotationUrls}
+                urlsToDelete={quotationUrlsToDelete}
+                pendingFiles={pendingQuotationFiles}
+                onRemoveUrl={(url) => setQuotationUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]))}
+                onRemovePending={removePendingQuotation}
+                isEditing={isEditing}
+              />
+
+              {/* Selected PIs: show above Items table with option to remove entire PI */}
+              {selectedPIsForDisplay.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-secondary-600">Selected PIs</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedPIsForDisplay.map((pi) => (
+                      <span
+                        key={pi.id}
+                        className="inline-flex items-center gap-2 rounded-lg border border-secondary-200 bg-white px-3 py-1.5 text-sm font-medium text-secondary-800 shadow-sm"
+                      >
+                        {pi.piNo}
+                        <button
+                          type="button"
+                          onClick={() => removePiFromSelection(pi.id)}
+                          className="p-0.5 rounded hover:bg-rose-100 text-secondary-500 hover:text-rose-600 transition-colors"
+                          title="Remove this PI and all its items from the PO"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Items table: only this area scrolls; horizontal scroll for long content */}
               <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden">
@@ -647,7 +713,6 @@ export function PurchaseOrderDialog({
         selectedPiIds={selectedPiIds}
         onSelectPIs={handleSelectPIs}
       />
-      <QuotationViewerModal isOpen={!!viewQuotationUrl} onClose={() => setViewQuotationUrl(null)} url={viewQuotationUrl} />
     </Dialog>
   );
 }

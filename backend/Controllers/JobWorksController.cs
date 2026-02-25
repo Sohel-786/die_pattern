@@ -12,10 +12,12 @@ namespace net_backend.Controllers
     public class JobWorksController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
+        private readonly Services.IItemStateService _itemState;
 
-        public JobWorksController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        public JobWorksController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, Services.IItemStateService itemState) : base(context)
         {
             _codeGenerator = codeGenerator;
+            _itemState = itemState;
         }
 
         [HttpGet("next-code")]
@@ -56,6 +58,10 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<JobWork>>> Create([FromBody] CreateJobWorkDto dto)
         {
             if (!await HasPermission("CreateInward")) return Forbidden();
+
+            var inStock = await _itemState.IsInStockAsync(dto.ItemId);
+            if (!inStock)
+                return BadRequest(new ApiResponse<JobWork> { Success = false, Message = "Item must be In stock to send for Job work. One item can only be in one process at a time (PI, PO, QC, Jobwork, Outward, or In stock)." });
 
             var jw = new JobWork
             {

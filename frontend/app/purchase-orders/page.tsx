@@ -1,338 +1,672 @@
 "use client";
 
+import { useState, useCallback, useMemo, Fragment, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Plus, Search, ShoppingCart, CheckCircle,
-    Eye, Building2, IndianRupee, Printer, Send, Edit2
+  Plus,
+  ShoppingCart,
+  Eye,
+  Printer,
+  Edit2,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Minus,
+  Ban,
 } from "lucide-react";
 import api from "@/lib/api";
 import { PO, PoStatus } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { toast } from "react-hot-toast";
-import { format } from "date-fns";
-
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
+import { toast } from "react-hot-toast";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { POFilters } from "@/components/filters/po-filters";
+import {
+  defaultPOFilters,
+  buildPOFilterParams,
+  type POFiltersState,
+} from "@/lib/po-filters";
+import { cn } from "@/lib/utils";
+import type { Party } from "@/types";
+import type { Item } from "@/types";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export default function PurchaseOrdersPage() {
-    const { data: permissions } = useCurrentUserPermissions();
-    const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All");
-    const [previewPOId, setPreviewPOId] = useState<number | null>(null);
-    const [approveTarget, setApproveTarget] = useState<PO | null>(null);
-    const [submitTarget, setSubmitTarget] = useState<PO | null>(null);
-    const [poDialogOpen, setPoDialogOpen] = useState(false);
-    const [editPO, setEditPO] = useState<PO | null>(null);
+  const { data: permissions } = useCurrentUserPermissions();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [filters, setFilters] = useState<POFiltersState>(defaultPOFilters);
+  const debouncedSearch = useDebouncedValue(filters.search, 400);
+  const [expandedPOId, setExpandedPOId] = useState<number | null>(null);
+  const [previewPOId, setPreviewPOId] = useState<number | null>(null);
+  const [approveTarget, setApproveTarget] = useState<PO | null>(null);
+  const [inactiveTarget, setInactiveTarget] = useState<PO | null>(null);
+  const [activeTarget, setActiveTarget] = useState<PO | null>(null);
+  const [poDialogOpen, setPoDialogOpen] = useState(false);
+  const [editPO, setEditPO] = useState<PO | null>(null);
+  const searchParams = useSearchParams();
 
-    if (permissions && !permissions.viewPO) {
+  useEffect(() => {
+    const openPoId = searchParams.get("openPoId");
+    if (openPoId) {
+      const id = parseInt(openPoId, 10);
+      if (!Number.isNaN(id)) setPreviewPOId(id);
+    }
+  }, [searchParams]);
+
+  const filterParams = useMemo(
+    () => buildPOFilterParams({ ...filters, search: debouncedSearch }),
+    [filters, debouncedSearch]
+  );
+  const queryKey = useMemo(
+    () => ["purchase-orders", filterParams],
+    [filterParams]
+  );
+
+  const { data: orders = [], isLoading } = useQuery<PO[]>({
+    queryKey,
+    queryFn: async () => {
+      const res = await api.get("/purchase-orders", { params: filterParams });
+      return res.data.data;
+    },
+  });
+
+  const { data: vendors = [] } = useQuery<Party[]>({
+    queryKey: ["parties", "active"],
+    queryFn: async () => {
+      const res = await api.get("/parties/active");
+      return res.data.data ?? [];
+    },
+  });
+
+  const { data: itemsList = [] } = useQuery<Item[]>({
+    queryKey: ["items", "active"],
+    queryFn: async () => {
+      const res = await api.get("/items/active");
+      return res.data.data ?? [];
+    },
+  });
+
+  const partyOptions = useMemo(
+    () =>
+      vendors.map((v) => ({
+        value: v.id,
+        label: v.name,
+      })),
+    [vendors]
+  );
+  const itemOptions = useMemo(
+    () =>
+      itemsList.map((i) => ({
+        value: i.id,
+        label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`,
+      })),
+    [itemsList]
+  );
+
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      toast.success("Order approved successfully");
+      setApproveTarget(null);
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Approval failed"),
+  });
+
+  const inactiveMutation = useMutation({
+    mutationFn: (id: number) => api.patch(`/purchase-orders/${id}/inactive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      toast.success("PO deactivated. Its PI items are available for other POs.");
+      setInactiveTarget(null);
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Deactivate failed"),
+  });
+
+  const activeMutation = useMutation({
+    mutationFn: (id: number) => api.patch(`/purchase-orders/${id}/active`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      toast.success("PO reactivated.");
+      setActiveTarget(null);
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Reactivate failed"),
+  });
+
+  const resetFilters = useCallback(() => {
+    setFilters(defaultPOFilters);
+  }, []);
+
+  const getStatusBadge = (status: PoStatus) => {
+    switch (status) {
+      case PoStatus.Approved:
         return (
-            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
-                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
-                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <ShoppingCart className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
-                    <p className="text-secondary-500 font-medium">You don't have the required clearance to view purchase orders.</p>
-                </div>
-            </div>
+          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">
+            Approved
+          </span>
+        );
+      case PoStatus.Rejected:
+        return (
+          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">
+            Rejected
+          </span>
+        );
+      case PoStatus.Pending:
+      case PoStatus.Draft:
+      default:
+        return (
+          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
+            Approval Pending
+          </span>
         );
     }
-    const queryClient = useQueryClient();
+  };
 
-    const { data: orders = [], isLoading } = useQuery<PO[]>({
-        queryKey: ["purchase-orders"],
-        queryFn: async () => {
-            const res = await api.get("/purchase-orders");
-            return res.data.data;
-        },
-    });
+  const canEdit = (po: PO) =>
+    (po.status === PoStatus.Pending || po.status === PoStatus.Draft) &&
+    (permissions?.editPO ?? user?.role === Role.ADMIN);
+  const canApprove = (po: PO) =>
+    po.status === PoStatus.Pending &&
+    (permissions?.approvePO === true || user?.role === Role.ADMIN);
 
-    const approveMutation = useMutation({
-        mutationFn: (id: number) => api.post(`/purchase-orders/${id}/approve`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-            toast.success("Order approved successfully");
-            setApproveTarget(null);
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || "Approval failed")
-    });
-
-    const submitMutation = useMutation({
-        mutationFn: (id: number) => api.post(`/purchase-orders/${id}/submit`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-            toast.success("PO submitted for approval");
-            setSubmitTarget(null);
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || "Submit failed")
-    });
-
-    const getStatusBadge = (status: PoStatus) => {
-        switch (status) {
-            case PoStatus.Draft:
-                return <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-slate-200">Draft</span>;
-            case PoStatus.Approved:
-                return <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-green-200">Approved</span>;
-            case PoStatus.Rejected:
-                return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-rose-200">Rejected</span>;
-            case PoStatus.Pending:
-            default:
-                return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Pending</span>;
-        }
-    };
-
-    const filteredOrders = orders.filter(po => {
-        const matchesSearch = po.poNo.toLowerCase().includes(search.toLowerCase()) ||
-            po.vendorName?.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === "All" || (typeof po.status === "string" ? po.status === statusFilter : String(po.status) === statusFilter);
-        return matchesSearch && matchesStatus;
-    });
-
+  if (permissions && !permissions.viewPO) {
     return (
-        <div className="p-4 space-y-4 bg-secondary-50/30 min-h-screen">
-            <div className="flex justify-between items-center mb-2">
-                <div>
-                    <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Purchase Orders</h1>
-                    <p className="text-secondary-500 text-sm">Official procurement and repair work orders</p>
-                </div>
-                {permissions?.createPO && (
-                    <Button
-                        onClick={() => { setEditPO(null); setPoDialogOpen(true); }}
-                        className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Issue New PO
-                    </Button>
-                )}
-            </div>
-
-            <Card className="border-secondary-200 shadow-sm overflow-hidden">
-                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center">
-                    <div className="relative flex-1 min-w-[300px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                        <Input
-                            placeholder="Search by PO No or Vendor..."
-                            className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Label className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Status</Label>
-                        <select
-                            className="h-10 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/10 w-40"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="All">All Status</option>
-                            <option value="Draft">Draft</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                        </select>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-secondary-500 hover:text-primary-600 font-bold text-xs uppercase tracking-wider"
-                        onClick={() => { setSearch(""); setStatusFilter("All"); }}
-                    >
-                        Clear Filters
-                    </Button>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-primary-50 border-secondary-100 divide-x divide-secondary-100">
-                                <TableHead className="w-16 h-11 text-center font-bold text-primary-900 uppercase tracking-tight text-[11px]">Sr.No</TableHead>
-                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Order Details</TableHead>
-                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Vendor / Items</TableHead>
-                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Valuation</TableHead>
-                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px] text-center">Status</TableHead>
-                                <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px] text-right pr-6">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={6} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : filteredOrders.length > 0 ? (
-                                filteredOrders.map((po, idx) => (
-                                    <TableRow
-                                        key={po.id}
-                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans whitespace-nowrap"
-                                    >
-                                        <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-secondary-900 text-[11px] uppercase">{po.poNo}</span>
-                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">{format(new Date(po.createdAt), 'dd MMM yyyy')}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-1.5 font-bold text-secondary-700 text-[11px] uppercase">
-                                                    <Building2 className="w-3.5 h-3.5 text-secondary-400" />
-                                                    {po.vendorName}
-                                                </div>
-                                                <span className="text-[10px] font-bold text-primary-600 uppercase italic">
-                                                    {po.items.length} Line Items
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-secondary-900 flex items-center">
-                                                    <IndianRupee className="w-3 h-3 mr-0.5" />
-                                                    {(po.totalAmount ?? po.subtotal ?? 0).toLocaleString()}
-                                                </span>
-                                                <span className="text-[10px] text-secondary-400 font-bold uppercase">
-                                                    {po.deliveryDate ? `Due: ${format(new Date(po.deliveryDate), 'dd MMM')}` : 'TBD'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            {getStatusBadge(po.status)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setPreviewPOId(po.id)}
-                                                    className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </Button>
-                                                {po.status === PoStatus.Approved && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setPreviewPOId(po.id)}
-                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
-                                                        title="Print"
-                                                    >
-                                                        <Printer className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                                {(po.status === PoStatus.Draft || po.status === PoStatus.Pending) && permissions?.editPO && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => { setEditPO(po); setPoDialogOpen(true); }}
-                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
-                                                        title="Edit PO"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                                {po.status === PoStatus.Draft && permissions?.createPO && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setSubmitTarget(po)}
-                                                        className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                                        title="Submit for Approval"
-                                                    >
-                                                        <Send className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                                {po.status === PoStatus.Pending && permissions?.approvePO && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setApproveTarget(po)}
-                                                        className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 border border-transparent hover:border-green-100 rounded-lg transition-all"
-                                                        title="Approve Order"
-                                                    >
-                                                        <CheckCircle className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
-                                        No purchase orders found matching parameters.
-                                    </td>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </Card>
-
-            {previewPOId != null && (
-                <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
-            )}
-
-            {poDialogOpen && (
-                <PurchaseOrderDialog
-                    open={poDialogOpen}
-                    onOpenChange={setPoDialogOpen}
-                    po={editPO ?? undefined}
-                    onPreviewRequest={(poId) => setPreviewPOId(poId)}
-                />
-            )}
-
-            <Dialog isOpen={!!submitTarget} onClose={() => setSubmitTarget(null)} title="Submit for Approval" size="sm">
-                <div className="space-y-4 font-sans">
-                    <p className="text-secondary-600">
-                        Submit PO <span className="font-bold text-secondary-900">{submitTarget?.poNo}</span> for approval? It will move to Pending status.
-                    </p>
-                    <div className="flex gap-3 pt-2">
-                        <Button variant="outline" onClick={() => setSubmitTarget(null)} className="flex-1 font-bold">Cancel</Button>
-                        <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={() => submitTarget && submitMutation.mutate(submitTarget.id)} disabled={submitMutation.isPending}>
-                            {submitMutation.isPending ? "Submitting..." : "Submit for Approval"}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
-
-            <Dialog
-                isOpen={!!approveTarget}
-                onClose={() => setApproveTarget(null)}
-                title="Approve Purchase Order"
-                size="sm"
-            >
-                <div className="space-y-4 font-sans">
-                    <p className="text-secondary-600">
-                        Approve PO <span className="font-bold text-secondary-900">{approveTarget?.poNo}</span>? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-3 pt-2">
-                        <Button variant="outline" onClick={() => setApproveTarget(null)} className="flex-1 font-bold">Cancel</Button>
-                        <Button
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
-                            onClick={() => approveTarget && approveMutation.mutate(approveTarget.id)}
-                            disabled={approveMutation.isPending}
-                        >
-                            {approveMutation.isPending ? "Processing..." : "Confirm Approve"}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
+      <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+        <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ShoppingCart className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">
+            Access Restricted
+          </h2>
+          <p className="text-secondary-500 font-medium">
+            You don&apos;t have the required clearance to view purchase orders.
+          </p>
         </div>
+      </div>
     );
-}
+  }
 
+  return (
+    <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
+      <div className="flex justify-between items-center shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">
+            Purchase Orders
+          </h1>
+          <p className="text-secondary-500 text-sm">
+            Official procurement and repair work orders
+          </p>
+        </div>
+        {permissions?.createPO && (
+          <Button
+            onClick={() => {
+              setEditPO(null);
+              setPoDialogOpen(true);
+            }}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Issue New PO
+          </Button>
+        )}
+      </div>
+
+      <POFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        partyOptions={partyOptions}
+        itemOptions={itemOptions}
+        onClear={resetFilters}
+        className="shadow-sm"
+      />
+
+      <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+        <div className="overflow-auto flex-1 min-h-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                  PO No.
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                  PO Date
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                  Party Name
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                  Delivery Date
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
+                  Approval Status
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
+                  Active
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell colSpan={8} className="h-16 px-6">
+                      <div className="h-4 bg-secondary-100 rounded-full w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : orders.length > 0 ? (
+                orders.map((po) => (
+                  <Fragment key={po.id}>
+                    <TableRow
+                      className={cn(
+                        "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
+                        expandedPOId === po.id && "bg-primary-50/30"
+                      )}
+                    >
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setExpandedPOId(
+                              expandedPOId === po.id ? null : po.id
+                            )
+                          }
+                          className="h-6 w-6 p-0 text-secondary-500"
+                          aria-label={
+                            expandedPOId === po.id ? "Collapse row" : "Expand row"
+                          }
+                        >
+                          {expandedPOId === po.id ? (
+                            <Minus className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-secondary-900 text-sm">
+                        {po.poNo}
+                      </td>
+                      <td className="px-4 py-3 text-secondary-700 text-sm">
+                        {format(new Date(po.createdAt), "dd MMM yyyy")}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                        {po.vendorName ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-secondary-700 text-sm">
+                        {po.deliveryDate
+                          ? format(new Date(po.deliveryDate), "dd MMM yyyy")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {canApprove(po) ? (
+                          <Button
+                            size="sm"
+                            onClick={() => setApproveTarget(po)}
+                            className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold gap-1.5"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Approve
+                          </Button>
+                        ) : (
+                          getStatusBadge(po.status)
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={cn(
+                          "inline-flex px-2 py-1 rounded-full text-xs font-semibold",
+                          po.isActive !== false ? "bg-green-100 text-green-700" : "bg-secondary-200 text-secondary-700"
+                        )}>
+                          {po.isActive !== false ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPreviewPOId(po.id)}
+                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                            title="Preview"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {po.status === PoStatus.Approved && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setPreviewPOId(po.id)}
+                              className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
+                              title="Print"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {canEdit(po) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditPO(po);
+                                setPoDialogOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
+                              title="Edit PO"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {(permissions?.editPO || user?.role === Role.ADMIN) && (
+                            po.isActive !== false ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setInactiveTarget(po)}
+                                className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                title="Deactivate PO"
+                              >
+                                <Ban className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setActiveTarget(po)}
+                                className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                title="Activate PO"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    </TableRow>
+
+                    <AnimatePresence>
+                      {expandedPOId === po.id && (
+                        <TableRow
+                          key={`expand-${po.id}`}
+                          className="bg-secondary-50/50 border-b border-secondary-100"
+                        >
+                          <td colSpan={8} className="p-0">
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-6 py-4 bg-secondary-50/50 border-x border-secondary-100">
+                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
+                                  <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
+                                    Items
+                                  </p>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="bg-secondary-50 border-b border-secondary-100">
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                          PI No.
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                          Name
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-24">
+                                          Type
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                          Drawing No. / Rev
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                          Material
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
+                                          GST %
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
+                                          Unit Rate (₹)
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
+                                          Tax
+                                        </TableHead>
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
+                                          Total
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {po.items?.map((i) => {
+                                        const gstPct = po.gstPercent ?? 18;
+                                        const tax =
+                                          ((i.rate ?? 0) * gstPct) / 100;
+                                        const total = (i.rate ?? 0) + tax;
+                                        return (
+                                          <TableRow
+                                            key={i.id}
+                                            className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30"
+                                          >
+                                            <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">
+                                              {i.piNo ?? "—"}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2">
+                                              <div className="flex flex-col min-w-0">
+                                                <span className="font-semibold text-secondary-900 text-sm truncate">
+                                                  {i.currentName ?? "—"}
+                                                </span>
+                                                <span className="text-xs text-secondary-500 truncate">
+                                                  {i.mainPartName ?? "—"}
+                                                </span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm whitespace-nowrap">
+                                              {i.itemTypeName ?? "—"}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2">
+                                              <div className="flex flex-col min-w-0">
+                                                <span className="font-medium text-secondary-800 text-sm truncate">
+                                                  {i.drawingNo ?? "N/A"}
+                                                </span>
+                                                <span className="text-xs text-secondary-500">
+                                                  R{i.revisionNo ?? "0"}
+                                                </span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm whitespace-nowrap">
+                                              {i.materialName ?? "—"}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-center text-sm">
+                                              {gstPct}%
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-center font-medium text-secondary-900 text-sm tabular-nums">
+                                              {((i.rate ?? 0)).toLocaleString(
+                                                undefined,
+                                                { minimumFractionDigits: 2 }
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-center text-secondary-600 text-sm tabular-nums">
+                                              ₹ {tax.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-center font-semibold text-secondary-900 text-sm tabular-nums">
+                                              ₹ {total.toFixed(2)}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </td>
+                        </TableRow>
+                      )}
+                    </AnimatePresence>
+                  </Fragment>
+                ))
+              ) : (
+                <TableRow>
+                  <td
+                    colSpan={7}
+                    className="py-16 text-center text-secondary-400 italic font-medium"
+                  >
+                    No purchase orders found.
+                  </td>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
+      {previewPOId != null && (
+        <PurchaseOrderPreviewModal
+          poId={previewPOId}
+          onClose={() => setPreviewPOId(null)}
+        />
+      )}
+
+      {poDialogOpen && (
+        <PurchaseOrderDialog
+          open={poDialogOpen}
+          onOpenChange={setPoDialogOpen}
+          po={editPO ?? undefined}
+          onPreviewRequest={(poId) => setPreviewPOId(poId)}
+        />
+      )}
+
+      <Dialog
+        isOpen={!!approveTarget}
+        onClose={() => setApproveTarget(null)}
+        title="Approve Purchase Order"
+        size="sm"
+      >
+        <div className="space-y-4 font-sans">
+          <p className="text-secondary-600">
+            Approve PO{" "}
+            <span className="font-bold text-secondary-900">
+              {approveTarget?.poNo}
+            </span>
+            ? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setApproveTarget(null)}
+              className="flex-1 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+              onClick={() =>
+                approveTarget && approveMutation.mutate(approveTarget.id)
+              }
+              disabled={approveMutation.isPending}
+            >
+              {approveMutation.isPending
+                ? "Processing..."
+                : "Confirm Approve"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={!!inactiveTarget}
+        onClose={() => setInactiveTarget(null)}
+        title="Deactivate Purchase Order"
+        size="sm"
+      >
+        <div className="space-y-4 font-sans">
+          <p className="text-secondary-600">
+            Deactivate PO{" "}
+            <span className="font-bold text-secondary-900">
+              {inactiveTarget?.poNo}
+            </span>
+            ? Its PI items will become available for selection in other POs. You cannot deactivate if any item from this PO has been inwarded.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setInactiveTarget(null)}
+              className="flex-1 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              onClick={() =>
+                inactiveTarget && inactiveMutation.mutate(inactiveTarget.id)
+              }
+              disabled={inactiveMutation.isPending}
+            >
+              {inactiveMutation.isPending ? "Processing..." : "Deactivate"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={!!activeTarget}
+        onClose={() => setActiveTarget(null)}
+        title="Activate Purchase Order"
+        size="sm"
+      >
+        <div className="space-y-4 font-sans">
+          <p className="text-secondary-600">
+            Reactivate PO{" "}
+            <span className="font-bold text-secondary-900">
+              {activeTarget?.poNo}
+            </span>
+            ? This is only allowed if none of its PI items have been used in another active PO.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setActiveTarget(null)}
+              className="flex-1 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+              onClick={() =>
+                activeTarget && activeMutation.mutate(activeTarget.id)
+              }
+              disabled={activeMutation.isPending}
+            >
+              {activeMutation.isPending ? "Processing..." : "Activate"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </div>
+  );
+}

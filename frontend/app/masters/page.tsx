@@ -7,8 +7,9 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "react-hot-toast";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { GeneralMasterDialog } from "@/components/masters/general-master-dialog";
 import { Input } from "@/components/ui/input";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
@@ -115,19 +116,20 @@ export default function OtherMastersPage() {
         return "Owner Type";
     };
 
-    const filteredData = currentData.filter((item: any) => {
-        const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const debouncedSearch = useDebouncedValue(search, 400);
+    const filteredData = useMemo(() => currentData.filter((item: any) => {
+        const matchesSearch = (debouncedSearch || "").trim() === "" || item.name.toLowerCase().includes(debouncedSearch.toLowerCase());
         const matchesFilter = activeFilter === "all"
             ? true
             : activeFilter === "active"
                 ? item.isActive
                 : !item.isActive;
         return matchesSearch && matchesFilter;
-    });
+    }), [currentData, debouncedSearch, activeFilter]);
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        <div className="flex flex-col h-full min-h-0 p-6 gap-4 overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0">
                 <div>
                     <h1 className="text-3xl font-bold text-secondary-900 tracking-tight mb-2">Other Masters</h1>
                     <p className="text-secondary-500 font-medium">Manage supplementary parameters and metadata categories</p>
@@ -150,7 +152,7 @@ export default function OtherMastersPage() {
                 </div>
             </div>
 
-            <div className="mb-6">
+            <div className="shrink-0">
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MasterType)}>
                     <TabsList className="bg-white border border-secondary-200 p-1.5 rounded-xl h-12 shadow-sm">
                         <TabsTrigger value="item-types" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Types</TabsTrigger>
@@ -161,23 +163,23 @@ export default function OtherMastersPage() {
                 </Tabs>
             </div>
 
-            <Card className="shadow-sm border-secondary-200 bg-white mb-6">
-                <div className="p-4 flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+            <Card className="shadow-sm border-secondary-200 bg-white shrink-0">
+                <div className="p-3 flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1 min-w-0">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-secondary-400" />
                         <Input
                             placeholder={`Search ${getTitle().toLowerCase()}s...`}
-                            className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm"
+                            className="pl-8 h-8 border-secondary-200 focus:ring-primary-500 text-sm"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-secondary-700">Display</span>
+                        <span className="text-xs font-medium text-secondary-700">Display</span>
                         <select
                             value={activeFilter}
                             onChange={(e) => setActiveFilter(e.target.value as any)}
-                            className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
+                            className="flex h-8 w-full sm:w-36 rounded-md border border-secondary-200 bg-white px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-7"
                         >
                             <option value="all">All Records</option>
                             <option value="active">Active Only</option>
@@ -187,13 +189,13 @@ export default function OtherMastersPage() {
                 </div>
             </Card>
 
-            <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
-                <div className="px-6 py-4 border-b border-secondary-100">
+            <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white flex-1 min-h-0 flex flex-col">
+                <div className="px-6 py-3 border-b border-secondary-100 shrink-0">
                     <h3 className="text-lg font-bold text-secondary-900">
                         All Records ({filteredData.length})
                     </h3>
                 </div>
-                <div className="table-container">
+                <div className="table-container flex-1 min-h-0 overflow-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead>
                             <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">

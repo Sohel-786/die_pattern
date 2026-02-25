@@ -73,6 +73,16 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
         enabled: open
     });
 
+    const { data: availableItemIds = [] } = useQuery<number[]>({
+        queryKey: ["purchase-indents", "available-item-ids", isEditing ? indent?.id : null],
+        queryFn: async () => {
+            const params = isEditing && indent?.id ? { excludePiId: indent.id } : {};
+            const res = await api.get("/purchase-indents/available-item-ids", { params });
+            return res.data.data ?? [];
+        },
+        enabled: open
+    });
+
     const { data: locations = [] } = useQuery<Location[]>({
         queryKey: ["locations", "active"],
         queryFn: async () => {
@@ -124,7 +134,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
     };
 
     const itemOptions = items
-        .filter(i => !selectedItemIds.includes(i.id))
+        .filter(i => !selectedItemIds.includes(i.id) && (availableItemIds.length === 0 || availableItemIds.includes(i.id)))
         .map(i => ({
             value: i.id,
             label: `${i.currentName} (${i.mainPartName})`

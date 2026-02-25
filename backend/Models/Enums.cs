@@ -72,4 +72,16 @@ namespace net_backend.Models
         Location,
         Vendor
     }
+
+    /// <summary>Single global process state for an item: one item can only be in one of these at a time.</summary>
+    public enum ItemProcessState
+    {
+        NotInStock = 0,
+        InPI = 1,
+        InPO = 2,
+        InQC = 3,
+        InJobwork = 4,
+        Outward = 5,
+        InStock = 6
+    }
 }

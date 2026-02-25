@@ -11,6 +11,7 @@ import { useCurrentUserPermissions } from '@/hooks/use-settings';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const SIDEBAR_WIDTH_EXPANDED = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 64;
@@ -40,6 +41,20 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [navExpanded, setNavExpanded] = useState(true);
   const sideWidth = sidebarExpanded ? SIDEBAR_WIDTH_EXPANDED : SIDEBAR_WIDTH_COLLAPSED;
+
+  const isFixedLayout = pathname.startsWith('/purchase-orders') ||
+    pathname.startsWith('/purchase-indents') ||
+    pathname.startsWith('/masters') ||
+    pathname.startsWith('/companies') ||
+    pathname.startsWith('/locations') ||
+    pathname.startsWith('/parties') ||
+    pathname.startsWith('/items') ||
+    pathname.startsWith('/issues') ||
+    pathname.startsWith('/inwards') ||
+    pathname.startsWith('/returns') ||
+    pathname.startsWith('/quality-control') ||
+    pathname.startsWith('/statuses') ||
+    pathname.startsWith('/store-items');
 
   const { data: permissions, isLoading: permissionsLoading } = useCurrentUserPermissions(
     pathname !== '/login' && !loading && !!user
@@ -125,12 +140,18 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             />
           )}
           <div
-            className="transition-[margin] duration-200 ease-in-out flex flex-col min-h-screen"
+            className={cn(
+              "transition-[margin] duration-200 ease-in-out flex flex-col",
+              isFixedLayout ? "h-screen overflow-hidden" : "min-h-screen"
+            )}
             style={{ marginLeft: isHorizontal ? 0 : sideWidth }}
           >
             <Header user={user} isNavExpanded={navExpanded} onNavExpandChange={setNavExpanded} />
             {isHorizontal && <HorizontalNav isExpanded={navExpanded} />}
-            <main className="flex-1 flex items-center justify-center p-6">
+            <main className={cn(
+              "flex-1 flex items-center justify-center p-6",
+              isFixedLayout ? "min-h-0 overflow-y-auto" : "overflow-visible"
+            )}>
               <div className="text-center max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-red-100">
                 <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldAlert className="w-8 h-8 text-red-600" />
@@ -159,12 +180,20 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           />
         )}
         <div
-          className="transition-[margin] duration-200 ease-in-out relative z-0 flex flex-col min-h-screen"
+          className={cn(
+            "transition-[margin] duration-200 ease-in-out relative z-0 flex flex-col",
+            isFixedLayout ? "h-screen overflow-hidden" : "min-h-screen"
+          )}
           style={{ marginLeft: isHorizontal ? 0 : sideWidth }}
         >
           <Header user={user} isNavExpanded={navExpanded} onNavExpandChange={setNavExpanded} />
           {isHorizontal && <HorizontalNav isExpanded={navExpanded} />}
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className={cn(
+            "flex-1 flex flex-col",
+            isFixedLayout ? "min-h-0 overflow-y-auto" : "overflow-visible"
+          )}>
+            {children}
+          </main>
         </div>
       </div>
     </SoftwareProfileDraftProvider>

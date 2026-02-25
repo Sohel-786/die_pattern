@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Printer } from "lucide-react";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import { PO, PoStatus, GstType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,31 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
     },
     enabled: !!poId,
   });
+
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    onCloseRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (poId) {
+      return registerDialog(handleClose);
+    }
+  }, [poId, handleClose]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isTopDialog(handleClose)) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [handleClose, onClose]);
 
   const handlePrint = () => {
     window.print();

@@ -12,10 +12,12 @@ namespace net_backend.Controllers
     public class PurchaseIndentsController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
+        private readonly IItemStateService _itemState;
 
-        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        public PurchaseIndentsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IItemStateService itemState) : base(context)
         {
             _codeGenerator = codeGenerator;
+            _itemState = itemState;
         }
 
         [HttpGet("next-code")]
@@ -25,8 +27,28 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<string> { Data = code });
         }
 
+        /// <summary>Returns item IDs that can be added to a PI (state = Not in stock). When editing, pass excludePiId so items only in that PI are included.</summary>
+        [HttpGet("available-item-ids")]
+        public async Task<ActionResult<ApiResponse<int[]>>> GetAvailableItemIdsForPI([FromQuery] int? excludePiId)
+        {
+            if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
+            var allItemIds = await _context.Items.Where(i => i.IsActive).Select(i => i.Id).ToListAsync();
+            var available = new List<int>();
+            foreach (var id in allItemIds)
+            {
+                if (await _itemState.CanAddToPIAsync(id, excludePiId))
+                    available.Add(id);
+            }
+            return Ok(new ApiResponse<int[]> { Data = available.ToArray() });
+        }
+
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentDto>>>> GetAll(
+            [FromQuery] string? search,
+            [FromQuery] string? status,
+            [FromQuery] DateTime? createdDateFrom,
+            [FromQuery] DateTime? createdDateTo,
+            [FromQuery] string? itemIds)
         {
             var isAdmin = await IsAdmin();
             var query = _context.PurchaseIndents
@@ -41,9 +63,30 @@ namespace net_backend.Controllers
                 .AsQueryable();
 
             if (!isAdmin)
-            {
                 query = query.Where(p => p.IsActive);
+
+            var searchTrim = (search ?? "").Trim();
+            if (!string.IsNullOrEmpty(searchTrim))
+            {
+                searchTrim = searchTrim.ToLowerInvariant();
+                query = query.Where(p =>
+                    p.PiNo.ToLower().Contains(searchTrim) ||
+                    (p.Creator != null && (p.Creator.FirstName + " " + p.Creator.LastName).ToLower().Contains(searchTrim)) ||
+                    (p.Remarks != null && p.Remarks.ToLower().Contains(searchTrim)));
             }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<PurchaseIndentStatus>(status, true, out var statusEnum))
+                query = query.Where(p => p.Status == statusEnum);
+
+            if (createdDateFrom.HasValue)
+                query = query.Where(p => p.CreatedAt.Date >= createdDateFrom.Value.Date);
+            if (createdDateTo.HasValue)
+                query = query.Where(p => p.CreatedAt.Date <= createdDateTo.Value.Date);
+
+            var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
+            if (itemIdList.Count > 0)
+                query = query.Where(p => p.Items.Any(i => itemIdList.Contains(i.ItemId)));
 
             var data = await query
                 .Select(p => new PurchaseIndentDto
@@ -76,10 +119,14 @@ namespace net_backend.Controllers
                         RevisionNo = i.Item.RevisionNo,
                         MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
                         PoNo = _context.PurchaseOrderItems
-                            .Where(poi => poi.PurchaseIndentItemId == i.Id)
+                            .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                             .Select(poi => poi.PurchaseOrder!.PoNo)
                             .FirstOrDefault() ?? "-",
-                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
+                        PoId = _context.PurchaseOrderItems
+                            .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                            .Select(poi => poi.PurchaseOrderId)
+                            .FirstOrDefault(),
+                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                     }).ToList()
                 })
                 .ToListAsync();
@@ -99,6 +146,17 @@ namespace net_backend.Controllers
             if (itemIds.Count == 0)
                 return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "At least one item is required." });
 
+            foreach (var itemId in itemIds)
+            {
+                var canAdd = await _itemState.CanAddToPIAsync(itemId, null);
+                if (!canAdd)
+                {
+                    var state = await _itemState.GetStateAsync(itemId, null);
+                    var stateName = state.ToString().Replace("In", "In ").Replace("Outward", "Outward to party");
+                    return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = $"Item (ID {itemId}) cannot be added to PI: it is already in another process ({stateName}). Only items that are Not in stock can be added to a Purchase Indent." });
+                }
+            }
+
             var pi = new PurchaseIndent
             {
                 PiNo = await _codeGenerator.GenerateCode("PI"),
@@ -106,7 +164,7 @@ namespace net_backend.Controllers
                 Type = dto.Type,
                 Remarks = dto.Remarks,
                 CreatedBy = CurrentUserId,
-                Status = PurchaseIndentStatus.Draft,
+                Status = PurchaseIndentStatus.Pending,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -142,6 +200,17 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Duplicate die/pattern in the same PI is not allowed." });
             if (itemIds.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
+
+            foreach (var itemId in itemIds)
+            {
+                var canAdd = await _itemState.CanAddToPIAsync(itemId, id);
+                if (!canAdd)
+                {
+                    var state = await _itemState.GetStateAsync(itemId, id);
+                    var stateName = state.ToString().Replace("In", "In ").Replace("Outward", "Outward to party");
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item (ID {itemId}) cannot be in this PI: it is already in another process ({stateName}). Only items that are Not in stock (or only in this indent) can be included." });
+                }
+            }
 
             pi.LocationId = dto.LocationId;
             pi.Type = dto.Type;
@@ -218,6 +287,30 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
+        /// <summary>Revert an approved PI back to Pending. Only allowed when no PO has been created that uses any item from this PI.</summary>
+        [HttpPost("{id}/revert-to-pending")]
+        public async Task<ActionResult<ApiResponse<bool>>> RevertToPending(int id)
+        {
+            if (!await HasPermission("ApprovePI")) return Forbidden();
+
+            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            if (pi == null) return NotFound();
+            if (pi.Status != PurchaseIndentStatus.Approved)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only approved indents can be reverted to pending." });
+
+            var piItemIds = pi.Items.Select(i => i.Id).ToList();
+            var hasLinkedPo = await _context.PurchaseOrderItems.AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
+            if (hasLinkedPo)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot revert: one or more items from this indent are already in a Purchase Order." });
+
+            pi.Status = PurchaseIndentStatus.Pending;
+            pi.ApprovedBy = null;
+            pi.ApprovedAt = null;
+            pi.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
         [HttpPut("{id}/toggle-status")]
         public async Task<ActionResult<ApiResponse<bool>>> ToggleStatus(int id)
         {
@@ -280,10 +373,14 @@ namespace net_backend.Controllers
                     RevisionNo = i.Item.RevisionNo,
                     MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
                     PoNo = _context.PurchaseOrderItems
-                        .Where(poi => poi.PurchaseIndentItemId == i.Id)
+                        .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                         .Select(poi => poi.PurchaseOrder!.PoNo)
                         .FirstOrDefault() ?? "-",
-                    IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id)
+                    PoId = _context.PurchaseOrderItems
+                        .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                        .Select(poi => poi.PurchaseOrderId)
+                        .FirstOrDefault(),
+                    IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });
@@ -298,7 +395,7 @@ namespace net_backend.Controllers
                 .Include(pii => pii.Item)
                 .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && 
                              pii.PurchaseIndent!.IsActive &&
-                             !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id))
+                             !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive))
                 .Select(pii => new PurchaseIndentItemDto
                 {
                     Id = pii.Id,
