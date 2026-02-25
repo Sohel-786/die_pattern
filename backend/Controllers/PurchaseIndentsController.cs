@@ -60,6 +60,9 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.ItemType)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.Material)
                 .AsQueryable();
 
             if (!isAdmin)
@@ -337,6 +340,9 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.ItemType)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.Material)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (pi == null) return NotFound();
@@ -393,6 +399,9 @@ namespace net_backend.Controllers
             var items = await _context.PurchaseIndentItems
                 .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
+                    .ThenInclude(i => i!.ItemType)
+                .Include(pii => pii.Item)
+                    .ThenInclude(i => i!.Material)
                 .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && 
                              pii.PurchaseIndent!.IsActive &&
                              !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive))

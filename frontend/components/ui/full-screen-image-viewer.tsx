@@ -11,6 +11,8 @@ export interface FullScreenImageViewerProps {
   onClose: () => void;
   imageSrc: string | null;
   alt?: string;
+  /** When true, do not register with dialog stack (use when parent already handles Esc, e.g. QuotationViewerModal) */
+  skipDialogStack?: boolean;
 }
 
 export function FullScreenImageViewer({
@@ -18,15 +20,16 @@ export function FullScreenImageViewer({
   onClose,
   imageSrc,
   alt = "Image",
+  skipDialogStack = false,
 }: FullScreenImageViewerProps) {
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !skipDialogStack) {
       return registerDialog(() => onCloseRef.current());
     }
-  }, [isOpen]);
+  }, [isOpen, skipDialogStack]);
 
   if (!imageSrc) return null;
 

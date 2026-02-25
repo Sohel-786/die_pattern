@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Eye, Trash2, FileText } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useCallback } from "react";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import { QuotationViewerModal } from "./quotation-viewer-modal";
 
 function BlobQuotationViewer({ file, onClose }: { file: File; onClose: () => void }) {
@@ -57,6 +59,8 @@ export function QuotationListDialog({
 
   const displayUrls = urls.filter((u) => !urlsToDelete.includes(u));
   const total = displayUrls.length + pendingFiles.length;
+
+
 
   return (
     <>

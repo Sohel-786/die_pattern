@@ -69,6 +69,9 @@ namespace net_backend.Controllers
             var query = _context.PurchaseIndentItems
                 .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
+                    .ThenInclude(i => i!.ItemType)
+                .Include(pii => pii.Item)
+                    .ThenInclude(i => i!.Material)
                 .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && pii.PurchaseIndent.IsActive);
 
             if (poId.HasValue)
@@ -243,6 +246,11 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.ItemType)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.Material)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.PurchaseIndent)
@@ -319,6 +327,7 @@ namespace net_backend.Controllers
                         RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
                         MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                         PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                        PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                         Rate = i.Rate
                     }).ToList()
                 };
@@ -386,6 +395,11 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.ItemType)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.Material)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.PurchaseIndent)
@@ -420,6 +434,7 @@ namespace net_backend.Controllers
                     RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
                     MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                     PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                    PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                     Rate = i.Rate
                 }).ToList()
             };

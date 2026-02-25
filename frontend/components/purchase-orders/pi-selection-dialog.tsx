@@ -8,6 +8,8 @@ import { PurchaseIndent, PurchaseIndentStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { useCallback } from "react";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 
 interface PiSelectionDialogProps {
     isOpen: boolean;
@@ -31,9 +33,14 @@ export function PiSelectionDialog({
         if (isOpen) setTempSelectedIds(selectedPiIds);
     }, [isOpen, selectedPiIds]);
 
+
+
     const filteredPIs = useMemo(() => {
-        // Filter rejected PIs (should already be filtered by backend but for safety)
-        let result = availablePIs.filter(pi => pi.status !== PurchaseIndentStatus.Rejected);
+        // Filter rejected PIs AND PIs that are already selected in the main PO dialog
+        let result = availablePIs.filter(pi =>
+            pi.status !== PurchaseIndentStatus.Rejected &&
+            !selectedPiIds.includes(pi.id)
+        );
 
         // Filter by search query
         if (searchQuery.trim()) {

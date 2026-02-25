@@ -89,6 +89,7 @@ namespace net_backend.DTOs
         public string? RevisionNo { get; set; }
         public string? MaterialName { get; set; }
         public string? PiNo { get; set; }
+        public int? PurchaseIndentId { get; set; }
         public decimal Rate { get; set; }
         /// <summary>Line amount = Rate (one unit per die/pattern, before GST)</summary>
         public decimal LineAmount => Math.Round(Rate, 2);

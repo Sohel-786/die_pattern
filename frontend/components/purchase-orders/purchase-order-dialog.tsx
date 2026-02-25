@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Save, Loader2, Calendar, Upload, Plus, ShieldCheck, Eye, X,
 } from "lucide-react";
+import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import {
   PO,
@@ -184,6 +185,31 @@ export function PurchaseOrderDialog({
       api.get("/purchase-orders/next-code").then((res) => setNextPoCode(res.data?.data ?? "PO-01")).catch(() => setNextPoCode("PO-01"));
     }
   }, [open, poData, isEditing]);
+
+  // In edit mode, derive selectedPiIds and sourcePiId from poData once approvedPIs is available (so Add PI dialog does not show already-selected PIs).
+  useEffect(() => {
+    if (!isEditing || !poData || !approvedPIs.length) return;
+    const piIdsInPo = new Set<number>();
+    const mappedItems = poData.items.map((i) => {
+      const pi = approvedPIs.find((p) => (p.items ?? []).some((it) => it.id === i.purchaseIndentItemId));
+      if (pi) piIdsInPo.add(pi.id);
+      return {
+        purchaseIndentItemId: i.purchaseIndentItemId,
+        rate: i.rate ?? 0,
+        gstPercent: poData.gstPercent || 18,
+        sourcePiId: pi?.id ?? 0,
+        included: true,
+      };
+    });
+    setItems(mappedItems);
+    setSelectedPiIds(Array.from(piIdsInPo));
+  }, [isEditing, poData, approvedPIs]);
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+
 
   const preSelectedKey = preSelectedPiItemIds.length > 0 ? preSelectedPiItemIds.join(",") : "";
   useEffect(() => {
@@ -420,14 +446,14 @@ export function PurchaseOrderDialog({
     const piItem = piItemsAvailable.find((p) => p.id === piItemId);
     return piItem
       ? {
-          currentName: piItem.currentName ?? "—",
-          mainPartName: piItem.mainPartName ?? "—",
-          drawingNo: piItem.drawingNo,
-          revisionNo: piItem.revisionNo,
-          materialName: piItem.materialName,
-          itemTypeName: piItem.itemTypeName,
-          piNo: piItem.piNo,
-        }
+        currentName: piItem.currentName ?? "—",
+        mainPartName: piItem.mainPartName ?? "—",
+        drawingNo: piItem.drawingNo,
+        revisionNo: piItem.revisionNo,
+        materialName: piItem.materialName,
+        itemTypeName: piItem.itemTypeName,
+        piNo: piItem.piNo,
+      }
       : { currentName: "—", mainPartName: "—" };
   };
 
@@ -570,6 +596,7 @@ export function PurchaseOrderDialog({
                   <table className="w-full border-collapse text-sm min-w-[900px]">
                     <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
                       <tr>
+                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-12 text-center">Sr.No</th>
                         <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-10">Include</th>
                         <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PI No.</th>
                         <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
@@ -585,7 +612,7 @@ export function PurchaseOrderDialog({
                     <tbody className="divide-y divide-secondary-100 bg-white">
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="py-12 text-center text-secondary-500 text-sm">
+                          <td colSpan={11} className="py-12 text-center text-secondary-500 text-sm">
                             No items. Click &quot;Add PI&quot; to add approved purchase indents.
                           </td>
                         </tr>
@@ -597,6 +624,7 @@ export function PurchaseOrderDialog({
                           const included = i.included !== false;
                           return (
                             <tr key={i.purchaseIndentItemId} className={cn("hover:bg-primary-50/30", !included && "opacity-60 bg-secondary-50/50")}>
+                              <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{items.indexOf(i) + 1}</td>
                               <td className="py-2.5 px-3 align-middle">
                                 <input
                                   type="checkbox"
@@ -698,7 +726,7 @@ export function PurchaseOrderDialog({
                   className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
                 >
                   {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                  Save
+                  {isEditing ? "Update" : "Save"}
                 </Button>
               </div>
             </footer>

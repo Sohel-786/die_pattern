@@ -250,6 +250,7 @@ export default function PurchaseOrdersPage() {
             <TableHeader>
               <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
                 <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
+                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">Sr.No</TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
                   PO No.
                 </TableHead>
@@ -312,6 +313,7 @@ export default function PurchaseOrdersPage() {
                           )}
                         </Button>
                       </td>
+                      <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{orders.indexOf(po) + 1}</td>
                       <td className="px-4 py-3 font-bold text-secondary-900 text-sm">
                         {po.poNo}
                       </td>
@@ -417,7 +419,7 @@ export default function PurchaseOrdersPage() {
                           key={`expand-${po.id}`}
                           className="bg-secondary-50/50 border-b border-secondary-100"
                         >
-                          <td colSpan={8} className="p-0">
+                          <td colSpan={9} className="p-0">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
@@ -432,6 +434,9 @@ export default function PurchaseOrdersPage() {
                                   <Table>
                                     <TableHeader>
                                       <TableRow className="bg-secondary-50 border-b border-secondary-100">
+                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12">
+                                          Sr.No
+                                        </TableHead>
                                         <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
                                           PI No.
                                         </TableHead>
@@ -472,6 +477,9 @@ export default function PurchaseOrdersPage() {
                                             key={i.id}
                                             className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30"
                                           >
+                                            <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">
+                                              {po.items.indexOf(i) + 1}
+                                            </TableCell>
                                             <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">
                                               {i.piNo ?? "—"}
                                             </TableCell>
@@ -533,7 +541,7 @@ export default function PurchaseOrdersPage() {
               ) : (
                 <TableRow>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-16 text-center text-secondary-400 italic font-medium"
                   >
                     No purchase orders found.

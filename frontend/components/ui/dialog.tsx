@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
-import { registerDialog, isTopDialog, getOpenDialogCount } from "@/lib/dialog-stack";
+import { registerDialog, getOpenDialogCount } from "@/lib/dialog-stack";
 
 interface DialogProps {
   isOpen: boolean;
@@ -45,11 +45,14 @@ export function Dialog({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const closeButtonDisabledRef = useRef(closeButtonDisabled);
 
-  // Keep onCloseRef up to date
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+  useEffect(() => {
+    closeButtonDisabledRef.current = closeButtonDisabled;
+  }, [closeButtonDisabled]);
 
   // Handle focus storage and return only on open/close transitions
   useEffect(() => {
@@ -72,20 +75,14 @@ export function Dialog({
   // This ensures that even if the onClose prop changes (causing are-render),
   // the identity of the entry in the stack stays the same, allowing isTopDialog to work.
   const handleClose = useCallback(() => {
+    if (closeButtonDisabledRef.current) return;
     onCloseRef.current();
   }, []);
 
-  // Lock body scroll and handle accessibility event listeners
+  // Lock body scroll and handle accessibility event listeners (Esc is handled globally by dialog-stack)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
-
-      // Handle ESC key
-      if (e.key === "Escape" && !closeButtonDisabled) {
-        if (isTopDialog(handleClose)) {
-          handleClose();
-        }
-      }
 
       // Handle Tab key (Focus Wrap)
       if (e.key === "Tab") {
@@ -130,7 +127,7 @@ export function Dialog({
         document.documentElement.style.overflow = "hidden";
       }
 
-      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keydown", handleKeyDown, true);
 
       return () => {
         // Remove from stack
@@ -142,10 +139,10 @@ export function Dialog({
           document.documentElement.style.overflow = "";
         }
 
-        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keydown", handleKeyDown, true);
       };
     }
-  }, [isOpen, closeButtonDisabled, handleClose]);
+  }, [isOpen, handleClose]);
 
   // Handle initial focus only once when dialog opens
   useEffect(() => {

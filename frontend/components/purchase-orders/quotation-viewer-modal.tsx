@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
-import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
+import { registerDialog } from "@/lib/dialog-stack";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -36,32 +36,46 @@ export function QuotationViewerModal({ isOpen, onClose, url, fileName }: Quotati
   const showImage = isImage(url, fileName);
 
   const onCloseRef = useRef(onClose);
+  const unregisterRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   const handleClose = useCallback(() => {
+    // Remove from dialog stack *before* closing so the next Esc closes the underlying dialog (Uploaded quotations), not this viewer again.
+    unregisterRef.current?.();
+    unregisterRef.current = null;
     onCloseRef.current();
+    // Move focus back to main document so next Esc is received by window (Edit PO: PDF iframe can leave focus in wrong place).
+    requestAnimationFrame(() => {
+      if (document.body && typeof document.body.focus === "function") {
+        document.body.setAttribute("tabindex", "-1");
+        document.body.focus({ preventScroll: true });
+      }
+    });
   }, []);
 
   useEffect(() => {
     if (isOpen) {
-      return registerDialog(handleClose);
+      const cleanup = registerDialog(handleClose);
+      unregisterRef.current = cleanup;
+      return () => {
+        unregisterRef.current = null;
+        cleanup();
+      };
     }
   }, [isOpen, handleClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (isTopDialog(handleClose)) {
-          onClose();
+    if (!isOpen) {
+      requestAnimationFrame(() => {
+        if (document.body && typeof document.body.focus === "function") {
+          document.body.setAttribute("tabindex", "-1");
+          document.body.focus({ preventScroll: true });
         }
-      }
-    };
-    window.addEventListener("keydown", handleEsc, true);
-    return () => window.removeEventListener("keydown", handleEsc, true);
-  }, [isOpen, handleClose, onClose]);
+      });
+    }
+  }, [isOpen]);
 
   if (showImage) {
     return (
@@ -70,6 +84,7 @@ export function QuotationViewerModal({ isOpen, onClose, url, fileName }: Quotati
         imageSrc={fullUrl}
         onClose={onClose}
         alt="Quotation"
+        skipDialogStack
       />
     );
   }
