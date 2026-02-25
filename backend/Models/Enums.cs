@@ -19,16 +19,14 @@ namespace net_backend.Models
     {
         Pending = 0,
         Approved = 1,
-        Rejected = 2,
-        Draft = 3
+        Rejected = 2
     }
 
     public enum PoStatus
     {
         Pending = 0,
         Approved = 1,
-        Rejected = 2,
-        Draft = 3
+        Rejected = 2
     }
 
     /// <summary>Indian GST types for PO calculation.</summary>

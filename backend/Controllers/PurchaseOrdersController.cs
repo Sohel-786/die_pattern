@@ -297,12 +297,18 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.Items.Any(i => i.Rate <= rateMax.Value));
 
             var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
+            var poIdsWithInward = await _context.Inwards
+                .Where(i => i.SourceType == InwardSourceType.PO)
+                .Select(i => i.SourceRefId)
+                .Distinct()
+                .ToListAsync();
 
             var data = list.Select(p =>
             {
                 var dto = new PODto
                 {
                     Id = p.Id,
+                    HasInward = poIdsWithInward.Contains(p.Id),
                     PoNo = p.PoNo,
                     VendorId = p.VendorId,
                     VendorName = p.Vendor != null ? p.Vendor.Name : "Unknown",
@@ -353,6 +359,9 @@ namespace net_backend.Controllers
             var alreadyInPo = await _context.PurchaseOrderItems
                 .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId));
             if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO." });
+
+            if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value.Date < DateTime.Today)
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Delivery date cannot be in the past." });
 
             var po = new PurchaseOrder
             {
@@ -449,8 +458,12 @@ namespace net_backend.Controllers
 
             var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
             if (po == null) return NotFound();
-            if (po.Status != PoStatus.Pending && po.Status != PoStatus.Draft)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft or pending POs can be edited." });
+            if (po.Status != PoStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be edited." });
+
+            var hasInward = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == id);
+            if (hasInward)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot edit: one or more items from this PO have been inwarded. Edit is allowed only when no inward has been done against this PO." });
 
             var items = dto.Items?.Where(i => i.PurchaseIndentItemId > 0).ToList() ?? new List<CreatePOItemDto>();
             if (items.Count == 0) return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item with rate is required." });
@@ -463,6 +476,9 @@ namespace net_backend.Controllers
                 .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrderId != id);
             if (alreadyInOtherPo)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items are already in another PO." });
+
+            if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value.Date < DateTime.Today)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Delivery date cannot be in the past." });
 
             po.VendorId = dto.VendorId;
             po.DeliveryDate = dto.DeliveryDate;
@@ -494,12 +510,9 @@ namespace net_backend.Controllers
 
             var po = await _context.PurchaseOrders.FindAsync(id);
             if (po == null) return NotFound();
-            if (po.Status != PoStatus.Draft)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft POs can be submitted for approval." });
-
-            po.Status = PoStatus.Pending;
-            po.UpdatedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
+            // Draft removed: new POs are created as Pending. No-op if already Pending.
+            if (po.Status != PoStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be submitted." });
             return Ok(new ApiResponse<bool> { Data = true });
         }
 

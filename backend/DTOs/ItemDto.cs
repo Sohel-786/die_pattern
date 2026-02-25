@@ -43,8 +43,16 @@ namespace net_backend.DTOs
     public class UpdateItemDto
     {
         public int Id { get; set; }
-        public int StatusId { get; set; }
+        public string? CurrentName { get; set; }
+        public int ItemTypeId { get; set; }
         public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public int MaterialId { get; set; }
+        public int OwnerTypeId { get; set; }
+        public int StatusId { get; set; }
+        public HolderType CurrentHolderType { get; set; }
+        public int? CurrentLocationId { get; set; }
+        public int? CurrentPartyId { get; set; }
         public bool IsActive { get; set; }
     }
 

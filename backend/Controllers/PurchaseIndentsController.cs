@@ -193,10 +193,8 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (pi == null) return NotFound();
-            if (pi.Status != PurchaseIndentStatus.Draft && pi.Status != PurchaseIndentStatus.Pending)
-            {
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft or pending indents can be edited." });
-            }
+            if (pi.Status != PurchaseIndentStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be edited." });
 
             var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
             if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
@@ -213,6 +211,18 @@ namespace net_backend.Controllers
                     var stateName = state.ToString().Replace("In", "In ").Replace("Outward", "Outward to party");
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item (ID {itemId}) cannot be in this PI: it is already in another process ({stateName}). Only items that are Not in stock (or only in this indent) can be included." });
                 }
+            }
+
+            // Do not allow removing an item that is in an active PO
+            var existingItemIds = pi.Items.Select(i => i.ItemId).ToHashSet();
+            var newItemIdsSet = itemIds.ToHashSet();
+            var toRemove = pi.Items.Where(i => !newItemIdsSet.Contains(i.ItemId)).ToList();
+            foreach (var pii in toRemove)
+            {
+                var inActivePo = await _context.PurchaseOrderItems
+                    .AnyAsync(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
+                if (inActivePo)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot remove item(s) that are already in an active Purchase Order. Remove only items that do not have a PO." });
             }
 
             pi.LocationId = dto.LocationId;
@@ -237,14 +247,9 @@ namespace net_backend.Controllers
 
             var pi = await _context.PurchaseIndents.FindAsync(id);
             if (pi == null) return NotFound();
-            if (pi.Status != PurchaseIndentStatus.Draft)
-            {
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft indents can be submitted for approval." });
-            }
-
-            pi.Status = PurchaseIndentStatus.Pending;
-            pi.UpdatedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
+            // Draft removed: new PIs are created as Pending. No-op if already Pending.
+            if (pi.Status != PurchaseIndentStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be submitted." });
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
@@ -319,8 +324,18 @@ namespace net_backend.Controllers
         {
             if (!await IsAdmin()) return Forbidden();
 
-            var pi = await _context.PurchaseIndents.FindAsync(id);
+            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
             if (pi == null) return NotFound();
+
+            // Do not allow deactivating if any item of this PI is in an active PO
+            if (pi.IsActive)
+            {
+                var piItemIds = pi.Items.Select(i => i.Id).ToList();
+                var hasActivePo = await _context.PurchaseOrderItems
+                    .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
+                if (hasActivePo)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this indent are in an active Purchase Order." });
+            }
 
             pi.IsActive = !pi.IsActive;
             pi.UpdatedAt = DateTime.Now;
@@ -390,6 +405,34 @@ namespace net_backend.Controllers
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });
+        }
+
+        /// <summary>Returns all active items with their current process state for PI item selection. Only items with status NotInStock can be added to a PI.</summary>
+        [HttpGet("items-with-status")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ItemWithStatusDto>>>> GetItemsWithStatus([FromQuery] int? excludePiId)
+        {
+            if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
+
+            var items = await _context.Items
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .Select(i => new { i.Id, i.CurrentName, i.MainPartName, ItemTypeName = i.ItemType != null ? i.ItemType.Name : null })
+                .ToListAsync();
+
+            var result = new List<ItemWithStatusDto>();
+            foreach (var i in items)
+            {
+                var state = await _itemState.GetStateAsync(i.Id, excludePiId);
+                result.Add(new ItemWithStatusDto
+                {
+                    ItemId = i.Id,
+                    CurrentName = i.CurrentName,
+                    MainPartName = i.MainPartName,
+                    ItemTypeName = i.ItemTypeName ?? "N/A",
+                    Status = state.ToString()
+                });
+            }
+            return Ok(new ApiResponse<IEnumerable<ItemWithStatusDto>> { Data = result });
         }
 
         [HttpGet("approved-items")]

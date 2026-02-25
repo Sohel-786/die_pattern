@@ -7,13 +7,13 @@ import {
   Plus,
   ShoppingCart,
   Eye,
-  Printer,
   Edit2,
   CheckCircle,
-  ChevronDown,
   ChevronRight,
   Minus,
   Ban,
+  MoreVertical,
+  XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
 import { PO, PoStatus } from "@/types";
@@ -46,6 +46,12 @@ import { cn } from "@/lib/utils";
 import type { Party } from "@/types";
 import type { Item } from "@/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 export default function PurchaseOrdersPage() {
   const { data: permissions } = useCurrentUserPermissions();
@@ -56,6 +62,7 @@ export default function PurchaseOrdersPage() {
   const [expandedPOId, setExpandedPOId] = useState<number | null>(null);
   const [previewPOId, setPreviewPOId] = useState<number | null>(null);
   const [approveTarget, setApproveTarget] = useState<PO | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PO | null>(null);
   const [inactiveTarget, setInactiveTarget] = useState<PO | null>(null);
   const [activeTarget, setActiveTarget] = useState<PO | null>(null);
   const [poDialogOpen, setPoDialogOpen] = useState(false);
@@ -156,6 +163,18 @@ export default function PurchaseOrdersPage() {
       toast.error(err.response?.data?.message || "Reactivate failed"),
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      toast.success("Purchase order rejected.");
+      setRejectTarget(null);
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Rejection failed"),
+  });
+
   const resetFilters = useCallback(() => {
     setFilters(defaultPOFilters);
   }, []);
@@ -175,7 +194,6 @@ export default function PurchaseOrdersPage() {
           </span>
         );
       case PoStatus.Pending:
-      case PoStatus.Draft:
       default:
         return (
           <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
@@ -186,11 +204,11 @@ export default function PurchaseOrdersPage() {
   };
 
   const canEdit = (po: PO) =>
-    (po.status === PoStatus.Pending || po.status === PoStatus.Draft) &&
-    (permissions?.editPO ?? user?.role === Role.ADMIN);
-  const canApprove = (po: PO) =>
     po.status === PoStatus.Pending &&
-    (permissions?.approvePO === true || user?.role === Role.ADMIN);
+    !po.hasInward &&
+    (permissions?.editPO === true || user?.role === Role.ADMIN);
+  const hasApprovalAccess = permissions?.approvePO === true || user?.role === Role.ADMIN;
+  const canApproveOrReject = (po: PO) => po.status === PoStatus.Pending && hasApprovalAccess;
 
   if (permissions && !permissions.viewPO) {
     return (
@@ -329,18 +347,7 @@ export default function PurchaseOrdersPage() {
                           : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {canApprove(po) ? (
-                          <Button
-                            size="sm"
-                            onClick={() => setApproveTarget(po)}
-                            className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold gap-1.5"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Approve
-                          </Button>
-                        ) : (
-                          getStatusBadge(po.status)
-                        )}
+                        {getStatusBadge(po.status)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={cn(
@@ -352,6 +359,57 @@ export default function PurchaseOrdersPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {hasApprovalAccess && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg transition-all"
+                                  title="Approve or reject"
+                                  aria-label="Open approval actions"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[11rem] py-1">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const target = po;
+                                    requestAnimationFrame(() => setApproveTarget(target));
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-2 cursor-pointer py-2",
+                                    !canApproveOrReject(po) && "opacity-60"
+                                  )}
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                  <span>Approve</span>
+                                  {!canApproveOrReject(po) && (
+                                    <span className="text-[10px] text-secondary-400 ml-auto">Pending only</span>
+                                  )}
+                                </DropdownMenuItem>
+                                <div className="my-1 border-t border-secondary-100" role="separator" />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const target = po;
+                                    requestAnimationFrame(() => setRejectTarget(target));
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-2 cursor-pointer py-2",
+                                    !canApproveOrReject(po) && "opacity-60"
+                                  )}
+                                >
+                                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                  <span>Reject</span>
+                                  {!canApproveOrReject(po) && (
+                                    <span className="text-[10px] text-secondary-400 ml-auto">Pending only</span>
+                                  )}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -361,17 +419,6 @@ export default function PurchaseOrdersPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          {po.status === PoStatus.Approved && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setPreviewPOId(po.id)}
-                              className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 rounded-lg transition-all"
-                              title="Print"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </Button>
-                          )}
                           {canEdit(po) && (
                             <Button
                               variant="ghost"
@@ -583,6 +630,11 @@ export default function PurchaseOrdersPage() {
             </span>
             ? This action cannot be undone.
           </p>
+          {approveTarget && approveTarget.status !== PoStatus.Pending && (
+            <p className="text-amber-600 text-sm font-medium">
+              Only Pending POs can be approved. Current status: {approveTarget.status}.
+            </p>
+          )}
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
@@ -596,11 +648,51 @@ export default function PurchaseOrdersPage() {
               onClick={() =>
                 approveTarget && approveMutation.mutate(approveTarget.id)
               }
-              disabled={approveMutation.isPending}
+              disabled={approveMutation.isPending || (approveTarget?.status !== PoStatus.Pending)}
             >
               {approveMutation.isPending
                 ? "Processing..."
                 : "Confirm Approve"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={!!rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        title="Reject Purchase Order"
+        size="sm"
+      >
+        <div className="space-y-4 font-sans">
+          <p className="text-secondary-600">
+            Reject PO{" "}
+            <span className="font-bold text-secondary-900">
+              {rejectTarget?.poNo}
+            </span>
+            ? This action cannot be undone.
+          </p>
+          {rejectTarget && rejectTarget.status !== PoStatus.Pending && (
+            <p className="text-amber-600 text-sm font-medium">
+              Only Pending POs can be rejected. Current status: {rejectTarget.status}.
+            </p>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setRejectTarget(null)}
+              className="flex-1 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              onClick={() =>
+                rejectTarget && rejectMutation.mutate(rejectTarget.id)
+              }
+              disabled={rejectMutation.isPending || (rejectTarget?.status !== PoStatus.Pending)}
+            >
+              {rejectMutation.isPending ? "Processing..." : "Confirm Reject"}
             </Button>
           </div>
         </div>

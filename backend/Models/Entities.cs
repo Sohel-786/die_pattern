@@ -188,7 +188,7 @@ namespace net_backend.Models
         public string PiNo { get; set; } = string.Empty;
         public int? LocationId { get; set; }
         public PurchaseIndentType Type { get; set; }
-        public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Draft;
+        public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Pending;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
@@ -233,7 +233,7 @@ namespace net_backend.Models
         public int? GstType { get; set; } // 0=CGST_SGST, 1=IGST, 2=UGST
         public decimal? GstPercent { get; set; }
         public string? PurchaseType { get; set; } = "Regular"; // Regular, Urgent, Critical
-        public PoStatus Status { get; set; } = PoStatus.Draft;
+        public PoStatus Status { get; set; } = PoStatus.Pending;
         public string? Remarks { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }

@@ -11,7 +11,6 @@ export enum PurchaseIndentStatus {
   Pending = 'Pending',
   Approved = 'Approved',
   Rejected = 'Rejected',
-  Draft = 'Draft'
 }
 
 export enum PurchaseIndentType {
@@ -25,10 +24,27 @@ export enum PoStatus {
   Pending = 'Pending',
   Approved = 'Approved',
   Rejected = 'Rejected',
-  Draft = 'Draft',
 }
 
 export type PurchaseType = 'Regular' | 'Urgent' | 'Critical';
+
+/** Item process state for PI selection: only NotInStock can be added to a PI. */
+export type ItemProcessState =
+  | 'NotInStock'
+  | 'InPI'
+  | 'InPO'
+  | 'InQC'
+  | 'InJobwork'
+  | 'Outward'
+  | 'InStock';
+
+export interface ItemWithStatus {
+  itemId: number;
+  currentName?: string | null;
+  mainPartName?: string | null;
+  itemTypeName?: string | null;
+  status: ItemProcessState;
+}
 
 export enum GstType {
   CGST_SGST = 'CGST_SGST',
@@ -290,6 +306,8 @@ export interface PO {
   items: POItem[];
   createdAt: string;
   isActive?: boolean;
+  /** True if any inward has been done against this PO (edit not allowed). */
+  hasInward?: boolean;
 }
 
 export interface POItem {

@@ -205,13 +205,31 @@ namespace net_backend.Controllers
             var existing = await _context.Items.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
-            if (dto.StatusId > 0) existing.StatusId = dto.StatusId;
-            if (dto.DrawingNo != null && dto.DrawingNo != existing.DrawingNo)
+            if (dto.CurrentName != null)
+                existing.CurrentName = dto.CurrentName.Trim();
+            if (dto.ItemTypeId > 0)
+                existing.ItemTypeId = dto.ItemTypeId;
+            if (dto.MaterialId > 0)
+                existing.MaterialId = dto.MaterialId;
+            if (dto.OwnerTypeId > 0)
+                existing.OwnerTypeId = dto.OwnerTypeId;
+            if (dto.StatusId > 0)
+                existing.StatusId = dto.StatusId;
+            if (dto.DrawingNo != null)
             {
-                if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
-                    return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number already exists" });
-                existing.DrawingNo = dto.DrawingNo;
+                var drawingTrim = dto.DrawingNo.Trim();
+                if (drawingTrim != existing.DrawingNo)
+                {
+                    if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo != null && p.DrawingNo.ToLower() == drawingTrim.ToLower()))
+                        return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number already exists" });
+                    existing.DrawingNo = drawingTrim;
+                }
             }
+            if (dto.RevisionNo != null)
+                existing.RevisionNo = dto.RevisionNo.Trim();
+            existing.CurrentHolderType = dto.CurrentHolderType;
+            existing.CurrentLocationId = dto.CurrentHolderType == HolderType.Location && dto.CurrentLocationId > 0 ? dto.CurrentLocationId : null;
+            existing.CurrentPartyId = dto.CurrentHolderType == HolderType.Vendor && dto.CurrentPartyId > 0 ? dto.CurrentPartyId : null;
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;
 

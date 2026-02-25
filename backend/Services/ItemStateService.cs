@@ -25,8 +25,8 @@ namespace net_backend.Services
                 .AnyAsync(poi => poi.PurchaseIndentItem!.ItemId == itemId);
             if (inPo) return ItemProcessState.InPO;
 
-            // In PI: item in an active PI (Draft/Pending/Approved) and that PI line is not in any active PO; exclude current PI when editing
-            var activeStatuses = new[] { PurchaseIndentStatus.Draft, PurchaseIndentStatus.Pending, PurchaseIndentStatus.Approved };
+            // In PI: item in an active PI (Pending/Approved) and that PI line is not in any active PO; exclude current PI when editing
+            var activeStatuses = new[] { PurchaseIndentStatus.Pending, PurchaseIndentStatus.Approved };
             var inPi = await _context.PurchaseIndentItems
                 .AsNoTracking()
                 .Where(pii => pii.ItemId == itemId && activeStatuses.Contains(pii.PurchaseIndent!.Status))

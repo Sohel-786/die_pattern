@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Trash2, Save, Package,
-    Loader2, Calendar
+    Loader2, Calendar, Plus
 } from "lucide-react";
 import api from "@/lib/api";
 import {
@@ -12,16 +12,17 @@ import {
     Location,
     PurchaseIndent,
     PurchaseIndentType,
+    ItemWithStatus
 } from "@/types";
 import {
     Dialog,
-    DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { ItemSelectionDialog } from "./item-selection-dialog";
+import { PiItemSelectionDialog } from "./pi-item-selection-dialog";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -39,7 +40,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
     const [remarks, setRemarks] = useState("");
     const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
     const [nextPiCode, setNextPiCode] = useState("");
-    const [addingItemId, setAddingItemId] = useState<number | string>("");
+    const [itemSelectionOpen, setItemSelectionOpen] = useState(false);
     const [locationId, setLocationId] = useState<number | "">("");
 
     // Initialize state when editing
@@ -54,7 +55,6 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
             setSelectedItemIds([]);
             setRemarks("");
             setType(PurchaseIndentType.New);
-            setAddingItemId("");
             setLocationId("");
             api.get("/purchase-indents/next-code").then(res => {
                 setNextPiCode(res.data.data);
@@ -73,21 +73,21 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
         enabled: open
     });
 
-    const { data: availableItemIds = [] } = useQuery<number[]>({
-        queryKey: ["purchase-indents", "available-item-ids", isEditing ? indent?.id : null],
-        queryFn: async () => {
-            const params = isEditing && indent?.id ? { excludePiId: indent.id } : {};
-            const res = await api.get("/purchase-indents/available-item-ids", { params });
-            return res.data.data ?? [];
-        },
-        enabled: open
-    });
-
     const { data: locations = [] } = useQuery<Location[]>({
         queryKey: ["locations", "active"],
         queryFn: async () => {
             const res = await api.get("/locations/active");
             return res.data.data;
+        },
+        enabled: open
+    });
+
+    const { data: itemsWithStatus = [], isLoading: itemsWithStatusLoading } = useQuery<ItemWithStatus[]>({
+        queryKey: ["purchase-indents", "items-with-status", isEditing ? indent?.id : null],
+        queryFn: async () => {
+            const params = isEditing && indent?.id ? { excludePiId: indent.id } : {};
+            const res = await api.get("/purchase-indents/items-with-status", { params });
+            return res.data.data ?? [];
         },
         enabled: open
     });
@@ -107,17 +107,23 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
 
     const selectedItems = items.filter(i => selectedItemIds.includes(i.id));
 
+    /** When editing, item IDs that are in an active PO cannot be removed. */
+    const itemIdsInPo = useMemo(
+        () => new Set((indent?.items ?? []).filter((i) => i.isInPO).map((i) => i.itemId)),
+        [indent?.items]
+    );
+
     const removeItem = (id: number) => {
+        if (itemIdsInPo.has(id)) {
+            toast.error("This item is in an active PO and cannot be removed from the indent.");
+            return;
+        }
         setSelectedItemIds(prev => prev.filter(x => x !== id));
     };
 
-    const addItem = (id: number | string) => {
-        if (!id) return;
-        const numId = Number(id);
-        if (!selectedItemIds.includes(numId)) {
-            setSelectedItemIds(prev => [...prev, numId]);
-        }
-        setAddingItemId("");
+    const addItemsFromSelection = (ids: number[]) => {
+        if (ids.length === 0) return;
+        setSelectedItemIds(prev => [...new Set([...prev, ...ids])]);
     };
 
     const handleSubmit = () => {
@@ -132,13 +138,6 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
             itemIds: selectedItemIds
         });
     };
-
-    const itemOptions = items
-        .filter(i => !selectedItemIds.includes(i.id) && (availableItemIds.length === 0 || availableItemIds.includes(i.id)))
-        .map(i => ({
-            value: i.id,
-            label: `${i.currentName} (${i.mainPartName})`
-        }));
 
     return (
         <Dialog
@@ -210,15 +209,25 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                             <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
                                 Select Die / Pattern
                             </Label>
-                            <SearchableSelect
-                                options={itemOptions}
-                                value={addingItemId}
-                                onChange={(val) => addItem(val)}
-                                placeholder="Search by name or main part to add items..."
-                                disabled={itemsLoading}
-                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setItemSelectionOpen(true)}
+                                className="w-full justify-start h-10 px-3 bg-white border-secondary-300 hover:bg-secondary-50 hover:text-secondary-900 shadow-sm transition-all text-sm font-medium text-secondary-600"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Custom Item Selection
+                            </Button>
                         </div>
                     </div>
+
+                    <PiItemSelectionDialog
+                        open={itemSelectionOpen}
+                        onClose={() => setItemSelectionOpen(false)}
+                        selectedItemIds={selectedItemIds}
+                        onAddItems={addItemsFromSelection}
+                        excludePiId={isEditing ? indent?.id : undefined}
+                    />
 
                     <div className="grid grid-cols-1 gap-3 max-h-[350px] overflow-y-auto pr-2 py-1 custom-scrollbar">
                         <AnimatePresence mode="popLayout">
@@ -244,7 +253,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => removeItem(item.id)}
-                                        className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-full"
+                                        disabled={itemIdsInPo.has(item.id)}
+                                        title={itemIdsInPo.has(item.id) ? "Item is in an active PO and cannot be removed" : "Remove from indent"}
+                                        className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
@@ -285,7 +296,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                         ) : (
                             <Save className="w-4 h-4 mr-2" />
                         )}
-                        {isEditing ? "Update Indent" : "Save as Draft"}
+                        {isEditing ? "Update Indent" : "Save"}
                     </Button>
                     <Button
                         type="button"
@@ -297,6 +308,17 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                     </Button>
                 </div>
             </div>
+
+            {itemSelectionOpen && (
+                <ItemSelectionDialog
+                    isOpen={itemSelectionOpen}
+                    onClose={() => setItemSelectionOpen(false)}
+                    items={itemsWithStatus}
+                    onSelectItem={(item) => addItem(item.itemId)}
+                    isLoading={itemsWithStatusLoading}
+                    selectedItemIds={selectedItemIds}
+                />
+            )}
         </Dialog>
     );
 }

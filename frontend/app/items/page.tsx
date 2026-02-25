@@ -109,7 +109,24 @@ export default function ItemsPage() {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (data: any) => api.put(`/items/${selectedItem?.id || data.id}`, { ...data, id: selectedItem?.id || data.id }),
+        mutationFn: (data: any) => {
+            const id = selectedItem?.id ?? data.id;
+            const payload = {
+                id,
+                currentName: data.currentName ?? undefined,
+                itemTypeId: Number(data.itemTypeId) || 0,
+                drawingNo: data.drawingNo ?? undefined,
+                revisionNo: data.revisionNo ?? undefined,
+                materialId: Number(data.materialId) || 0,
+                ownerTypeId: Number(data.ownerTypeId) || 0,
+                statusId: Number(data.statusId) || 0,
+                currentHolderType: data.currentHolderType,
+                currentLocationId: data.currentHolderType === "Location" ? (Number(data.currentLocationId) || null) : null,
+                currentPartyId: data.currentHolderType === "Vendor" ? (Number(data.currentPartyId) || null) : null,
+                isActive: Boolean(data.isActive),
+            };
+            return api.put(`/items/${id}`, payload);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Information updated");

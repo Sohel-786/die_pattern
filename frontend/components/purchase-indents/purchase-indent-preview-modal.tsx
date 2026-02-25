@@ -186,7 +186,7 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
             {pi.status !== PurchaseIndentStatus.Approved && (
               <div className="mt-6 pt-4 border-t border-secondary-100 print:border-0">
                 <p className="text-xs font-bold text-amber-600 uppercase tracking-wider">
-                  Status: {pi.status === PurchaseIndentStatus.Draft ? "Draft" : pi.status === PurchaseIndentStatus.Pending ? "Pending Approval" : "Rejected"}
+                  Status: {pi.status === PurchaseIndentStatus.Pending ? "Pending Approval" : pi.status === PurchaseIndentStatus.Approved ? "Approved" : "Rejected"}
                 </p>
               </div>
             )}

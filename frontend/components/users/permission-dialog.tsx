@@ -82,10 +82,12 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
         mutationFn: (data: UserPermission) => api.put(`/users/${userId}/permissions`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user-permissions", userId] });
-            toast.success("Strategic reach reconfigured");
+            queryClient.invalidateQueries({ queryKey: ["settings", "permissions", "me"] });
+            queryClient.invalidateQueries({ queryKey: ["settings", "permissions", userId] });
+            toast.success("Permissions saved. Changes apply on next load for that user.");
             onClose();
         },
-        onError: (err: any) => toast.error("Authorization failed")
+        onError: (err: any) => toast.error(err.response?.data?.message || "Failed to save permissions")
     });
 
     const updatePermission = (key: keyof UserPermission, value: boolean) => {

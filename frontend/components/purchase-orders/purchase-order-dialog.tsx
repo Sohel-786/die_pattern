@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Save, Loader2, Calendar, Upload, Plus, ShieldCheck, Eye, X,
@@ -76,6 +76,7 @@ export function PurchaseOrderDialog({
   const [gstType, setGstType] = useState<GstType | "">("");
   const [uploading, setUploading] = useState(false);
   const [itemsDisplayMap, setItemsDisplayMap] = useState<Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }>>({});
+  const deliveryDateInputRef = useRef<HTMLInputElement>(null);
 
   const { data: poData, isLoading: loadingPO } = useQuery<PO>({
     queryKey: ["purchase-order", po?.id],
@@ -363,11 +364,14 @@ export function PurchaseOrderDialog({
   const totalGst = includedItems.reduce((sum, i) => sum + ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100, 0);
   const finalAmount = totalTaxable + totalGst;
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const deliveryDateNotPast = deliveryDate.trim() !== "" && deliveryDate >= todayStr;
+
   const isValid =
     !!vendorId &&
     quotationNo.trim() !== "" &&
-    effectiveQuotationCount >= 1 &&
     deliveryDate.trim() !== "" &&
+    deliveryDateNotPast &&
     includedItems.length >= 1 &&
     includedItems.some((i) => (i.rate ?? 0) > 0);
 
@@ -380,12 +384,12 @@ export function PurchaseOrderDialog({
       toast.error("Quotation Number is required");
       return;
     }
-    if (effectiveQuotationCount === 0) {
-      toast.error("At least one quotation file is required (add files and save)");
-      return;
-    }
     if (deliveryDate.trim() === "") {
       toast.error("Delivery Date is required");
+      return;
+    }
+    if (deliveryDate < todayStr) {
+      toast.error("Delivery Date cannot be in the past");
       return;
     }
     if (includedItems.length === 0) {
@@ -696,12 +700,38 @@ export function PurchaseOrderDialog({
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
                   <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date *</Label>
-                  <Input
-                    type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                    className="h-9 w-40 mt-0.5 text-sm border-secondary-200"
-                  />
+                  <div className="mt-0.5 flex items-center gap-1 w-40">
+                    <input
+                      ref={deliveryDateInputRef}
+                      type="date"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      min={todayStr}
+                      value={deliveryDate}
+                      onChange={(e) => {
+                        setDeliveryDate(e.target.value);
+                        e.target.blur();
+                      }}
+                      className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                    />
+                    <Input
+                      readOnly
+                      value={deliveryDate ? format(new Date(deliveryDate + "T00:00:00"), "dd-MMM-yyyy") : ""}
+                      placeholder="Select date"
+                      className="h-9 flex-1 min-w-0 text-sm border-secondary-200 bg-white cursor-pointer"
+                      onClick={() => deliveryDateInputRef.current?.showPicker?.()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0 shrink-0"
+                      onClick={() => deliveryDateInputRef.current?.showPicker?.()}
+                      title="Pick delivery date"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <span className="text-xs font-semibold text-secondary-500 block">Total Amount</span>

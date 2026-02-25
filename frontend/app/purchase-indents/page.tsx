@@ -4,9 +4,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
-    Plus, FileText, CheckCircle, XCircle, Eye, Ban, Minus,
-    ShoppingCart, Edit2, Send, RotateCcw
+    Plus, FileText, CheckCircle, XCircle, Eye, Ban, Minus, ChevronRight, MoreVertical,
+    ShoppingCart, Edit2, RotateCcw
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import api from "@/lib/api";
 import { PurchaseIndent, PurchaseIndentStatus } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -36,7 +42,6 @@ export default function PurchaseIndentsPage() {
     const [selectedPIIds, setSelectedPIIds] = useState<number[]>([]);
     const [inactiveTarget, setInactiveTarget] = useState<PurchaseIndent | null>(null);
     const [approvalTarget, setApprovalTarget] = useState<{ pi: PurchaseIndent; action: "approve" | "reject" } | null>(null);
-    const [submitTarget, setSubmitTarget] = useState<PurchaseIndent | null>(null);
     const [revertTarget, setRevertTarget] = useState<PurchaseIndent | null>(null);
     const [previewPIId, setPreviewPIId] = useState<number | null>(null);
     const [poDialogOpen, setPoDialogOpen] = useState(false);
@@ -93,16 +98,6 @@ export default function PurchaseIndentsPage() {
         onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed")
     });
 
-    const submitMutation = useMutation({
-        mutationFn: (id: number) => api.post(`/purchase-indents/${id}/submit`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
-            toast.success("Indent submitted for approval");
-            setSubmitTarget(null);
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || "Submit failed")
-    });
-
     const toggleActiveMutation = useMutation({
         mutationFn: (id: number) => api.put(`/purchase-indents/${id}/toggle-status`),
         onSuccess: () => {
@@ -130,7 +125,6 @@ export default function PurchaseIndentsPage() {
             case PurchaseIndentStatus.Rejected:
                 return <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-rose-200">Rejected</span>;
             case PurchaseIndentStatus.Pending:
-            case PurchaseIndentStatus.Draft:
             default:
                 return <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">Approval Pending</span>;
         }
@@ -151,6 +145,9 @@ export default function PurchaseIndentsPage() {
         pi.status === PurchaseIndentStatus.Approved &&
         permissions?.approvePI &&
         (pi.items || []).every((i) => !i.isInPO);
+
+    /** Cannot deactivate PI if any of its items are in an active PO. */
+    const canDeactivate = (pi: PurchaseIndent) => !(pi.items || []).some((i) => i.isInPO);
 
     /** PI can be selected for Create PO only while at least one of its items is not yet in any PO. */
     const canSelectPIForPO = (pi: PurchaseIndent) =>
@@ -283,7 +280,7 @@ export default function PurchaseIndentsPage() {
                                                     className="h-6 w-6 p-0 text-secondary-500"
                                                     aria-label={expandedPIId === pi.id ? "Collapse row" : "Expand row"}
                                                 >
-                                                    {expandedPIId === pi.id ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                                    {expandedPIId === pi.id ? <Minus className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                                 </Button>
                                             </td>
                                             <td className="px-4 py-3 text-center">
@@ -308,42 +305,7 @@ export default function PurchaseIndentsPage() {
                                                 <div className="font-medium text-secondary-700 text-xs">{pi.creatorName}</div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {pi.status === PurchaseIndentStatus.Pending && permissions?.approvePI ? (
-                                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => setApprovalTarget({ pi, action: "approve" })}
-                                                            className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold gap-1.5"
-                                                        >
-                                                            <CheckCircle className="w-3.5 h-3.5" />
-                                                            Approve
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setApprovalTarget({ pi, action: "reject" })}
-                                                            className="h-8 px-3 border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold gap-1.5"
-                                                        >
-                                                            <XCircle className="w-3.5 h-3.5" />
-                                                            Reject
-                                                        </Button>
-                                                    </div>
-                                                ) : pi.status === PurchaseIndentStatus.Approved && canRevertToPending(pi) ? (
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        {getStatusBadge(pi.status)}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setRevertTarget(pi)}
-                                                            className="h-7 px-2 text-amber-600 border-amber-200 hover:bg-amber-50 text-[10px] font-semibold gap-1"
-                                                        >
-                                                            <RotateCcw className="w-3 h-3" />
-                                                            Revert to Pending
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    getStatusBadge(pi.status)
-                                                )}
+                                                {getStatusBadge(pi.status)}
                                             </td>
                                             {isAdmin && (
                                                 <td className="px-4 py-3 text-center text-[10px] font-bold">
@@ -356,6 +318,60 @@ export default function PurchaseIndentsPage() {
                                             )}
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    {permissions?.approvePI && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg transition-all"
+                                                                    title="Approvals"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <MoreVertical className="w-4 h-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                                                {pi.status === PurchaseIndentStatus.Pending ? (
+                                                                    <>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                requestAnimationFrame(() => setApprovalTarget({ pi, action: "approve" }));
+                                                                            }}
+                                                                            className="flex items-center gap-2 cursor-pointer py-2"
+                                                                        >
+                                                                            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                                                            <span>Approve</span>
+                                                                        </DropdownMenuItem>
+                                                                        <div className="my-1 border-t border-secondary-100" role="separator" />
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                requestAnimationFrame(() => setApprovalTarget({ pi, action: "reject" }));
+                                                                            }}
+                                                                            className="flex items-center gap-2 cursor-pointer py-2"
+                                                                        >
+                                                                            <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                                            <span>Reject</span>
+                                                                        </DropdownMenuItem>
+                                                                    </>
+                                                                ) : pi.status === PurchaseIndentStatus.Approved && canRevertToPending(pi) ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            requestAnimationFrame(() => setRevertTarget(pi));
+                                                                        }}
+                                                                        className="flex items-center gap-2 cursor-pointer py-2 text-amber-700"
+                                                                    >
+                                                                        <RotateCcw className="w-4 h-4 shrink-0" />
+                                                                        <span>Revert to Pending</span>
+                                                                    </DropdownMenuItem>
+                                                                ) : (
+                                                                    <div className="px-3 py-2 text-xs text-secondary-500 italic">
+                                                                        No approval actions available
+                                                                    </div>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
@@ -365,7 +381,7 @@ export default function PurchaseIndentsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </Button>
-                                                    {(pi.status === PurchaseIndentStatus.Draft || pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && (
+                                                    {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -379,28 +395,18 @@ export default function PurchaseIndentsPage() {
                                                             <Edit2 className="w-4 h-4" />
                                                         </Button>
                                                     )}
-                                                    {pi.status === PurchaseIndentStatus.Draft && permissions?.createPI && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setSubmitTarget(pi)}
-                                                            className="h-8 w-8 p-0 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                                            title="Submit for Approval"
-                                                        >
-                                                            <Send className="w-4 h-4" />
-                                                        </Button>
-                                                    )}
-
                                                     {isAdmin && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
+                                                            disabled={pi.isActive && (pi.items ?? []).some((i: any) => i.isInPO)}
                                                             onClick={() => setInactiveTarget(pi)}
-                                                            className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${pi.isActive
-                                                                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
-                                                                : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                                                                }`}
-                                                            title={pi.isActive ? "Deactivate" : "Activate"}
+                                                            className={cn(
+                                                                "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
+                                                                pi.isActive && (pi.items ?? []).some((i: any) => i.isInPO) ? "opacity-30 cursor-not-allowed" : "",
+                                                                pi.isActive ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100' : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                                                            )}
+                                                            title={pi.isActive && (pi.items ?? []).some((i: any) => i.isInPO) ? "Cannot deactivate because some items are in active POs" : pi.isActive ? "Deactivate" : "Activate"}
                                                         >
                                                             {pi.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                                                         </Button>
@@ -524,30 +530,6 @@ export default function PurchaseIndentsPage() {
                             disabled={toggleActiveMutation.isPending}
                         >
                             {toggleActiveMutation.isPending ? "Processing..." : inactiveTarget?.isActive ? "Deactivate" : "Activate"}
-                        </Button>
-                    </div>
-                </div>
-            </Dialog>
-
-            {/* Submit for Approval Confirmation */}
-            <Dialog
-                isOpen={!!submitTarget}
-                onClose={() => setSubmitTarget(null)}
-                title="Submit for Approval"
-                size="sm"
-            >
-                <div className="space-y-4 font-sans">
-                    <p className="text-secondary-600">
-                        Submit indent <span className="font-bold text-secondary-900">{submitTarget?.piNo}</span> for approval? It will move to Pending status and become eligible for approval.
-                    </p>
-                    <div className="flex gap-3 pt-2">
-                        <Button variant="outline" onClick={() => setSubmitTarget(null)} className="flex-1 font-bold">Cancel</Button>
-                        <Button
-                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                            onClick={() => submitTarget && submitMutation.mutate(submitTarget.id)}
-                            disabled={submitMutation.isPending}
-                        >
-                            {submitMutation.isPending ? "Submitting..." : "Submit for Approval"}
                         </Button>
                     </div>
                 </div>

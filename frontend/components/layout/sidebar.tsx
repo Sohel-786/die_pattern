@@ -221,9 +221,9 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
-                  {renderMenuItem("/purchase-indents", "PI", FileText)}
-                  {renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
-                  {renderMenuItem("/inwards", "Inward", ArrowLeftRight)}
+                  {permissions?.viewPI && renderMenuItem("/purchase-indents", "PI", FileText)}
+                  {permissions?.viewPO && renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
+                  {permissions?.viewInward && renderMenuItem("/inwards", "Inward", ArrowLeftRight)}
                 </div>
               )}
             </div>

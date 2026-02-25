@@ -48,6 +48,16 @@ namespace net_backend.DTOs
         public List<int> ItemIds { get; set; } = new();
     }
 
+    /// <summary>Item with its current process state for PI item selection (only NotInStock can be added).</summary>
+    public class ItemWithStatusDto
+    {
+        public int ItemId { get; set; }
+        public string? CurrentName { get; set; }
+        public string? MainPartName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string Status { get; set; } = string.Empty; // NotInStock, InPI, InPO, InQC, InJobwork, Outward, InStock
+    }
+
     public class PODto
     {
         public int Id { get; set; }
@@ -74,6 +84,8 @@ namespace net_backend.DTOs
         public string? ApproverName { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public bool IsActive { get; set; } = true;
+        /// <summary>True if any inward has been recorded against this PO (edit not allowed).</summary>
+        public bool HasInward { get; set; }
         public List<POItemDto> Items { get; set; } = new();
     }
 
