@@ -12,10 +12,27 @@ namespace net_backend.Controllers
     public class ItemsController : BaseController
     {
         private readonly IExcelService _excelService;
+        private readonly IItemStateService _itemState;
 
-        public ItemsController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public ItemsController(ApplicationDbContext context, IExcelService excelService, IItemStateService itemState) : base(context)
         {
             _excelService = excelService;
+            _itemState = itemState;
+        }
+
+        private static string MapProcessStateToDisplay(ItemProcessState state)
+        {
+            return state switch
+            {
+                ItemProcessState.NotInStock => "Not In Stock",
+                ItemProcessState.InPI => "PI Issued",
+                ItemProcessState.InPO => "PO Issued",
+                ItemProcessState.InQC => "In QC",
+                ItemProcessState.InJobwork => "In Job Work",
+                ItemProcessState.Outward => "In Outward",
+                ItemProcessState.InStock => "In Stock",
+                _ => "Not In Stock"
+            };
         }
 
         [HttpGet]
@@ -88,6 +105,12 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
+            foreach (var dto in data)
+            {
+                var state = await _itemState.GetStateAsync(dto.Id, null);
+                dto.CurrentProcess = MapProcessStateToDisplay(state);
+            }
+
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }
 
@@ -142,6 +165,17 @@ namespace net_backend.Controllers
             if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.LocationId == locationId && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
+            if (dto.CurrentHolderType == HolderType.Vendor && (!dto.CurrentPartyId.HasValue || dto.CurrentPartyId.Value <= 0))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Vendor is required when custodian is Vendor" });
+
+            // At Location = in-stock at current (request) location; NotInStock = no holder
+            int? currentLocationId = null;
+            int? currentPartyId = null;
+            if (dto.CurrentHolderType == HolderType.Location)
+                currentLocationId = locationId;
+            else if (dto.CurrentHolderType == HolderType.Vendor && dto.CurrentPartyId > 0)
+                currentPartyId = dto.CurrentPartyId;
+
             var item = new Item
             {
                 MainPartName = dto.MainPartName.Trim(),
@@ -153,8 +187,8 @@ namespace net_backend.Controllers
                 OwnerTypeId = dto.OwnerTypeId,
                 StatusId = dto.StatusId,
                 CurrentHolderType = dto.CurrentHolderType,
-                CurrentLocationId = dto.CurrentLocationId,
-                CurrentPartyId = dto.CurrentPartyId,
+                CurrentLocationId = currentLocationId,
+                CurrentPartyId = currentPartyId,
                 LocationId = locationId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
@@ -210,6 +244,9 @@ namespace net_backend.Controllers
             var existing = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
+            if (dto.CurrentHolderType == HolderType.Vendor && (!dto.CurrentPartyId.HasValue || dto.CurrentPartyId.Value <= 0))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Vendor is required when custodian is Vendor" });
+
             if (dto.CurrentName != null)
                 existing.CurrentName = dto.CurrentName.Trim();
             if (dto.ItemTypeId > 0)
@@ -233,7 +270,7 @@ namespace net_backend.Controllers
             if (dto.RevisionNo != null)
                 existing.RevisionNo = dto.RevisionNo.Trim();
             existing.CurrentHolderType = dto.CurrentHolderType;
-            existing.CurrentLocationId = dto.CurrentHolderType == HolderType.Location && dto.CurrentLocationId > 0 ? dto.CurrentLocationId : null;
+            existing.CurrentLocationId = dto.CurrentHolderType == HolderType.Location ? locationId : null;
             existing.CurrentPartyId = dto.CurrentHolderType == HolderType.Vendor && dto.CurrentPartyId > 0 ? dto.CurrentPartyId : null;
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;
@@ -266,8 +303,8 @@ namespace net_backend.Controllers
                 Material = i.Material?.Name,
                 Ownership = i.OwnerType?.Name,
                 Status = i.Status?.Name,
-                CustodianType = i.CurrentHolderType.ToString(),
-                CustodianName = i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name
+                CustodianType = i.CurrentHolderType == HolderType.NotInStock ? "Not in stock" : i.CurrentHolderType.ToString(),
+                CustodianName = i.CurrentHolderType == HolderType.NotInStock ? "—" : (i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name)
             });
 
             var file = _excelService.GenerateExcel(data, "Die Pattern Masters");
@@ -304,13 +341,24 @@ namespace net_backend.Controllers
                     var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.Ownership);
                     var status = await _context.ItemStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
                     
+                    var cType = row.Data.CustodianType?.Trim().ToLower().Replace(" ", "") ?? "";
+                    HolderType holderType;
                     int? currentLocationId = null;
                     int? partyId = null;
-
-                    if (row.Data.CustodianType == "Location")
-                        currentLocationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CustodianName))?.Id;
-                    else
+                    if (cType == "notinstock")
+                    {
+                        holderType = HolderType.NotInStock;
+                    }
+                    else if (cType == "vendor")
+                    {
+                        holderType = HolderType.Vendor;
                         partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.LocationId == locationId && p.Name == row.Data.CustodianName))?.Id;
+                    }
+                    else
+                    {
+                        holderType = HolderType.Location;
+                        currentLocationId = locationId;
+                    }
 
                     _context.Items.Add(new Item
                     {
@@ -322,7 +370,7 @@ namespace net_backend.Controllers
                         MaterialId = material?.Id ?? 0,
                         OwnerTypeId = ownerType?.Id ?? 0,
                         StatusId = status?.Id ?? 0,
-                        CurrentHolderType = row.Data.CustodianType.Equals("Location", StringComparison.OrdinalIgnoreCase) ? HolderType.Location : HolderType.Vendor,
+                        CurrentHolderType = holderType,
                         CurrentLocationId = currentLocationId,
                         CurrentPartyId = partyId,
                         LocationId = locationId,
@@ -395,28 +443,26 @@ namespace net_backend.Controllers
                 if (string.IsNullOrEmpty(d.Ownership) || !ownerTypes.Contains(d.Ownership.ToLower())) errors.Add("Invalid Ownership");
                 if (string.IsNullOrEmpty(d.Status) || !statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 
-                // Custodian Validation
+                // Custodian Validation: Location, Vendor, or NotInStock (Not in stock)
                 if (string.IsNullOrEmpty(d.CustodianType))
                 {
-                    errors.Add("Custodian Type is required (Location / Vendor)");
+                    errors.Add("Custodian Type is required (Location / Vendor / Not in stock)");
                 }
                 else
                 {
-                    var cType = d.CustodianType.Trim().ToLower();
-                    if (cType != "location" && cType != "vendor")
+                    var cType = d.CustodianType.Trim().ToLower().Replace(" ", "");
+                    if (cType != "location" && cType != "vendor" && cType != "notinstock")
                     {
-                        errors.Add("Custodian Type must be 'Location' or 'Vendor'");
+                        errors.Add("Custodian Type must be 'Location', 'Vendor', or 'Not in stock'");
                     }
-                    else if (string.IsNullOrEmpty(d.CustodianName))
+                    else if (cType == "vendor" && string.IsNullOrEmpty(d.CustodianName))
                     {
-                        errors.Add("Custodian Name is required");
+                        errors.Add("Custodian Name is required for Vendor");
                     }
-                    else
+                    else if (cType == "vendor" && !string.IsNullOrEmpty(d.CustodianName))
                     {
                         var cName = d.CustodianName.Trim().ToLower();
-                        if (cType == "location" && !locationNames.Contains(cName))
-                            errors.Add($"Location '{d.CustodianName}' not found");
-                        else if (cType == "vendor" && !partyNames.Contains(cName))
+                        if (!partyNames.Contains(cName))
                             errors.Add($"Vendor/Party '{d.CustodianName}' not found");
                     }
                 }

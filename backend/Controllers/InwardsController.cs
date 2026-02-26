@@ -78,7 +78,7 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
 
             int? vid = null;
-            try { ValidateSourceRef(locationId, dto.SourceType, dto.SourceRefId, out vid); }
+            try { vid = await ValidateSourceRefAsync(locationId, dto.SourceType, dto.SourceRefId); }
             catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<Inward> { Success = false, Message = "At least one line is required." });
@@ -124,7 +124,7 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be edited." });
 
             int? vid = null;
-            try { ValidateSourceRef(locationId, dto.SourceType, dto.SourceRefId, out vid); }
+            try { vid = await ValidateSourceRefAsync(locationId, dto.SourceType, dto.SourceRefId); }
             catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
@@ -192,26 +192,46 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
-        private void ValidateSourceRef(int locationId, InwardSourceType sourceType, int sourceRefId, out int? vendorId)
+        private async Task<int?> ValidateSourceRefAsync(int locationId, InwardSourceType sourceType, int sourceRefId)
         {
-            vendorId = null;
+            int? vendorId = null;
             if (sourceType == InwardSourceType.PO)
             {
-                var po = _context.PurchaseOrders.FirstOrDefault(p => p.Id == sourceRefId && p.LocationId == locationId);
+                var po = await _context.PurchaseOrders.Include(p => p.Items).ThenInclude(i => i.PurchaseIndentItem).FirstOrDefaultAsync(p => p.Id == sourceRefId && p.LocationId == locationId);
                 if (po == null) throw new ArgumentException("Invalid PO reference or PO not in current location.");
+                if (po.Status != PoStatus.Approved) throw new ArgumentException("Only approved POs can be used for Inward.");
+                if (!po.IsActive) throw new ArgumentException("Inactive POs cannot be used for Inward.");
+                var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToHashSet();
+                var submittedInwardIds = await _context.Inwards
+                    .Where(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted)
+                    .Select(i => i.Id)
+                    .ToListAsync();
+                var inwardedFromPo = await _context.InwardLines
+                    .Where(l => submittedInwardIds.Contains(l.InwardId))
+                    .Select(l => l.ItemId)
+                    .ToListAsync();
+                var inwardedSet = inwardedFromPo.ToHashSet();
+                if (poItemIds.Count > 0 && poItemIds.All(id => inwardedSet.Contains(id)))
+                    throw new ArgumentException("This PO is already fully inwarded.");
                 vendorId = po.VendorId;
             }
             else if (sourceType == InwardSourceType.OutwardReturn)
             {
-                var mov = _context.Movements.FirstOrDefault(m => m.Id == sourceRefId && m.Type == MovementType.Outward);
+                var mov = await _context.Movements.FirstOrDefaultAsync(m => m.Id == sourceRefId && m.Type == MovementType.Outward);
                 if (mov == null) throw new ArgumentException("Invalid Outward movement reference.");
+                var alreadyInwarded = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.OutwardReturn && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted);
+                if (alreadyInwarded) throw new ArgumentException("This Outward challan has already been inwarded.");
                 vendorId = mov.ToPartyId;
             }
             else if (sourceType == InwardSourceType.JobWork)
             {
-                if (!_context.JobWorks.Any(j => j.Id == sourceRefId && j.LocationId == locationId))
-                    throw new ArgumentException("Invalid Job Work reference or not in current location.");
+                var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
+                if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
+                if (jw.Status != JobWorkStatus.Pending) throw new ArgumentException("Only pending Job Work entries (not yet inwarded) can be used for Inward.");
+                var alreadyInwarded = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.JobWork && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted);
+                if (alreadyInwarded) throw new ArgumentException("This Job Work has already been inwarded.");
             }
+            return vendorId;
         }
 
         private static InwardDto MapToDto(Inward i)

@@ -37,7 +37,7 @@ namespace net_backend.Controllers
                     ItemType = p.ItemType!.Name,
                     p.RevisionNo,
                     Status = p.Status!.Name,
-                    Holder = p.CurrentHolderType == HolderType.Location ? p.CurrentLocation!.Name : p.CurrentParty!.Name,
+                    Holder = p.CurrentHolderType == HolderType.NotInStock ? "Not in stock" : (p.CurrentHolderType == HolderType.Location ? p.CurrentLocation!.Name : p.CurrentParty!.Name),
                     p.CurrentHolderType,
                     p.IsActive
                 })

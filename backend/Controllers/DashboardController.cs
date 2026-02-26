@@ -23,7 +23,8 @@ namespace net_backend.Controllers
             var totalItems = await _context.Items.CountAsync(p => p.LocationId == locationId && p.IsActive);
             var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Vendor && p.IsActive);
             var itemsAtLocation = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Location && p.IsActive);
-            
+            var itemsNotInStock = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.NotInStock && p.IsActive);
+
             var pendingPI = await _context.PurchaseIndents.CountAsync(pi => pi.Status == PurchaseIndentStatus.Pending);
             var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.LocationId == locationId && po.Status == PoStatus.Pending);
 
@@ -62,6 +63,7 @@ namespace net_backend.Controllers
                     total = totalItems, 
                     atVendor = itemsAtVendor, 
                     atLocation = itemsAtLocation,
+                    notInStock = itemsNotInStock,
                     pendingPI,
                     pendingPO
                 },

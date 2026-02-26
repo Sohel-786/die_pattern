@@ -25,11 +25,11 @@ namespace net_backend.Services
                 .AnyAsync(poi => poi.PurchaseIndentItem!.ItemId == itemId);
             if (inPo) return ItemProcessState.InPO;
 
-            // In PI: item in an active PI (Pending/Approved) and that PI line is not in any active PO; exclude current PI when editing
+            // In PI: item in an active PI (IsActive + Pending/Approved) and that PI line is not in any active PO; exclude current PI when editing
             var activeStatuses = new[] { PurchaseIndentStatus.Pending, PurchaseIndentStatus.Approved };
             var inPi = await _context.PurchaseIndentItems
                 .AsNoTracking()
-                .Where(pii => pii.ItemId == itemId && activeStatuses.Contains(pii.PurchaseIndent!.Status))
+                .Where(pii => pii.ItemId == itemId && pii.PurchaseIndent != null && pii.PurchaseIndent.IsActive && activeStatuses.Contains(pii.PurchaseIndent.Status))
                 .Where(pii => excludePurchaseIndentId == null || pii.PurchaseIndentId != excludePurchaseIndentId)
                 .AnyAsync(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive));
             if (inPi) return ItemProcessState.InPI;
@@ -44,10 +44,8 @@ namespace net_backend.Services
             var inJw = await _context.JobWorks.AsNoTracking().AnyAsync(j => j.ItemId == itemId);
             if (inJw) return ItemProcessState.InJobwork;
 
-            // Outward: at vendor/party
+            if (item.CurrentHolderType == HolderType.NotInStock) return ItemProcessState.NotInStock;
             if (item.CurrentHolderType == HolderType.Vendor) return ItemProcessState.Outward;
-
-            // In Stock: at location
             if (item.CurrentHolderType == HolderType.Location) return ItemProcessState.InStock;
 
             return ItemProcessState.NotInStock;

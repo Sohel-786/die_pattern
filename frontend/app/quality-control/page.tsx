@@ -2,10 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    ClipboardCheck, Search, ShieldCheck, ShieldAlert,
+    ClipboardCheck, Search, ShieldAlert,
     Package, Clock, CheckCircle, XCircle,
-    ArrowDownLeft, RotateCcw, Info, MessageSquare, Eye, Loader2,
-    FileText, Truck, Briefcase
+    ArrowDownLeft, RotateCcw, Loader2, MoreVertical
 } from "lucide-react";
 import api from "@/lib/api";
 import { Movement, MovementType, InwardSourceType } from "@/types";
@@ -22,14 +21,16 @@ import {
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-import {
-    Dialog,
-    DialogContent
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 const SOURCE_TABS: { value: "" | InwardSourceType; label: string }[] = [
@@ -43,8 +44,8 @@ export default function QualityControlPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const [search, setSearch] = useState("");
     const [sourceTab, setSourceTab] = useState<"" | InwardSourceType>("");
-    const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
-    const [isInspectionOpen, setIsInspectionOpen] = useState(false);
+    const [approveTarget, setApproveTarget] = useState<Movement | null>(null);
+    const [rejectTarget, setRejectTarget] = useState<Movement | null>(null);
     const [remarks, setRemarks] = useState("");
     const queryClient = useQueryClient();
 
@@ -74,22 +75,17 @@ export default function QualityControlPage() {
     const performMutation = useMutation({
         mutationFn: (data: { movementId: number; isApproved: boolean; remarks: string }) =>
             api.post("/quality-control/perform", data),
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ["quality-control", "pending"] });
             queryClient.invalidateQueries({ queryKey: ["movements"] });
             queryClient.invalidateQueries({ queryKey: ["items"] });
-            toast.success("Inspection recorded successfully");
-            setIsInspectionOpen(false);
-            setSelectedMovement(null);
+            toast.success(variables.isApproved ? "QC approved and item released" : "QC rejected");
+            setApproveTarget(null);
+            setRejectTarget(null);
             setRemarks("");
         },
         onError: (err: any) => toast.error(err.response?.data?.message || "Execution failed")
     });
-
-    const handleInspect = (m: Movement) => {
-        setSelectedMovement(m);
-        setIsInspectionOpen(true);
-    };
 
     const filteredPending = pending.filter(m =>
         (m.itemName ?? m.item?.currentName ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -99,8 +95,8 @@ export default function QualityControlPage() {
     );
 
     return (
-        <div className="p-4 space-y-4 bg-secondary-50/30 min-h-screen">
-            <div className="flex justify-between items-center mb-2">
+        <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
+            <div className="flex justify-between items-center shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Quality Certification</h1>
                     <p className="text-secondary-500 text-sm">Verify material integrity for incoming components</p>
@@ -111,8 +107,8 @@ export default function QualityControlPage() {
                 </div>
             </div>
 
-            <Card className="border-secondary-200 shadow-sm overflow-hidden">
-                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center">
+            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center shrink-0">
                     <div className="flex flex-wrap items-center gap-2">
                         {SOURCE_TABS.map((tab) => (
                             <Button
@@ -145,10 +141,10 @@ export default function QualityControlPage() {
                     </Button>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-primary-50 border-secondary-100 divide-x divide-secondary-100">
+                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
                                 <TableHead className="w-16 h-11 text-center font-bold text-primary-900 uppercase tracking-tight text-[11px]">Sr.No</TableHead>
                                 <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Source / Ref</TableHead>
                                 <TableHead className="h-11 font-bold text-primary-900 uppercase tracking-tight text-[11px]">Entry Type</TableHead>
@@ -210,13 +206,38 @@ export default function QualityControlPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            {permissions?.createQC && (
-                                                <Button
-                                                    onClick={() => handleInspect(m)}
-                                                    className="h-8 px-4 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm transition-all"
-                                                >
-                                                    Perform QC
-                                                </Button>
+                                            {(permissions?.createQC || permissions?.approveQC) && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg transition-all"
+                                                            title="Approve or Reject"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="min-w-[11rem] py-1">
+                                                        {permissions?.approveQC && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => setApproveTarget(m)}
+                                                                className="flex items-center gap-2 cursor-pointer py-2"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                                                <span>Approve</span>
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem
+                                                            onClick={() => setRejectTarget(m)}
+                                                            className="flex items-center gap-2 cursor-pointer py-2"
+                                                        >
+                                                            <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                            <span>Reject</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             )}
                                         </td>
                                     </TableRow>
@@ -233,67 +254,58 @@ export default function QualityControlPage() {
                 </div>
             </Card>
 
-            {/* QC Inspection Dialog */}
-            <Dialog
-                isOpen={isInspectionOpen}
-                onClose={() => setIsInspectionOpen(false)}
-                title="Quality Inspection"
-                hideHeader={true}
-                size="md"
-                className="bg-white overflow-hidden shadow-2xl rounded-2xl"
-            >
-                <div className="flex flex-col h-full">
-                    <div className="bg-primary-600 p-6 text-white">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                <ShieldCheck className="w-7 h-7 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold tracking-tight">Quality Verification</h2>
-                                <p className="text-primary-100 text-xs font-medium uppercase tracking-wider">{selectedMovement?.itemName ?? selectedMovement?.item?.currentName}</p>
-                            </div>
-                        </div>
+            {/* Approve QC Confirm Dialog */}
+            <Dialog isOpen={!!approveTarget} onClose={() => setApproveTarget(null)} title="Approve QC" size="sm">
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600">
+                        Approve QC and release <span className="font-bold text-secondary-900">{approveTarget?.itemName ?? approveTarget?.item?.currentName ?? "this item"}</span> to stock?
+                    </p>
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-secondary-600">Remarks (optional)</Label>
+                        <Textarea
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="min-h-[80px] border-secondary-200 text-sm"
+                            placeholder="Inspection notes..."
+                        />
                     </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setApproveTarget(null)} className="flex-1 font-bold">Cancel</Button>
+                        <Button
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+                            onClick={() => approveTarget && performMutation.mutate({ movementId: approveTarget.id, isApproved: true, remarks })}
+                            disabled={performMutation.isPending}
+                        >
+                            {performMutation.isPending ? "Processing..." : "Confirm Approve"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
 
-                    <div className="p-8 space-y-6 flex-1">
-                        <div className="flex items-start gap-4 p-4 bg-secondary-50 border border-secondary-100 rounded-xl">
-                            <Info className="w-5 h-5 text-primary-500 mt-0.5" />
-                            <p className="text-xs text-secondary-600 font-medium leading-relaxed">
-                                Please confirm visual integrity, dimensional compliance and documentation accuracy before certification.
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider ml-1">Inspection Findings</Label>
-                            <Textarea
-                                value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
-                                className="min-h-[120px] border-secondary-200 focus:border-primary-500 transition-all font-medium text-sm p-4"
-                                placeholder="Enter detailed inspection notes or findings..."
-                            />
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
-                            <Button
-                                onClick={() => performMutation.mutate({ movementId: selectedMovement!.id, isApproved: false, remarks })}
-                                disabled={performMutation.isPending}
-                                variant="outline"
-                                className="flex-1 h-12 border-rose-200 text-rose-600 font-bold hover:bg-rose-50"
-                            >
-                                <XCircle className="w-4 h-4 mr-2" /> REJECT
-                            </Button>
-                            <Button
-                                onClick={() => performMutation.mutate({ movementId: selectedMovement!.id, isApproved: true, remarks })}
-                                disabled={performMutation.isPending}
-                                className="flex-[1.5] h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg"
-                            >
-                                {performMutation.isPending ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                ) : (
-                                    <><CheckCircle className="w-4 h-4 mr-2" /> APPROVE & RELEASE</>
-                                )}
-                            </Button>
-                        </div>
+            {/* Reject QC Confirm Dialog */}
+            <Dialog isOpen={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Reject QC" size="sm">
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600">
+                        Reject QC for <span className="font-bold text-secondary-900">{rejectTarget?.itemName ?? rejectTarget?.item?.currentName ?? "this item"}</span>?
+                    </p>
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-secondary-600">Remarks (optional)</Label>
+                        <Textarea
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="min-h-[80px] border-secondary-200 text-sm"
+                            placeholder="Reason for rejection..."
+                        />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setRejectTarget(null)} className="flex-1 font-bold">Cancel</Button>
+                        <Button
+                            className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                            onClick={() => rejectTarget && performMutation.mutate({ movementId: rejectTarget.id, isApproved: false, remarks })}
+                            disabled={performMutation.isPending}
+                        >
+                            {performMutation.isPending ? "Processing..." : "Confirm Reject"}
+                        </Button>
                     </div>
                 </div>
             </Dialog>

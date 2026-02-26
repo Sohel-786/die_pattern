@@ -7,6 +7,7 @@ import { DashboardMetrics } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Package,
+  PackageX,
   Users,
   MapPin,
   FileText,
@@ -35,8 +36,9 @@ export default function DashboardPage() {
 
   const statCards = [
     { title: "Total Items", value: metrics?.summary.total || 0, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "At Vendor", value: metrics?.summary.atVendor || 0, icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
     { title: "At Location", value: metrics?.summary.atLocation || 0, icon: MapPin, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "At Vendor", value: metrics?.summary.atVendor || 0, icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
+    { title: "Not in stock", value: metrics?.summary.notInStock ?? 0, icon: PackageX, color: "text-secondary-600", bg: "bg-secondary-50" },
     { title: "Pending PI", value: metrics?.summary.pendingPI || 0, icon: FileText, color: "text-rose-600", bg: "bg-rose-50" },
     { title: "Pending PO", value: metrics?.summary.pendingPO || 0, icon: ShoppingCart, color: "text-indigo-600", bg: "bg-indigo-50" },
   ];
@@ -49,7 +51,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         {statCards.map((stat, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05, duration: 0.2 }}>
             <Card className="border-none shadow-sm hover:shadow-md transition-shadow">

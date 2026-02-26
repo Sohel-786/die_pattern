@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -369,12 +369,6 @@ export default function SettingsPage() {
     setDraft?.(null);
   }, [savedCompanyName, savedSoftwareName, savedPrimaryColor, setDraft]);
 
-  const revertPermissions = useCallback(() => {
-    if (userPermissionsData) {
-      setLocalPermissions(JSON.parse(JSON.stringify(userPermissionsData.permissions)));
-    }
-  }, [userPermissionsData]);
-
   const clearLogoDraft = useCallback(() => {
     setLogoPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -415,7 +409,34 @@ export default function SettingsPage() {
     setLocalLocationAccess(flat);
   }, [selectedUserId, userLocationAccess]);
 
+  const initialLocationAccessFlat = useMemo(() => {
+    return (userLocationAccess as CompanyLocationAccessItem[]).flatMap((c) =>
+      (c.locations || []).map((l) => ({
+        companyId: c.companyId,
+        companyName: c.companyName,
+        locationId: l.id,
+        locationName: l.name,
+      }))
+    );
+  }, [selectedUserId, userLocationAccess]);
 
+  const hasUnsavedLocationAccess =
+    selectedUserId != null &&
+    JSON.stringify(
+      [...localLocationAccess].sort((a, b) => a.companyId - b.companyId || a.locationId - b.locationId)
+    ) !==
+      JSON.stringify(
+        [...initialLocationAccessFlat].sort((a, b) => a.companyId - b.companyId || a.locationId - b.locationId)
+      );
+
+  const hasUnsavedAccessChanges = hasUnsavedPermissions || hasUnsavedLocationAccess;
+
+  const revertPermissions = useCallback(() => {
+    if (userPermissionsData) {
+      setLocalPermissions(JSON.parse(JSON.stringify(userPermissionsData.permissions)));
+    }
+    setLocalLocationAccess(initialLocationAccessFlat);
+  }, [userPermissionsData, initialLocationAccessFlat]);
 
   if (userLoading) {
     return (
@@ -492,11 +513,24 @@ export default function SettingsPage() {
   };
 
   const handleSavePermissions = () => {
-    if (selectedUserId && localPermissions) {
-      updateUserPermissionsMutation.mutate({
-        userId: selectedUserId,
-        permissions: localPermissions,
-      });
+    if (!selectedUserId) return;
+    const saveLocationAccess = () => {
+      updateLocationAccess.mutate(
+        localLocationAccess.map((a) => ({ companyId: a.companyId, locationId: a.locationId })),
+        { onError: () => {} }
+      );
+    };
+    if (localPermissions) {
+      updateUserPermissionsMutation.mutate(
+        { userId: selectedUserId, permissions: localPermissions },
+        {
+          onSuccess: () => {
+            if (hasUnsavedLocationAccess) saveLocationAccess();
+          },
+        }
+      );
+    } else if (hasUnsavedLocationAccess) {
+      saveLocationAccess();
     }
   };
 
@@ -1108,12 +1142,101 @@ export default function SettingsPage() {
                               </CardHeader>
                             </Card>
                           </div>
+                          <Card className="shadow-sm border-secondary-200 border-t-4 border-t-emerald-500">
+                            <CardHeader className="bg-gradient-to-r from-emerald-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-emerald-100/50 rounded-lg text-emerald-600">
+                                  <Building2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Company & Location Access</CardTitle>
+                                  <p className="text-xs text-secondary-500 mt-0.5">Assign companies and locations this user can access. Admin role still sees all.</p>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-4 space-y-4">
+                              <div className="flex flex-wrap gap-2">
+                                {localLocationAccess.map((a) => (
+                                  <span
+                                    key={`${a.companyId}-${a.locationId}`}
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-3 py-1.5 text-sm font-medium"
+                                  >
+                                    {a.companyName} – {a.locationName}
+                                    <button
+                                      type="button"
+                                      onClick={() => setLocalLocationAccess((prev) => prev.filter((x) => !(x.companyId === a.companyId && x.locationId === a.locationId)))}
+                                      className="rounded-full p-0.5 hover:bg-emerald-200/80 transition-colors"
+                                      aria-label="Remove"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </span>
+                                ))}
+                                {localLocationAccess.length === 0 && (
+                                  <span className="text-sm text-secondary-500 italic">No company or location assigned yet.</span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-end gap-2 pt-2 border-t border-secondary-100">
+                                <div className="min-w-[140px]">
+                                  <Label className="text-xs">Company</Label>
+                                  <select
+                                    value={locationAccessAddCompanyId}
+                                    onChange={(e) => {
+                                      setLocationAccessAddCompanyId(e.target.value ? Number(e.target.value) : "");
+                                      setLocationAccessAddLocationId("");
+                                    }}
+                                    className="mt-1 w-full rounded-md border border-secondary-300 px-2 py-1.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                                  >
+                                    <option value="">Select</option>
+                                    {companies?.map((c) => (
+                                      <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="min-w-[140px]">
+                                  <Label className="text-xs">Location</Label>
+                                  <select
+                                    value={locationAccessAddLocationId}
+                                    onChange={(e) => setLocationAccessAddLocationId(e.target.value ? Number(e.target.value) : "")}
+                                    className="mt-1 w-full rounded-md border border-secondary-300 px-2 py-1.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                                    disabled={!locationAccessAddCompanyId}
+                                  >
+                                    <option value="">Select</option>
+                                    {locations
+                                      ?.filter((l) => l.companyId === Number(locationAccessAddCompanyId))
+                                      .map((l) => (
+                                        <option key={l.id} value={l.id}>{l.name}</option>
+                                      ))}
+                                  </select>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => {
+                                    const cid = locationAccessAddCompanyId === "" ? null : Number(locationAccessAddCompanyId);
+                                    const lid = locationAccessAddLocationId === "" ? null : Number(locationAccessAddLocationId);
+                                    if (cid == null || lid == null) return;
+                                    const company = companies?.find((c) => c.id === cid);
+                                    const location = locations?.find((l) => l.id === lid);
+                                    if (!company || !location) return;
+                                    if (localLocationAccess.some((a) => a.companyId === cid && a.locationId === lid)) return;
+                                    setLocalLocationAccess((prev) => [...prev, { companyId: cid, companyName: company.name, locationId: lid, locationName: location.name }]);
+                                    setLocationAccessAddCompanyId("");
+                                    setLocationAccessAddLocationId("");
+                                  }}
+                                  disabled={!locationAccessAddCompanyId || !locationAccessAddLocationId}
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
                           <div className="flex justify-end gap-2 pt-6 border-t border-secondary-100">
-                            <Button type="button" variant="outline" onClick={revertPermissions} disabled={!hasUnsavedPermissions || updateUserPermissionsMutation.isPending} className="gap-2">
+                            <Button type="button" variant="outline" onClick={revertPermissions} disabled={!hasUnsavedAccessChanges || updateUserPermissionsMutation.isPending || updateLocationAccess.isPending} className="gap-2">
                               <X className="w-4 h-4" /> Cancel
                             </Button>
-                            <Button onClick={handleSavePermissions} disabled={updateUserPermissionsMutation.isPending || !hasUnsavedPermissions} className="gap-2">
-                              {updateUserPermissionsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <Button onClick={handleSavePermissions} disabled={updateUserPermissionsMutation.isPending || updateLocationAccess.isPending || !hasUnsavedAccessChanges} className="gap-2">
+                              {(updateUserPermissionsMutation.isPending || updateLocationAccess.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                               Save Permissions
                             </Button>
                           </div>

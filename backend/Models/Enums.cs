@@ -65,10 +65,12 @@ namespace net_backend.Models
         Completed = 2
     }
 
+    /// <summary>Where the item is held: at current location (in-stock), at vendor, or not in stock.</summary>
     public enum HolderType
     {
-        Location,
-        Vendor
+        Location = 0,   // In-stock at location (current request location)
+        Vendor = 1,
+        NotInStock = 2
     }
 
     /// <summary>Single global process state for an item: one item can only be in one of these at a time.</summary>

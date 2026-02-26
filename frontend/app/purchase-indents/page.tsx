@@ -82,6 +82,7 @@ export default function PurchaseIndentsPage() {
         mutationFn: (id: number) => api.post(`/purchase-indents/${id}/approve`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Indent approved successfully");
             setApprovalTarget(null);
         },
@@ -92,6 +93,7 @@ export default function PurchaseIndentsPage() {
         mutationFn: (id: number) => api.post(`/purchase-indents/${id}/reject`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Indent rejected successfully");
             setApprovalTarget(null);
         },
@@ -102,6 +104,7 @@ export default function PurchaseIndentsPage() {
         mutationFn: (id: number) => api.put(`/purchase-indents/${id}/toggle-status`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Status updated successfully");
             setInactiveTarget(null);
         },
@@ -112,6 +115,7 @@ export default function PurchaseIndentsPage() {
         mutationFn: (id: number) => api.post(`/purchase-indents/${id}/revert-to-pending`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Indent reverted to Pending");
             setRevertTarget(null);
         },
@@ -318,7 +322,7 @@ export default function PurchaseIndentsPage() {
                                             )}
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {permissions?.approvePI && (
+                                                    {permissions?.approvePI && pi.isActive && (
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
                                                                 <Button
@@ -372,6 +376,7 @@ export default function PurchaseIndentsPage() {
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     )}
+                                                    {pi.isActive && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
@@ -381,7 +386,8 @@ export default function PurchaseIndentsPage() {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </Button>
-                                                    {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && (
+                                                    )}
+                                                    {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && pi.isActive && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"

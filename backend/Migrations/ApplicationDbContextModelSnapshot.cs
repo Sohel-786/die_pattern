@@ -432,6 +432,9 @@ namespace net_backend.Migrations
                     b.Property<int?>("LocationId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ToPartyId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
@@ -455,6 +458,8 @@ namespace net_backend.Migrations
                         .IsUnique();
 
                     b.HasIndex("LocationId");
+
+                    b.HasIndex("ToPartyId");
 
                     b.ToTable("job_works");
                 });
@@ -1246,11 +1251,18 @@ namespace net_backend.Migrations
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("net_backend.Models.Party", "ToParty")
+                        .WithMany()
+                        .HasForeignKey("ToPartyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Creator");
 
                     b.Navigation("Item");
 
                     b.Navigation("Location");
+
+                    b.Navigation("ToParty");
                 });
 
             modelBuilder.Entity("net_backend.Models.Location", b =>

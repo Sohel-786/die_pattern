@@ -17,6 +17,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetAll()
         {
+            if (!await HasPermission("ViewMovement")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var data = await _context.Movements
                 .Where(m => m.FromLocationId == locationId || m.ToLocationId == locationId || (m.Item != null && m.Item.LocationId == locationId))

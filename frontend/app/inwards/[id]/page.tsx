@@ -38,6 +38,7 @@ export default function InwardDetailPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["inwards"] });
             queryClient.invalidateQueries({ queryKey: ["quality-control"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Inward submitted for QC");
             router.push("/inwards");
         },

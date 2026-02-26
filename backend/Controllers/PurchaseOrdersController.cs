@@ -243,6 +243,7 @@ namespace net_backend.Controllers
             [FromQuery] decimal? rateMax)
         {
             var locationId = await GetCurrentLocationIdAsync();
+            var isAdmin = await IsAdmin();
             var query = _context.PurchaseOrders
                 .Where(p => p.LocationId == locationId)
                 .Include(p => p.Vendor)
@@ -300,6 +301,9 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.Items.Any(i => i.Rate >= rateMin.Value));
             if (rateMax.HasValue)
                 query = query.Where(p => p.Items.Any(i => i.Rate <= rateMax.Value));
+
+            if (!isAdmin)
+                query = query.Where(p => p.IsActive);
 
             var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             var poIdsWithInward = await _context.Inwards
@@ -404,6 +408,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<PODto>>> GetById(int id)
         {
             var locationId = await GetCurrentLocationIdAsync();
+            var isAdmin = await IsAdmin();
             var po = await _context.PurchaseOrders
                 .Include(p => p.Vendor)
                 .Include(p => p.Creator)
@@ -422,6 +427,8 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
 
             if (po == null) return NotFound();
+            if (!isAdmin && !po.IsActive)
+                return NotFound();
 
             var dto = new PODto
             {
@@ -465,6 +472,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
+            if (!po.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Orders can be edited." });
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be edited." });
 
@@ -530,6 +539,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
+            if (!po.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Orders can be approved." });
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be approved." });
 
@@ -549,6 +560,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
+            if (!po.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Orders can be rejected." });
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be rejected." });
 

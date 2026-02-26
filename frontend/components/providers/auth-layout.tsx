@@ -38,8 +38,10 @@ const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = {
   '/purchase-indents': 'viewPI',
   '/purchase-orders': 'viewPO',
   '/inwards': 'viewInward',
-  '/movements': 'viewMovement',
   '/quality-control': 'viewQC',
+  '/job-works': 'viewMovement',
+  '/movements': 'viewMovement',
+  '/movements/outward': 'viewMovement',
   '/reports': 'viewReports',
   '/settings': 'accessSettings',
 };
@@ -91,6 +93,8 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/inwards') ||
     pathname.startsWith('/returns') ||
     pathname.startsWith('/quality-control') ||
+    pathname.startsWith('/job-works') ||
+    pathname.startsWith('/movements') ||
     pathname.startsWith('/statuses') ||
     pathname.startsWith('/store-items');
 
@@ -136,7 +140,8 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           const pairs = access.flatMap((c) =>
             (c.locations || []).map((l) => ({ companyId: c.companyId, locationId: l.id }))
           );
-          if (pairs.length === 1) {
+          // Always set a default selection when we have at least one pair so API requests get X-Company-Id / X-Location-Id
+          if (pairs.length >= 1) {
             setSelected({ companyId: pairs[0].companyId, locationId: pairs[0].locationId });
           }
         }
@@ -181,7 +186,6 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
     if (pairs.length === 1) {
       const only = pairs[0];
-      // auto-select single location access
       if (!isSelectedValid(selected, allowedAccess)) {
         setSelected({ companyId: only.companyId, locationId: only.locationId });
       }
@@ -189,10 +193,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // multiple: require selection
+    // multiple: default to first pair so API always has headers; user can switch via header
     if (!isSelectedValid(selected, allowedAccess)) {
-      clearSelected();
-      setOrgDialogOpen(true);
+      setSelected({ companyId: pairs[0].companyId, locationId: pairs[0].locationId });
+      setOrgDialogOpen(false);
     } else {
       setOrgDialogOpen(false);
     }

@@ -280,6 +280,7 @@ namespace net_backend.Models
         [Required]
         public string JobWorkNo { get; set; } = string.Empty;
         public int? LocationId { get; set; }
+        public int? ToPartyId { get; set; }
         public int ItemId { get; set; }
         public string? Description { get; set; }
         public JobWorkStatus Status { get; set; } = JobWorkStatus.Pending;
@@ -289,6 +290,8 @@ namespace net_backend.Models
 
         [ForeignKey("LocationId")]
         public virtual Location? Location { get; set; }
+        [ForeignKey("ToPartyId")]
+        public virtual Party? ToParty { get; set; }
         [ForeignKey("ItemId")]
         public virtual Item? Item { get; set; }
         [ForeignKey("CreatedBy")]

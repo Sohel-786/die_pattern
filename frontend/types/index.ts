@@ -93,6 +93,7 @@ export const RETURN_CONDITIONS = [
 export enum HolderType {
   Location = 'Location',
   Vendor = 'Vendor',
+  NotInStock = 'NotInStock',
 }
 
 export interface User {
@@ -251,6 +252,8 @@ export interface Item {
   currentLocationName?: string;
   currentPartyId?: number;
   currentPartyName?: string;
+  /** Latest process for display: PI Issued, PO Issued, In QC, In Job Work, In Outward, In Stock, Not In Stock */
+  currentProcess?: string | null;
   isActive: boolean;
 }
 
@@ -431,6 +434,7 @@ export interface DashboardMetrics {
     total: number;
     atVendor: number;
     atLocation: number;
+    notInStock?: number;
     pendingPI: number;
     pendingPO: number;
   };

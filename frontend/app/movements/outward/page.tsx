@@ -1,183 +1,132 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    ArrowLeft, Search, Save, ArrowUpRight,
-    Package, Building2, MapPin, Users,
-    ArrowRight, ShieldCheck, Info, Briefcase
-} from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, ArrowUpRight, Package, Users } from "lucide-react";
 import api from "@/lib/api";
-import { Item, Party, HolderType, MovementType } from "@/types";
+import { Movement, MovementType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import { useState } from "react";
-import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { OutwardDialog } from "@/components/outward/outward-dialog";
 
-export default function OutwardEntryPage() {
-    const router = useRouter();
-    const queryClient = useQueryClient();
-    const [selectedItemId, setSelectedItemId] = useState<number>(0);
-    const [targetPartyId, setTargetPartyId] = useState<number>(0);
-    const [remarks, setRemarks] = useState("");
-    const [searchTerm, setSearchTerm] = useState("");
+export default function OutwardPage() {
+    const { data: permissions } = useCurrentUserPermissions();
+    const [search, setSearch] = useState("");
+    const [dialogOpen, setDialogOpen] = useState(false);
 
-    const { data: items = [], isLoading: loadingItems } = useQuery<Item[]>({
-        queryKey: ["items", "active"],
+    const { data: movements = [], isLoading } = useQuery<Movement[]>({
+        queryKey: ["movements"],
         queryFn: async () => {
-            const res = await api.get("/items/active");
-            // Only items currently at a Location can go Outward to a Vendor
-            return res.data.data.filter((i: any) => i.currentHolderType === HolderType.Location);
+            const res = await api.get("/movements");
+            return (res.data.data ?? []).filter((m: Movement) => m.type === MovementType.Outward);
         },
+        enabled: !!permissions?.viewMovement
     });
 
-    const { data: vendors = [] } = useQuery<Party[]>({
-        queryKey: ["parties", "active"],
-        queryFn: async () => {
-            const res = await api.get("/parties/active");
-            return res.data.data;
-        },
-    });
+    if (permissions && !permissions.viewMovement) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <ArrowUpRight className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+                    <p className="text-secondary-500 font-medium">You don&apos;t have permission to view Outward entries.</p>
+                </div>
+            </div>
+        );
+    }
 
-    const createMutation = useMutation({
-        mutationFn: (data: any) => api.post("/movements", data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["movements"] });
-            queryClient.invalidateQueries({ queryKey: ["items"] });
-            toast.success("Outward movement recorded successfully");
-            router.push("/movements");
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || "Movement failed")
-    });
-
-    const filteredItems = items.filter(i =>
-        i.currentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        i.mainPartName.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = movements.filter(m =>
+        (m.itemName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (m.toName ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleCreate = () => {
-        if (!selectedItemId || !targetPartyId) {
-            toast.error("Please select item and target vendor");
-            return;
-        }
-        createMutation.mutate({
-            type: MovementType.Outward,
-            itemId: selectedItemId,
-            toType: HolderType.Vendor,
-            toPartyId: targetPartyId,
-            remarks
-        });
-    };
-
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-12 pb-32">
-            <div className="flex items-center gap-8">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.back()}
-                    className="h-16 w-16 rounded-[2rem] bg-white shadow-xl border border-gray-100 flex items-center justify-center hover:bg-secondary-50 transition-all hover:scale-110"
-                >
-                    <ArrowLeft className="w-8 h-8 text-gray-400" />
-                </Button>
+        <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
+            <div className="flex justify-between items-center shrink-0">
                 <div>
-                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Outward Gate Pass</h1>
-                    <p className="text-gray-400 mt-2 font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
-                        <div className="h-2 w-2 rounded-full bg-rose-500"></div>
-                        Dispatching Assets to Vendor
-                    </p>
+                    <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Outward</h1>
+                    <p className="text-secondary-500 text-sm">Dispatch items to party — no QC required</p>
                 </div>
+                {permissions?.createMovement && (
+                    <Button
+                        onClick={() => setDialogOpen(true)}
+                        className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Outward
+                    </Button>
+                )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-12 space-y-10">
-                    <div className="bg-white rounded-[3.5rem] p-12 shadow-2xl shadow-black/5 border border-gray-100 space-y-12 relative overflow-hidden">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            {/* Step 1: Item Selection */}
-                            <div className="space-y-6">
-                                <h3 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-4">
-                                    <div className="h-2 w-2 rounded-full bg-rose-600"></div>
-                                    I. Asset Identification
-                                </h3>
-                                <div className="space-y-4">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Package className="w-4 h-4 text-rose-500" /> Item Unit
-                                    </label>
-                                    <SearchableSelect
-                                        options={items.map(i => ({ value: i.id, label: `${i.currentName} (at ${i.currentLocationName})` }))}
-                                        value={selectedItemId || ""}
-                                        onChange={(val) => setSelectedItemId(Number(val))}
-                                        placeholder="Select Available Unit"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Step 2: Vendor Selection */}
-                            <div className="space-y-6">
-                                <h3 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-4">
-                                    <div className="h-2 w-2 rounded-full bg-rose-600"></div>
-                                    II. Consignee Allocation
-                                </h3>
-                                <div className="space-y-4">
-                                    <label className="text-sm font-black text-gray-700 ml-1 uppercase flex items-center gap-2">
-                                        <Users className="w-4 h-4 text-primary-500" /> Target Vendor / Party
-                                    </label>
-                                    <SearchableSelect
-                                        options={vendors.map(v => ({ value: v.id, label: v.name }))}
-                                        value={targetPartyId || ""}
-                                        onChange={(val) => setTargetPartyId(Number(val))}
-                                        placeholder="Select Target Vendor"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6 pt-12 border-t border-gray-50">
-                            <h3 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-4">
-                                <div className="h-2 w-2 rounded-full bg-rose-600"></div>
-                                III. Movement Justification
-                            </h3>
-                            <div className="space-y-4">
-                                <label className="text-sm font-black text-gray-700 ml-1 uppercase">Dispatch Remarks / Purpose</label>
-                                <Textarea
-                                    value={remarks}
-                                    onChange={(e) => setRemarks(e.target.value)}
-                                    className="rounded-[2rem] min-h-[120px] bg-secondary-50/50 border-gray-200 focus:bg-white transition-all font-bold p-8 leading-relaxed text-base"
-                                    placeholder="e.g. Sent for annual maintenance, Sent for cavity modification as per DRW-X..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="bg-rose-50/50 rounded-[2.5rem] p-10 flex items-start gap-8 border-2 border-rose-100/50">
-                            <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center border-2 border-rose-100 shadow-sm shrink-0">
-                                <Briefcase className="w-8 h-8 text-rose-500" />
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="text-xl font-black text-rose-700 tracking-tight">Responsibility Shift</h4>
-                                <p className="text-rose-600/80 font-bold leading-relaxed">
-                                    Upon processing this Outward entry, the <span className="underline font-black">Stock Holder</span> for this asset will immediately shift to the selected vendor. No QC is required for outward dispatch.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="pt-8 flex justify-end">
-                            <Button
-                                onClick={handleCreate}
-                                disabled={createMutation.isPending || !selectedItemId || !targetPartyId}
-                                className="h-24 px-12 rounded-[2.5rem] bg-rose-600 hover:bg-rose-700 text-white shadow-2xl shadow-rose-500/30 flex items-center gap-6 transition-all active:scale-95 group disabled:grayscale"
-                            >
-                                <div className="text-left">
-                                    <p className="text-xs font-black uppercase tracking-widest opacity-60 mb-1">Issue Gate Pass</p>
-                                    <p className="text-3xl font-black tracking-tighter">Confirm Dispatch</p>
-                                </div>
-                                <ArrowUpRight className="w-10 h-10 group-hover:scale-125 transition-transform" />
-                            </Button>
-                        </div>
+            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center shrink-0">
+                    <div className="relative flex-1 min-w-[220px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <Input
+                            placeholder="Search by item, party..."
+                            className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
                     </div>
                 </div>
-            </div>
+
+                <div className="overflow-auto flex-1 min-h-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">#</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">Item</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">To Party</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">Remarks</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">Date</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i} className="animate-pulse">
+                                        <TableCell colSpan={5} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filtered.length > 0 ? (
+                                filtered.map((m, idx) => (
+                                    <TableRow key={m.id} className="border-b border-secondary-100 hover:bg-secondary-50">
+                                        <TableCell className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{idx + 1}</TableCell>
+                                        <TableCell className="px-4 py-3 font-medium text-secondary-900 text-sm">{m.itemName ?? "—"}</TableCell>
+                                        <TableCell className="px-4 py-3 text-secondary-700 text-sm">{m.toName ?? "—"}</TableCell>
+                                        <TableCell className="px-4 py-3 text-secondary-600 text-sm max-w-[200px] truncate">{m.remarks ?? "—"}</TableCell>
+                                        <TableCell className="px-4 py-3 text-sm text-secondary-500">
+                                            {m.createdAt ? format(new Date(m.createdAt), "dd MMM yyyy HH:mm") : "—"}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="py-16 text-center text-secondary-400 italic font-medium">
+                                        No outward entries found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </Card>
+
+            {dialogOpen && <OutwardDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
         </div>
     );
 }

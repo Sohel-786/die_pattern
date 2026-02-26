@@ -11,12 +11,13 @@ import {
   Package,
   FileText,
   ShoppingCart,
-  ArrowLeftRight,
   ArrowDownLeft,
   ClipboardCheck,
   BarChart3,
   LayoutDashboard,
   Settings,
+  Briefcase,
+  ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,22 +93,28 @@ const navigationSections = {
       permission: "viewInward",
     },
     {
-      href: "/movements",
-      label: "Movements",
-      icon: ArrowLeftRight,
-      getColor: (active: boolean) => active ? "text-cyan-600" : "text-cyan-500",
-      permission: "viewMovement",
-    },
-  ],
-  qcEntries: [
-    {
       href: "/quality-control",
-      label: "QC Entry",
+      label: "QC",
       icon: ClipboardCheck,
       getColor: (active: boolean) => active ? "text-purple-600" : "text-purple-500",
       permission: "viewQC",
     },
+    {
+      href: "/job-works",
+      label: "Job Work",
+      icon: Briefcase,
+      getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
+      permission: "viewMovement",
+    },
+    {
+      href: "/movements/outward",
+      label: "Outward",
+      icon: ArrowUpRight,
+      getColor: (active: boolean) => active ? "text-cyan-600" : "text-cyan-500",
+      permission: "viewMovement",
+    },
   ],
+  qcEntries: [],
   other: [
     {
       href: "/reports",

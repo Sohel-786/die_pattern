@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useEffect } from "react";
-import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck } from "lucide-react";
+import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck, PackageX } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import * as React from "react";
@@ -30,6 +30,9 @@ const itemSchema = z.object({
     currentLocationId: z.coerce.number().optional().nullable(),
     currentPartyId: z.coerce.number().optional().nullable(),
     isActive: z.boolean().default(true),
+}).refine((data) => data.currentHolderType !== HolderType.Vendor || (data.currentPartyId != null && data.currentPartyId > 0), {
+    message: "Please select a vendor when custodian is Vendor",
+    path: ["currentPartyId"],
 });
 
 type ItemFormValues = z.infer<typeof itemSchema>;
@@ -119,8 +122,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                 ownerTypeId: 0,
                 statusId: 0,
                 currentHolderType: HolderType.Location,
-                currentLocationId: null,
-                currentPartyId: null,
+                currentLocationId: undefined,
+                currentPartyId: undefined,
                 isActive: true,
             });
         }
@@ -271,44 +274,58 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                     </div>
                 </div>
 
-                {/* Initial Stock / Holder Section */}
+                {/* Initial Custodian: At Location (in-stock), Vendor, or Not in stock */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-secondary-100">
                         <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200"></div>
                         <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Initial Custodian</h4>
                     </div>
                     <div className="p-5 bg-secondary-50/50 rounded-2xl border border-secondary-200 flex flex-col gap-5">
-                        <div className="flex gap-2 p-1 bg-white rounded-xl border border-secondary-200 w-fit shadow-sm">
+                        <div className="flex flex-wrap gap-2 p-1 bg-white rounded-xl border border-secondary-200 w-fit shadow-sm">
                             <button
                                 type="button"
-                                onClick={() => setValue("currentHolderType", HolderType.Location)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Location ? 'bg-primary-600 text-white shadow-md' : 'text-secondary-500 hover:text-secondary-700'}`}
+                                onClick={() => {
+                                    setValue("currentHolderType", HolderType.Location);
+                                    setValue("currentLocationId", null);
+                                    setValue("currentPartyId", null);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Location ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
                             >
                                 <MapPin className="w-3.5 h-3.5" />
-                                INTERNAL
+                                At Location
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setValue("currentHolderType", HolderType.Vendor)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Vendor ? 'bg-primary-600 text-white shadow-md' : 'text-secondary-500 hover:text-secondary-700'}`}
+                                onClick={() => {
+                                    setValue("currentHolderType", HolderType.Vendor);
+                                    setValue("currentLocationId", null);
+                                    setValue("currentPartyId", null);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Vendor ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
                             >
                                 <Truck className="w-3.5 h-3.5" />
-                                VENDOR
+                                Vendor
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setValue("currentHolderType", HolderType.NotInStock);
+                                    setValue("currentLocationId", null);
+                                    setValue("currentPartyId", null);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.NotInStock ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
+                            >
+                                <PackageX className="w-3.5 h-3.5" />
+                                Not in stock
                             </button>
                         </div>
 
-                        {holderType === HolderType.Location ? (
-                            <div className="space-y-2">
-                                <Label htmlFor="currentLocationId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Internal Location</Label>
-                                <SearchableSelect
-                                    options={locations.map((l: any) => ({ value: l.id, label: l.name }))}
-                                    value={currentLocationId || ""}
-                                    onChange={(val) => setValue("currentLocationId", Number(val), { shouldValidate: true })}
-                                    placeholder="Select Warehouse/Floor"
-                                    id="currentLocationId"
-                                />
-                            </div>
-                        ) : (
+                        {holderType === HolderType.Location && (
+                            <p className="text-xs text-secondary-600 font-medium">
+                                Item will be counted as <strong>in-stock at your current location</strong>. No location selection needed.
+                            </p>
+                        )}
+                        {holderType === HolderType.Vendor && (
                             <div className="space-y-2">
                                 <Label htmlFor="currentPartyId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">External Vendor</Label>
                                 <SearchableSelect
@@ -319,6 +336,11 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     id="currentPartyId"
                                 />
                             </div>
+                        )}
+                        {holderType === HolderType.NotInStock && (
+                            <p className="text-xs text-secondary-600 font-medium">
+                                Item is not in stock. It can be added to a Purchase Indent when needed.
+                            </p>
                         )}
                     </div>
                 </div>

@@ -32,6 +32,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetAll(
             [FromQuery] JobWorkStatus? status)
         {
+            if (!await HasPermission("ViewMovement")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var query = _context.JobWorks
                 .Where(j => j.LocationId == locationId)
@@ -49,6 +50,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<JobWorkDto>>> GetById(int id)
         {
+            if (!await HasPermission("ViewMovement")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var jw = await _context.JobWorks
                 .Include(j => j.Item)
@@ -71,6 +73,7 @@ namespace net_backend.Controllers
             {
                 JobWorkNo = await _codeGenerator.GenerateCode("JW", locationId),
                 ItemId = dto.ItemId,
+                ToPartyId = dto.ToPartyId,
                 Description = dto.Description,
                 Status = JobWorkStatus.Pending,
                 LocationId = locationId,

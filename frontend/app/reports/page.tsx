@@ -190,8 +190,8 @@ export default function ReportsPage() {
                         </TableCell>
                         <TableCell className="text-center border-b border-gray-50">
                           <p className="text-sm font-black text-gray-700">{row.holder}</p>
-                          <p className={`text-[9px] font-black uppercase tracking-[0.1em] mt-1 ${row.currentHolderType === 'Location' ? 'text-primary-500' : 'text-amber-500'}`}>
-                            {row.currentHolderType}
+                          <p className={`text-[9px] font-black uppercase tracking-[0.1em] mt-1 ${row.currentHolderType === "Location" ? "text-primary-500" : row.currentHolderType === "NotInStock" ? "text-secondary-500" : "text-amber-500"}`}>
+                            {row.currentHolderType === "NotInStock" ? "Not in stock" : row.currentHolderType}
                           </p>
                         </TableCell>
                         <TableCell className="text-center border-b border-gray-50">

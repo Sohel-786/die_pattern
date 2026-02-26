@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Trash2, Loader2, Save, Send } from "lucide-react";
 import api from "@/lib/api";
 import {
     InwardSourceType, CreateInwardDto, CreateInwardLineDto,
-    PO, PoStatus, Location, Movement, MovementType, JobWork
+    PO, PoStatus, Location, Movement, MovementType, JobWork, JobWorkStatus
 } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export default function CreateInwardPage() {
         queryKey: ["purchase-orders"],
         queryFn: async () => {
             const res = await api.get("/purchase-orders");
-            return res.data.data.filter((p: PO) => p.status === PoStatus.Approved);
+            return res.data.data.filter((p: PO) => p.status === PoStatus.Approved && p.isActive !== false);
         },
         enabled: sourceType === InwardSourceType.PO
     });
@@ -54,7 +54,7 @@ export default function CreateInwardPage() {
         queryKey: ["job-works"],
         queryFn: async () => {
             const res = await api.get("/job-works");
-            return res.data.data;
+            return (res.data.data ?? []).filter((jw: JobWork) => jw.status === JobWorkStatus.Pending);
         },
         enabled: sourceType === InwardSourceType.JobWork
     });
@@ -89,6 +89,7 @@ export default function CreateInwardPage() {
                 }
                 queryClient.invalidateQueries({ queryKey: ["inwards"] });
                 queryClient.invalidateQueries({ queryKey: ["quality-control"] });
+                queryClient.invalidateQueries({ queryKey: ["items"] });
                 router.push("/inwards");
                 return;
             }

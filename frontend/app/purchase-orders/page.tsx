@@ -132,6 +132,7 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("Order approved successfully");
       setApproveTarget(null);
     },
@@ -144,6 +145,7 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("PO deactivated. Its PI items are available for other POs.");
       setInactiveTarget(null);
     },
@@ -156,6 +158,7 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("PO reactivated.");
       setActiveTarget(null);
     },
@@ -168,6 +171,7 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("Purchase order rejected.");
       setRejectTarget(null);
     },
@@ -204,11 +208,12 @@ export default function PurchaseOrdersPage() {
   };
 
   const canEdit = (po: PO) =>
+    po.isActive !== false &&
     po.status === PoStatus.Pending &&
     !po.hasInward &&
     (permissions?.editPO === true || user?.role === Role.ADMIN);
   const hasApprovalAccess = permissions?.approvePO === true || user?.role === Role.ADMIN;
-  const canApproveOrReject = (po: PO) => po.status === PoStatus.Pending && hasApprovalAccess;
+  const canApproveOrReject = (po: PO) => po.isActive !== false && po.status === PoStatus.Pending && hasApprovalAccess;
 
   if (permissions && !permissions.viewPO) {
     return (
@@ -359,7 +364,7 @@ export default function PurchaseOrdersPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {hasApprovalAccess && (
+                          {hasApprovalAccess && po.isActive !== false && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -410,6 +415,7 @@ export default function PurchaseOrdersPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
+                          {po.isActive !== false && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -419,6 +425,7 @@ export default function PurchaseOrdersPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                          )}
                           {canEdit(po) && (
                             <Button
                               variant="ghost"

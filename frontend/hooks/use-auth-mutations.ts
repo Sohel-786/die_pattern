@@ -35,8 +35,15 @@ export function useLogin() {
           data.allowedLocationAccess ?? data.AllowedLocationAccess ?? [];
         if (Array.isArray(access)) {
           localStorage.setItem("allowedLocationAccess", JSON.stringify(access));
-          // Clear any previous selection; AuthLayout will auto-select if only one, otherwise prompt
-          localStorage.removeItem("selectedOrgContext");
+          // Set default selection to first (company, location) so API requests always have headers
+          const pairs = access.flatMap((c: CompanyLocationAccess) =>
+            (c.locations || []).map((l: { id: number }) => ({ companyId: c.companyId, locationId: l.id }))
+          );
+          if (pairs.length >= 1) {
+            localStorage.setItem("selectedOrgContext", JSON.stringify({ companyId: pairs[0].companyId, locationId: pairs[0].locationId }));
+          } else {
+            localStorage.removeItem("selectedOrgContext");
+          }
         }
         queryClient.setQueryData(['user'], data.user);
         toast.success('Login successful!');

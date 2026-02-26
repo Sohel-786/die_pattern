@@ -71,10 +71,13 @@ namespace net_backend.Controllers
             if (user == null)
                 return NotFound(new ApiResponse<UserPermission> { Success = false, Message = "User not found" });
 
-            // ADMIN always receives full permissions so UI (e.g. Approve PO) shows correctly regardless of DB row
+            // ADMIN always receives full permissions; prefer saved NavigationLayout (and any future preferences) from DB
             if (user.Role == Role.ADMIN)
             {
                 var adminPerms = CreateDefaultPermissions(userId, Role.ADMIN);
+                var dbRow = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == userId);
+                if (dbRow != null && !string.IsNullOrEmpty(dbRow.NavigationLayout))
+                    adminPerms.NavigationLayout = dbRow.NavigationLayout;
                 return Ok(new ApiResponse<UserPermission> { Success = true, Data = adminPerms });
             }
 

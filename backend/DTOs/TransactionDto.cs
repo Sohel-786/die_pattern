@@ -248,6 +248,7 @@ namespace net_backend.DTOs
     public class CreateJobWorkDto
     {
         public int ItemId { get; set; }
+        public int? ToPartyId { get; set; }
         public string? Description { get; set; }
     }
 

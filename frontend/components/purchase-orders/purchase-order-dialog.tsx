@@ -243,6 +243,7 @@ export function PurchaseOrderDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("PO saved");
       onOpenChange(false);
     },
@@ -253,6 +254,7 @@ export function PurchaseOrderDialog({
     mutationFn: (data: any) => api.put(`/purchase-orders/${po!.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("PO updated");
       onOpenChange(false);
     },

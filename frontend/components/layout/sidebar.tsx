@@ -22,7 +22,9 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  Briefcase,
+  ArrowUpRight
 } from "lucide-react";
 import { Role, UserPermission } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -199,8 +201,8 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
             </div>
           )}
 
-          {/* Transactions Section */}
-          {(permissions?.viewPI || permissions?.viewPO || permissions?.viewMovement) && (
+          {/* Transactions Section: PI, PO, Inward, Job Work, Outward, QC as separate options */}
+          {(permissions?.viewPI || permissions?.viewPO || permissions?.viewInward || permissions?.viewQC || permissions?.viewMovement) && (
             <div className="pt-1">
               {showFullSidebar ? (
                 <>
@@ -215,7 +217,10 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                     <div className="pl-1 mt-0.5 space-y-0.5">
                       {permissions?.viewPI && renderSubMenuItem("/purchase-indents", "Purchase Indent (PI)", FileText)}
                       {permissions?.viewPO && renderSubMenuItem("/purchase-orders", "Purchase Order (PO)", ShoppingCart)}
-                      {permissions?.viewInward && renderSubMenuItem("/inwards", "Inward Entry", ArrowLeftRight)}
+                      {permissions?.viewInward && renderSubMenuItem("/inwards", "Inward", ArrowLeftRight)}
+                      {permissions?.viewQC && renderSubMenuItem("/quality-control", "QC", ClipboardCheck)}
+                      {permissions?.viewMovement && renderSubMenuItem("/job-works", "Job Work", Briefcase)}
+                      {permissions?.viewMovement && renderSubMenuItem("/movements/outward", "Outward", ArrowUpRight)}
                     </div>
                   )}
                 </>
@@ -224,13 +229,14 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                   {permissions?.viewPI && renderMenuItem("/purchase-indents", "PI", FileText)}
                   {permissions?.viewPO && renderMenuItem("/purchase-orders", "PO", ShoppingCart)}
                   {permissions?.viewInward && renderMenuItem("/inwards", "Inward", ArrowLeftRight)}
+                  {permissions?.viewQC && renderMenuItem("/quality-control", "QC", ClipboardCheck)}
+                  {permissions?.viewMovement && renderMenuItem("/job-works", "Job Work", Briefcase)}
+                  {permissions?.viewMovement && renderMenuItem("/movements/outward", "Outward", ArrowUpRight)}
                 </div>
               )}
             </div>
           )}
 
-          {/* QC Module */}
-          {permissions?.viewQC && renderMenuItem("/quality-control", "QC Entry", ClipboardCheck)}
 
           {/* Reports & Settings */}
           <div className="pt-1 border-t border-secondary-100 mt-1 space-y-0.5">

@@ -22,6 +22,8 @@ namespace net_backend.DTOs
         public string? CurrentLocationName { get; set; }
         public int? CurrentPartyId { get; set; }
         public string? CurrentPartyName { get; set; }
+        /// <summary>Latest process state for display: PI Issued, PO Issued, In Inward, In QC, In Job Work, In Outward, In Stock, Not In Stock.</summary>
+        public string? CurrentProcess { get; set; }
         public bool IsActive { get; set; }
     }
 

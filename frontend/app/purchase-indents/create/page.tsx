@@ -34,6 +34,7 @@ export default function CreatePIPage() {
         mutationFn: (data: any) => api.post("/purchase-indents", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Purchase Indent created successfully");
             router.push("/purchase-indents");
         },

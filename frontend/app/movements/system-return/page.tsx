@@ -45,6 +45,7 @@ export default function SystemReturnPage() {
         mutationFn: (data: any) => api.post("/movements", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["movements"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
             toast.success("Return recorded. Sent for QC verification.");
             router.push("/movements");
         },

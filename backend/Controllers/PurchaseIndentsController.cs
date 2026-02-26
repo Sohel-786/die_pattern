@@ -191,6 +191,8 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
 
             if (pi == null) return NotFound();
+            if (!pi.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "An inactive Purchase Indent cannot be edited. Inactivated indents cannot be modified or reactivated." });
             if (pi.Status != PurchaseIndentStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be edited." });
 
@@ -257,6 +259,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
+            if (!pi.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Indents can be approved." });
             if (pi.Status != PurchaseIndentStatus.Pending)
             {
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be approved." });
@@ -278,6 +282,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
+            if (!pi.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Indents can be rejected." });
             if (pi.Status != PurchaseIndentStatus.Pending)
             {
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be rejected." });
@@ -300,6 +306,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
+            if (!pi.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Indents can be reverted to pending." });
             if (pi.Status != PurchaseIndentStatus.Approved)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only approved indents can be reverted to pending." });
 
@@ -332,6 +340,12 @@ namespace net_backend.Controllers
                     .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
                 if (hasActivePo)
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this indent are in an active Purchase Order." });
+            }
+            else
+            {
+                // Do not allow reactivating an inactive PI that has items (items are released for a new PI)
+                if (pi.Items.Any())
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "An inactive Purchase Indent that contains items cannot be reactivated. Those items are available for a new PI." });
             }
 
             pi.IsActive = !pi.IsActive;

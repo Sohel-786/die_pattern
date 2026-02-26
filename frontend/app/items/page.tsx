@@ -121,7 +121,6 @@ export default function ItemsPage() {
                 ownerTypeId: Number(data.ownerTypeId) || 0,
                 statusId: Number(data.statusId) || 0,
                 currentHolderType: data.currentHolderType,
-                currentLocationId: data.currentHolderType === "Location" ? (Number(data.currentLocationId) || null) : null,
                 currentPartyId: data.currentHolderType === "Vendor" ? (Number(data.currentPartyId) || null) : null,
                 isActive: Boolean(data.isActive),
             };
@@ -333,8 +332,7 @@ export default function ItemsPage() {
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Material</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Ownership</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Custodian Type</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Custodian Name</th>
+                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Current Process</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                             </tr>
                         </thead>
@@ -342,7 +340,7 @@ export default function ItemsPage() {
                             {isLoading ? (
                                 [1, 2, 3].map((i) => (
                                     <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(12).fill(0).map((_, j) => (
+                                        {Array(11).fill(0).map((_, j) => (
                                             <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
                                         ))}
                                     </tr>
@@ -378,14 +376,10 @@ export default function ItemsPage() {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-[11px] font-bold text-secondary-700 uppercase">{item.currentHolderType}</td>
-                                        <td className="px-4 py-3 text-[11px] font-bold text-secondary-700 uppercase flex items-center gap-1.5">
-                                            {item.currentHolderType === 'Location' ? (
-                                                <Database className="w-3.5 h-3.5 text-secondary-300" />
-                                            ) : (
-                                                <MapPin className="w-3.5 h-3.5 text-secondary-300" />
-                                            )}
-                                            {item.currentLocationName || item.currentPartyName || 'UNKNOWN'}
+                                        <td className="px-4 py-3">
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border bg-secondary-50 border-secondary-200 text-secondary-800">
+                                                {item.currentProcess ?? "—"}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
@@ -421,7 +415,7 @@ export default function ItemsPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={12} className="py-16 text-center text-secondary-400 italic font-medium">
+                                    <td colSpan={11} className="py-16 text-center text-secondary-400 italic font-medium">
                                         No assets found matching selected filters.
                                     </td>
                                 </tr>
