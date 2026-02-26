@@ -100,7 +100,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Apply pending migrations, schema fix (for PO item rates), and seed database
+// Apply pending migrations and schema fallbacks so the app works on any environment (publish-only deploy, no explicit migrations).
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -117,6 +117,12 @@ using (var scope = app.Services.CreateScope())
 
         // Ensure companies has new master fields (fallback if AddCompanyMasterFields migration did not run)
         EnsureCompanyMasterFieldsSchema(context);
+
+        // Ensure IsActive exists on purchase_indents and purchase_orders (fallback when DB was copied/restored or migrations skipped)
+        EnsureIsActiveColumnsSchema(context);
+
+        // Ensure purchase_orders has GstPercent, GstType, QuotationUrlsJson (fallback when deploy is publish-only, no migrations run)
+        EnsurePurchaseOrderColumnsSchema(context);
 
         DbInitializer.Initialize(context);
         logger.LogInformation("Database migrations and seeding completed.");
@@ -164,6 +170,45 @@ static void EnsureCompanyMasterFieldsSchema(ApplicationDbContext context)
                     ALTER TABLE [dbo].[companies] ADD [Phone] nvarchar(30) NULL;
                 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Email')
                     ALTER TABLE [dbo].[companies] ADD [Email] nvarchar(255) NULL;
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct */ }
+}
+
+static void EnsureIsActiveColumnsSchema(ApplicationDbContext context)
+{
+    try
+    {
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[purchase_indents]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'IsActive')
+                    ALTER TABLE [dbo].[purchase_indents] ADD [IsActive] bit NOT NULL DEFAULT 1;
+            END
+            IF OBJECT_ID(N'[dbo].[purchase_orders]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'IsActive')
+                    ALTER TABLE [dbo].[purchase_orders] ADD [IsActive] bit NOT NULL DEFAULT 1;
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct */ }
+}
+
+static void EnsurePurchaseOrderColumnsSchema(ApplicationDbContext context)
+{
+    try
+    {
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[purchase_orders]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'GstPercent')
+                    ALTER TABLE [dbo].[purchase_orders] ADD [GstPercent] decimal(18,2) NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'GstType')
+                    ALTER TABLE [dbo].[purchase_orders] ADD [GstType] int NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'QuotationUrlsJson')
+                    ALTER TABLE [dbo].[purchase_orders] ADD [QuotationUrlsJson] nvarchar(max) NULL;
             END
         ");
     }
