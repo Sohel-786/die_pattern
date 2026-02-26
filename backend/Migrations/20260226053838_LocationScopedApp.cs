@@ -135,24 +135,26 @@ namespace net_backend.Migrations
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
 
-            migrationBuilder.AddColumn<int>(
-                name: "LocationId",
-                table: "purchase_indents",
-                type: "int",
-                nullable: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_purchase_indents_LocationId",
-                table: "purchase_indents",
-                column: "LocationId");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_purchase_indents_locations_LocationId",
-                table: "purchase_indents",
-                column: "LocationId",
-                principalTable: "locations",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+            // Idempotent: purchase_indents may already have LocationId from an earlier migration
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('purchase_indents') AND name = 'LocationId')
+                BEGIN
+                    ALTER TABLE [purchase_indents] ADD [LocationId] int NULL;
+                END
+            ");
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('purchase_indents') AND name = 'IX_purchase_indents_LocationId')
+                BEGIN
+                    CREATE INDEX [IX_purchase_indents_LocationId] ON [purchase_indents] ([LocationId]);
+                END
+            ");
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID('purchase_indents') AND name = 'FK_purchase_indents_locations_LocationId')
+                BEGIN
+                    ALTER TABLE [purchase_indents] ADD CONSTRAINT [FK_purchase_indents_locations_LocationId]
+                        FOREIGN KEY ([LocationId]) REFERENCES [locations] ([Id]) ON DELETE NO ACTION;
+                END
+            ");
 
             migrationBuilder.AddColumn<int>(
                 name: "LocationId",

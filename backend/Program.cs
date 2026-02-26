@@ -127,6 +127,12 @@ using (var scope = app.Services.CreateScope())
         // Remove LocationId from purchase_indents if still present (fallback when clone has old schema before RemoveLocationIdFromPurchaseIndents migration)
         EnsureRemovePILocationId(context);
 
+        // Ensure users.DefaultCompanyId / DefaultLocationId and user_location_access table exist
+        EnsureUserLocationSchema(context);
+
+        // Ensure job_works.ToPartyId exists (fallback from AddToPartyIdToJobWork migration)
+        EnsureJobWorkToPartyId(context);
+
         DbInitializer.Initialize(context);
         logger.LogInformation("Database migrations and seeding completed.");
     }
@@ -237,4 +243,69 @@ static void EnsureRemovePILocationId(ApplicationDbContext context)
         ");
     }
     catch (Exception) { /* Schema may already be correct or table may not exist yet */ }
+}
+
+static void EnsureUserLocationSchema(ApplicationDbContext context)
+{
+    try
+    {
+        // Add DefaultCompanyId / DefaultLocationId to users if missing
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[users]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'DefaultCompanyId')
+                    ALTER TABLE [dbo].[users] ADD [DefaultCompanyId] int NULL;
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'DefaultLocationId')
+                    ALTER TABLE [dbo].[users] ADD [DefaultLocationId] int NULL;
+            END
+        ");
+
+        // Create user_location_access table if missing
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[user_location_access]') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[user_location_access] (
+                    [Id]        int NOT NULL IDENTITY(1,1),
+                    [UserId]    int NOT NULL,
+                    [CompanyId] int NOT NULL,
+                    [LocationId] int NOT NULL,
+                    [CreatedAt] datetime2 NOT NULL,
+                    CONSTRAINT [PK_user_location_access] PRIMARY KEY ([Id]),
+                    CONSTRAINT [FK_user_location_access_users_UserId]
+                        FOREIGN KEY ([UserId]) REFERENCES [users]([Id]) ON DELETE CASCADE,
+                    CONSTRAINT [FK_user_location_access_companies_CompanyId]
+                        FOREIGN KEY ([CompanyId]) REFERENCES [companies]([Id]) ON DELETE NO ACTION,
+                    CONSTRAINT [FK_user_location_access_locations_LocationId]
+                        FOREIGN KEY ([LocationId]) REFERENCES [locations]([Id]) ON DELETE NO ACTION
+                );
+                CREATE UNIQUE INDEX [IX_user_location_access_UserId_CompanyId_LocationId]
+                    ON [dbo].[user_location_access] ([UserId], [CompanyId], [LocationId]);
+                CREATE INDEX [IX_user_location_access_CompanyId]
+                    ON [dbo].[user_location_access] ([CompanyId]);
+                CREATE INDEX [IX_user_location_access_LocationId]
+                    ON [dbo].[user_location_access] ([LocationId]);
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct */ }
+}
+
+static void EnsureJobWorkToPartyId(ApplicationDbContext context)
+{
+    try
+    {
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[job_works]') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[job_works]') AND name = 'ToPartyId')
+                BEGIN
+                    ALTER TABLE [dbo].[job_works] ADD [ToPartyId] int NULL;
+                    CREATE INDEX [IX_job_works_ToPartyId] ON [dbo].[job_works] ([ToPartyId]);
+                    ALTER TABLE [dbo].[job_works] ADD CONSTRAINT [FK_job_works_parties_ToPartyId]
+                        FOREIGN KEY ([ToPartyId]) REFERENCES [dbo].[parties]([Id]);
+                END
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct */ }
 }

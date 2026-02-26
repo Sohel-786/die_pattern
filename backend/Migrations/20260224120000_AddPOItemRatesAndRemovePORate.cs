@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace net_backend.Migrations
 {
+    [Migration("20260224120000_AddPOItemRatesAndRemovePORate")]
     public partial class AddPOItemRatesAndRemovePORate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace net_backend.Migrations
 {
     /// <summary>Remove Location selection from Purchase Indents.</summary>
+    [Migration("20260226120000_RemoveLocationIdFromPurchaseIndents")]
     public partial class RemoveLocationIdFromPurchaseIndents : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace net_backend.Migrations
 {
+    [Migration("20260224100000_AddPOQuotationGstDraft")]
     public partial class AddPOQuotationGstDraft : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

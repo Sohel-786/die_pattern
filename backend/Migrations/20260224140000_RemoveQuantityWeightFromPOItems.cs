@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace net_backend.Migrations
 {
+    [Migration("20260224140000_RemoveQuantityWeightFromPOItems")]
     public partial class RemoveQuantityWeightFromPOItems : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
