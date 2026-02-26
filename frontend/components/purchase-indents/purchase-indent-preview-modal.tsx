@@ -102,11 +102,8 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <h1 className="text-2xl font-black text-secondary-900 uppercase tracking-tight">
-                    {pi.companyName || "Company Name"}
+                    Purchase Indent
                   </h1>
-                  {pi.locationName && (
-                    <p className="text-sm font-semibold text-secondary-600 mt-1">{pi.locationName}</p>
-                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Document</p>
@@ -186,7 +183,7 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
             {pi.status !== PurchaseIndentStatus.Approved && (
               <div className="mt-6 pt-4 border-t border-secondary-100 print:border-0">
                 <p className="text-xs font-bold text-amber-600 uppercase tracking-wider">
-                  Status: {pi.status === PurchaseIndentStatus.Pending ? "Pending Approval" : pi.status === PurchaseIndentStatus.Approved ? "Approved" : "Rejected"}
+                  Status: {pi.status === PurchaseIndentStatus.Pending ? "Pending Approval" : "Rejected"}
                 </p>
               </div>
             )}

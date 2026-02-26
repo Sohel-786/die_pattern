@@ -7,9 +7,6 @@ namespace net_backend.DTOs
     {
         public int Id { get; set; }
         public string PiNo { get; set; } = string.Empty;
-        public int? LocationId { get; set; }
-        public string? LocationName { get; set; }
-        public string? CompanyName { get; set; }
         public PurchaseIndentType Type { get; set; }
         public PurchaseIndentStatus Status { get; set; }
         public string? Remarks { get; set; }
@@ -42,7 +39,6 @@ namespace net_backend.DTOs
 
     public class CreatePurchaseIndentDto
     {
-        public int? LocationId { get; set; }
         public PurchaseIndentType Type { get; set; }
         public string? Remarks { get; set; }
         public List<int> ItemIds { get; set; } = new();

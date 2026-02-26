@@ -124,6 +124,9 @@ using (var scope = app.Services.CreateScope())
         // Ensure purchase_orders has GstPercent, GstType, QuotationUrlsJson (fallback when deploy is publish-only, no migrations run)
         EnsurePurchaseOrderColumnsSchema(context);
 
+        // Remove LocationId from purchase_indents if still present (fallback when clone has old schema before RemoveLocationIdFromPurchaseIndents migration)
+        EnsureRemovePILocationId(context);
+
         DbInitializer.Initialize(context);
         logger.LogInformation("Database migrations and seeding completed.");
     }
@@ -213,4 +216,25 @@ static void EnsurePurchaseOrderColumnsSchema(ApplicationDbContext context)
         ");
     }
     catch (Exception) { /* Schema may already be correct */ }
+}
+
+static void EnsureRemovePILocationId(ApplicationDbContext context)
+{
+    try
+    {
+        context.Database.ExecuteSqlRaw(@"
+            IF OBJECT_ID(N'[dbo].[purchase_indents]') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'LocationId')
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'FK_purchase_indents_locations_LocationId')
+                        ALTER TABLE [dbo].[purchase_indents] DROP CONSTRAINT [FK_purchase_indents_locations_LocationId];
+                    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'IX_purchase_indents_LocationId')
+                        DROP INDEX [IX_purchase_indents_LocationId] ON [dbo].[purchase_indents];
+                    ALTER TABLE [dbo].[purchase_indents] DROP COLUMN [LocationId];
+                END
+            END
+        ");
+    }
+    catch (Exception) { /* Schema may already be correct or table may not exist yet */ }
 }

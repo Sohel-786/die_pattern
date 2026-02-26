@@ -186,7 +186,6 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string PiNo { get; set; } = string.Empty;
-        public int? LocationId { get; set; }
         public PurchaseIndentType Type { get; set; }
         public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Pending;
         public string? Remarks { get; set; }
@@ -201,8 +200,6 @@ namespace net_backend.Models
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]
         public virtual User? Approver { get; set; }
-        [ForeignKey("LocationId")]
-        public virtual Location? Location { get; set; }
         public virtual ICollection<PurchaseIndentItem> Items { get; set; } = new List<PurchaseIndentItem>();
     }
 

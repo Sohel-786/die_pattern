@@ -72,12 +72,6 @@ namespace net_backend.Data
                 .HasForeignKey(l => l.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PurchaseIndent>()
-                .HasOne(pi => pi.Location)
-                .WithMany()
-                .HasForeignKey(pi => pi.LocationId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             modelBuilder.Entity<Item>()
                 .HasOne(p => p.Status)
                 .WithMany()

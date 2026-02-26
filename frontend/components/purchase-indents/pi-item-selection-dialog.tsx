@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Check, Loader2 } from "lucide-react";
+import { Plus, Check, Loader2, X, Package } from "lucide-react";
 import api from "@/lib/api";
 import { ItemWithStatus, ItemProcessState } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
@@ -36,7 +36,6 @@ interface PiItemSelectionDialogProps {
   onClose: () => void;
   selectedItemIds: number[];
   onAddItems: (itemIds: number[]) => void;
-  /** When editing a PI, pass its id so items only in this PI are treated as available. */
   excludePiId?: number | null;
 }
 
@@ -48,7 +47,16 @@ export function PiItemSelectionDialog({
   excludePiId,
 }: PiItemSelectionDialogProps) {
   const [search, setSearch] = useState("");
-  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+  /** Item IDs the user has selected in this dialog to be added to the PI (pending commit). */
+  const [pendingIds, setPendingIds] = useState<number[]>([]);
+
+  // Reset state when dialog closes so next open starts fresh (no stale selection or search)
+  useEffect(() => {
+    if (!open) {
+      setSearch("");
+      setPendingIds([]);
+    }
+  }, [open]);
 
   const { data: itemsWithStatus = [], isLoading } = useQuery<ItemWithStatus[]>({
     queryKey: ["purchase-indents", "items-with-status", excludePiId ?? "new"],
@@ -62,6 +70,7 @@ export function PiItemSelectionDialog({
   });
 
   const selectedSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
+  const pendingSet = useMemo(() => new Set(pendingIds), [pendingIds]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return itemsWithStatus;
@@ -77,54 +86,38 @@ export function PiItemSelectionDialog({
     () => filtered.filter((i) => i.status === "NotInStock" && !selectedSet.has(i.itemId)),
     [filtered, selectedSet]
   );
-  const checkedAddable = useMemo(
-    () => addableRows.filter((r) => checkedIds.has(r.itemId)),
-    [addableRows, checkedIds]
+
+  /** Pending items in display order (same order as pendingIds). */
+  const pendingItems = useMemo(
+    () =>
+      pendingIds
+        .map((id) => itemsWithStatus.find((i) => i.itemId === id))
+        .filter((i): i is ItemWithStatus => i != null),
+    [pendingIds, itemsWithStatus]
   );
 
-  const handleToggle = (itemId: number) => {
-    const item = itemsWithStatus.find((i) => i.itemId === itemId);
-    if (!item || item.status !== "NotInStock" || selectedSet.has(itemId)) return;
-    setCheckedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
+  const addToPending = (item: ItemWithStatus) => {
+    if (item.status !== "NotInStock" || selectedSet.has(item.itemId) || pendingSet.has(item.itemId)) return;
+    setPendingIds((prev) => [...prev, item.itemId]);
   };
 
-  const handleSelectAllAddable = () => {
-    if (checkedAddable.length === addableRows.length) {
-      setCheckedIds((prev) => {
-        const next = new Set(prev);
-        addableRows.forEach((r) => next.delete(r.itemId));
-        return next;
-      });
-    } else {
-      setCheckedIds((prev) => {
-        const next = new Set(prev);
-        addableRows.forEach((r) => next.add(r.itemId));
-        return next;
-      });
-    }
+  const removeFromPending = (itemId: number) => {
+    setPendingIds((prev) => prev.filter((id) => id !== itemId));
   };
 
-  const handleAddSelected = () => {
-    const toAdd = Array.from(checkedIds).filter(
-      (id) => itemsWithStatus.find((i) => i.itemId === id)?.status === "NotInStock" && !selectedSet.has(id)
-    );
-    if (toAdd.length === 0) return;
-    onAddItems(toAdd);
-    setCheckedIds((prev) => {
-      const next = new Set(prev);
-      toAdd.forEach((id) => next.delete(id));
-      return next;
-    });
+  const clearPending = () => {
+    setPendingIds([]);
+  };
+
+  const commitAddToPI = () => {
+    if (pendingIds.length === 0) return;
+    onAddItems(pendingIds);
+    setPendingIds([]);
   };
 
   const handleDone = () => {
     setSearch("");
-    setCheckedIds(new Set());
+    setPendingIds([]);
     onClose();
   };
 
@@ -135,41 +128,100 @@ export function PiItemSelectionDialog({
       title="Add items to Purchase Indent"
       size="2xl"
       contentScroll={false}
-      className="max-h-[85vh] flex flex-col"
+      className="max-h-[90vh] flex flex-col"
     >
-      <div className="flex flex-col flex-1 min-h-0 p-6">
-        <p className="text-sm text-secondary-600 mb-4">
-          Only items with status <span className="font-semibold text-slate-700">Not in stock</span> can be added. Others are shown for reference.
+      <div className="flex flex-col flex-1 min-h-0 p-6 gap-4">
+        <p className="text-sm text-secondary-600">
+          Click an item below to add it to the selection. Items appear in <span className="font-semibold text-slate-700">Selected for PI</span>. Use <span className="font-semibold text-primary-600">Add to PI</span> to confirm.
         </p>
-        <div className="flex gap-3 mb-4">
+
+        {/* Selected for PI – pending section */}
+        {pendingItems.length > 0 && (
+          <div className="rounded-lg border-2 border-primary-200 bg-primary-50/30 overflow-hidden shrink-0">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary-200 bg-primary-100/50">
+              <h3 className="text-sm font-bold text-primary-900 uppercase tracking-wider flex items-center gap-2">
+                <Package className="w-4 h-4 text-primary-600" />
+                Selected for PI ({pendingItems.length})
+              </h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearPending}
+                className="h-7 px-2 text-xs font-semibold text-primary-700 hover:bg-primary-200/50 hover:text-primary-900"
+              >
+                Clear all
+              </Button>
+            </div>
+            <div className="max-h-[180px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-primary-50/50 border-b border-primary-200">
+                    <TableHead className="w-10 text-center text-[10px] font-bold uppercase text-primary-800">#</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase text-primary-800">Name</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase text-primary-800">Main Part</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase text-primary-800 w-28">Type</TableHead>
+                    <TableHead className="w-14 text-center text-[10px] font-bold uppercase text-primary-800">Remove</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingItems.map((item, idx) => (
+                    <TableRow
+                      key={item.itemId}
+                      className="border-b border-primary-100/50 last:border-0 hover:bg-primary-50/50"
+                    >
+                      <TableCell className="text-center text-secondary-600 font-medium text-sm py-2">
+                        {idx + 1}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <span className="font-semibold text-secondary-900 text-sm">{item.currentName ?? "—"}</span>
+                      </TableCell>
+                      <TableCell className="py-2 text-secondary-600 text-sm">{item.mainPartName ?? "—"}</TableCell>
+                      <TableCell className="py-2 text-secondary-600 text-xs">{item.itemTypeName ?? "—"}</TableCell>
+                      <TableCell className="text-center py-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFromPending(item.itemId)}
+                          className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-100 hover:text-rose-700 rounded-full"
+                          title="Remove from selection"
+                          aria-label="Remove from selection"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {/* Available items */}
+        <div className="flex gap-3">
           <Input
             placeholder="Search by name or main part..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm h-9 border-secondary-200"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleSelectAllAddable}
-            disabled={addableRows.length === 0}
-            className="h-9"
-          >
-            {checkedAddable.length === addableRows.length && addableRows.length > 0 ? "Deselect all" : "Select all addable"}
-          </Button>
         </div>
-        <div className="flex-1 min-h-0 border border-secondary-200 rounded-lg overflow-hidden bg-white">
+        <div className="flex-1 min-h-0 border border-secondary-200 rounded-lg overflow-hidden bg-white flex flex-col">
+          <div className="px-3 py-2 border-b border-secondary-200 bg-secondary-50 text-xs font-semibold text-secondary-600 uppercase tracking-wider">
+            Available items — click a row to add to selection
+          </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
             </div>
           ) : (
-            <div className="overflow-auto max-h-[50vh]">
+            <div className="overflow-auto flex-1 min-h-0" style={{ maxHeight: "42vh" }}>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-secondary-50 border-b border-secondary-200">
-                    <TableHead className="w-10 text-center">Add</TableHead>
+                  <TableRow className="bg-secondary-50 border-b border-secondary-200 sticky top-0 z-10">
+                    <TableHead className="w-12 text-center text-xs font-bold uppercase text-secondary-600">Action</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-secondary-600">Name</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-secondary-600">Main Part</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-secondary-600 w-28">Type</TableHead>
@@ -186,31 +238,50 @@ export function PiItemSelectionDialog({
                   ) : (
                     filtered.map((item) => {
                       const canAdd = item.status === "NotInStock" && !selectedSet.has(item.itemId);
-                      const alreadyIn = selectedSet.has(item.itemId);
-                      const checked = checkedIds.has(item.itemId);
+                      const alreadyInPI = selectedSet.has(item.itemId);
+                      const inPending = pendingSet.has(item.itemId);
                       return (
                         <TableRow
                           key={item.itemId}
                           className={cn(
-                            "border-b border-secondary-100",
+                            "border-b border-secondary-100 transition-colors",
                             !canAdd && "bg-secondary-50/50",
-                            canAdd && "hover:bg-primary-50/30"
+                            canAdd && "hover:bg-primary-50/40 cursor-pointer"
                           )}
+                          onClick={() => canAdd && addToPending(item)}
+                          role={canAdd ? "button" : undefined}
+                          tabIndex={canAdd ? 0 : -1}
+                          onKeyDown={(e) => {
+                            if (canAdd && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              addToPending(item);
+                            }
+                          }}
                         >
                           <TableCell className="text-center align-middle">
-                            {alreadyIn ? (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" title="Already in PI">
-                                <Check className="w-3.5 h-3.5" />
+                            {alreadyInPI ? (
+                              <span
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+                                title="Already in PI"
+                              >
+                                <Check className="w-4 h-4" />
+                              </span>
+                            ) : inPending ? (
+                              <span
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-primary-700 border border-primary-200"
+                                title="In selection — click Add to PI to confirm"
+                              >
+                                <Check className="w-4 h-4" />
                               </span>
                             ) : canAdd ? (
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => handleToggle(item.itemId)}
-                                className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                              />
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-primary-300 text-primary-600 hover:bg-primary-50 hover:border-primary-500">
+                                <Plus className="w-4 h-4" />
+                              </span>
                             ) : (
-                              <span className="inline-block w-4 h-4 rounded border border-secondary-200 bg-secondary-100" title={STATUS_LABELS[item.status]} />
+                              <span
+                                className="inline-block h-7 w-7 rounded border border-secondary-200 bg-secondary-100"
+                                title={STATUS_LABELS[item.status]}
+                              />
                             )}
                           </TableCell>
                           <TableCell>
@@ -241,27 +312,29 @@ export function PiItemSelectionDialog({
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between gap-4 pt-4 border-t border-secondary-200 mt-4">
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-4 pt-3 border-t border-secondary-200 shrink-0">
           <div className="text-sm text-secondary-600">
-            {checkedAddable.length > 0 && (
-              <span className="font-medium text-primary-700">{checkedAddable.length} item(s) selected to add</span>
+            {pendingItems.length > 0 && (
+              <span className="font-medium text-primary-700">{pendingItems.length} item(s) in selection</span>
             )}
             {selectedItemIds.length > 0 && (
               <span className="ml-2 text-secondary-500">{selectedItemIds.length} already in PI</span>
             )}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleDone} className="font-semibold">
+            <Button type="button" variant="outline" onClick={handleDone} className="font-semibold h-9 px-4">
               Done
             </Button>
             <Button
               type="button"
-              onClick={handleAddSelected}
-              disabled={checkedAddable.length === 0}
-              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
+              onClick={commitAddToPI}
+              disabled={pendingIds.length === 0}
+              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 h-9 px-4"
             >
               <Plus className="w-4 h-4" />
-              Add selected to PI
+              Add {pendingIds.length > 0 ? `${pendingIds.length} ` : ""}item(s) to PI
             </Button>
           </div>
         </div>

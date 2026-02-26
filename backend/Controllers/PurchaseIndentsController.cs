@@ -55,8 +55,6 @@ namespace net_backend.Controllers
                 .OrderByDescending(p => p.CreatedAt)
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
-                .Include(p => p.Location)
-                    .ThenInclude(l => l!.Company)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.ItemType)
@@ -96,9 +94,6 @@ namespace net_backend.Controllers
                 {
                     Id = p.Id,
                     PiNo = p.PiNo,
-                    LocationId = p.LocationId,
-                    LocationName = p.Location != null ? p.Location.Name : null,
-                    CompanyName = p.Location != null && p.Location.Company != null ? p.Location.Company.Name : null,
                     Type = p.Type,
                     Status = p.Status,
                     Remarks = p.Remarks,
@@ -163,7 +158,6 @@ namespace net_backend.Controllers
             var pi = new PurchaseIndent
             {
                 PiNo = await _codeGenerator.GenerateCode("PI"),
-                LocationId = dto.LocationId,
                 Type = dto.Type,
                 Remarks = dto.Remarks,
                 CreatedBy = CurrentUserId,
@@ -225,7 +219,6 @@ namespace net_backend.Controllers
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot remove item(s) that are already in an active Purchase Order. Remove only items that do not have a PO." });
             }
 
-            pi.LocationId = dto.LocationId;
             pi.Type = dto.Type;
             pi.Remarks = dto.Remarks;
             pi.UpdatedAt = DateTime.Now;
@@ -350,8 +343,6 @@ namespace net_backend.Controllers
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
-                .Include(p => p.Location)
-                    .ThenInclude(l => l!.Company)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.ItemType)
@@ -369,9 +360,6 @@ namespace net_backend.Controllers
             {
                 Id = pi.Id,
                 PiNo = pi.PiNo,
-                LocationId = pi.LocationId,
-                LocationName = pi.Location?.Name,
-                CompanyName = pi.Location?.Company?.Name,
                 Type = pi.Type,
                 Status = pi.Status,
                 Remarks = pi.Remarks,

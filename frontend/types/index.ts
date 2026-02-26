@@ -251,9 +251,6 @@ export interface Item {
 export interface PurchaseIndent {
   id: number;
   piNo: string;
-  locationId?: number | null;
-  locationName?: string | null;
-  companyName?: string | null;
   type: PurchaseIndentType;
   status: PurchaseIndentStatus;
   remarks?: string;

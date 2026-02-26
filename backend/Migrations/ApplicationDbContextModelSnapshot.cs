@@ -673,9 +673,6 @@ namespace net_backend.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("LocationId")
-                        .HasColumnType("int");
-
                     b.Property<string>("PiNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -697,8 +694,6 @@ namespace net_backend.Migrations
                     b.HasIndex("ApprovedBy");
 
                     b.HasIndex("CreatedBy");
-
-                    b.HasIndex("LocationId");
 
                     b.HasIndex("PiNo")
                         .IsUnique();
@@ -1261,16 +1256,9 @@ namespace net_backend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("net_backend.Models.Location", "Location")
-                        .WithMany()
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Approver");
 
                     b.Navigation("Creator");
-
-                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("net_backend.Models.PurchaseIndentItem", b =>
