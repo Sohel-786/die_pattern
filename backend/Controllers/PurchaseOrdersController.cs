@@ -195,7 +195,7 @@ namespace net_backend.Controllers
             var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
 
-            var hasInward = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == id);
+            var hasInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id);
             if (hasInward)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this PO have been inwarded. Inactive is allowed only when no inward has been done against this PO." });
 
@@ -306,11 +306,13 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.IsActive);
 
             var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            var poIdsWithInward = await _context.Inwards
-                .Where(i => i.SourceType == InwardSourceType.PO)
-                .Select(i => i.SourceRefId)
+            var inwardedItems = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.Status == InwardStatus.Submitted)
+                .Select(l => new { l.SourceRefId, l.ItemId })
                 .Distinct()
                 .ToListAsync();
+            var inwardedSet = inwardedItems.Select(x => $"{x.SourceRefId}_{x.ItemId}").ToHashSet();
+            var poIdsWithInward = inwardedItems.Select(x => x.SourceRefId ?? 0).Distinct().ToHashSet();
 
             var data = list.Select(p =>
             {
@@ -343,7 +345,8 @@ namespace net_backend.Controllers
                         MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                         PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
                         PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
-                        Rate = i.Rate
+                        Rate = i.Rate,
+                        IsInwarded = inwardedSet.Contains($"{p.Id}_{i.PurchaseIndentItem.ItemId}")
                     }).ToList()
                 };
                 MapToDto(p, dto);
@@ -430,6 +433,13 @@ namespace net_backend.Controllers
             if (!isAdmin && !po.IsActive)
                 return NotFound();
 
+            var inwardedItemsForPo = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward!.Status == InwardStatus.Submitted)
+                .Select(l => l.ItemId)
+                .Distinct()
+                .ToListAsync();
+            var inwardedSetForPo = inwardedItemsForPo.ToHashSet();
+
             var dto = new PODto
             {
                 Id = po.Id,
@@ -458,7 +468,8 @@ namespace net_backend.Controllers
                     MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                     PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
                     PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
-                    Rate = i.Rate
+                    Rate = i.Rate,
+                    IsInwarded = inwardedSetForPo.Contains(i.PurchaseIndentItem.ItemId)
                 }).ToList()
             };
             MapToDto(po, dto);
@@ -477,7 +488,7 @@ namespace net_backend.Controllers
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be edited." });
 
-            var hasInward = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == id);
+            var hasInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id);
             if (hasInward)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot edit: one or more items from this PO have been inwarded. Edit is allowed only when no inward has been done against this PO." });
 

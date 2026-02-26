@@ -28,7 +28,7 @@ namespace net_backend.Controllers
                 .Where(m => m.IsQCPending && !m.IsQCApproved && m.ToLocationId == locationId);
 
             if (sourceType.HasValue)
-                query = query.Where(m => m.Inward != null && m.Inward.SourceType == sourceType.Value);
+                query = query.Where(m => m.Lines.Any(l => l.SourceType == sourceType.Value));
 
             var list = await query.ToListAsync();
             var data = list.Select(m => MapToDto(m)).ToList();
@@ -54,12 +54,12 @@ namespace net_backend.Controllers
                 PoNo = m.PurchaseOrder?.PoNo,
                 InwardId = m.InwardId,
                 InwardNo = m.Inward?.InwardNo,
-                SourceType = m.Inward != null ? (InwardSourceType?)m.Inward.SourceType : null,
-                SourceRefDisplay = m.Inward != null
-                    ? (m.Inward.SourceType == InwardSourceType.PO ? $"PO-{m.Inward.SourceRefId}"
-                        : m.Inward.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{m.Inward.SourceRefId}"
-                        : m.Inward.SourceType == InwardSourceType.JobWork ? $"JW-{m.Inward.SourceRefId}"
-                        : m.Inward.SourceRefId.ToString())
+                SourceType = m.Lines.FirstOrDefault()?.SourceType,
+                SourceRefDisplay = m.Lines.FirstOrDefault() != null
+                    ? (m.Lines.First().SourceType == InwardSourceType.PO ? $"PO-{m.Lines.First().SourceRefId}"
+                        : m.Lines.First().SourceType == InwardSourceType.OutwardReturn ? $"Outward #{m.Lines.First().SourceRefId}"
+                        : m.Lines.First().SourceType == InwardSourceType.JobWork ? $"JW-{m.Lines.First().SourceRefId}"
+                        : m.Lines.First().SourceRefId?.ToString())
                     : null,
                 IsQCPending = m.IsQCPending,
                 IsQCApproved = m.IsQCApproved,

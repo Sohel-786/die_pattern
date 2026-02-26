@@ -377,9 +377,6 @@ export interface Inward {
   id: number;
   inwardNo: string;
   inwardDate: string;
-  sourceType: InwardSourceType;
-  sourceRefId: number;
-  sourceRefDisplay?: string;
   locationId: number;
   locationName?: string;
   vendorId?: number | null;
@@ -399,6 +396,10 @@ export interface InwardLine {
   itemName?: string;
   mainPartName?: string;
   quantity: number;
+  sourceType: InwardSourceType;
+  sourceRefId: number;
+  sourceRefDisplay?: string;
+  remarks?: string;
   movementId?: number | null;
   isQCPending: boolean;
   isQCApproved: boolean;
@@ -406,9 +407,6 @@ export interface InwardLine {
 
 export interface CreateInwardDto {
   inwardDate?: string;
-  sourceType: InwardSourceType;
-  sourceRefId: number;
-  locationId: number;
   vendorId?: number | null;
   remarks?: string | null;
   lines: CreateInwardLineDto[];
@@ -417,6 +415,9 @@ export interface CreateInwardDto {
 export interface CreateInwardLineDto {
   itemId: number;
   quantity: number;
+  sourceType: InwardSourceType;
+  sourceRefId: number;
+  remarks?: string;
 }
 
 export interface JobWork {

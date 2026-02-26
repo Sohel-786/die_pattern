@@ -305,8 +305,6 @@ namespace net_backend.Models
         [Required]
         public string InwardNo { get; set; } = string.Empty;
         public DateTime InwardDate { get; set; } = DateTime.Now;
-        public InwardSourceType SourceType { get; set; }
-        public int SourceRefId { get; set; }
         public int LocationId { get; set; }
         public int? VendorId { get; set; }
         public string? Remarks { get; set; }
@@ -331,6 +329,9 @@ namespace net_backend.Models
         public int InwardId { get; set; }
         public int ItemId { get; set; }
         public int Quantity { get; set; } = 1;
+        public InwardSourceType SourceType { get; set; }
+        public int? SourceRefId { get; set; }
+        public string? Remarks { get; set; }
         public int? MovementId { get; set; }
 
         [ForeignKey("InwardId")]

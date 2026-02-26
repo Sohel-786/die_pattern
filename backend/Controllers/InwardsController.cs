@@ -44,8 +44,6 @@ namespace net_backend.Controllers
                 .OrderByDescending(i => i.CreatedAt)
                 .AsQueryable();
 
-            if (sourceType.HasValue)
-                query = query.Where(i => i.SourceType == sourceType.Value);
             if (status.HasValue)
                 query = query.Where(i => i.Status == status.Value);
 
@@ -77,9 +75,6 @@ namespace net_backend.Controllers
             if (!await HasPermission("CreateInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
-            int? vid = null;
-            try { vid = await ValidateSourceRefAsync(locationId, dto.SourceType, dto.SourceRefId); }
-            catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<Inward> { Success = false, Message = "At least one line is required." });
 
@@ -87,10 +82,8 @@ namespace net_backend.Controllers
             {
                 InwardNo = await _codeGenerator.GenerateCode("INWARD", locationId),
                 InwardDate = dto.InwardDate ?? DateTime.Now.Date,
-                SourceType = dto.SourceType,
-                SourceRefId = dto.SourceRefId,
                 LocationId = locationId,
-                VendorId = dto.VendorId ?? vid,
+                VendorId = dto.VendorId,
                 Remarks = dto.Remarks,
                 Status = InwardStatus.Draft,
                 CreatedBy = CurrentUserId,
@@ -98,10 +91,26 @@ namespace net_backend.Controllers
                 UpdatedAt = DateTime.Now
             };
 
-            foreach (var line in dto.Lines)
+            foreach (var l in dto.Lines)
             {
-                if (line.Quantity < 1) continue;
-                inward.Lines.Add(new InwardLine { ItemId = line.ItemId, Quantity = line.Quantity });
+                if (l.Quantity < 1) continue;
+                
+                // Validate source for each line if provided
+                if (l.SourceRefId.HasValue) {
+                   try { 
+                       var vid = await ValidateSourceRefAsync(locationId, l.SourceType, l.SourceRefId.Value); 
+                       if (inward.VendorId == null) inward.VendorId = vid;
+                   }
+                   catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
+                }
+
+                inward.Lines.Add(new InwardLine { 
+                    ItemId = l.ItemId, 
+                    Quantity = l.Quantity,
+                    SourceType = l.SourceType,
+                    SourceRefId = l.SourceRefId,
+                    Remarks = l.Remarks
+                });
             }
 
             if (inward.Lines.Count == 0)
@@ -123,24 +132,34 @@ namespace net_backend.Controllers
             if (inward.Status != InwardStatus.Draft)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be edited." });
 
-            int? vid = null;
-            try { vid = await ValidateSourceRefAsync(locationId, dto.SourceType, dto.SourceRefId); }
-            catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
 
             inward.InwardDate = dto.InwardDate ?? inward.InwardDate;
-            inward.SourceType = dto.SourceType;
-            inward.SourceRefId = dto.SourceRefId;
-            inward.VendorId = dto.VendorId ?? vid;
+            inward.VendorId = dto.VendorId;
             inward.Remarks = dto.Remarks;
             inward.UpdatedAt = DateTime.Now;
 
             _context.InwardLines.RemoveRange(inward.Lines);
-            foreach (var line in dto.Lines)
+            foreach (var l in dto.Lines)
             {
-                if (line.Quantity < 1) continue;
-                inward.Lines.Add(new InwardLine { ItemId = line.ItemId, Quantity = line.Quantity });
+                if (l.Quantity < 1) continue;
+                
+                if (l.SourceRefId.HasValue) {
+                   try { 
+                       var vid = await ValidateSourceRefAsync(locationId, l.SourceType, l.SourceRefId.Value); 
+                       if (inward.VendorId == null) inward.VendorId = vid;
+                   }
+                   catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
+                }
+
+                inward.Lines.Add(new InwardLine { 
+                    ItemId = l.ItemId, 
+                    Quantity = l.Quantity,
+                    SourceType = l.SourceType,
+                    SourceRefId = l.SourceRefId,
+                    Remarks = l.Remarks
+                });
             }
 
             await _context.SaveChangesAsync();
@@ -173,8 +192,8 @@ namespace net_backend.Controllers
                     ToType = HolderType.Location,
                     ToLocationId = inward.LocationId,
                     ToPartyId = null,
-                    Remarks = inward.Remarks,
-                    PurchaseOrderId = inward.SourceType == InwardSourceType.PO ? inward.SourceRefId : null,
+                    Remarks = line.Remarks ?? inward.Remarks,
+                    PurchaseOrderId = line.SourceType == InwardSourceType.PO ? line.SourceRefId : null,
                     InwardId = inward.Id,
                     IsQCPending = true,
                     IsQCApproved = false,
@@ -184,6 +203,17 @@ namespace net_backend.Controllers
                 _context.Movements.Add(movement);
                 await _context.SaveChangesAsync();
                 line.MovementId = movement.Id;
+
+                // Update source status if necessary
+                if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
+                {
+                    var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
+                    if (jw != null)
+                    {
+                        jw.Status = JobWorkStatus.Completed;
+                        jw.UpdatedAt = DateTime.Now;
+                    }
+                }
             }
 
             inward.Status = InwardStatus.Submitted;
@@ -202,14 +232,12 @@ namespace net_backend.Controllers
                 if (po.Status != PoStatus.Approved) throw new ArgumentException("Only approved POs can be used for Inward.");
                 if (!po.IsActive) throw new ArgumentException("Inactive POs cannot be used for Inward.");
                 var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToHashSet();
-                var submittedInwardIds = await _context.Inwards
-                    .Where(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted)
-                    .Select(i => i.Id)
-                    .ToListAsync();
+                
                 var inwardedFromPo = await _context.InwardLines
-                    .Where(l => submittedInwardIds.Contains(l.InwardId))
+                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted)
                     .Select(l => l.ItemId)
                     .ToListAsync();
+
                 var inwardedSet = inwardedFromPo.ToHashSet();
                 if (poItemIds.Count > 0 && poItemIds.All(id => inwardedSet.Contains(id)))
                     throw new ArgumentException("This PO is already fully inwarded.");
@@ -219,7 +247,7 @@ namespace net_backend.Controllers
             {
                 var mov = await _context.Movements.FirstOrDefaultAsync(m => m.Id == sourceRefId && m.Type == MovementType.Outward);
                 if (mov == null) throw new ArgumentException("Invalid Outward movement reference.");
-                var alreadyInwarded = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.OutwardReturn && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted);
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted);
                 if (alreadyInwarded) throw new ArgumentException("This Outward challan has already been inwarded.");
                 vendorId = mov.ToPartyId;
             }
@@ -228,7 +256,7 @@ namespace net_backend.Controllers
                 var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
                 if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
                 if (jw.Status != JobWorkStatus.Pending) throw new ArgumentException("Only pending Job Work entries (not yet inwarded) can be used for Inward.");
-                var alreadyInwarded = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.JobWork && i.SourceRefId == sourceRefId && i.Status == InwardStatus.Submitted);
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted);
                 if (alreadyInwarded) throw new ArgumentException("This Job Work has already been inwarded.");
             }
             return vendorId;
@@ -241,10 +269,6 @@ namespace net_backend.Controllers
                 Id = i.Id,
                 InwardNo = i.InwardNo,
                 InwardDate = i.InwardDate,
-                SourceType = i.SourceType,
-                SourceRefId = i.SourceRefId,
-                LocationId = i.LocationId,
-                LocationName = i.Location?.Name,
                 VendorId = i.VendorId,
                 VendorName = i.Vendor?.Name,
                 Remarks = i.Remarks,
@@ -260,12 +284,15 @@ namespace net_backend.Controllers
                     ItemName = l.Item?.CurrentName,
                     MainPartName = l.Item?.MainPartName,
                     Quantity = l.Quantity,
+                    SourceType = l.SourceType,
+                    SourceRefId = l.SourceRefId,
+                    Remarks = l.Remarks,
                     MovementId = l.MovementId,
                     IsQCPending = l.Movement?.IsQCPending ?? false,
-                    IsQCApproved = l.Movement?.IsQCApproved ?? false
+                    IsQCApproved = l.Movement?.IsQCApproved ?? false,
+                    SourceRefDisplay = l.SourceType == InwardSourceType.PO ? $"PO-{l.SourceRefId}" : l.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{l.SourceRefId}" : l.SourceType == InwardSourceType.JobWork ? $"JW-{l.SourceRefId}" : l.SourceRefId?.ToString()
                 }).ToList()
             };
-            dto.SourceRefDisplay = i.SourceType == InwardSourceType.PO ? $"PO-{i.SourceRefId}" : i.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{i.SourceRefId}" : i.SourceType == InwardSourceType.JobWork ? $"JW-{i.SourceRefId}" : i.SourceRefId.ToString();
             return dto;
         }
     }

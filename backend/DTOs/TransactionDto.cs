@@ -101,6 +101,7 @@ namespace net_backend.DTOs
         public decimal Rate { get; set; }
         /// <summary>Line amount = Rate (one unit per die/pattern, before GST)</summary>
         public decimal LineAmount => Math.Round(Rate, 2);
+        public bool IsInwarded { get; set; }
     }
 
     /// <summary>Per-item input for PO creation/update. Each die/pattern has its own rate.</summary>
@@ -189,11 +190,6 @@ namespace net_backend.DTOs
         public int Id { get; set; }
         public string InwardNo { get; set; } = string.Empty;
         public DateTime InwardDate { get; set; }
-        public InwardSourceType SourceType { get; set; }
-        public int SourceRefId { get; set; }
-        public string? SourceRefDisplay { get; set; }
-        public int LocationId { get; set; }
-        public string? LocationName { get; set; }
         public int? VendorId { get; set; }
         public string? VendorName { get; set; }
         public string? Remarks { get; set; }
@@ -212,6 +208,10 @@ namespace net_backend.DTOs
         public string? ItemName { get; set; }
         public string? MainPartName { get; set; }
         public int Quantity { get; set; }
+        public InwardSourceType SourceType { get; set; }
+        public int? SourceRefId { get; set; }
+        public string? SourceRefDisplay { get; set; }
+        public string? Remarks { get; set; }
         public int? MovementId { get; set; }
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
@@ -220,9 +220,6 @@ namespace net_backend.DTOs
     public class CreateInwardDto
     {
         public DateTime? InwardDate { get; set; }
-        public InwardSourceType SourceType { get; set; }
-        public int SourceRefId { get; set; }
-        public int LocationId { get; set; }
         public int? VendorId { get; set; }
         public string? Remarks { get; set; }
         public List<CreateInwardLineDto> Lines { get; set; } = new();
@@ -232,6 +229,9 @@ namespace net_backend.DTOs
     {
         public int ItemId { get; set; }
         public int Quantity { get; set; } = 1;
+        public InwardSourceType SourceType { get; set; }
+        public int? SourceRefId { get; set; }
+        public string? Remarks { get; set; }
     }
 
     public class JobWorkDto
