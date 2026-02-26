@@ -22,7 +22,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetInventoryStatus()
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
             var data = await _context.Items
+                .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
@@ -48,7 +50,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetMovementLedger()
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
             var data = await _context.Movements
+                .Where(m => m.FromLocationId == locationId || m.ToLocationId == locationId || (m.Item != null && m.Item.LocationId == locationId))
                 .Include(m => m.Item)
                 .Include(m => m.FromLocation)
                 .Include(m => m.FromParty)
@@ -78,11 +82,14 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<object>>> GetQCSummary()
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
-            var total = await _context.QualityControls.CountAsync();
-            var approved = await _context.QualityControls.CountAsync(q => q.IsApproved);
+            var locationId = await GetCurrentLocationIdAsync();
+            var qcQuery = _context.QualityControls.Where(q => q.Movement != null && q.Movement.ToLocationId == locationId);
+            var total = await qcQuery.CountAsync();
+            var approved = await qcQuery.CountAsync(q => q.IsApproved);
             var rejected = total - approved;
 
             var recent = await _context.QualityControls
+                .Where(q => q.Movement != null && q.Movement.ToLocationId == locationId)
                 .Include(q => q.Movement)
                     .ThenInclude(m => m!.Item)
                 .Include(q => q.Checker)

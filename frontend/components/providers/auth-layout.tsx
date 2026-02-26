@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { HorizontalNav } from '@/components/layout/horizontal-nav';
@@ -12,6 +13,16 @@ import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useLocationContext, CompanyLocationAccess } from "@/contexts/location-context";
+import { OrgContextDialog } from "@/components/auth/org-context-dialog";
+
+/** Query key prefixes that depend on current company/location; refetch when user switches location. */
+const LOCATION_SCOPED_QUERY_KEYS: readonly string[] = [
+  'parties', 'items', 'purchase-indents', 'purchase-orders', 'inwards', 'job-works',
+  'movements', 'quality-control', 'issues', 'returns', 'dashboard-metrics', 'reports',
+  'companies', 'locations', 'statuses', 'active-issues',
+  'purchase-indent', 'purchase-order',
+];
 
 const SIDEBAR_WIDTH_EXPANDED = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 64;
@@ -41,6 +52,33 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [navExpanded, setNavExpanded] = useState(true);
   const sideWidth = sidebarExpanded ? SIDEBAR_WIDTH_EXPANDED : SIDEBAR_WIDTH_COLLAPSED;
+  const queryClient = useQueryClient();
+  const { allowedAccess, selected, setAllowedAccess, setSelected, clearSelected, isSelectedValid, getAllPairs } = useLocationContext();
+  const [orgDialogOpen, setOrgDialogOpen] = useState(false);
+
+  // When current user updates their profile (name, avatar, username), refresh header without reload
+  useEffect(() => {
+    const onCurrentUserUpdated = (e: Event) => {
+      const detail = (e as CustomEvent<User>).detail;
+      if (detail) setUser(detail);
+    };
+    window.addEventListener('currentUserUpdated', onCurrentUserUpdated);
+    return () => window.removeEventListener('currentUserUpdated', onCurrentUserUpdated);
+  }, []);
+
+  // When user switches company/location, invalidate all location-scoped data so current page refetches without reload
+  useEffect(() => {
+    const onOrgContextChanged = () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const firstKey = query.queryKey[0];
+          return typeof firstKey === 'string' && LOCATION_SCOPED_QUERY_KEYS.includes(firstKey);
+        },
+      });
+    };
+    window.addEventListener('orgContextChanged', onOrgContextChanged);
+    return () => window.removeEventListener('orgContextChanged', onOrgContextChanged);
+  }, [queryClient]);
 
   const isFixedLayout = pathname.startsWith('/purchase-orders') ||
     pathname.startsWith('/purchase-indents') ||
@@ -84,6 +122,24 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           setUser(response.data.user);
           localStorage.setItem('user', JSON.stringify(response.data.user));
         }
+
+        // allowed location access can come as AllowedLocationAccess (Pascal) or allowedLocationAccess (camel)
+        const rawAccess =
+          response.data?.allowedLocationAccess ??
+          response.data?.AllowedLocationAccess ??
+          response.data?.data?.allowedLocationAccess ??
+          response.data?.data?.AllowedLocationAccess ??
+          [];
+        if (Array.isArray(rawAccess)) {
+          const access = rawAccess as CompanyLocationAccess[];
+          setAllowedAccess(access);
+          const pairs = access.flatMap((c) =>
+            (c.locations || []).map((l) => ({ companyId: c.companyId, locationId: l.id }))
+          );
+          if (pairs.length === 1) {
+            setSelected({ companyId: pairs[0].companyId, locationId: pairs[0].locationId });
+          }
+        }
       } catch (err) {
         localStorage.removeItem('user');
         setUser(null);
@@ -95,6 +151,52 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
     validateAndGetUser();
   }, [router, pathname]);
+
+  // If backend rejects request due to missing/invalid org context, show selector
+  useEffect(() => {
+    const onOrgRequired = () => {
+      if (pathname !== "/login") setOrgDialogOpen(true);
+    };
+    const onOpenOrgDialog = () => setOrgDialogOpen(true);
+    window.addEventListener("orgContextRequired", onOrgRequired as any);
+    window.addEventListener("openOrgDialog", onOpenOrgDialog);
+    return () => {
+      window.removeEventListener("orgContextRequired", onOrgRequired as any);
+      window.removeEventListener("openOrgDialog", onOpenOrgDialog);
+    };
+  }, [pathname]);
+
+  // Ensure we have a selected (company, location) context when needed.
+  useEffect(() => {
+    if (pathname === "/login") return;
+    if (!user) return;
+    if (!allowedAccess || allowedAccess.length === 0) return;
+
+    const pairs = getAllPairs(allowedAccess);
+    if (pairs.length === 0) {
+      clearSelected();
+      setOrgDialogOpen(true);
+      return;
+    }
+
+    if (pairs.length === 1) {
+      const only = pairs[0];
+      // auto-select single location access
+      if (!isSelectedValid(selected, allowedAccess)) {
+        setSelected({ companyId: only.companyId, locationId: only.locationId });
+      }
+      setOrgDialogOpen(false);
+      return;
+    }
+
+    // multiple: require selection
+    if (!isSelectedValid(selected, allowedAccess)) {
+      clearSelected();
+      setOrgDialogOpen(true);
+    } else {
+      setOrgDialogOpen(false);
+    }
+  }, [pathname, user, allowedAccess, selected, isSelectedValid, setSelected, clearSelected, getAllPairs]);
 
   if (loading || (permissionsLoading && pathname !== '/login')) {
     return (
@@ -109,6 +211,45 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
   if (pathname === '/login' || !user) {
     return <>{children}</>;
+  }
+
+  const pairs = getAllPairs(allowedAccess);
+  const needOrgSelection =
+    allowedAccess &&
+    allowedAccess.length > 0 &&
+    (pairs.length > 1 ? !isSelectedValid(selected, allowedAccess) : false);
+
+  // Require company/location selection before rendering app (so API calls get headers)
+  if (needOrgSelection) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-6">
+        <OrgContextDialog
+          open
+          access={allowedAccess}
+          onSelect={(sel) => setSelected(sel)}
+          closeDisabled
+        />
+      </div>
+    );
+  }
+
+  // No access edge case: user exists but has no location access rows configured
+  if (allowedAccess && allowedAccess.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-secondary-100 p-6">
+          <h1 className="text-xl font-semibold text-gray-900">No location access</h1>
+          <p className="mt-2 text-sm text-secondary-600">
+            Your account does not have any company/location access configured. Please contact an admin.
+          </p>
+          <div className="mt-5 flex justify-end">
+            <Button onClick={() => (window.location.href = "/login")} variant="outline">
+              Back to login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Permission Check
@@ -170,6 +311,16 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <SoftwareProfileDraftProvider>
       <div className="min-h-screen bg-secondary-50">
+        <OrgContextDialog
+          open={orgDialogOpen}
+          access={allowedAccess}
+          onSelect={(sel) => {
+            setSelected(sel);
+            setOrgDialogOpen(false);
+          }}
+          onClose={() => setOrgDialogOpen(false)}
+          closeDisabled={false}
+        />
         {!isHorizontal && (
           <Sidebar
             userRole={user.role}

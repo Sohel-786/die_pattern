@@ -4,7 +4,8 @@ import { User } from '@/types';
 import { Avatar } from '@/components/ui/avatar';
 import { useAppSettings, useCurrentUserPermissions } from '@/hooks/use-settings';
 import { useSoftwareProfileDraft } from '@/contexts/software-profile-draft-context';
-import { LogOut, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useLocationContext } from '@/contexts/location-context';
+import { LogOut, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useLogout } from '@/hooks/use-auth-mutations';
 import { Button } from '@/components/ui/button';
 
@@ -24,12 +25,22 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
     profileDraft?.logoUrl ??
     (appSettings?.companyLogo ? `${API_BASE}/storage/${appSettings.companyLogo}` : null);
   const hasLogo = Boolean(logoUrl);
+  const { selected, allowedAccess, getAllPairs } = useLocationContext();
+  const pairs = getAllPairs(allowedAccess);
+  const currentPair = selected
+    ? pairs.find((p) => p.companyId === selected.companyId && p.locationId === selected.locationId)
+    : null;
+  const hasMultipleLocations = pairs.length > 1;
 
   const isHorizontal = permissions?.navigationLayout === 'HORIZONTAL';
 
   const logoutMutation = useLogout();
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  const openSwitchLocation = () => {
+    window.dispatchEvent(new CustomEvent('openOrgDialog'));
   };
 
   return (
@@ -60,6 +71,70 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
       </div>
 
       <div className="flex items-center gap-4 min-w-0 flex-1 justify-end">
+        {currentPair && (
+          hasMultipleLocations ? (
+            <button
+              type="button"
+              onClick={openSwitchLocation}
+              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 px-3 py-2 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm transition-all duration-200 hover:border-primary-200 hover:from-primary-50/50 hover:to-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300"
+              title="Switch company or location"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-secondary-100 shrink-0">
+                  <Building2 className="h-4 w-4 text-primary-600" aria-hidden />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500">Company</span>
+                  <span className="text-sm font-semibold text-secondary-900 truncate max-w-[120px] sm:max-w-[180px]" title={currentPair.companyName}>
+                    {currentPair.companyName}
+                  </span>
+                </div>
+              </div>
+              <div className="hidden sm:block w-px h-8 bg-secondary-200" aria-hidden />
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-secondary-100 shrink-0">
+                  <MapPin className="h-4 w-4 text-primary-600" aria-hidden />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500">Location</span>
+                  <span className="text-sm font-semibold text-secondary-900 truncate max-w-[120px] sm:max-w-[160px]" title={currentPair.locationName}>
+                    {currentPair.locationName}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-secondary-400 self-center sm:self-auto" aria-hidden />
+            </button>
+          ) : (
+            <div
+              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 px-3 py-2 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm"
+              title="Current context"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-secondary-100 shrink-0">
+                  <Building2 className="h-4 w-4 text-primary-600" aria-hidden />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500">Company</span>
+                  <span className="text-sm font-semibold text-secondary-900 truncate max-w-[120px] sm:max-w-[180px]" title={currentPair.companyName}>
+                    {currentPair.companyName}
+                  </span>
+                </div>
+              </div>
+              <div className="hidden sm:block w-px h-8 bg-secondary-200" aria-hidden />
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-secondary-100 shrink-0">
+                  <MapPin className="h-4 w-4 text-primary-600" aria-hidden />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500">Location</span>
+                  <span className="text-sm font-semibold text-secondary-900 truncate max-w-[120px] sm:max-w-[160px]" title={currentPair.locationName}>
+                    {currentPair.locationName}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        )}
         {isHorizontal && (
           <button
             onClick={() => onNavExpandChange(!isNavExpanded)}

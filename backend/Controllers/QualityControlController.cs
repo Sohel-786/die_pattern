@@ -18,13 +18,14 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetPending(
             [FromQuery] InwardSourceType? sourceType)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.Movements
                 .Include(m => m.Item)
                 .Include(m => m.ToLocation)
                 .Include(m => m.ToParty)
                 .Include(m => m.Inward)
                 .Include(m => m.PurchaseOrder)
-                .Where(m => m.IsQCPending && !m.IsQCApproved);
+                .Where(m => m.IsQCPending && !m.IsQCApproved && m.ToLocationId == locationId);
 
             if (sourceType.HasValue)
                 query = query.Where(m => m.Inward != null && m.Inward.SourceType == sourceType.Value);
@@ -72,10 +73,11 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("CreateQC")) return Forbidden();
             if (dto.IsApproved && !await HasPermission("ApproveQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
             var movement = await _context.Movements
                 .Include(m => m.Item)
-                .FirstOrDefaultAsync(m => m.Id == dto.MovementId);
+                .FirstOrDefaultAsync(m => m.Id == dto.MovementId && m.ToLocationId == locationId);
 
             if (movement == null) return NotFound("Movement not found");
             if (!movement.IsQCPending)

@@ -206,8 +206,10 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
-
+            var allowed = await GetAllowedLocationIdsAsync();
+            var companyIds = allowed.Select(x => x.companyId).ToHashSet();
             var companies = await _context.Companies
+                .Where(c => companyIds.Contains(c.Id))
                 .OrderBy(c => c.Name)
                 .Select(c => new CompanyDto
                 {
@@ -234,8 +236,10 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetActive()
         {
+            var allowed = await GetAllowedLocationIdsAsync();
+            var companyIds = allowed.Select(x => x.companyId).ToHashSet();
             var companies = await _context.Companies
-                .Where(c => c.IsActive)
+                .Where(c => companyIds.Contains(c.Id) && c.IsActive)
                 .OrderBy(c => c.Name)
                 .Select(c => new CompanyDto
                 {

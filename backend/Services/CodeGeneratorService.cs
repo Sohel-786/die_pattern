@@ -5,7 +5,7 @@ namespace net_backend.Services
 {
     public interface ICodeGeneratorService
     {
-        Task<string> GenerateCode(string type);
+        Task<string> GenerateCode(string type, int? locationId = null);
     }
 
     public class CodeGeneratorService : ICodeGeneratorService
@@ -17,19 +17,22 @@ namespace net_backend.Services
             _context = context;
         }
 
-        public async Task<string> GenerateCode(string type)
+        public async Task<string> GenerateCode(string type, int? locationId = null)
         {
             int count = 0;
             string prefix = type;
 
             if (type == "PI")
             {
+                // PurchaseIndent has no LocationId; count all
                 count = await _context.PurchaseIndents.CountAsync();
                 return $"PI-{count + 1:D2}";
             }
-            else if (type == "PO")
+            if (type == "PO")
             {
-                count = await _context.PurchaseOrders.CountAsync();
+                count = locationId.HasValue
+                    ? await _context.PurchaseOrders.CountAsync(p => p.LocationId == locationId)
+                    : await _context.PurchaseOrders.CountAsync();
                 prefix = "PO";
             }
             else if (type == "OUT")
@@ -44,12 +47,16 @@ namespace net_backend.Services
             }
             else if (type == "INWARD")
             {
-                count = await _context.Inwards.CountAsync();
+                count = locationId.HasValue
+                    ? await _context.Inwards.CountAsync(i => i.LocationId == locationId)
+                    : await _context.Inwards.CountAsync();
                 return $"INW-{count + 1:D4}";
             }
             else if (type == "JW")
             {
-                count = await _context.JobWorks.CountAsync();
+                count = locationId.HasValue
+                    ? await _context.JobWorks.CountAsync(j => j.LocationId == locationId)
+                    : await _context.JobWorks.CountAsync();
                 return $"JW-{count + 1:D4}";
             }
 

@@ -14,6 +14,8 @@ interface CreateUserData {
   isActive?: boolean;
   avatar?: string | null;
   mobileNumber?: string | null;
+  companyId: number;
+  locationId: number;
 }
 
 interface UpdateUserData {
@@ -24,6 +26,8 @@ interface UpdateUserData {
   role?: Role;
   isActive?: boolean;
   mobileNumber?: string | null;
+  companyId?: number;
+  locationId?: number;
 }
 
 export function useUsers() {

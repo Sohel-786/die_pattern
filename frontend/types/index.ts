@@ -104,6 +104,12 @@ export interface User {
   isActive: boolean;
   avatar?: string | null;
   mobileNumber?: string | null;
+  /** From API: default company/location (camelCase from backend DefaultCompanyId/DefaultLocationId). */
+  defaultCompanyId?: number | null;
+  defaultLocationId?: number | null;
+  /** Convenience: same as defaultCompanyId/defaultLocationId when present. */
+  companyId?: number;
+  locationId?: number;
 }
 
 export interface Company {

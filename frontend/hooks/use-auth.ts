@@ -37,6 +37,8 @@ export function useAuth() {
       // Ignore errors
     } finally {
       localStorage.removeItem('user');
+      localStorage.removeItem("allowedLocationAccess");
+      localStorage.removeItem("selectedOrgContext");
       sessionStorage.clear();
       // Force full page reload to clear all state including React Query
       window.location.href = '/login';

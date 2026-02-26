@@ -170,8 +170,10 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetAll()
         {
             if (!await HasPermission("ManageLocation")) return Forbidden();
-
+            var allowed = await GetAllowedLocationIdsAsync();
+            var locationIds = allowed.Select(x => x.locationId).ToHashSet();
             var locations = await _context.Locations
+                .Where(l => locationIds.Contains(l.Id))
                 .Include(l => l.Company)
                 .Select(l => new {
                     l.Id,
@@ -189,8 +191,10 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Location>>>> GetActive()
         {
+            var allowed = await GetAllowedLocationIdsAsync();
+            var locationIds = allowed.Select(x => x.locationId).ToHashSet();
             var locations = await _context.Locations
-                .Where(l => l.IsActive)
+                .Where(l => locationIds.Contains(l.Id) && l.IsActive)
                 .OrderBy(l => l.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Location>> { Data = locations });

@@ -17,7 +17,9 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetAll()
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var data = await _context.Movements
+                .Where(m => m.FromLocationId == locationId || m.ToLocationId == locationId || (m.Item != null && m.Item.LocationId == locationId))
                 .Include(m => m.Item)
                 .Include(m => m.FromLocation)
                 .Include(m => m.FromParty)
@@ -49,8 +51,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Movement>>> Create([FromBody] CreateMovementDto dto)
         {
             if (!await HasPermission("CreateMovement")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
-            var item = await _context.Items.FindAsync(dto.ItemId);
+            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == dto.ItemId && i.LocationId == locationId);
             if (item == null) return NotFound("Item not found");
 
             // No direct Vendor → Vendor transfer
@@ -62,9 +65,11 @@ namespace net_backend.Controllers
 
             if (dto.Type == MovementType.Outward)
             {
-                // Issue to Vendor: item must be at Location
+                // Issue to Vendor: item must be at current location
                 if (item.CurrentHolderType != HolderType.Location)
                     return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Cannot issue: item is not at a location (already at vendor or invalid state)." });
+                if (item.CurrentLocationId != locationId)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Item is not at current location." });
                 if (dto.ToType != HolderType.Vendor)
                     return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Outward (Issue) must be to Vendor." });
             }
@@ -76,6 +81,8 @@ namespace net_backend.Controllers
                     return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Cannot receive: item is not at vendor (must be issued first)." });
                 if (dto.ToType != HolderType.Location)
                     return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Inward/System Return must be to Location." });
+                if (dto.ToLocationId != locationId)
+                    return BadRequest(new ApiResponse<Movement> { Success = false, Message = "Inward/System Return must be to current location." });
             }
 
             var movement = new Movement

@@ -18,23 +18,21 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<object>>> GetMetrics()
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
-            var totalItems = await _context.Items.CountAsync(p => p.IsActive);
-            var itemsAtVendor = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Vendor && p.IsActive);
-            var itemsAtLocation = await _context.Items.CountAsync(p => p.CurrentHolderType == HolderType.Location && p.IsActive);
+            var locationId = await GetCurrentLocationIdAsync();
+
+            var totalItems = await _context.Items.CountAsync(p => p.LocationId == locationId && p.IsActive);
+            var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Vendor && p.IsActive);
+            var itemsAtLocation = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Location && p.IsActive);
             
             var pendingPI = await _context.PurchaseIndents.CountAsync(pi => pi.Status == PurchaseIndentStatus.Pending);
-            var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.Status == PoStatus.Pending);
+            var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.LocationId == locationId && po.Status == PoStatus.Pending);
 
-            var locationWiseCount = await _context.Locations
-                .Select(l => new
-                {
-                    LocationName = l.Name,
-                    Count = _context.Items.Count(p => p.CurrentLocationId == l.Id && p.IsActive)
-                })
-                .ToListAsync();
+            var loc = await _context.Locations.FindAsync(locationId);
+            var locationWiseCount = loc == null ? new List<object>() : new List<object> { new { LocationName = loc.Name, Count = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentLocationId == locationId && p.IsActive) } };
 
             var recentChanges = await _context.ItemChangeLogs
                 .Include(l => l.Item)
+                .Where(l => l.Item != null && l.Item.LocationId == locationId)
                 .OrderByDescending(l => l.CreatedAt)
                 .Take(5)
                 .Select(l => new {
@@ -48,7 +46,7 @@ namespace net_backend.Controllers
 
             var recentSystemAdjustments = await _context.Movements
                 .Include(m => m.Item)
-                .Where(m => m.Type == MovementType.SystemReturn)
+                .Where(m => m.Type == MovementType.SystemReturn && (m.ToLocationId == locationId || m.FromLocationId == locationId))
                 .OrderByDescending(m => m.CreatedAt)
                 .Take(5)
                 .Select(m => new {

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import api from '@/lib/api';
-import { AppSettings, UserPermission } from '@/types';
+import { AppSettings, UserPermission, Company, Location } from '@/types';
 
 export function useAppSettings() {
   return useQuery({
@@ -99,6 +99,61 @@ export function useUpdateUserPermissions() {
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Failed to save permissions';
       toast.error(message);
+    },
+  });
+}
+
+export function useCompaniesActive() {
+  return useQuery({
+    queryKey: ['companies', 'active'],
+    queryFn: async (): Promise<Company[]> => {
+      const response = await api.get('/companies/active');
+      return response.data.data ?? response.data ?? [];
+    },
+  });
+}
+
+export function useLocationsActive() {
+  return useQuery({
+    queryKey: ['locations', 'active'],
+    queryFn: async (): Promise<Location[]> => {
+      const response = await api.get('/locations/active');
+      return response.data.data ?? response.data ?? [];
+    },
+  });
+}
+
+export type CompanyLocationAccessItem = {
+  companyId: number;
+  companyName: string;
+  locations: { id: number; name: string }[];
+};
+
+export function useUserLocationAccess(userId: number | null) {
+  return useQuery({
+    queryKey: ['users', userId, 'location-access'],
+    queryFn: async (): Promise<CompanyLocationAccessItem[]> => {
+      if (!userId) return [];
+      const response = await api.get(`/users/${userId}/location-access`);
+      return response.data.data ?? response.data ?? [];
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateUserLocationAccess(userId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { companyId: number; locationId: number }[]) => {
+      const response = await api.put(`/users/${userId}/location-access`, items);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', userId, 'location-access'] });
+      toast.success('Location access updated');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update location access');
     },
   });
 }

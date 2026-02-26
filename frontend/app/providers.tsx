@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { useState } from 'react';
 import { AuthLayout } from '@/components/providers/auth-layout';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { LocationProvider } from '@/contexts/location-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthLayout>{children}</AuthLayout>
+        <LocationProvider>
+          <AuthLayout>{children}</AuthLayout>
+        </LocationProvider>
       </ThemeProvider>
       <Toaster position="bottom-right" />
     </QueryClientProvider>

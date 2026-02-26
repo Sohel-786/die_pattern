@@ -21,7 +21,8 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
-            var code = await _codeGenerator.GenerateCode("INWARD");
+            var locationId = await GetCurrentLocationIdAsync();
+            var code = await _codeGenerator.GenerateCode("INWARD", locationId);
             return Ok(new ApiResponse<string> { Data = code });
         }
 
@@ -30,7 +31,9 @@ namespace net_backend.Controllers
             [FromQuery] InwardSourceType? sourceType,
             [FromQuery] InwardStatus? status)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.Inwards
+                .Where(i => i.LocationId == locationId)
                 .Include(i => i.Location)
                 .Include(i => i.Vendor)
                 .Include(i => i.Creator)
@@ -54,6 +57,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<InwardDto>>> GetById(int id)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var inward = await _context.Inwards
                 .Include(i => i.Location)
                 .Include(i => i.Vendor)
@@ -62,7 +66,7 @@ namespace net_backend.Controllers
                     .ThenInclude(l => l.Item)
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Movement)
-                .FirstOrDefaultAsync(i => i.Id == id);
+                .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
             return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward) });
         }
@@ -71,20 +75,21 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Inward>>> Create([FromBody] CreateInwardDto dto)
         {
             if (!await HasPermission("CreateInward")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
             int? vid = null;
-            try { ValidateSourceRef(dto.SourceType, dto.SourceRefId, out vid); }
+            try { ValidateSourceRef(locationId, dto.SourceType, dto.SourceRefId, out vid); }
             catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<Inward> { Success = false, Message = "At least one line is required." });
 
             var inward = new Inward
             {
-                InwardNo = await _codeGenerator.GenerateCode("INWARD"),
+                InwardNo = await _codeGenerator.GenerateCode("INWARD", locationId),
                 InwardDate = dto.InwardDate ?? DateTime.Now.Date,
                 SourceType = dto.SourceType,
                 SourceRefId = dto.SourceRefId,
-                LocationId = dto.LocationId,
+                LocationId = locationId,
                 VendorId = dto.VendorId ?? vid,
                 Remarks = dto.Remarks,
                 Status = InwardStatus.Draft,
@@ -111,14 +116,15 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreateInwardDto dto)
         {
             if (!await HasPermission("EditInward")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
-            var inward = await _context.Inwards.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id);
+            var inward = await _context.Inwards.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
             if (inward.Status != InwardStatus.Draft)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be edited." });
 
             int? vid = null;
-            try { ValidateSourceRef(dto.SourceType, dto.SourceRefId, out vid); }
+            try { ValidateSourceRef(locationId, dto.SourceType, dto.SourceRefId, out vid); }
             catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
@@ -126,7 +132,6 @@ namespace net_backend.Controllers
             inward.InwardDate = dto.InwardDate ?? inward.InwardDate;
             inward.SourceType = dto.SourceType;
             inward.SourceRefId = dto.SourceRefId;
-            inward.LocationId = dto.LocationId;
             inward.VendorId = dto.VendorId ?? vid;
             inward.Remarks = dto.Remarks;
             inward.UpdatedAt = DateTime.Now;
@@ -146,12 +151,13 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
         {
             if (!await HasPermission("CreateInward")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
             var inward = await _context.Inwards
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Item)
                 .Include(i => i.Location)
-                .FirstOrDefaultAsync(i => i.Id == id);
+                .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
             if (inward.Status != InwardStatus.Draft)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be submitted." });
@@ -186,13 +192,13 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
-        private void ValidateSourceRef(InwardSourceType sourceType, int sourceRefId, out int? vendorId)
+        private void ValidateSourceRef(int locationId, InwardSourceType sourceType, int sourceRefId, out int? vendorId)
         {
             vendorId = null;
             if (sourceType == InwardSourceType.PO)
             {
-                var po = _context.PurchaseOrders.FirstOrDefault(p => p.Id == sourceRefId);
-                if (po == null) throw new ArgumentException("Invalid PO reference.");
+                var po = _context.PurchaseOrders.FirstOrDefault(p => p.Id == sourceRefId && p.LocationId == locationId);
+                if (po == null) throw new ArgumentException("Invalid PO reference or PO not in current location.");
                 vendorId = po.VendorId;
             }
             else if (sourceType == InwardSourceType.OutwardReturn)
@@ -203,8 +209,8 @@ namespace net_backend.Controllers
             }
             else if (sourceType == InwardSourceType.JobWork)
             {
-                if (!_context.JobWorks.Any(j => j.Id == sourceRefId))
-                    throw new ArgumentException("Invalid Job Work reference.");
+                if (!_context.JobWorks.Any(j => j.Id == sourceRefId && j.LocationId == locationId))
+                    throw new ArgumentException("Invalid Job Work reference or not in current location.");
             }
         }
 

@@ -21,7 +21,8 @@ import {
   Database,
   Truck,
   BarChart3,
-  FileText
+  FileText,
+  ShoppingCart
 } from "lucide-react";
 import {
   Card,
@@ -38,6 +39,11 @@ import {
   useUserPermissions,
   useUpdateUserPermissions,
   useCurrentUserPermissions,
+  useCompaniesActive,
+  useLocationsActive,
+  useUserLocationAccess,
+  useUpdateUserLocationAccess,
+  type CompanyLocationAccessItem,
 } from "@/hooks/use-settings";
 import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/use-users";
 // Removed useDivisions import
@@ -49,7 +55,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { User, UserPermission } from "@/types";
-import { Plus, Edit2, Search, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit2, Search, Eye, EyeOff, MapPin } from "lucide-react";
 import { applyPrimaryColor } from "@/lib/theme";
 import { useSoftwareProfileDraft } from "@/contexts/software-profile-draft-context";
 import {
@@ -61,10 +67,13 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+/** Stable empty array for location access so useEffect dependency does not change every render when query is disabled. */
+const EMPTY_LOCATION_ACCESS: CompanyLocationAccessItem[] = [];
+
 const tabs = [
   { id: "software", label: "Software", icon: Building2 },
-  { id: "access", label: "Access", icon: Shield },
   { id: "users", label: "User Management", icon: Users },
+  { id: "access", label: "Access", icon: Shield },
 ] as const;
 
 const userSchema = z.object({
@@ -81,8 +90,10 @@ const userSchema = z.object({
   isActive: z.boolean().optional(),
   avatar: z.string().nullable().optional(),
   mobileNumber: z.string().optional().nullable(),
+  companyId: z.number().optional(),
+  locationId: z.number().optional(),
 }).superRefine((data, ctx) => {
-  const isMandatory = data.role === Role.QC_USER || data.role === Role.QC_MANAGER;
+  const isMandatory = data.role === Role.USER || data.role === Role.MANAGER;
   const mobile = data.mobileNumber?.trim();
 
   // Mandatory check for User/Manager
@@ -224,6 +235,11 @@ export default function SettingsPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: companies = [] } = useCompaniesActive();
+  const { data: locations = [] } = useLocationsActive();
+  const { data: userLocationAccessData } = useUserLocationAccess(selectedUserId ?? null);
+  const userLocationAccess = userLocationAccessData ?? EMPTY_LOCATION_ACCESS;
+  const updateLocationAccess = useUpdateUserLocationAccess(selectedUserId ?? 0);
 
   const {
     register,
@@ -239,7 +255,7 @@ export default function SettingsPage() {
       password: "",
       firstName: "",
       lastName: "",
-      role: Role.QC_USER,
+      role: Role.USER,
       isActive: true,
       avatar: null as string | null,
     },
@@ -259,7 +275,7 @@ export default function SettingsPage() {
       currentUserPermissions
     ) {
       if (
-        currentUser.role !== Role.QC_ADMIN &&
+        currentUser.role !== Role.ADMIN &&
         !currentUserPermissions.accessSettings
       ) {
         router.push("/dashboard");
@@ -367,6 +383,10 @@ export default function SettingsPage() {
     setLogoFile(null);
   }, []);
 
+  const [localLocationAccess, setLocalLocationAccess] = useState<{ companyId: number; companyName: string; locationId: number; locationName: string }[]>([]);
+  const [locationAccessAddCompanyId, setLocationAccessAddCompanyId] = useState<number | "">("");
+  const [locationAccessAddLocationId, setLocationAccessAddLocationId] = useState<number | "">("");
+
   useEffect(() => {
     if (!isUserFormOpen) {
       reset({
@@ -374,12 +394,26 @@ export default function SettingsPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: Role.QC_USER,
+        role: Role.USER,
         isActive: true,
         avatar: null,
+        companyId: undefined,
+        locationId: undefined,
       });
     }
   }, [isUserFormOpen, reset]);
+
+  useEffect(() => {
+    const flat = (userLocationAccess as CompanyLocationAccessItem[]).flatMap((c) =>
+      (c.locations || []).map((l) => ({
+        companyId: c.companyId,
+        companyName: c.companyName,
+        locationId: l.id,
+        locationName: l.name,
+      }))
+    );
+    setLocalLocationAccess(flat);
+  }, [selectedUserId, userLocationAccess]);
 
 
 
@@ -396,7 +430,7 @@ export default function SettingsPage() {
 
   if (
     currentUser &&
-    currentUser.role !== Role.QC_ADMIN &&
+    currentUser.role !== Role.ADMIN &&
     (!currentUserPermissions || !currentUserPermissions.accessSettings)
   ) {
     return null;
@@ -469,6 +503,8 @@ export default function SettingsPage() {
   const handleOpenUserForm = (user?: User) => {
     if (user) {
       setEditingUser(user);
+      const companyId = user.defaultCompanyId ?? user.companyId ?? undefined;
+      const locationId = user.defaultLocationId ?? user.locationId ?? undefined;
       reset({
         username: user.username,
         firstName: user.firstName,
@@ -478,6 +514,8 @@ export default function SettingsPage() {
         avatar: user.avatar ?? null,
         mobileNumber: user.mobileNumber || "",
         password: "",
+        companyId,
+        locationId,
       });
     } else {
       setEditingUser(null);
@@ -486,9 +524,11 @@ export default function SettingsPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: Role.QC_USER,
+        role: Role.USER,
         isActive: true,
         avatar: null,
+        companyId: undefined,
+        locationId: undefined,
       });
     }
     setIsUserFormOpen(true);
@@ -510,6 +550,8 @@ export default function SettingsPage() {
         isActive: data.isActive,
         avatar: data.avatar ?? null,
         mobileNumber: data.mobileNumber,
+        companyId: data.companyId,
+        locationId: data.locationId,
       };
       if (data.password) updateData.password = data.password;
       updateUser.mutate(
@@ -518,6 +560,12 @@ export default function SettingsPage() {
       );
     } else {
       if (!data.password) return;
+      const companyId = data.companyId ?? 0;
+      const locationId = data.locationId ?? 0;
+      if (!companyId || !locationId) {
+        toast.error("Please select Company and Location for the user.");
+        return;
+      }
       createUser.mutate(
         {
           username: data.username,
@@ -528,6 +576,8 @@ export default function SettingsPage() {
           isActive: data.isActive ?? false,
           avatar: data.avatar ?? null,
           mobileNumber: data.mobileNumber,
+          companyId,
+          locationId,
         },
         { onSuccess: handleCloseUserForm },
       );
@@ -732,7 +782,7 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
 
-                {/* {currentUser?.role === Role.QC_ADMIN && (
+                {/* {currentUser?.role === Role.ADMIN && (
                   <Card className="border-red-200 shadow-sm overflow-hidden mt-6">
                     <CardHeader className="bg-red-50 border-b border-red-100">
                       <div className="flex items-center gap-2 text-red-700">
@@ -834,22 +884,18 @@ export default function SettingsPage() {
               >
                 <Card>
                   <CardHeader className="border-b border-secondary-100">
-                    <CardTitle className="text-xl">
-                      Access & Permissions
-                    </CardTitle>
+                    <CardTitle className="text-xl">Access & Permissions</CardTitle>
                     <p className="text-sm text-secondary-600 font-normal mt-1">
                       Manage user-specific permissions. Permissions are granular and override role defaults.
                     </p>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-
-                    {/* User Selection */}
                     <div className="max-w-md">
                       <Label>Select User to Manage</Label>
                       <select
                         className="mt-1 w-full rounded-md border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                        value={selectedUserId || ""}
-                        onChange={(e) => setSelectedUserId(Number(e.target.value) || null)}
+                        value={selectedUserId ?? ""}
+                        onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
                       >
                         <option value="">-- Select a User --</option>
                         {users?.map(u => (
@@ -859,143 +905,83 @@ export default function SettingsPage() {
                         ))}
                       </select>
                     </div>
-
                     {selectedUserId && permissionsLoading && (
                       <div className="flex justify-center py-12">
                         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
                       </div>
                     )}
-
                     {selectedUserId && !permissionsLoading && localPermissions && (() => {
                       const managedUser = users?.find(u => u.id === selectedUserId);
-                      const isManagedUserAdmin = managedUser?.role === Role.QC_ADMIN;
-
+                      const isManagedUserAdmin = managedUser?.role === Role.ADMIN;
                       return (
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-                            {/* Module: System & Navigation */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200">
                               <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-2 bg-primary-100/50 rounded-lg text-primary-600">
                                     <LayoutDashboard className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">
-                                    System & Navigation
-                                  </CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">System & Navigation</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Dashboard Access</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">View dashboard statistics.</p>
                                   </div>
-                                  <div className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={localPermissions.viewDashboard}
-                                      onChange={(e) => handlePermissionChange("viewDashboard", e.target.checked)}
-                                      className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                                    />
-                                  </div>
+                                  <input type="checkbox" checked={localPermissions.viewDashboard} onChange={(e) => handlePermissionChange("viewDashboard", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer" />
                                 </label>
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Access Settings</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">Manage system configuration.</p>
                                   </div>
-                                  <div className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={localPermissions.accessSettings}
-                                      onChange={(e) => handlePermissionChange("accessSettings", e.target.checked)}
-                                      disabled={
-                                        localPermissions.accessSettings &&
-                                        (currentUser?.id === selectedUserId ||
-                                          users?.find((u) => u.id === selectedUserId)?.role === Role.QC_ADMIN)
-                                      }
-                                      className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                    />
-                                  </div>
+                                  <input type="checkbox" checked={localPermissions.accessSettings} onChange={(e) => handlePermissionChange("accessSettings", e.target.checked)} disabled={localPermissions.accessSettings && (currentUser?.id === selectedUserId || isManagedUserAdmin)} className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" />
                                 </label>
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Users</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">Create and manage accounts.</p>
                                   </div>
-                                  <div className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={localPermissions.manageUsers}
-                                      onChange={(e) => handlePermissionChange("manageUsers", e.target.checked)}
-                                      className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                                    />
-                                  </div>
+                                  <input type="checkbox" checked={localPermissions.manageUsers} onChange={(e) => handlePermissionChange("manageUsers", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer" />
                                 </label>
                                 <div className="p-4 hover:bg-secondary-50/50 transition-colors">
                                   <div className="mb-2">
                                     <p className="text-sm font-medium text-primary-900">Navigation Layout</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">Preferred menu style.</p>
                                   </div>
-                                  <select
-                                    value={localPermissions.navigationLayout || "SIDEBAR"}
-                                    onChange={(e) => handlePermissionChange("navigationLayout", e.target.value)}
-                                    className="w-full text-sm rounded-md border-secondary-300 py-2 px-3 focus:ring-primary-500 focus:border-primary-500 bg-white"
-                                  >
+                                  <select value={(localPermissions as any).navigationLayout || "SIDEBAR"} onChange={(e) => handlePermissionChange("navigationLayout" as any, e.target.value)} className="w-full text-sm rounded-md border border-secondary-300 py-2 px-3 focus:ring-primary-500 focus:border-primary-500 bg-white">
                                     <option value="SIDEBAR">Vertical Sidebar</option>
                                     <option value="HORIZONTAL">Horizontal Header</option>
                                   </select>
                                 </div>
                               </CardContent>
                             </Card>
-
-                            {/* Module: Master Data */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-orange-500">
                               <CardHeader className="bg-gradient-to-r from-orange-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-2 bg-orange-100/50 rounded-lg text-orange-600">
                                     <Database className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">
-                                    Master Data
-                                  </CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Master Data</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900">View Master Data</p>
                                     <p className="text-xs text-secondary-500">Global browse access.</p>
                                   </div>
-                                  <input
-                                    type="checkbox"
-                                    checked={localPermissions.viewMaster}
-                                    onChange={(e) => handlePermissionChange("viewMaster", e.target.checked)}
-                                    className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
-                                  />
+                                  <input type="checkbox" checked={(localPermissions as any).viewMaster} onChange={(e) => handlePermissionChange("viewMaster" as any, e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
                                 </label>
                                 <div className="p-4 bg-orange-50/20">
                                   <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-3">Management Permissions</p>
                                   <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                                    {[
-                                      { key: 'manageItem', label: 'Items' },
-                                      { key: 'manageItemType', label: 'Item Types' },
-                                      { key: 'manageMaterial', label: 'Materials' },
-                                      { key: 'manageItemStatus', label: 'Item Statuses' },
-                                      { key: 'manageOwnerType', label: 'Owner Types' },
-                                      { key: 'manageParty', label: 'Parties' },
-                                      { key: 'manageLocation', label: 'Locations' },
-                                      { key: 'manageCompany', label: 'Companies' }
-                                    ].map(item => (
+                                    {[{ key: "manageItem", label: "Items" }, { key: "manageItemType", label: "Item Types" }, { key: "manageMaterial", label: "Materials" }, { key: "manageItemStatus", label: "Item Statuses" }, { key: "manageOwnerType", label: "Owner Types" }, { key: "manageParty", label: "Parties" }, { key: "manageLocation", label: "Locations" }, { key: "manageCompany", label: "Companies" }].map(item => (
                                       <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[item.key]}
-                                          onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)}
-                                          className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500"
-                                        />
+                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
                                         <span className="text-xs font-medium text-secondary-700 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
                                       </label>
                                     ))}
@@ -1003,45 +989,31 @@ export default function SettingsPage() {
                                 </div>
                               </CardContent>
                             </Card>
-
-                            {/* Module: Operations & QC */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-blue-500">
                               <CardHeader className="bg-gradient-to-r from-blue-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
                                     <Truck className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">
-                                    Operations
-                                  </CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Operations</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <div className="p-4 space-y-3">
                                   <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Movements & Inward</p>
                                   <div className="grid grid-cols-2 gap-4">
-                                    {['viewMovement', 'createMovement'].map(k => (
+                                    {["viewMovement", "createMovement"].map(k => (
                                       <label key={k} className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[k]}
-                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
-                                          className="w-4 h-4 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-xs font-medium text-secondary-700 uppercase tracking-tight">{k.replace('view', 'View ').replace('create', 'Create ')}</span>
+                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="text-xs font-medium text-secondary-700 uppercase tracking-tight">{k.replace("view", "View ").replace("create", "Create ")}</span>
                                       </label>
                                     ))}
                                   </div>
                                   <div className="grid grid-cols-3 gap-2 mt-2">
-                                    {['viewInward', 'createInward', 'editInward'].map(k => (
+                                    {["viewInward", "createInward", "editInward"].map(k => (
                                       <label key={k} className="flex flex-col items-center gap-1 p-2 rounded border border-secondary-100 bg-secondary-50/30 cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[k]}
-                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
-                                          className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace('Inward', '').replace('view', 'View').replace('create', 'Add').replace('edit', 'Edit')}</span>
+                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("Inward", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit")}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -1049,19 +1021,9 @@ export default function SettingsPage() {
                                 <div className="p-4 space-y-3 bg-emerald-50/10">
                                   <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Quality Control</p>
                                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                                    {[
-                                      { key: 'viewQC', label: 'View QC' },
-                                      { key: 'createQC', label: 'Add Result' },
-                                      { key: 'editQC', label: 'Edit QC' },
-                                      { key: 'approveQC', label: 'Approve QC' }
-                                    ].map(item => (
+                                    {[{ key: "viewQC", label: "View QC" }, { key: "createQC", label: "Add Result" }, { key: "editQC", label: "Edit QC" }, { key: "approveQC", label: "Approve QC" }].map(item => (
                                       <label key={item.key} className="flex items-center gap-2 cursor-pointer group">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[item.key]}
-                                          onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)}
-                                          className="w-4 h-4 rounded border-secondary-300 text-emerald-600 focus:ring-emerald-500"
-                                        />
+                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-emerald-600 focus:ring-emerald-500" />
                                         <span className="text-xs font-medium text-secondary-700 uppercase tracking-tight">{item.label}</span>
                                       </label>
                                     ))}
@@ -1069,32 +1031,23 @@ export default function SettingsPage() {
                                 </div>
                               </CardContent>
                             </Card>
-
-                            {/* Module: Purchase Indents & Orders */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-indigo-500">
                               <CardHeader className="bg-gradient-to-r from-indigo-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-2 bg-indigo-100/50 rounded-lg text-indigo-600">
                                     <FileText className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">
-                                    Purchasing
-                                  </CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Purchasing</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <div className="p-4 space-y-2">
                                   <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Indents</p>
                                   <div className="grid grid-cols-4 gap-2">
-                                    {['viewPI', 'createPI', 'editPI', 'approvePI'].map(k => (
-                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transiton-colors">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[k]}
-                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
-                                          className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace('PI', '').replace('view', 'View').replace('create', 'Add').replace('edit', 'Edit').replace('approve', 'Appr')}</span>
+                                    {["viewPI", "createPI", "editPI", "approvePI"].map(k => (
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transition-colors">
+                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
+                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("PI", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Appr")}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -1102,63 +1055,42 @@ export default function SettingsPage() {
                                 <div className="p-4 space-y-2">
                                   <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Orders</p>
                                   <div className="grid grid-cols-4 gap-2">
-                                    {['viewPO', 'createPO', 'editPO', 'approvePO'].map(k => (
-                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transiton-colors">
-                                        <input
-                                          type="checkbox"
-                                          checked={(localPermissions as any)[k]}
-                                          onChange={(e) => handlePermissionChange(k as any, e.target.checked)}
-                                          className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace('PO', '').replace('view', 'View').replace('create', 'Add').replace('edit', 'Edit').replace('approve', 'Appr')}</span>
+                                    {["viewPO", "createPO", "editPO", "approvePO"].map(k => (
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transition-colors">
+                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
+                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("PO", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Appr")}</span>
                                       </label>
                                     ))}
                                   </div>
                                 </div>
                               </CardContent>
                             </Card>
-
-                            {/* Module: Data Control */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-rose-500">
                               <CardHeader className="bg-gradient-to-r from-rose-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
                                     <Shield className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">
-                                    Data Control
-                                  </CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Data Control</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Pattern Changes</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">Edit protected pattern fields.</p>
                                   </div>
-                                  <input
-                                    type="checkbox"
-                                    checked={localPermissions.manageChanges}
-                                    onChange={(e) => handlePermissionChange("manageChanges", e.target.checked)}
-                                    className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500"
-                                  />
+                                  <input type="checkbox" checked={localPermissions.manageChanges} onChange={(e) => handlePermissionChange("manageChanges", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500" />
                                 </label>
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer transition-colors group">
+                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
                                   <div>
                                     <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Revert Changes</p>
                                     <p className="text-xs text-secondary-500 mt-0.5">Undo history movements.</p>
                                   </div>
-                                  <input
-                                    type="checkbox"
-                                    checked={localPermissions.revertChanges}
-                                    onChange={(e) => handlePermissionChange("revertChanges", e.target.checked)}
-                                    className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500"
-                                  />
+                                  <input type="checkbox" checked={localPermissions.revertChanges} onChange={(e) => handlePermissionChange("revertChanges", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500" />
                                 </label>
                               </CardContent>
                             </Card>
-
-                            {/* Module: Reports */}
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-purple-500">
                               <CardHeader className="bg-gradient-to-r from-purple-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
                                 <div className="flex items-center justify-between">
@@ -1166,61 +1098,33 @@ export default function SettingsPage() {
                                     <div className="p-2 bg-purple-100/50 rounded-lg text-purple-600">
                                       <BarChart3 className="w-5 h-5" />
                                     </div>
-                                    <CardTitle className="text-base font-semibold text-primary-900">
-                                      Reports & Analytics
-                                    </CardTitle>
+                                    <CardTitle className="text-base font-semibold text-primary-900">Reports & Analytics</CardTitle>
                                   </div>
                                   <label className="flex items-center justify-between bg-white border border-secondary-200 px-3 py-1.5 rounded-full hover:bg-secondary-50 transition-colors shadow-sm cursor-pointer">
                                     <span className="text-xs font-medium text-secondary-700 mr-2">Enable Reports</span>
-                                    <input
-                                      type="checkbox"
-                                      checked={localPermissions.viewReports}
-                                      onChange={(e) => handlePermissionChange("viewReports", e.target.checked)}
-                                      className="w-4 h-4 rounded-full border-secondary-300 text-purple-600 focus:ring-purple-500"
-                                    />
+                                    <input type="checkbox" checked={localPermissions.viewReports} onChange={(e) => handlePermissionChange("viewReports", e.target.checked)} className="w-4 h-4 rounded-full border-secondary-300 text-purple-600 focus:ring-purple-500" />
                                   </label>
                                 </div>
                               </CardHeader>
                             </Card>
-
-                            {/* Division Access Card Removed */}
-
                           </div>
-
                           <div className="flex justify-end gap-2 pt-6 border-t border-secondary-100">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={revertPermissions}
-                              disabled={!hasUnsavedPermissions || updateUserPermissionsMutation.isPending}
-                              className="gap-2"
-                            >
-                              <X className="w-4 h-4" />
-                              Cancel
+                            <Button type="button" variant="outline" onClick={revertPermissions} disabled={!hasUnsavedPermissions || updateUserPermissionsMutation.isPending} className="gap-2">
+                              <X className="w-4 h-4" /> Cancel
                             </Button>
-                            <Button
-                              onClick={handleSavePermissions}
-                              disabled={updateUserPermissionsMutation.isPending || !hasUnsavedPermissions}
-                              className="gap-2"
-                            >
-                              {updateUserPermissionsMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Save className="w-4 h-4" />
-                              )}
+                            <Button onClick={handleSavePermissions} disabled={updateUserPermissionsMutation.isPending || !hasUnsavedPermissions} className="gap-2">
+                              {updateUserPermissionsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                               Save Permissions
                             </Button>
                           </div>
                         </>
                       );
                     })()}
-
-                    {(!selectedUserId) && (
+                    {!selectedUserId && (
                       <div className="text-center py-12 text-secondary-500 italic">
                         Select a user above to view and manage their permissions.
                       </div>
                     )}
-
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1306,16 +1210,16 @@ export default function SettingsPage() {
                               </td>
                               <td className="py-3 px-4">
                                 <span
-                                  className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${u.role === Role.QC_ADMIN
+                                  className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${u.role === Role.ADMIN
                                     ? "bg-amber-100 text-amber-800"
-                                    : u.role === Role.QC_MANAGER
+                                    : u.role === Role.MANAGER
                                       ? "bg-purple-100 text-purple-700"
                                       : "bg-blue-100 text-blue-700"
                                     }`}
                                 >
-                                  {u.role === Role.QC_ADMIN
+                                  {u.role === Role.ADMIN
                                     ? "Admin"
-                                    : u.role === Role.QC_MANAGER
+                                    : u.role === Role.MANAGER
                                       ? "Manager"
                                       : "User"}
                                 </span>
@@ -1346,14 +1250,17 @@ export default function SettingsPage() {
                                 )}
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenUserForm(u)}
-                                  className="hover:bg-primary-50"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenUserForm(u)}
+                                    className="hover:bg-primary-50"
+                                    title="Edit Profile"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1375,7 +1282,7 @@ export default function SettingsPage() {
         </main>
       </motion.div>
 
-      {/* User form dialog – full form, empty when adding */}
+      {/* User form dialog – matches Master entries UI */}
       <Dialog
         isOpen={isUserFormOpen}
         onClose={handleCloseUserForm}
@@ -1383,196 +1290,226 @@ export default function SettingsPage() {
         size="lg"
       >
         <form
-          key={editingUser ? `edit-${editingUser.id}` : "add"}
-          onSubmit={handleSubmit(onSubmitUser)}
-          className="space-y-6"
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>First name *</Label>
-              <Input
-                {...register("firstName")}
-                className="mt-1"
-                placeholder="Enter first name"
-              />
-              {errors.firstName && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.firstName.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label>Last name *</Label>
-              <Input
-                {...register("lastName")}
-                className="mt-1"
-                placeholder="Enter last name"
-              />
-              {errors.lastName && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.lastName.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div>
-            <Label>Username *</Label>
-            <Input
-              {...register("username")}
-              className="mt-1"
-              placeholder="Enter username"
-            />
-            {errors.username && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.username.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label>Mobile Number {watch("role") !== Role.QC_ADMIN ? "*" : ""}</Label>
-            <Input
-              {...register("mobileNumber")}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                e.target.value = value;
-                register("mobileNumber").onChange(e);
-              }}
-              className="mt-1"
-              placeholder="Enter 10-digit mobile number"
-            />
-            {errors.mobileNumber && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.mobileNumber.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label>Password *</Label>
-            <div className="relative mt-1">
-              <Input
-                type={showPassword ? "text" : "password"}
-                {...register("password")}
-                className="pr-10"
-                placeholder={
-                  editingUser ? "Leave empty to keep current" : "Enter password"
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((p) => !p)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-secondary-500 hover:text-secondary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
-                tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label>Role *</Label>
-            <select
-              {...register("role")}
-              className="mt-1 w-full rounded-md border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            >
-              <option value={Role.QC_USER}>User</option>
-              <option value={Role.QC_MANAGER}>Manager</option>
-              <option value={Role.QC_ADMIN}>Admin</option>
-            </select>
-          </div>
+            key={editingUser ? `edit-${editingUser.id}` : "add"}
+            onSubmit={handleSubmit(onSubmitUser)}
+            className="flex flex-col overflow-hidden"
+          >
+            <div className="overflow-y-auto p-6 space-y-6">
+              {/* Profile Basics Row */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">First Name <span className="text-rose-500">*</span></Label>
+                  <Input
+                    {...register("firstName")}
+                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                    placeholder="e.g. Rahul"
+                  />
+                  {errors.firstName && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.firstName.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Last Name <span className="text-rose-500">*</span></Label>
+                  <Input
+                    {...register("lastName")}
+                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                    placeholder="e.g. Sharma"
+                  />
+                  {errors.lastName && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
 
-          {/* Avatar selection – preset SVGs from /avatar/, default from /assets/avatar.jpg */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold text-primary-900">
-              Avatar
-            </Label>
-            <p className="text-sm text-primary-700/80">
-              Choose an avatar for this user. It will appear in the header and
-              user list.
-            </p>
-            <div className="flex flex-row flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setValue("avatar", null, { shouldValidate: true })
-                }
-                className={`relative w-[30px] h-[30px] rounded-full overflow-hidden flex-shrink-0 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${!watch("avatar")
-                  ? "scale-[1.05] ring-2 ring-primary-500 ring-offset-2 ring-offset-white shadow-sm"
-                  : "border border-secondary-200 hover:border-primary-300"
-                  }`}
-                title="Default avatar"
-              >
-                <img
-                  src={DEFAULT_AVATAR_PATH}
-                  alt="Default"
-                  className="w-full h-full object-cover"
-                />
-              </button>
-              {AVATAR_OPTIONS.map((filename) => {
-                const isSelected = watch("avatar") === filename;
-                return (
-                  <button
-                    key={filename}
-                    type="button"
-                    onClick={() =>
-                      setValue("avatar", filename, { shouldValidate: true })
-                    }
-                    className={`relative w-[30px] h-[30px] rounded-full overflow-hidden flex-shrink-0 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${isSelected
-                      ? "scale-[1.05] ring-2 ring-primary-500 ring-offset-2 ring-offset-white shadow-sm"
-                      : "border border-secondary-200 hover:border-primary-300"
-                      }`}
-                    title={filename}
-                  >
-                    <img
-                      src={`${AVATAR_PRESETS_PATH}/${filename}`}
-                      alt=""
-                      className="w-full h-full object-cover"
+              {/* Login Credentials Row */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Username <span className="text-rose-500">*</span></Label>
+                  <div className="relative group">
+                    <Input
+                      {...register("username")}
+                      className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium bg-slate-50/50 group-focus-within:bg-white"
+                      placeholder="rahul.s"
                     />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  </div>
+                  {errors.username && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.username.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Password {editingUser ? "(Optional)" : "*"}</Label>
+                  <div className="relative group">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      {...register("password")}
+                      className="h-12 pl-4 pr-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                      placeholder={editingUser ? "Keep existing" : "••••••••"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.password.message}</p>
+                  )}
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              {...register("isActive")}
-              className="rounded"
-            />
-            <Label htmlFor="isActive">Active</Label>
-          </div>
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={createUser.isPending || updateUser.isPending}
-              className="flex-1"
-            >
-              {createUser.isPending || updateUser.isPending
-                ? "Saving..."
-                : editingUser
-                  ? "Update"
-                  : "Create"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseUserForm}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+              {/* Contact & Role Row */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Contact Protocol {watch("role") !== Role.ADMIN ? "*" : ""}</Label>
+                  <Input
+                    {...register("mobileNumber")}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      e.target.value = value;
+                      register("mobileNumber").onChange(e);
+                    }}
+                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                    placeholder="10-digit mobile"
+                  />
+                  {errors.mobileNumber && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.mobileNumber.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Role <span className="text-rose-500">*</span></Label>
+                  <select
+                    {...register("role")}
+                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
+                  >
+                    <option value={Role.USER}>User</option>
+                    <option value={Role.MANAGER}>Manager</option>
+                    <option value={Role.ADMIN}>Admin</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Organization Context Row */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Primary Company <span className="text-rose-500">*</span></Label>
+                  <select
+                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
+                    value={watch("companyId") ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value ? Number(e.target.value) : undefined;
+                      setValue("companyId", v);
+                      setValue("locationId", undefined);
+                    }}
+                  >
+                    <option value="">Select Company Context</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  {errors.companyId && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.companyId.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Assigned Location <span className="text-rose-500">*</span></Label>
+                  <select
+                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none disabled:bg-slate-50/50 disabled:text-slate-400"
+                    value={watch("locationId") ?? ""}
+                    onChange={(e) => setValue("locationId", e.target.value ? Number(e.target.value) : undefined)}
+                    disabled={!watch("companyId")}
+                  >
+                    <option value="">{watch("companyId") ? "Select Operational Site" : "Awaiting Company..."}</option>
+                    {locations
+                      .filter((l) => l.companyId === watch("companyId"))
+                      .map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                  </select>
+                  {errors.locationId && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.locationId.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Identity Row: Avatar & Status */}
+              <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="space-y-3">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Profile Identity</Label>
+                  <div className="flex flex-row flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setValue("avatar", null, { shouldValidate: true })}
+                      className={cn(
+                        "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
+                        !watch("avatar") ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                      )}
+                    >
+                      <img src={DEFAULT_AVATAR_PATH} alt="Def" className="w-full h-full object-cover" />
+                    </button>
+                    {AVATAR_OPTIONS.map((filename) => {
+                      const isSelected = watch("avatar") === filename;
+                      return (
+                        <button
+                          key={filename}
+                          type="button"
+                          onClick={() => setValue("avatar", filename, { shouldValidate: true })}
+                          className={cn(
+                            "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
+                            isSelected ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                          )}
+                        >
+                          <img src={`${AVATAR_PRESETS_PATH}/${filename}`} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 mr-1">Account Activation</Label>
+                  <label className="relative inline-flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      {...register("isActive")}
+                      className="sr-only peer"
+                    />
+                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-slate-950 shadow-inner"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-secondary-100">
+              <Button
+                type="submit"
+                disabled={createUser.isPending || updateUser.isPending}
+                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
+              >
+                {createUser.isPending || updateUser.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="w-4 h-4" />
+                    Save
+                  </div>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseUserForm}
+                className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </form>
       </Dialog>
     </div>
   );

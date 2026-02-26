@@ -28,8 +28,9 @@ namespace net_backend.Controllers
             [FromQuery] int? statusId)
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.Items
+                .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
@@ -93,7 +94,9 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetActive()
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var data = await _context.Items
+                .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
@@ -132,11 +135,11 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Item>>> Create([FromBody] CreateItemDto dto)
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
-
-            if (await _context.Items.AnyAsync(p => p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
+            var locationId = await GetCurrentLocationIdAsync();
+            if (await _context.Items.AnyAsync(p => p.LocationId == locationId && p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique" });
             
-            if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
+            if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.LocationId == locationId && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
             var item = new Item
@@ -152,6 +155,7 @@ namespace net_backend.Controllers
                 CurrentHolderType = dto.CurrentHolderType,
                 CurrentLocationId = dto.CurrentLocationId,
                 CurrentPartyId = dto.CurrentPartyId,
+                LocationId = locationId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -166,8 +170,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Item>>> ChangeProcess([FromBody] ItemChangeRequestDto dto)
         {
             if (!await HasPermission("ManageChanges")) return Forbidden();
-
-            var item = await _context.Items.FindAsync(dto.ItemId);
+            var locationId = await GetCurrentLocationIdAsync();
+            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == dto.ItemId && i.LocationId == locationId);
             if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
             // Store history
@@ -199,10 +203,11 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Item>>> Update(int id, [FromBody] UpdateItemDto dto)
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
 
             if (id != dto.Id) return BadRequest(new ApiResponse<Item> { Success = false, Message = "ID mismatch" });
 
-            var existing = await _context.Items.FindAsync(id);
+            var existing = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
             if (dto.CurrentName != null)
@@ -220,7 +225,7 @@ namespace net_backend.Controllers
                 var drawingTrim = dto.DrawingNo.Trim();
                 if (drawingTrim != existing.DrawingNo)
                 {
-                    if (await _context.Items.AnyAsync(p => p.Id != id && p.DrawingNo != null && p.DrawingNo.ToLower() == drawingTrim.ToLower()))
+                    if (await _context.Items.AnyAsync(p => p.LocationId == locationId && p.Id != id && p.DrawingNo != null && p.DrawingNo.ToLower() == drawingTrim.ToLower()))
                         return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number already exists" });
                     existing.DrawingNo = drawingTrim;
                 }
@@ -241,8 +246,9 @@ namespace net_backend.Controllers
         public async Task<IActionResult> Export()
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var items = await _context.Items
+                .Where(i => i.LocationId == locationId)
                 .Include(i => i.ItemType)
                 .Include(i => i.Material)
                 .Include(i => i.OwnerType)
@@ -284,7 +290,7 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
-
+            var locationId = await GetCurrentLocationIdAsync();
             using var stream = file.OpenReadStream();
             var excelResult = _excelService.ImportExcel<ItemImportDto>(stream);
             var validation = await ValidateImport(excelResult.Data);
@@ -298,13 +304,13 @@ namespace net_backend.Controllers
                     var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.Ownership);
                     var status = await _context.ItemStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
                     
-                    int? locationId = null;
+                    int? currentLocationId = null;
                     int? partyId = null;
 
                     if (row.Data.CustodianType == "Location")
-                        locationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CustodianName))?.Id;
+                        currentLocationId = (await _context.Locations.FirstOrDefaultAsync(l => l.Name == row.Data.CustodianName))?.Id;
                     else
-                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.Name == row.Data.CustodianName))?.Id;
+                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.LocationId == locationId && p.Name == row.Data.CustodianName))?.Id;
 
                     _context.Items.Add(new Item
                     {
@@ -317,8 +323,9 @@ namespace net_backend.Controllers
                         OwnerTypeId = ownerType?.Id ?? 0,
                         StatusId = status?.Id ?? 0,
                         CurrentHolderType = row.Data.CustodianType.Equals("Location", StringComparison.OrdinalIgnoreCase) ? HolderType.Location : HolderType.Vendor,
-                        CurrentLocationId = locationId,
+                        CurrentLocationId = currentLocationId,
                         CurrentPartyId = partyId,
+                        LocationId = locationId,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now,
                         IsActive = true
@@ -336,8 +343,10 @@ namespace net_backend.Controllers
         private async Task<ValidationResultDto<ItemImportDto>> ValidateImport(List<ExcelRow<ItemImportDto>> rows)
         {
             var result = new ValidationResultDto<ItemImportDto>();
-            var existingNames = await _context.Items.Select(p => p.MainPartName.ToLower()).ToListAsync();
-            var existingDrawingNos = await _context.Items
+            var locationId = await GetCurrentLocationIdAsync();
+            var itemsQuery = _context.Items.Where(p => p.LocationId == locationId);
+            var existingNames = await itemsQuery.Select(p => p.MainPartName.ToLower()).ToListAsync();
+            var existingDrawingNos = await itemsQuery
                 .Where(p => !string.IsNullOrEmpty(p.DrawingNo))
                 .Select(p => p.DrawingNo!.ToLower())
                 .ToListAsync();

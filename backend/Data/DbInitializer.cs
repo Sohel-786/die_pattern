@@ -53,26 +53,68 @@ namespace net_backend.Data
                 }
             }
 
-            // 1. Ensure Admin User Exists
+            // 1. Seed default Company and Location first so all data can be scoped to them (target id 1 when DB is empty)
+            if (!context.Companies.Any())
+            {
+                context.Companies.Add(new Company
+                {
+                    Name = "Aira Euro Automation Pvt Ltd",
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                });
+                context.SaveChanges();
+            }
+
+            if (!context.Locations.Any())
+            {
+                var companyId = context.Companies.OrderBy(c => c.Id).First().Id;
+                context.Locations.Add(new Location
+                {
+                    Name = "Aira Ho",
+                    CompanyId = companyId,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                });
+                context.SaveChanges();
+            }
+
+            var seedCompanyId = context.Companies.OrderBy(c => c.Id).First().Id;
+            var seedLocationId = context.Locations.Where(l => l.CompanyId == seedCompanyId).OrderBy(l => l.Id).First().Id;
+
+            // 2. Ensure Admin User Exists
             var adminUser = context.Users.FirstOrDefault(u => u.Username == "mitul");
             if (adminUser == null)
             {
-                adminUser = new User 
-                { 
-                    Username = "mitul", 
-                    Password = BCrypt.Net.BCrypt.HashPassword("admin"), 
-                    FirstName = "Mitul", 
-                    LastName = "Admin", 
-                    Role = Role.ADMIN, 
-                    IsActive = true, 
-                    CreatedAt = DateTime.Now, 
-                    UpdatedAt = DateTime.Now 
+                adminUser = new User
+                {
+                    Username = "mitul",
+                    Password = BCrypt.Net.BCrypt.HashPassword("admin"),
+                    FirstName = "Mitul",
+                    LastName = "Admin",
+                    Role = Role.ADMIN,
+                    IsActive = true,
+                    DefaultCompanyId = seedCompanyId,
+                    DefaultLocationId = seedLocationId,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
                 };
                 context.Users.Add(adminUser);
                 context.SaveChanges();
             }
+            else
+            {
+                if (adminUser.DefaultCompanyId == null || adminUser.DefaultLocationId == null)
+                {
+                    adminUser.DefaultCompanyId = seedCompanyId;
+                    adminUser.DefaultLocationId = seedLocationId;
+                    adminUser.UpdatedAt = DateTime.Now;
+                    context.SaveChanges();
+                }
+            }
 
-            // 2. Refresh Permissions for Admin
+            // 3. Refresh Permissions for Admin
             var adminPerm = context.UserPermissions.FirstOrDefault(p => p.UserId == adminUser.Id);
             if (adminPerm == null)
             {
@@ -172,6 +214,59 @@ namespace net_backend.Data
             }
 
             context.SaveChanges();
+
+            // 5. Assign all existing data to default company/location so it appears when that location is selected
+            try
+            {
+                var partiesToFix = context.Parties.Where(p => p.LocationId == null || p.LocationId == 0).ToList();
+                foreach (var p in partiesToFix) { p.LocationId = seedLocationId; }
+                var itemsToFix = context.Items.Where(i => i.LocationId == null || i.LocationId == 0).ToList();
+                foreach (var i in itemsToFix) { i.LocationId = seedLocationId; }
+                var posToFix = context.PurchaseOrders.Where(po => po.LocationId == null || po.LocationId == 0).ToList();
+                foreach (var po in posToFix) { po.LocationId = seedLocationId; }
+                var jwToFix = context.JobWorks.Where(j => j.LocationId == null || j.LocationId == 0).ToList();
+                foreach (var j in jwToFix) { j.LocationId = seedLocationId; }
+                var inwardsToFix = context.Inwards.Where(i => i.LocationId == 0).ToList();
+                foreach (var i in inwardsToFix) { i.LocationId = seedLocationId; }
+                if (partiesToFix.Count > 0 || itemsToFix.Count > 0 || posToFix.Count > 0 || jwToFix.Count > 0 || inwardsToFix.Count > 0)
+                {
+                    context.SaveChanges();
+                    Console.WriteLine($"Location backfill: assigned {partiesToFix.Count} parties, {itemsToFix.Count} items, {posToFix.Count} POs, {jwToFix.Count} job works, {inwardsToFix.Count} inwards to location {seedLocationId}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Location data backfill skipped: {ex.Message}");
+            }
+
+            // 6. Location-scoped app: ensure every user has at least one UserLocationAccess (backfill using seed company/location)
+            try
+            {
+                foreach (var user in context.Users.ToList())
+                {
+                    if (!context.UserLocationAccess.Any(ula => ula.UserId == user.Id))
+                    {
+                        context.UserLocationAccess.Add(new UserLocationAccess
+                        {
+                            UserId = user.Id,
+                            CompanyId = seedCompanyId,
+                            LocationId = seedLocationId,
+                            CreatedAt = DateTime.Now
+                        });
+                        if (user.DefaultCompanyId == null || user.DefaultLocationId == null)
+                        {
+                            user.DefaultCompanyId = seedCompanyId;
+                            user.DefaultLocationId = seedLocationId;
+                            user.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                }
+                context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"User location access backfill skipped: {ex.Message}");
+            }
         }
     }
 }

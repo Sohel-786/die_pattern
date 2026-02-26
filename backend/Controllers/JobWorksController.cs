@@ -23,7 +23,8 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
-            var code = await _codeGenerator.GenerateCode("JW");
+            var locationId = await GetCurrentLocationIdAsync();
+            var code = await _codeGenerator.GenerateCode("JW", locationId);
             return Ok(new ApiResponse<string> { Data = code });
         }
 
@@ -31,7 +32,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetAll(
             [FromQuery] JobWorkStatus? status)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.JobWorks
+                .Where(j => j.LocationId == locationId)
                 .Include(j => j.Item)
                 .Include(j => j.Creator)
                 .OrderByDescending(j => j.CreatedAt)
@@ -46,10 +49,11 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<JobWorkDto>>> GetById(int id)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var jw = await _context.JobWorks
                 .Include(j => j.Item)
                 .Include(j => j.Creator)
-                .FirstOrDefaultAsync(j => j.Id == id);
+                .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
             if (jw == null) return NotFound();
             return Ok(new ApiResponse<JobWorkDto> { Data = MapToDto(jw) });
         }
@@ -58,17 +62,18 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<JobWork>>> Create([FromBody] CreateJobWorkDto dto)
         {
             if (!await HasPermission("CreateInward")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var inStock = await _itemState.IsInStockAsync(dto.ItemId);
             if (!inStock)
                 return BadRequest(new ApiResponse<JobWork> { Success = false, Message = "Item must be In stock to send for Job work. One item can only be in one process at a time (PI, PO, QC, Jobwork, Outward, or In stock)." });
 
             var jw = new JobWork
             {
-                JobWorkNo = await _codeGenerator.GenerateCode("JW"),
+                JobWorkNo = await _codeGenerator.GenerateCode("JW", locationId),
                 ItemId = dto.ItemId,
                 Description = dto.Description,
                 Status = JobWorkStatus.Pending,
+                LocationId = locationId,
                 CreatedBy = CurrentUserId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
@@ -81,7 +86,8 @@ namespace net_backend.Controllers
         [HttpPut("{id}/status")]
         public async Task<ActionResult<ApiResponse<bool>>> UpdateStatus(int id, [FromBody] UpdateJobWorkStatusDto dto)
         {
-            var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
             if (jw == null) return NotFound();
             jw.Status = dto.Status;
             jw.UpdatedAt = DateTime.Now;

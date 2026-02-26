@@ -58,7 +58,8 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
-            var code = await _codeGenerator.GenerateCode("PO");
+            var locationId = await GetCurrentLocationIdAsync();
+            var code = await _codeGenerator.GenerateCode("PO", locationId);
             return Ok(new ApiResponse<string> { Data = code });
         }
 
@@ -66,13 +67,15 @@ namespace net_backend.Controllers
         [HttpGet("approved-items-for-edit")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItemsForEdit([FromQuery] int? poId)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.PurchaseIndentItems
                 .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
                     .ThenInclude(i => i!.ItemType)
                 .Include(pii => pii.Item)
                     .ThenInclude(i => i!.Material)
-                .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && pii.PurchaseIndent.IsActive);
+                .Where(pii => pii.Item != null && pii.Item.LocationId == locationId &&
+                             pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && pii.PurchaseIndent.IsActive);
 
             if (poId.HasValue)
                 query = query.Where(pii => !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) || _context.PurchaseOrderItems.Any(poi => poi.PurchaseOrderId == poId && poi.PurchaseIndentItemId == pii.Id));
@@ -188,8 +191,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
         {
             if (!await HasPermission("EditPO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
 
             var hasInward = await _context.Inwards.AnyAsync(i => i.SourceType == InwardSourceType.PO && i.SourceRefId == id);
@@ -207,8 +210,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
         {
             if (!await HasPermission("EditPO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
 
             foreach (var poi in po.Items)
@@ -239,7 +242,9 @@ namespace net_backend.Controllers
             [FromQuery] decimal? rateMin,
             [FromQuery] decimal? rateMax)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var query = _context.PurchaseOrders
+                .Where(p => p.LocationId == locationId)
                 .Include(p => p.Vendor)
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
@@ -348,7 +353,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<PurchaseOrder>>> Create([FromBody] CreatePODto dto)
         {
             if (!await HasPermission("CreatePO")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var items = dto.Items?.Where(i => i.PurchaseIndentItemId > 0).ToList() ?? new List<CreatePOItemDto>();
             if (items.Count == 0) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "At least one item with rate is required." });
 
@@ -365,7 +370,8 @@ namespace net_backend.Controllers
 
             var po = new PurchaseOrder
             {
-                PoNo = await _codeGenerator.GenerateCode("PO"),
+                PoNo = await _codeGenerator.GenerateCode("PO", locationId),
+                LocationId = locationId,
                 VendorId = dto.VendorId,
                 DeliveryDate = dto.DeliveryDate,
                 QuotationNo = dto.QuotationNo,
@@ -397,6 +403,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<PODto>>> GetById(int id)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders
                 .Include(p => p.Vendor)
                 .Include(p => p.Creator)
@@ -412,7 +419,7 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.PurchaseIndentItem)
                         .ThenInclude(pii => pii!.PurchaseIndent)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
 
             if (po == null) return NotFound();
 
@@ -455,8 +462,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreatePODto dto)
         {
             if (!await HasPermission("EditPO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be edited." });
@@ -507,8 +514,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
         {
             if (!await HasPermission("CreatePO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
             // Draft removed: new POs are created as Pending. No-op if already Pending.
             if (po.Status != PoStatus.Pending)
@@ -520,8 +527,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
             if (!await HasPermission("ApprovePO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be approved." });
@@ -539,8 +546,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Reject(int id)
         {
             if (!await HasPermission("ApprovePO")) return Forbidden();
-
-            var po = await _context.PurchaseOrders.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be rejected." });

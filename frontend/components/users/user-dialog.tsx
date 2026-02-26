@@ -1,201 +1,247 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    X, Save, User as UserIcon, Lock,
-    Mail, Phone, Shield, Camera,
-    UserCheck
-} from "lucide-react";
-import api from "@/lib/api";
-import { User, Role } from "@/types";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { Label } from "@/components/ui/label";
+import { User, Role } from "@/types";
+import { useCreateUser, useUpdateUser } from "@/hooks/use-users";
+import { useCompaniesActive, useLocationsActive } from "@/hooks/use-settings";
+import { Save, X, Loader2 } from "lucide-react";
+import { useEffect } from "react";
+
+const userSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().optional(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.nativeEnum(Role),
+  isActive: z.boolean().default(true),
+  mobileNumber: z.string().optional().nullable(),
+  companyId: z.number().optional(),
+  locationId: z.number().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.password && !data.companyId) return;
+  const isMandatory = data.role === Role.USER || data.role === Role.MANAGER;
+  const mobile = data.mobileNumber?.trim();
+  if (isMandatory && (!mobile || mobile.length === 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mobile number is mandatory for User and Manager", path: ["mobileNumber"] });
+  }
+  if (mobile && mobile.length > 0 && !/^[6-9]\d{9}$/.test(mobile)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please enter a valid 10-digit Indian mobile number", path: ["mobileNumber"] });
+  }
+});
+
+type UserFormValues = z.infer<typeof userSchema>;
 
 interface UserDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  user?: User | null;
 }
 
 export function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
-    const queryClient = useQueryClient();
-    const [formData, setFormData] = useState({
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const { data: companies = [] } = useCompaniesActive();
+  const { data: locations = [] } = useLocationsActive();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      role: Role.USER,
+      isActive: true,
+    },
+  });
+
+  const companyId = watch("companyId");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (user) {
+      const companyIdVal = (user as any).defaultCompanyId ?? user.companyId ?? undefined;
+      const locationIdVal = (user as any).defaultLocationId ?? user.locationId ?? undefined;
+      reset({
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+        mobileNumber: user.mobileNumber || "",
+        password: "",
+        companyId: companyIdVal,
+        locationId: locationIdVal,
+      });
+    } else {
+      reset({
         username: "",
         password: "",
         firstName: "",
         lastName: "",
         role: Role.USER,
+        isActive: true,
         mobileNumber: "",
-        isActive: true
-    });
+        companyId: undefined,
+        locationId: undefined,
+      });
+    }
+  }, [isOpen, user, reset]);
 
-    useEffect(() => {
-        if (user) {
-            setFormData({
-                username: user.username,
-                password: "", // Keep password empty on edit
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role,
-                mobileNumber: user.mobileNumber || "",
-                isActive: user.isActive
-            });
-        } else {
-            setFormData({
-                username: "",
-                password: "",
-                firstName: "",
-                lastName: "",
-                role: Role.USER,
-                mobileNumber: "",
-                isActive: true
-            });
-        }
-    }, [user, isOpen]);
-
-    const mutation = useMutation({
-        mutationFn: (data: any) => {
-            if (user) return api.put(`/users/${user.id}`, data);
-            return api.post("/users", data);
+  const onSubmit = (data: UserFormValues) => {
+    if (user) {
+      updateUser.mutate(
+        {
+          id: user.id,
+          data: {
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            role: data.role,
+            isActive: data.isActive,
+            mobileNumber: data.mobileNumber || null,
+            ...(data.password ? { password: data.password } : {}),
+            ...(data.companyId != null && data.locationId != null ? { companyId: data.companyId, locationId: data.locationId } : {}),
+          },
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["users"] });
-            toast.success(user ? "Identity updated" : "operative provisioned");
-            onClose();
+        { onSuccess: onClose }
+      );
+    } else {
+      const companyIdVal = data.companyId ?? 0;
+      const locationIdVal = data.locationId ?? 0;
+      if (!data.password || !companyIdVal || !locationIdVal) return;
+      createUser.mutate(
+        {
+          username: data.username,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+          isActive: data.isActive ?? true,
+          mobileNumber: data.mobileNumber || null,
+          companyId: companyIdVal,
+          locationId: locationIdVal,
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || "Operation failed")
-    });
+        { onSuccess: onClose }
+      );
+    }
+  };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        mutation.mutate(formData);
-    };
+  const isPending = createUser.isPending || updateUser.isPending;
 
-    return (
-        <Dialog
-            isOpen={isOpen}
-            onClose={onClose}
-            title=""
-            hideHeader
-            size="lg"
-            className="rounded-[3.5rem] bg-white border-none shadow-2xl overflow-hidden p-0"
-        >
-            <form onSubmit={handleSubmit} className="flex flex-col h-full -m-6">
-                <div className="bg-gray-900 p-12 relative overflow-hidden">
-                    <div className="relative z-10 flex items-center gap-6">
-                        <div className="h-20 w-20 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-xl">
-                            <UserCheck className="w-10 h-10" />
-                        </div>
-                        <div>
-                            <h2 className="text-3xl font-black text-white tracking-tight">
-                                {user ? "Modify Identity" : "New Operative"}
-                            </h2>
-                            <p className="text-gray-400 font-bold text-sm uppercase tracking-widest mt-1">System Authorization Protocol</p>
-                        </div>
-                    </div>
-                    <div className="absolute -right-20 -bottom-20 h-64 w-64 bg-primary-600/20 rounded-full blur-3xl" />
-                </div>
-
-                <div className="p-12 space-y-10 bg-white">
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                <UserIcon className="w-3 h-3" /> First Name
-                            </label>
-                            <Input
-                                required
-                                value={formData.firstName}
-                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                className="h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner"
-                                placeholder="e.g. John"
-                            />
-                        </div>
-                        <div className="space-y-3">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                <UserIcon className="w-3 h-3" /> Last Name
-                            </label>
-                            <Input
-                                required
-                                value={formData.lastName}
-                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                className="h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner"
-                                placeholder="e.g. Wick"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                            <Lock className="w-3 h-3" /> System Alias (Username)
-                        </label>
-                        <Input
-                            required
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                            className="h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner"
-                            placeholder="e.g. j.wick"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                <Shield className="w-3 h-3" /> Tactical Role
-                            </label>
-                            <select
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                className="w-full h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner appearance-none outline-none cursor-pointer"
-                            >
-                                <option value={Role.USER}>Standard Operative</option>
-                                <option value={Role.MANAGER}>District Manager</option>
-                                <option value={Role.ADMIN}>System Overseer</option>
-                            </select>
-                        </div>
-                        <div className="space-y-3">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                <Lock className="w-3 h-3" /> {user ? "Secret Key (Leave blank to keep)" : "Provision Secret Key"}
-                            </label>
-                            <Input
-                                type="password"
-                                required={!user}
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                className="h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner"
-                                placeholder="Minimum 8 characters"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                            <Phone className="w-3 h-3" /> Secure Contact (Mobile)
-                        </label>
-                        <Input
-                            value={formData.mobileNumber}
-                            onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
-                            className="h-16 rounded-[1.5rem] bg-secondary-50 border-none px-6 font-bold text-lg focus:bg-white transition-all shadow-inner"
-                            placeholder="e.g. 9876543210"
-                        />
-                    </div>
-
-                    <div className="pt-8 flex justify-end gap-4">
-                        <Button type="button" variant="ghost" onClick={onClose} className="h-16 px-8 rounded-2xl font-black text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-                            Cancel
-                        </Button>
-                        <Button
-                            disabled={mutation.isPending}
-                            className="h-16 px-12 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-black shadow-xl shadow-primary/30 flex items-center gap-3 transition-all active:scale-95"
-                        >
-                            <Save className="w-5 h-5" />
-                            {mutation.isPending ? "AUTHORIZING..." : (user ? "UPDATE IDENTITY" : "CONFIRM PROVISIONING")}
-                        </Button>
-                    </div>
-                </div>
-            </form>
-        </Dialog>
-    );
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={user ? "Edit User" : "Add User"}
+      size="lg"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">First Name <span className="text-red-500">*</span></Label>
+            <Input {...register("firstName")} className="h-11 border-secondary-300" placeholder="First name" />
+            {errors.firstName && <p className="text-xs text-rose-500">{errors.firstName.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Last Name <span className="text-red-500">*</span></Label>
+            <Input {...register("lastName")} className="h-11 border-secondary-300" placeholder="Last name" />
+            {errors.lastName && <p className="text-xs text-rose-500">{errors.lastName.message}</p>}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Username <span className="text-red-500">*</span></Label>
+            <Input {...register("username")} className="h-11 border-secondary-300" placeholder="Username" disabled={!!user} />
+            {errors.username && <p className="text-xs text-rose-500">{errors.username.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Password {user ? "(leave blank to keep)" : "*"}</Label>
+            <Input type="password" {...register("password")} className="h-11 border-secondary-300" placeholder={user ? "••••••••" : "Password"} />
+            {errors.password && <p className="text-xs text-rose-500">{errors.password.message}</p>}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Mobile</Label>
+            <Input
+              {...register("mobileNumber")}
+              className="h-11 border-secondary-300"
+              placeholder="10-digit mobile"
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 10);
+                setValue("mobileNumber", v || "", { shouldValidate: true });
+              }}
+            />
+            {errors.mobileNumber && <p className="text-xs text-rose-500">{errors.mobileNumber.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Role <span className="text-red-500">*</span></Label>
+            <select {...register("role")} className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm font-medium">
+              <option value={Role.USER}>User</option>
+              <option value={Role.MANAGER}>Manager</option>
+              <option value={Role.ADMIN}>Admin</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Company <span className="text-red-500">*</span></Label>
+            <select
+              className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm"
+              value={watch("companyId") ?? ""}
+              onChange={(e) => {
+                const v = e.target.value ? Number(e.target.value) : undefined;
+                setValue("companyId", v);
+                setValue("locationId", undefined);
+              }}
+            >
+              <option value="">Select company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            {errors.companyId && <p className="text-xs text-rose-500">{errors.companyId.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Location <span className="text-red-500">*</span></Label>
+            <select
+              className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm disabled:opacity-50"
+              value={watch("locationId") ?? ""}
+              onChange={(e) => setValue("locationId", e.target.value ? Number(e.target.value) : undefined)}
+              disabled={!companyId}
+            >
+              <option value="">{companyId ? "Select location" : "Select company first"}</option>
+              {locations.filter((l) => l.companyId === companyId).map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+            {errors.locationId && <p className="text-xs text-rose-500">{errors.locationId.message}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 py-2">
+          <input type="checkbox" {...register("isActive")} className="w-4 h-4 rounded border-secondary-300 text-primary-600" id="user-active" />
+          <Label htmlFor="user-active" className="text-sm font-medium text-secondary-700">Active</Label>
+        </div>
+        <div className="flex gap-3 pt-4 border-t border-secondary-100">
+          <Button type="submit" disabled={isPending} className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11">
+            {isPending ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving... </> : <><Save className="w-4 h-4 mr-2" /> Save</>}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11">
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 }

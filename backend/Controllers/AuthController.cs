@@ -58,6 +58,7 @@ namespace net_backend.Controllers
 
             Response.Cookies.Append("access_token", token, cookieOptions);
 
+            var allowedAccess = await GetLocationAccessForUserAsync(user.Id, user.Role == Role.ADMIN);
             return Ok(new LoginResponse
             {
                 Success = true,
@@ -70,7 +71,8 @@ namespace net_backend.Controllers
                     LastName = user.LastName,
                     Role = user.Role.ToString(),
                     Avatar = user.Avatar
-                }
+                },
+                AllowedLocationAccess = allowedAccess
             });
         }
 
@@ -97,6 +99,7 @@ namespace net_backend.Controllers
                 return Unauthorized(new { success = false, message = "User not found or inactive" });
             }
 
+            var allowedAccess = await GetLocationAccessForUserAsync(user.Id, user.Role == Role.ADMIN);
             return Ok(new
             {
                 success = true,
@@ -109,8 +112,41 @@ namespace net_backend.Controllers
                     LastName = user.LastName,
                     Role = user.Role.ToString(),
                     Avatar = user.Avatar
-                }
+                },
+                allowedLocationAccess = allowedAccess
             });
+        }
+
+        private async Task<List<CompanyLocationAccessDto>> GetLocationAccessForUserAsync(int userId, bool isAdmin)
+        {
+            if (isAdmin)
+            {
+                var locs = await _context.Locations
+                    .Include(l => l.Company)
+                    .Where(l => l.Company != null && l.Company.IsActive)
+                    .OrderBy(l => l.Company!.Name).ThenBy(l => l.Name)
+                    .ToListAsync();
+                var byCompany = locs.GroupBy(l => new { l.CompanyId, CompanyName = l.Company!.Name }).ToList();
+                return byCompany.Select(g => new CompanyLocationAccessDto
+                {
+                    CompanyId = g.Key.CompanyId,
+                    CompanyName = g.Key.CompanyName,
+                    Locations = g.Select(l => new LocationOptionDto { Id = l.Id, Name = l.Name }).ToList()
+                }).ToList();
+            }
+            var access = await _context.UserLocationAccess
+                .Include(ula => ula.Company)
+                .Include(ula => ula.Location)
+                .Where(ula => ula.UserId == userId && ula.Company != null && ula.Location != null)
+                .OrderBy(ula => ula.Company!.Name).ThenBy(ula => ula.Location!.Name)
+                .ToListAsync();
+            var grouped = access.GroupBy(ula => new { ula.CompanyId, CompanyName = ula.Company!.Name }).ToList();
+            return grouped.Select(g => new CompanyLocationAccessDto
+            {
+                CompanyId = g.Key.CompanyId,
+                CompanyName = g.Key.CompanyName,
+                Locations = g.Select(ula => new LocationOptionDto { Id = ula.LocationId, Name = ula.Location!.Name }).Distinct().ToList()
+            }).ToList();
         }
 
         private string GenerateJwtToken(User user)

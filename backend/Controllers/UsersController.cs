@@ -40,9 +40,14 @@ namespace net_backend.Controllers
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return Conflict(new ApiResponse<User> { Success = false, Message = "Username already exists" });
 
+            var location = await _context.Locations
+                .Include(l => l.Company)
+                .FirstOrDefaultAsync(l => l.Id == request.LocationId && l.CompanyId == request.CompanyId);
+            if (location == null)
+                return BadRequest(new ApiResponse<User> { Success = false, Message = "Location must belong to the selected company. Invalid Company or Location." });
+
             var role = Enum.Parse<Role>(request.Role);
 
-            // Validation for MobileNumber
             if ((role == Role.USER || role == Role.MANAGER) && string.IsNullOrEmpty(request.MobileNumber))
             {
                 return BadRequest(new ApiResponse<User> { Success = false, Message = "Mobile number is mandatory for User and Manager roles." });
@@ -67,12 +72,23 @@ namespace net_backend.Controllers
                 IsActive = request.IsActive,
                 Avatar = request.Avatar,
                 MobileNumber = request.MobileNumber,
+                DefaultCompanyId = request.CompanyId,
+                DefaultLocationId = request.LocationId,
                 CreatedBy = request.CreatedBy,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
 
             _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            _context.UserLocationAccess.Add(new UserLocationAccess
+            {
+                UserId = user.Id,
+                CompanyId = request.CompanyId,
+                LocationId = request.LocationId,
+                CreatedAt = DateTime.Now
+            });
             await _context.SaveChangesAsync();
 
             return StatusCode(201, new ApiResponse<User> { Data = user });
@@ -116,6 +132,27 @@ namespace net_backend.Controllers
                 if (!indianPhoneRegex.IsMatch(user.MobileNumber))
                 {
                     return BadRequest(new ApiResponse<User> { Success = false, Message = "Please provide a valid 10-digit Indian mobile number." });
+                }
+            }
+
+            if (request.CompanyId.HasValue && request.LocationId.HasValue)
+            {
+                var location = await _context.Locations
+                    .Include(l => l.Company)
+                    .FirstOrDefaultAsync(l => l.Id == request.LocationId.Value && l.CompanyId == request.CompanyId.Value);
+                if (location == null)
+                    return BadRequest(new ApiResponse<User> { Success = false, Message = "Location must belong to the selected company. Invalid Company or Location." });
+                user.DefaultCompanyId = request.CompanyId.Value;
+                user.DefaultLocationId = request.LocationId.Value;
+                var hasAccess = await _context.UserLocationAccess.AnyAsync(ula => ula.UserId == id && ula.CompanyId == request.CompanyId.Value && ula.LocationId == request.LocationId.Value);
+                if (!hasAccess)
+                {
+                    _context.UserLocationAccess.Add(new UserLocationAccess
+                    {
+                        UserId = id,
+                        CompanyId = request.CompanyId.Value,
+                        LocationId = request.LocationId.Value,
+                    });
                 }
             }
 
@@ -191,6 +228,59 @@ namespace net_backend.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new ApiResponse<UserPermission> { Data = permission });
+        }
+
+        [HttpGet("{id}/location-access")]
+        public async Task<ActionResult<ApiResponse<List<CompanyLocationAccessDto>>>> GetLocationAccess(int id)
+        {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
+            var access = await _context.UserLocationAccess
+                .Include(ula => ula.Company)
+                .Include(ula => ula.Location)
+                .Where(ula => ula.UserId == id && ula.Company != null && ula.Location != null)
+                .OrderBy(ula => ula.Company!.Name).ThenBy(ula => ula.Location!.Name)
+                .ToListAsync();
+            var grouped = access.GroupBy(ula => new { ula.CompanyId, CompanyName = ula.Company!.Name }).ToList();
+            var list = grouped.Select(g => new CompanyLocationAccessDto
+            {
+                CompanyId = g.Key.CompanyId,
+                CompanyName = g.Key.CompanyName,
+                Locations = g.Select(ula => new LocationOptionDto { Id = ula.LocationId, Name = ula.Location!.Name }).ToList()
+            }).ToList();
+            return Ok(new ApiResponse<List<CompanyLocationAccessDto>> { Data = list });
+        }
+
+        [HttpPut("{id}/location-access")]
+        public async Task<ActionResult<ApiResponse<bool>>> UpdateLocationAccess(int id, [FromBody] List<UserLocationAccessItemDto> request)
+        {
+            if (!await HasPermission("ManageUsers")) return Forbidden();
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+            var existing = await _context.UserLocationAccess.Where(ula => ula.UserId == id).ToListAsync();
+            foreach (var item in request)
+            {
+                var loc = await _context.Locations.FirstOrDefaultAsync(l => l.Id == item.LocationId && l.CompanyId == item.CompanyId);
+                if (loc == null) continue;
+                if (existing.Any(e => e.CompanyId == item.CompanyId && e.LocationId == item.LocationId)) continue;
+                _context.UserLocationAccess.Add(new UserLocationAccess
+                {
+                    UserId = id,
+                    CompanyId = item.CompanyId,
+                    LocationId = item.LocationId,
+                    CreatedAt = DateTime.Now
+                });
+            }
+            var toRemove = existing.Where(e => !request.Any(r => r.CompanyId == e.CompanyId && r.LocationId == e.LocationId)).ToList();
+            _context.UserLocationAccess.RemoveRange(toRemove);
+            if (request.Count > 0 && !request.Any(r => r.CompanyId == user.DefaultCompanyId && r.LocationId == user.DefaultLocationId))
+            {
+                var first = request[0];
+                user.DefaultCompanyId = first.CompanyId;
+                user.DefaultLocationId = first.LocationId;
+                user.UpdatedAt = DateTime.Now;
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
         }
 
         [HttpDelete("{id}")]

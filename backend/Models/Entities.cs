@@ -89,6 +89,7 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
+        public int? LocationId { get; set; }
         public string? PartyCategory { get; set; }
         public string? PartyCode { get; set; }
         public string? CustomerType { get; set; }
@@ -101,6 +102,9 @@ namespace net_backend.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
     }
 
     [Table("item_types")]
@@ -150,6 +154,7 @@ namespace net_backend.Models
         [Required]
         public string CurrentName { get; set; } = string.Empty; // Editable only via Change Process
 
+        public int? LocationId { get; set; }
         public int ItemTypeId { get; set; }
         public string? DrawingNo { get; set; }
         public string? RevisionNo { get; set; }
@@ -174,6 +179,8 @@ namespace net_backend.Models
         public virtual OwnerType? OwnerType { get; set; }
         [ForeignKey("StatusId")]
         public virtual ItemStatus? Status { get; set; }
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
         [ForeignKey("CurrentLocationId")]
         public virtual Location? CurrentLocation { get; set; }
         [ForeignKey("CurrentPartyId")]
@@ -222,6 +229,7 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string PoNo { get; set; } = string.Empty;
+        public int? LocationId { get; set; }
         public int VendorId { get; set; }
         public DateTime? DeliveryDate { get; set; }
         public string? QuotationNo { get; set; }
@@ -239,6 +247,8 @@ namespace net_backend.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
         [ForeignKey("VendorId")]
         public virtual Party? Vendor { get; set; }
         [ForeignKey("CreatedBy")]
@@ -269,6 +279,7 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string JobWorkNo { get; set; } = string.Empty;
+        public int? LocationId { get; set; }
         public int ItemId { get; set; }
         public string? Description { get; set; }
         public JobWorkStatus Status { get; set; } = JobWorkStatus.Pending;
@@ -276,6 +287,8 @@ namespace net_backend.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
         [ForeignKey("ItemId")]
         public virtual Item? Item { get; set; }
         [ForeignKey("CreatedBy")]
@@ -423,12 +436,39 @@ namespace net_backend.Models
         public bool IsActive { get; set; } = true;
         public string? Avatar { get; set; }
         public string? MobileNumber { get; set; }
+        /// <summary>Home company at creation; used when user has single company.</summary>
+        public int? DefaultCompanyId { get; set; }
+        /// <summary>Home location at creation; used when user has single location.</summary>
+        public int? DefaultLocationId { get; set; }
         public int? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [ForeignKey("DefaultCompanyId")]
+        public virtual Company? DefaultCompany { get; set; }
+        [ForeignKey("DefaultLocationId")]
+        public virtual Location? DefaultLocation { get; set; }
         public virtual UserPermission? Permission { get; set; }
+        public virtual ICollection<UserLocationAccess> LocationAccess { get; set; } = new List<UserLocationAccess>();
         public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    }
+
+    /// <summary>Which locations (and companies) a user can access. At creation user gets one; more can be added via Settings.</summary>
+    [Table("user_location_access")]
+    public class UserLocationAccess
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public int CompanyId { get; set; }
+        public int LocationId { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("UserId")]
+        public virtual User? User { get; set; }
+        [ForeignKey("CompanyId")]
+        public virtual Company? Company { get; set; }
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
     }
 
     [Table("user_permissions")]

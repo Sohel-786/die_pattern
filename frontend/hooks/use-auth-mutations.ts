@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import api from '@/lib/api';
 import { User, Role, UserPermission } from '@/types';
+import { CompanyLocationAccess } from "@/contexts/location-context";
 
 interface LoginData {
   username: string;
@@ -14,6 +15,8 @@ interface LoginData {
 interface LoginResponse {
   success: boolean;
   user: User;
+  allowedLocationAccess?: CompanyLocationAccess[];
+  AllowedLocationAccess?: CompanyLocationAccess[];
 }
 
 export function useLogin() {
@@ -28,6 +31,13 @@ export function useLogin() {
     onSuccess: (data) => {
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        const access =
+          data.allowedLocationAccess ?? data.AllowedLocationAccess ?? [];
+        if (Array.isArray(access)) {
+          localStorage.setItem("allowedLocationAccess", JSON.stringify(access));
+          // Clear any previous selection; AuthLayout will auto-select if only one, otherwise prompt
+          localStorage.removeItem("selectedOrgContext");
+        }
         queryClient.setQueryData(['user'], data.user);
         toast.success('Login successful!');
 
@@ -58,12 +68,16 @@ export function useLogout() {
     },
     onSuccess: () => {
       localStorage.removeItem('user');
+      localStorage.removeItem("allowedLocationAccess");
+      localStorage.removeItem("selectedOrgContext");
       queryClient.clear();
       toast.success('Logged out successfully');
       window.location.href = '/login';
     },
     onError: () => {
       localStorage.removeItem('user');
+      localStorage.removeItem("allowedLocationAccess");
+      localStorage.removeItem("selectedOrgContext");
       queryClient.clear();
       window.location.href = '/login';
     },

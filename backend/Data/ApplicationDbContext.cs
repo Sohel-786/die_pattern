@@ -31,6 +31,7 @@ namespace net_backend.Data
         public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
         public DbSet<User> Users { get; set; } = default!;
         public DbSet<UserPermission> UserPermissions { get; set; } = default!;
+        public DbSet<UserLocationAccess> UserLocationAccess { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -189,6 +190,60 @@ namespace net_backend.Data
                 .WithOne(u => u.Permission)
                 .HasForeignKey<UserPermission>(up => up.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserLocationAccess>()
+                .HasIndex(ula => new { ula.UserId, ula.CompanyId, ula.LocationId })
+                .IsUnique();
+            modelBuilder.Entity<UserLocationAccess>()
+                .HasOne(ula => ula.User)
+                .WithMany(u => u.LocationAccess)
+                .HasForeignKey(ula => ula.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<UserLocationAccess>()
+                .HasOne(ula => ula.Company)
+                .WithMany()
+                .HasForeignKey(ula => ula.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<UserLocationAccess>()
+                .HasOne(ula => ula.Location)
+                .WithMany()
+                .HasForeignKey(ula => ula.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.DefaultCompany)
+                .WithMany()
+                .HasForeignKey(u => u.DefaultCompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.DefaultLocation)
+                .WithMany()
+                .HasForeignKey(u => u.DefaultLocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Party>()
+                .HasOne(p => p.Location)
+                .WithMany()
+                .HasForeignKey(p => p.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Item>()
+                .HasOne(i => i.Location)
+                .WithMany()
+                .HasForeignKey(i => i.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseOrder>()
+                .HasOne(po => po.Location)
+                .WithMany()
+                .HasForeignKey(po => po.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<JobWork>()
+                .HasOne(j => j.Location)
+                .WithMany()
+                .HasForeignKey(j => j.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -23,7 +23,8 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
-            var code = await _codeGenerator.GenerateCode("PI");
+            var locationId = await GetCurrentLocationIdAsync();
+            var code = await _codeGenerator.GenerateCode("PI", locationId);
             return Ok(new ApiResponse<string> { Data = code });
         }
 
@@ -32,7 +33,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<int[]>>> GetAvailableItemIdsForPI([FromQuery] int? excludePiId)
         {
             if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
-            var allItemIds = await _context.Items.Where(i => i.IsActive).Select(i => i.Id).ToListAsync();
+            var locationId = await GetCurrentLocationIdAsync();
+            var allItemIds = await _context.Items.Where(i => i.LocationId == locationId && i.IsActive).Select(i => i.Id).ToListAsync();
             var available = new List<int>();
             foreach (var id in allItemIds)
             {
@@ -50,8 +52,10 @@ namespace net_backend.Controllers
             [FromQuery] DateTime? createdDateTo,
             [FromQuery] string? itemIds)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var isAdmin = await IsAdmin();
             var query = _context.PurchaseIndents
+                .Where(p => p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId))
                 .OrderByDescending(p => p.CreatedAt)
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
@@ -136,7 +140,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<PurchaseIndent>>> Create([FromBody] CreatePurchaseIndentDto dto)
         {
             if (!await HasPermission("CreatePI")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
             if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
                 return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "Duplicate die/pattern in the same PI is not allowed." });
@@ -157,7 +161,7 @@ namespace net_backend.Controllers
 
             var pi = new PurchaseIndent
             {
-                PiNo = await _codeGenerator.GenerateCode("PI"),
+                PiNo = await _codeGenerator.GenerateCode("PI", locationId),
                 Type = dto.Type,
                 Remarks = dto.Remarks,
                 CreatedBy = CurrentUserId,
@@ -181,10 +185,10 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreatePurchaseIndentDto dto)
         {
             if (!await HasPermission("EditPI")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Items)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
 
             if (pi == null) return NotFound();
             if (pi.Status != PurchaseIndentStatus.Pending)
@@ -237,8 +241,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
         {
             if (!await HasPermission("CreatePI")) return Forbidden();
-
-            var pi = await _context.PurchaseIndents.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             // Draft removed: new PIs are created as Pending. No-op if already Pending.
             if (pi.Status != PurchaseIndentStatus.Pending)
@@ -250,8 +254,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
-
-            var pi = await _context.PurchaseIndents.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             if (pi.Status != PurchaseIndentStatus.Pending)
             {
@@ -271,8 +275,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Reject(int id)
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
-
-            var pi = await _context.PurchaseIndents.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             if (pi.Status != PurchaseIndentStatus.Pending)
             {
@@ -293,8 +297,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> RevertToPending(int id)
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
-
-            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             if (pi.Status != PurchaseIndentStatus.Approved)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only approved indents can be reverted to pending." });
@@ -316,8 +320,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> ToggleStatus(int id)
         {
             if (!await IsAdmin()) return Forbidden();
-
-            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
 
             // Do not allow deactivating if any item of this PI is in an active PO
@@ -340,6 +344,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<PurchaseIndentDto>>> GetById(int id)
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
@@ -349,7 +354,7 @@ namespace net_backend.Controllers
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(it => it!.Material)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
 
             if (pi == null) return NotFound();
             var isAdmin = await IsAdmin();
@@ -400,10 +405,10 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemWithStatusDto>>>> GetItemsWithStatus([FromQuery] int? excludePiId)
         {
             if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var items = await _context.Items
                 .AsNoTracking()
-                .Where(i => i.IsActive)
+                .Where(i => i.LocationId == locationId && i.IsActive)
                 .Select(i => new { i.Id, i.CurrentName, i.MainPartName, ItemTypeName = i.ItemType != null ? i.ItemType.Name : null })
                 .ToListAsync();
 
@@ -426,14 +431,16 @@ namespace net_backend.Controllers
         [HttpGet("approved-items")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItems()
         {
-            // Items from approved PIs that are NOT already in a PO
+            var locationId = await GetCurrentLocationIdAsync();
+            // Items from approved PIs that are NOT already in a PO (scoped to current location)
             var items = await _context.PurchaseIndentItems
                 .Include(pii => pii.PurchaseIndent)
                 .Include(pii => pii.Item)
                     .ThenInclude(i => i!.ItemType)
                 .Include(pii => pii.Item)
                     .ThenInclude(i => i!.Material)
-                .Where(pii => pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && 
+                .Where(pii => pii.Item != null && pii.Item.LocationId == locationId &&
+                             pii.PurchaseIndent!.Status == PurchaseIndentStatus.Approved && 
                              pii.PurchaseIndent!.IsActive &&
                              !_context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == pii.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive))
                 .Select(pii => new PurchaseIndentItemDto

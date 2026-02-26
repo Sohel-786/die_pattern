@@ -16,11 +16,28 @@ namespace net_backend.DTOs
         public string? Avatar { get; set; }
     }
 
+    /// <summary>One location within a company for location selector.</summary>
+    public class LocationOptionDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    /// <summary>Company with its locations for post-login company/location selection.</summary>
+    public class CompanyLocationAccessDto
+    {
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public List<LocationOptionDto> Locations { get; set; } = new();
+    }
+
     public class LoginResponse
     {
         public bool Success { get; set; }
         public string Token { get; set; } = string.Empty;
         public UserDto? User { get; set; }
         public string? Message { get; set; }
+        /// <summary>For post-login location (and company) selection. Empty if no access.</summary>
+        public List<CompanyLocationAccessDto> AllowedLocationAccess { get; set; } = new();
     }
 }

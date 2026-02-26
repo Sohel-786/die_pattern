@@ -21,8 +21,9 @@ namespace net_backend.Controllers
         public async Task<IActionResult> Export()
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var parties = await _context.Parties
+                .Where(p => p.LocationId == locationId)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             var data = parties.Select(p => new {
@@ -74,6 +75,7 @@ namespace net_backend.Controllers
                     var validation = await ValidateParties(result.Data);
                     var newParties = new List<Party>();
 
+                    var locationId = await GetCurrentLocationIdAsync();
                     foreach (var validRow in validation.Valid)
                     {
                         newParties.Add(new Party
@@ -88,6 +90,7 @@ namespace net_backend.Controllers
                             GstNo = validRow.Data.GstNo!,
                             GstDate = validRow.Data.GstDate,
                             IsActive = true,
+                            LocationId = locationId,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
                         });
@@ -118,7 +121,9 @@ namespace net_backend.Controllers
         private async Task<ValidationResultDto<PartyImportDto>> ValidateParties(List<ExcelRow<PartyImportDto>> rows)
         {
             var validation = new ValidationResultDto<PartyImportDto>();
+            var locationId = await GetCurrentLocationIdAsync();
             var existingNames = await _context.Parties
+                .Where(p => p.LocationId == locationId)
                 .Select(p => p.Name.ToLower())
                 .ToListAsync();
             var processedInFile = new HashSet<string>();
@@ -161,8 +166,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll()
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-
+            var locationId = await GetCurrentLocationIdAsync();
             var parties = await _context.Parties
+                .Where(p => p.LocationId == locationId)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
@@ -171,8 +177,9 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive()
         {
+            var locationId = await GetCurrentLocationIdAsync();
             var parties = await _context.Parties
-                .Where(p => p.IsActive)
+                .Where(p => p.LocationId == locationId && p.IsActive)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
@@ -182,8 +189,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Party>>> Create([FromBody] Party party)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-
-            if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == party.Name.Trim().ToLower()))
+            var locationId = await GetCurrentLocationIdAsync();
+            if (await _context.Parties.AnyAsync(p => p.LocationId == locationId && p.Name.ToLower() == party.Name.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
 
             if (string.IsNullOrWhiteSpace(party.PartyCategory) || string.IsNullOrWhiteSpace(party.CustomerType) ||
@@ -193,6 +200,7 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields must be provided" });
             }
 
+            party.LocationId = locationId;
             party.CreatedAt = DateTime.Now;
             party.UpdatedAt = DateTime.Now;
             _context.Parties.Add(party);
@@ -205,13 +213,13 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] UpdatePartyRequest request)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-
-            var existing = await _context.Parties.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var existing = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found" });
 
             if (request.Name != null) 
             {
-                if (await _context.Parties.AnyAsync(p => p.Id != id && p.Name.ToLower() == request.Name.Trim().ToLower()))
+                if (await _context.Parties.AnyAsync(p => p.LocationId == locationId && p.Id != id && p.Name.ToLower() == request.Name.Trim().ToLower()))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
                 existing.Name = request.Name.Trim();
             }
@@ -252,8 +260,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-
-            var party = await _context.Parties.FindAsync(id);
+            var locationId = await GetCurrentLocationIdAsync();
+            var party = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (party == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Party not found" });
 
             _context.Parties.Remove(party);
