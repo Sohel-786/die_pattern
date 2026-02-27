@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo, Fragment } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Plus, Search, Package, MapPin, Eye, FileText, Truck, Briefcase,
-    ChevronRight, Minus, X, Building2, Edit2
+    Plus, Package, ChevronRight, Minus, Building2, Edit2,
+    MoreVertical, CheckCircle2, XCircle, Ban
 } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
 import api from "@/lib/api";
-import { Inward, InwardSourceType, InwardStatus, Role } from "@/types";
+import { Inward, InwardSourceType, Role, Party } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
     Table,
@@ -19,51 +19,80 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import Link from "next/link";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { InwardDialog } from "@/components/inwards/inward-dialog";
-
-const SOURCE_LABELS: Record<InwardSourceType, string> = {
-    [InwardSourceType.PO]: "PO",
-    [InwardSourceType.OutwardReturn]: "Outward Return",
-    [InwardSourceType.JobWork]: "Job Work",
-};
-
-const STATUS_LABELS: Record<InwardStatus, string> = {
-    [InwardStatus.Draft]: "Draft",
-    [InwardStatus.Submitted]: "Submitted",
-};
+import { InwardFilters } from "@/components/filters/inward-filters";
+import { initialInwardFilters, InwardFiltersState } from "@/lib/inward-filters";
+import { toast } from "react-hot-toast";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function InwardsPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const { user } = useAuth();
-    const [search, setSearch] = useState("");
-    const [sourceFilter, setSourceFilter] = useState<InwardSourceType | "">("");
-    const [statusFilter, setStatusFilter] = useState<InwardStatus | "">("");
+    const queryClient = useQueryClient();
+
+    const [filters, setFilters] = useState<InwardFiltersState>(initialInwardFilters);
     const [expandedInwardId, setExpandedInwardId] = useState<number | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingInwardId, setEditingInwardId] = useState<number | null>(null);
+    const [inactiveTarget, setInactiveTarget] = useState<Inward | null>(null);
+
+    const debouncedSearch = useDebounce(filters.search, 500);
+    const debouncedSourceNo = useDebounce(filters.sourceNo, 500);
 
     const { data: inwards = [], isLoading } = useQuery<Inward[]>({
-        queryKey: ["inwards", sourceFilter, statusFilter],
+        queryKey: ["inwards", { ...filters, search: debouncedSearch, sourceNo: debouncedSourceNo }],
         queryFn: async () => {
             const params = new URLSearchParams();
-            if (sourceFilter !== "") params.set("sourceType", String(sourceFilter));
-            if (statusFilter !== "") params.set("status", String(statusFilter));
-            const res = await api.get("/inwards" + (params.toString() ? "?" + params.toString() : ""));
+            if (debouncedSearch) params.set("search", debouncedSearch);
+            if (filters.sourceType !== "") params.set("sourceType", String(filters.sourceType));
+            if (debouncedSourceNo) params.set("sourceNo", debouncedSourceNo);
+            if (filters.isActive !== null) params.set("isActive", String(filters.isActive));
+            if (filters.dateFrom) params.set("startDate", filters.dateFrom);
+            if (filters.dateTo) params.set("endDate", filters.dateTo);
+            filters.vendorIds.forEach(id => params.append("vendorIds", String(id)));
+
+            const res = await api.get("/inwards?" + params.toString());
             return res.data.data ?? [];
         },
         enabled: !!permissions?.viewInward
     });
 
+    const { data: parties = [] } = useQuery<Party[]>({
+        queryKey: ["parties"],
+        queryFn: async () => {
+            const res = await api.get("/parties");
+            return res.data.data ?? [];
+        }
+    });
+
+    const partyOptions = useMemo(() =>
+        parties.map(p => ({ label: p.name, value: p.id })),
+        [parties]);
+
+    const toggleActiveMutation = useMutation({
+        mutationFn: async ({ id, active }: { id: number, active: boolean }) => {
+            await api.patch(`/inwards/${id}/active?active=${active}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["inwards"] });
+            toast.success("Inward status updated");
+        },
+        onError: () => toast.error("Failed to update status")
+    });
+
     const resetFilters = useCallback(() => {
-        setSearch("");
-        setSourceFilter("");
-        setStatusFilter("");
+        setFilters(initialInwardFilters);
     }, []);
 
     if (permissions && !permissions.viewInward) {
@@ -80,37 +109,13 @@ export default function InwardsPage() {
         );
     }
 
-    const filtered = inwards.filter(i =>
-        (i.inwardNo || "").toLowerCase().includes(search.toLowerCase()) ||
-        i.lines?.some(l => (l.sourceRefDisplay || "").toLowerCase().includes(search.toLowerCase())) ||
-        (i.vendorName || "").toLowerCase().includes(search.toLowerCase())
-    );
-
-    const getStatusBadge = (status: InwardStatus) => {
-        switch (status) {
-            case InwardStatus.Submitted:
-                return (
-                    <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">
-                        Submitted
-                    </span>
-                );
-            case InwardStatus.Draft:
-            default:
-                return (
-                    <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
-                        Draft
-                    </span>
-                );
-        }
-    };
-
     return (
         <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
             {/* Header Area */}
             <div className="flex justify-between items-center shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">Inward Entries</h1>
-                    <p className="text-secondary-500 text-sm">Receipts from PO, Outward Return & Job Work</p>
+                    <p className="text-secondary-500 text-sm tracking-tight font-medium">Manage receipts from PO, Outward Return & Job Work</p>
                 </div>
                 {permissions?.createInward && (
                     <Button
@@ -127,76 +132,47 @@ export default function InwardsPage() {
             </div>
 
             {/* Filter Area */}
-            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-                <div className="p-4 bg-white border-b border-secondary-100 flex flex-wrap gap-4 items-center shrink-0">
-                    <div className="relative flex-1 min-w-[220px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                        <Input
-                            placeholder="Search by Inward No, Vendor, Ref..."
-                            className="pl-10 h-10 border-secondary-200 focus:border-primary-500 focus:ring-primary-500/10"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                    <select
-                        value={sourceFilter}
-                        onChange={(e) => setSourceFilter(e.target.value === "" ? "" : Number(e.target.value))}
-                        className="h-10 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-700 focus:border-primary-500"
-                    >
-                        <option value="">All Sources</option>
-                        {(Object.keys(SOURCE_LABELS) as unknown as InwardSourceType[]).map((k) => (
-                            <option key={k} value={k}>{SOURCE_LABELS[k]}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value === "" ? "" : Number(e.target.value))}
-                        className="h-10 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-700 focus:border-primary-500"
-                    >
-                        <option value="">All Statuses</option>
-                        {(Object.keys(STATUS_LABELS) as unknown as InwardStatus[]).map((k) => (
-                            <option key={k} value={k}>{STATUS_LABELS[k]}</option>
-                        ))}
-                    </select>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-secondary-500 hover:text-primary-600 font-bold text-xs uppercase tracking-wider"
-                        onClick={resetFilters}
-                    >
-                        Clear
-                    </Button>
-                </div>
+            <InwardFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                onClear={resetFilters}
+                partyOptions={partyOptions}
+                className="shrink-0"
+            />
 
+            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white">
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100">
                                 <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
-                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">Sr.No</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">Inward No / Date</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">Vendor / Party</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap text-center">Lines</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">Status</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">Actions</TableHead>
+                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD NO</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD DATE</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">PARTY NAME</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD FROM</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">ACTIVE</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={7} className="h-16 px-6">
-                                            <div className="h-4 bg-secondary-100 rounded-full w-full" />
+                                        <TableCell colSpan={9} className="h-16 px-6 text-center">
+                                            <div className="h-4 bg-secondary-100 rounded-full w-full max-w-sm mx-auto" />
                                         </TableCell>
                                     </TableRow>
                                 ))
-                            ) : filtered.length > 0 ? (
-                                filtered.map((i, idx) => (
+                            ) : inwards.length > 0 ? (
+                                inwards.map((i, idx) => (
                                     <Fragment key={i.id}>
                                         <TableRow
                                             className={cn(
                                                 "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
-                                                expandedInwardId === i.id && "bg-primary-50/30"
+                                                expandedInwardId === i.id && "bg-primary-50/30",
+                                                !i.isActive && "bg-secondary-50/50 opacity-75"
                                             )}
                                         >
                                             <td className="px-4 py-3 text-center">
@@ -204,107 +180,129 @@ export default function InwardsPage() {
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => setExpandedInwardId(expandedInwardId === i.id ? null : i.id)}
-                                                    className="h-6 w-6 p-0 text-secondary-500"
+                                                    className="h-6 w-6 p-0 text-secondary-500 hover:bg-white border border-transparent hover:border-secondary-200 rounded"
                                                 >
-                                                    {expandedInwardId === i.id ? <Minus className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                    {expandedInwardId === i.id ? <Minus className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                                                 </Button>
                                             </td>
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{idx + 1}</td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-secondary-900 text-sm">{i.inwardNo}</span>
-                                                    <span className="text-xs text-secondary-400">{format(new Date(i.inwardDate), "dd MMM yyyy")}</span>
-                                                </div>
-                                            </td>
+                                            <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</td>
+                                            <td className="px-4 py-3 text-secondary-700 text-sm">{format(new Date(i.inwardDate), "dd MMM yyyy")}</td>
                                             <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-secondary-700 text-sm flex items-center gap-1">
-                                                        <Building2 className="w-3 h-3 text-secondary-400" />
-                                                        {i.vendorName ?? "—"}
-                                                    </span>
-                                                </div>
+                                                {i.vendorName ?? "—"}
                                             </td>
-                                            <td className="px-4 py-3 text-center text-sm font-bold text-secondary-600 italic">
-                                                {i.lines?.length ?? 0} Item(s)
+                                            <td className="px-4 py-3 text-secondary-700 text-sm">
+                                                {i.inwardFrom || "—"}
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {getStatusBadge(i.status)}
+                                                <span className={cn(
+                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
+                                                    i.isActive !== false ? "bg-green-50 text-green-700 border-green-200" : "bg-secondary-100 text-secondary-600 border-secondary-200"
+                                                )}>
+                                                    {i.isActive !== false ? "Active" : "Inactive"}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                                                {i.status === InwardStatus.Draft && permissions?.createInward && (
+                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm">
+                                                {i.creatorName ?? "System"}
+                                            </td>
+                                            <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    {permissions?.editInward && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setEditingInwardId(i.id!);
+                                                                setDialogOpen(true);
+                                                            }}
+                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                            title="Edit Inward"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingInwardId(i.id);
-                                                            setDialogOpen(true);
+                                                        onClick={() => {
+                                                            if (i.isActive) setInactiveTarget(i);
+                                                            else toggleActiveMutation.mutate({ id: i.id!, active: true });
                                                         }}
-                                                        className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-lg transition-all"
-                                                        title="Edit Draft"
+                                                        className={cn(
+                                                            "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
+                                                            i.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                        )}
+                                                        title={i.isActive ? "Deactivate" : "Activate"}
                                                     >
-                                                        <Edit2 className="w-4 h-4" />
+                                                        {i.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                                                     </Button>
-                                                )}
-                                                <Link href={`/inwards/${i.id}`}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
-                                                </Link>
+                                                </div>
                                             </td>
                                         </TableRow>
 
                                         <AnimatePresence>
                                             {expandedInwardId === i.id && (
-                                                <TableRow key={`expand-${i.id}`} className="bg-secondary-50/30 border-b border-secondary-100">
-                                                    <td colSpan={7} className="p-0">
+                                                <TableRow key={`expand-${i.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
+                                                    <td colSpan={9} className="p-0 border-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
                                                             className="overflow-hidden"
                                                         >
-                                                            <div className="px-6 py-4">
+                                                            <div className="px-6 py-4 bg-secondary-50/50 border-x border-secondary-100">
                                                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest px-4 py-2 border-b border-secondary-50 bg-secondary-50/50">
-                                                                        Received Items Details
+                                                                    <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
+                                                                        Items
                                                                     </p>
                                                                     <Table>
                                                                         <TableHeader>
-                                                                            <TableRow className="bg-secondary-50/30 border-b border-secondary-100/50">
-                                                                                <TableHead className="h-9 px-4 text-[9px] font-black uppercase text-secondary-500 tracking-wider text-center w-12">Sr</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[9px] font-black uppercase text-secondary-500 tracking-wider">Source Context</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[9px] font-black uppercase text-secondary-500 tracking-wider">Line Item</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[9px] font-black uppercase text-secondary-500 tracking-wider text-center w-24">Qty</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[9px] font-black uppercase text-secondary-500 tracking-wider">Remarks</TableHead>
+                                                                            <TableRow className="bg-secondary-50 border-b border-secondary-100">
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                                                                    {i.inwardFrom?.includes("Purchase Order") ? "PO NO."
+                                                                                        : i.inwardFrom?.includes("Job Work") ? "JOBWORK NO."
+                                                                                            : i.inwardFrom?.includes("Outward") ? "OUTWARD NO."
+                                                                                                : "SOURCE NO."}
+                                                                                </TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">LINE REMARKS</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC NO.</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center w-24">QC STATUS</TableHead>
                                                                             </TableRow>
                                                                         </TableHeader>
                                                                         <TableBody>
                                                                             {i.lines?.map((line, lidx) => (
-                                                                                <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20">
-                                                                                    <TableCell className="px-4 py-2 text-secondary-400 font-bold text-[11px] text-center">{lidx + 1}</TableCell>
+                                                                                <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
+                                                                                    <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{line.sourceRefDisplay || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className="text-[9px] font-black text-primary-500 uppercase leading-none mb-0.5">{SOURCE_LABELS[line.sourceType]}</span>
-                                                                                            <span className="font-bold text-secondary-900 text-xs tracking-tight">{line.sourceRefDisplay}</span>
+                                                                                        <div className="flex flex-col min-w-0">
+                                                                                            <span className="font-semibold text-secondary-900 text-sm">{line.itemName ?? "—"}</span>
+                                                                                            <span className="text-xs text-secondary-500">{line.mainPartName ?? "—"}</span>
                                                                                         </div>
                                                                                     </TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.itemTypeName ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className="font-bold text-secondary-800 text-xs">{line.itemName ?? "—"}</span>
-                                                                                            <span className="text-[10px] font-medium text-secondary-400">{line.mainPartName ?? "—"}</span>
+                                                                                        <div className="flex flex-col min-w-0">
+                                                                                            <span className="font-medium text-secondary-800 text-sm truncate">{line.drawingNo ?? "N/A"}</span>
+                                                                                            <span className="text-xs text-secondary-500">R{line.revisionNo ?? "0"}</span>
                                                                                         </div>
                                                                                     </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-center">
-                                                                                        <span className="inline-flex h-6 px-2 items-center justify-center bg-secondary-50 border border-secondary-100 rounded font-black text-secondary-700 text-xs">{line.quantity}</span>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-[11px] text-secondary-500 italic max-w-md truncate">
-                                                                                        {line.remarks ?? "—"}
+                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.materialName ?? "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-sm text-secondary-600 max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{line.qcNo || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-center whitespace-nowrap">
+                                                                                        {line.isQCApproved ? (
+                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">Approved</span>
+                                                                                        ) : line.isQCPending || !line.movementId ? (
+                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Pending QC</span>
+                                                                                        ) : (
+                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
+                                                                                        )}
                                                                                     </TableCell>
                                                                                 </TableRow>
                                                                             ))}
@@ -321,7 +319,7 @@ export default function InwardsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <td colSpan={7} className="py-24 text-center">
+                                    <td colSpan={9} className="py-24 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-12 h-12 bg-secondary-50 rounded-2xl flex items-center justify-center text-secondary-200">
                                                 <Package className="w-6 h-6" />
@@ -338,9 +336,47 @@ export default function InwardsPage() {
 
             <InwardDialog
                 open={dialogOpen}
-                onOpenChange={setDialogOpen}
+                onOpenChange={(open) => {
+                    setDialogOpen(open);
+                    if (!open) setEditingInwardId(null);
+                }}
                 inwardId={editingInwardId}
             />
+
+            <Dialog
+                isOpen={!!inactiveTarget}
+                onClose={() => setInactiveTarget(null)}
+                title="Confirm Inactivation"
+                size="sm"
+            >
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600 font-medium">
+                        Are you sure you want to deactivate inward entry <span className="font-bold text-secondary-900">{inactiveTarget?.inwardNo}</span>?
+                        This will mark the inward entry as inactive.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setInactiveTarget(null)}
+                            className="flex-1 font-bold"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                            onClick={() => {
+                                if (inactiveTarget?.id) {
+                                    toggleActiveMutation.mutate({ id: inactiveTarget.id, active: false });
+                                    setInactiveTarget(null);
+                                }
+                            }}
+                            disabled={toggleActiveMutation.isPending}
+                        >
+                            {toggleActiveMutation.isPending ? "Deactivating..." : "Deactivate Entry"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 }

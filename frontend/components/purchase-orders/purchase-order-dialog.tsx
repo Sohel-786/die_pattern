@@ -9,6 +9,7 @@ import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import {
   PO,
+  PoStatus,
   Party,
   GstType,
   PurchaseIndent,
@@ -754,8 +755,9 @@ export function PurchaseOrderDialog({
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={mutation.isPending || !isValid}
-                  className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
+                  disabled={mutation.isPending || !isValid || (isEditing && po?.status !== PoStatus.Pending)}
+                  className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                  title={isEditing && po?.status !== PoStatus.Pending ? "Approved or Rejected POs cannot be updated" : ""}
                 >
                   {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                   {isEditing ? "Update" : "Save"}

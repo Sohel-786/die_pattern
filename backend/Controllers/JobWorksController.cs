@@ -28,6 +28,45 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<string> { Data = code });
         }
 
+        [HttpGet("pending")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetPending([FromQuery] int? vendorId)
+        {
+            var locationId = await GetCurrentLocationIdAsync();
+            
+            var inwardedJws = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.Inward!.Status == InwardStatus.Submitted && l.SourceRefId.HasValue)
+                .Select(l => l.SourceRefId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.JobWorks
+                .Where(j => j.LocationId == locationId && j.Status == JobWorkStatus.Pending && !inwardedJws.Contains(j.Id));
+
+            if (vendorId.HasValue && vendorId > 0)
+                query = query.Where(j => j.ToPartyId == vendorId.Value);
+
+            var jws = await query
+                .Include(j => j.Item)
+                .Include(j => j.ToParty)
+                .OrderByDescending(j => j.CreatedAt)
+                .ToListAsync();
+
+            var data = jws.Select(j => new JobWorkDto
+            {
+                Id = j.Id,
+                JobWorkNo = j.JobWorkNo,
+                ItemId = j.ItemId,
+                ItemName = j.Item?.CurrentName,
+                MainPartName = j.Item?.MainPartName,
+                VendorId = j.ToPartyId,
+                VendorName = j.ToParty?.Name,
+                Status = j.Status,
+                CreatedAt = j.CreatedAt
+            }).ToList();
+
+            return Ok(new ApiResponse<IEnumerable<JobWorkDto>> { Data = data });
+        }
+
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetAll(
             [FromQuery] JobWorkStatus? status)

@@ -180,6 +180,9 @@ namespace net_backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LocationId")
                         .HasColumnType("int");
 
@@ -217,11 +220,20 @@ namespace net_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
+                    b.Property<string>("DrawingNo")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("InwardId")
                         .HasColumnType("int");
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ItemTypeName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MaterialName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("MovementId")
                         .HasColumnType("int");
@@ -230,6 +242,9 @@ namespace net_backend.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RevisionNo")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("SourceRefId")
@@ -552,6 +567,9 @@ namespace net_backend.Migrations
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
+
+                    b.Property<string>("MovementNo")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("PurchaseOrderId")
                         .HasColumnType("int");

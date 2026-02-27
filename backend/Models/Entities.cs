@@ -310,6 +310,7 @@ namespace net_backend.Models
         public string? Remarks { get; set; }
         public InwardStatus Status { get; set; } = InwardStatus.Draft;
         public int CreatedBy { get; set; }
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
@@ -328,6 +329,10 @@ namespace net_backend.Models
         public int Id { get; set; }
         public int InwardId { get; set; }
         public int ItemId { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? MaterialName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
         public int Quantity { get; set; } = 1;
         public InwardSourceType SourceType { get; set; }
         public int? SourceRefId { get; set; }
@@ -346,6 +351,7 @@ namespace net_backend.Models
     public class Movement
     {
         public int Id { get; set; }
+        public string? MovementNo { get; set; }
         public MovementType Type { get; set; }
         public int ItemId { get; set; }
         

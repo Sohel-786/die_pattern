@@ -228,6 +228,61 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
+        [HttpGet("approved")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetApproved([FromQuery] int? vendorId)
+        {
+            var locationId = await GetCurrentLocationIdAsync();
+            
+            var inwardedItems = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.Status == InwardStatus.Submitted)
+                .Select(l => new { l.SourceRefId, l.ItemId })
+                .Distinct()
+                .ToListAsync();
+
+            var inwardedSet = inwardedItems.Select(x => $"{x.SourceRefId}_{x.ItemId}").ToHashSet();
+
+            var query = _context.PurchaseOrders
+                .Where(p => p.LocationId == locationId && p.Status == PoStatus.Approved && p.IsActive);
+
+            if (vendorId.HasValue && vendorId > 0)
+                query = query.Where(p => p.VendorId == vendorId.Value);
+
+            var pos = await query
+                .Include(p => p.Vendor)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
+            var data = pos.Where(p => {
+                var poItemIds = p.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToList();
+                if (poItemIds.Count == 0) return false;
+                return !poItemIds.All(id => inwardedSet.Contains($"{p.Id}_{id}"));
+            }).Select(p =>
+            {
+                var dto = new PODto
+                {
+                    Id = p.Id,
+                    PoNo = p.PoNo,
+                    VendorId = p.VendorId,
+                    VendorName = p.Vendor?.Name,
+                    CreatedAt = p.CreatedAt,
+                    Items = p.Items.Where(i => i.PurchaseIndentItem != null && !inwardedSet.Contains($"{p.Id}_{i.PurchaseIndentItem.ItemId}")).Select(i => new POItemDto
+                    {
+                        Id = i.Id,
+                        ItemId = i.PurchaseIndentItem!.ItemId,
+                        MainPartName = i.PurchaseIndentItem!.Item?.MainPartName,
+                        CurrentName = i.PurchaseIndentItem!.Item?.CurrentName,
+                        IsInwarded = false
+                    }).ToList()
+                };
+                return dto;
+            });
+
+            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data.ToList() });
+        }
+
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetAll(
             [FromQuery] string? search,

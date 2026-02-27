@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
+using net_backend.Services;
 
 namespace net_backend.Controllers
 {
@@ -10,8 +11,51 @@ namespace net_backend.Controllers
     [ApiController]
     public class MovementsController : BaseController
     {
-        public MovementsController(ApplicationDbContext context) : base(context)
+        private readonly ICodeGeneratorService _codeGenerator;
+
+        public MovementsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
+            _codeGenerator = codeGenerator;
+        }
+
+        [HttpGet("outward-pending-return")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetOutwardPendingReturn([FromQuery] int? vendorId)
+        {
+            var locationId = await GetCurrentLocationIdAsync();
+            
+            var inwardedOutwards = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.Inward!.Status == InwardStatus.Submitted && l.SourceRefId.HasValue)
+                .Select(l => l.SourceRefId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _context.Movements
+                .Where(m => m.Type == MovementType.Outward && m.FromLocationId == locationId && !inwardedOutwards.Contains(m.Id));
+
+            if (vendorId.HasValue && vendorId > 0)
+                query = query.Where(m => m.ToPartyId == vendorId.Value);
+
+            var movements = await query
+                .Include(m => m.Item)
+                .Include(m => m.ToParty)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync();
+
+            var data = movements.Select(m => new MovementDto
+            {
+                Id = m.Id,
+                MovementNo = m.MovementNo,
+                Type = m.Type,
+                ItemId = m.ItemId,
+                ItemName = m.Item?.CurrentName,
+                MainPartName = m.Item?.MainPartName,
+                ToPartyId = m.ToPartyId,
+                ToPartyName = m.ToParty?.Name,
+                Remarks = m.Remarks,
+                CreatedAt = m.CreatedAt
+            }).ToList();
+
+            return Ok(new ApiResponse<IEnumerable<MovementDto>> { Data = data });
         }
 
         [HttpGet]
@@ -29,6 +73,7 @@ namespace net_backend.Controllers
                 .Select(m => new MovementDto
                 {
                     Id = m.Id,
+                    MovementNo = m.MovementNo,
                     Type = m.Type,
                     ItemId = m.ItemId,
                     ItemName = m.Item!.CurrentName,
@@ -88,6 +133,7 @@ namespace net_backend.Controllers
 
             var movement = new Movement
             {
+                MovementNo = await _codeGenerator.GenerateCode(dto.Type == MovementType.Outward ? "OUT" : "INW", locationId),
                 Type = dto.Type,
                 ItemId = dto.ItemId,
                 

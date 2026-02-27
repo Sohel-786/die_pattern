@@ -145,6 +145,7 @@ namespace net_backend.DTOs
     public class MovementDto
     {
         public int Id { get; set; }
+        public string? MovementNo { get; set; }
         public MovementType Type { get; set; }
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
@@ -153,6 +154,8 @@ namespace net_backend.DTOs
         public string? FromName { get; set; }
         public HolderType ToType { get; set; }
         public string? ToName { get; set; }
+        public int? ToPartyId { get; set; }
+        public string? ToPartyName { get; set; }
         public string? Remarks { get; set; }
         public string? Reason { get; set; }
         public int? PurchaseOrderId { get; set; }
@@ -196,6 +199,8 @@ namespace net_backend.DTOs
         public InwardStatus Status { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
+        public bool IsActive { get; set; } = true;
+        public string? InwardFrom { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<InwardLineDto> Lines { get; set; } = new();
     }
@@ -207,6 +212,10 @@ namespace net_backend.DTOs
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
         public string? MainPartName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? MaterialName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
         public int Quantity { get; set; }
         public InwardSourceType SourceType { get; set; }
         public int? SourceRefId { get; set; }
@@ -215,6 +224,7 @@ namespace net_backend.DTOs
         public int? MovementId { get; set; }
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
+        public string? QCNo { get; set; }
     }
 
     public class CreateInwardDto
@@ -240,6 +250,9 @@ namespace net_backend.DTOs
         public string JobWorkNo { get; set; } = string.Empty;
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
+        public string? MainPartName { get; set; }
+        public int? VendorId { get; set; }
+        public string? VendorName { get; set; }
         public string? Description { get; set; }
         public JobWorkStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }

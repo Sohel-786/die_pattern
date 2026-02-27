@@ -28,28 +28,87 @@ namespace net_backend.Controllers
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<InwardDto>>>> GetAll(
+            [FromQuery] List<int>? vendorIds,
             [FromQuery] InwardSourceType? sourceType,
-            [FromQuery] InwardStatus? status)
+            [FromQuery] string? sourceNo,
+            [FromQuery] bool? isActive,
+            [FromQuery] string? search,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
         {
             var locationId = await GetCurrentLocationIdAsync();
             var query = _context.Inwards
                 .Where(i => i.LocationId == locationId)
-                .Include(i => i.Location)
                 .Include(i => i.Vendor)
                 .Include(i => i.Creator)
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Item)
+                        .ThenInclude(i => i.ItemType)
+                .Include(i => i.Lines)
+                    .ThenInclude(l => l.Item)
+                        .ThenInclude(i => i.Material)
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Movement)
                 .OrderByDescending(i => i.CreatedAt)
                 .AsQueryable();
 
-            if (status.HasValue)
-                query = query.Where(i => i.Status == status.Value);
+            if (vendorIds != null && vendorIds.Any())
+                query = query.Where(i => vendorIds.Contains(i.VendorId ?? 0));
+
+            if (sourceType.HasValue)
+                query = query.Where(i => i.Lines.Any(l => l.SourceType == sourceType.Value));
+
+            if (isActive.HasValue)
+                query = query.Where(i => i.IsActive == isActive.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(i => i.InwardNo.Contains(search) || (i.Vendor != null && i.Vendor.Name.Contains(search)));
+            }
+            
+            if (!string.IsNullOrWhiteSpace(sourceNo))
+            {
+                // This is a bit expensive but requested: filter by source number across POs and JWs
+                query = query.Where(i => i.Lines.Any(l => 
+                    (l.SourceType == InwardSourceType.PO && _context.PurchaseOrders.Any(p => p.Id == l.SourceRefId && p.PoNo.Contains(sourceNo))) ||
+                    (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.Contains(sourceNo))) ||
+                    (l.SourceType == InwardSourceType.OutwardReturn && _context.Movements.Any(m => m.Id == l.SourceRefId && m.MovementNo != null && m.MovementNo.Contains(sourceNo)))
+                ));
+            }
+
+            if (startDate.HasValue)
+                query = query.Where(i => i.InwardDate >= startDate.Value.Date);
+            
+            if (endDate.HasValue)
+                query = query.Where(i => i.InwardDate <= endDate.Value.Date);
 
             var list = await query.ToListAsync();
-            var data = list.Select(i => MapToDto(i)).ToList();
+            
+            // Pre-fetch source numbers for display
+            var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var outIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var movIds = list.SelectMany(i => i.Lines).Where(l => l.MovementId.HasValue).Select(l => l.MovementId!.Value).Distinct().ToList();
+
+            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
+            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
+            var outs = await _context.Movements.Where(m => outIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.MovementNo ?? $"OUT-{m.Id}");
+            var qcs = await _context.QualityControls.Where(q => movIds.Contains(q.MovementId)).ToDictionaryAsync(q => q.MovementId, q => q.Id);
+
+            var data = list.Select(i => MapToDto(i, pos, jws, outs, qcs)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
+        }
+
+        [HttpPatch("{id}/active")]
+        public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
+        {
+            if (!await HasPermission("EditInward")) return Forbidden();
+            var inward = await _context.Inwards.FindAsync(id);
+            if (inward == null) return NotFound();
+            inward.IsActive = active;
+            inward.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
         }
 
         [HttpGet("{id}")]
@@ -66,7 +125,19 @@ namespace net_backend.Controllers
                     .ThenInclude(l => l.Movement)
                 .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
-            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward) });
+
+            // Fetch source details for single result too
+            var poIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var outIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var movIds = inward.Lines.Where(l => l.MovementId.HasValue).Select(l => l.MovementId!.Value).Distinct().ToList();
+
+            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
+            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
+            var outs = await _context.Movements.Where(m => outIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.MovementNo ?? $"OUT-{m.Id}");
+            var qcs = await _context.QualityControls.Where(q => movIds.Contains(q.MovementId)).ToDictionaryAsync(q => q.MovementId, q => q.Id);
+
+            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, outs, qcs) });
         }
 
         [HttpPost]
@@ -85,11 +156,19 @@ namespace net_backend.Controllers
                 LocationId = locationId,
                 VendorId = dto.VendorId,
                 Remarks = dto.Remarks,
-                Status = InwardStatus.Draft,
+                Status = InwardStatus.Submitted, // Directly Submitted
                 CreatedBy = CurrentUserId,
                 CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                UpdatedAt = DateTime.Now,
+                IsActive = true
             };
+
+            var itemIds = dto.Lines.Select(l => l.ItemId).Distinct().ToList();
+            var items = await _context.Items
+                .Include(i => i.ItemType)
+                .Include(i => i.Material)
+                .Where(i => itemIds.Contains(i.Id))
+                .ToDictionaryAsync(i => i.Id);
 
             foreach (var l in dto.Lines)
             {
@@ -104,8 +183,13 @@ namespace net_backend.Controllers
                    catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
                 }
 
+                var item = items.ContainsKey(l.ItemId) ? items[l.ItemId] : null;
                 inward.Lines.Add(new InwardLine { 
                     ItemId = l.ItemId, 
+                    ItemTypeName = item?.ItemType?.Name,
+                    MaterialName = item?.Material?.Name,
+                    DrawingNo = item?.DrawingNo,
+                    RevisionNo = item?.RevisionNo,
                     Quantity = l.Quantity,
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
@@ -118,6 +202,10 @@ namespace net_backend.Controllers
 
             _context.Inwards.Add(inward);
             await _context.SaveChangesAsync();
+            
+            await ProcessInwardMovementsAsync(inward);
+            await _context.SaveChangesAsync();
+            
             return StatusCode(201, new ApiResponse<Inward> { Data = inward });
         }
 
@@ -129,8 +217,6 @@ namespace net_backend.Controllers
 
             var inward = await _context.Inwards.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
-            if (inward.Status != InwardStatus.Draft)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be edited." });
 
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
@@ -140,7 +226,22 @@ namespace net_backend.Controllers
             inward.Remarks = dto.Remarks;
             inward.UpdatedAt = DateTime.Now;
 
+            var itemIds = dto.Lines.Select(l => l.ItemId).Distinct().ToList();
+            var items = await _context.Items
+                .Include(i => i.ItemType)
+                .Include(i => i.Material)
+                .Where(i => itemIds.Contains(i.Id))
+                .ToDictionaryAsync(i => i.Id);
+
+            // Simple approach: remove lines and recreate (which will recreate movements if we are not careful)
+            // But if Movement already exists and we remove the line, what happens?
+            // For now, let's just update the header. If items changed, they should recreate.
+            // Actually, I'll clear lines and movements linked to this inward and recreate.
+            
+            var existingMovements = await _context.Movements.Where(m => m.InwardId == inward.Id).ToListAsync();
+            _context.Movements.RemoveRange(existingMovements);
             _context.InwardLines.RemoveRange(inward.Lines);
+            
             foreach (var l in dto.Lines)
             {
                 if (l.Quantity < 1) continue;
@@ -153,8 +254,13 @@ namespace net_backend.Controllers
                    catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
                 }
 
+                var item = items.ContainsKey(l.ItemId) ? items[l.ItemId] : null;
                 inward.Lines.Add(new InwardLine { 
                     ItemId = l.ItemId, 
+                    ItemTypeName = item?.ItemType?.Name,
+                    MaterialName = item?.Material?.Name,
+                    DrawingNo = item?.DrawingNo,
+                    RevisionNo = item?.RevisionNo,
                     Quantity = l.Quantity,
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
@@ -163,63 +269,59 @@ namespace net_backend.Controllers
             }
 
             await _context.SaveChangesAsync();
+            await ProcessInwardMovementsAsync(inward);
+            await _context.SaveChangesAsync();
+            
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
         [HttpPost("{id}/submit")]
         public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
         {
-            if (!await HasPermission("CreateInward")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
+            // Legacy endpoint, keep for compatibility but now handled in Create
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
 
-            var inward = await _context.Inwards
-                .Include(i => i.Lines)
-                    .ThenInclude(l => l.Item)
-                .Include(i => i.Location)
-                .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
-            if (inward == null) return NotFound();
-            if (inward.Status != InwardStatus.Draft)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only draft inwards can be submitted." });
-
+        private async Task ProcessInwardMovementsAsync(Inward inward)
+        {
             foreach (var line in inward.Lines)
             {
-                var movement = new Movement
+                if (line.MovementId == null)
                 {
-                    Type = MovementType.Inward,
-                    ItemId = line.ItemId,
-                    FromType = HolderType.Vendor,
-                    FromPartyId = inward.VendorId,
-                    ToType = HolderType.Location,
-                    ToLocationId = inward.LocationId,
-                    ToPartyId = null,
-                    Remarks = line.Remarks ?? inward.Remarks,
-                    PurchaseOrderId = line.SourceType == InwardSourceType.PO ? line.SourceRefId : null,
-                    InwardId = inward.Id,
-                    IsQCPending = true,
-                    IsQCApproved = false,
-                    CreatedBy = CurrentUserId,
-                    CreatedAt = DateTime.Now
-                };
-                _context.Movements.Add(movement);
-                await _context.SaveChangesAsync();
-                line.MovementId = movement.Id;
-
-                // Update source status if necessary
-                if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
-                {
-                    var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
-                    if (jw != null)
+                    var movement = new Movement
                     {
-                        jw.Status = JobWorkStatus.Completed;
-                        jw.UpdatedAt = DateTime.Now;
+                        MovementNo = await _codeGenerator.GenerateCode("INW", inward.LocationId),
+                        Type = MovementType.Inward,
+                        ItemId = line.ItemId,
+                        FromType = HolderType.Vendor,
+                        FromPartyId = inward.VendorId,
+                        ToType = HolderType.Location,
+                        ToLocationId = inward.LocationId,
+                        ToPartyId = null,
+                        Remarks = line.Remarks ?? inward.Remarks,
+                        PurchaseOrderId = line.SourceType == InwardSourceType.PO ? line.SourceRefId : null,
+                        InwardId = inward.Id,
+                        IsQCPending = true,
+                        IsQCApproved = false,
+                        CreatedBy = CurrentUserId,
+                        CreatedAt = DateTime.Now
+                    };
+                    _context.Movements.Add(movement);
+                    await _context.SaveChangesAsync(); // Save to get Id
+                    line.MovementId = movement.Id;
+
+                    // Update source status if necessary
+                    if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
+                    {
+                        var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
+                        if (jw != null)
+                        {
+                            jw.Status = JobWorkStatus.Completed;
+                            jw.UpdatedAt = DateTime.Now;
+                        }
                     }
                 }
             }
-
-            inward.Status = InwardStatus.Submitted;
-            inward.UpdatedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<bool> { Data = true });
         }
 
         private async Task<int?> ValidateSourceRefAsync(int locationId, InwardSourceType sourceType, int sourceRefId)
@@ -234,7 +336,7 @@ namespace net_backend.Controllers
                 var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToHashSet();
                 
                 var inwardedFromPo = await _context.InwardLines
-                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted)
+                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId)
                     .Select(l => l.ItemId)
                     .ToListAsync();
 
@@ -247,7 +349,7 @@ namespace net_backend.Controllers
             {
                 var mov = await _context.Movements.FirstOrDefaultAsync(m => m.Id == sourceRefId && m.Type == MovementType.Outward);
                 if (mov == null) throw new ArgumentException("Invalid Outward movement reference.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted);
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId);
                 if (alreadyInwarded) throw new ArgumentException("This Outward challan has already been inwarded.");
                 vendorId = mov.ToPartyId;
             }
@@ -256,14 +358,25 @@ namespace net_backend.Controllers
                 var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
                 if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
                 if (jw.Status != JobWorkStatus.Pending) throw new ArgumentException("Only pending Job Work entries (not yet inwarded) can be used for Inward.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward!.Status == InwardStatus.Submitted);
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId);
                 if (alreadyInwarded) throw new ArgumentException("This Job Work has already been inwarded.");
             }
             return vendorId;
         }
 
-        private static InwardDto MapToDto(Inward i)
+        private static InwardDto MapToDto(
+            Inward i, 
+            Dictionary<int, string>? pos = null, 
+            Dictionary<int, string>? jws = null,
+            Dictionary<int, string>? outs = null,
+            Dictionary<int, int>? qcs = null)
         {
+            var sourceTypes = i.Lines.Select(l => l.SourceType).Distinct().ToList();
+            var fromStrs = new List<string>();
+            if (sourceTypes.Contains(InwardSourceType.PO)) fromStrs.Add("Purchase Order");
+            if (sourceTypes.Contains(InwardSourceType.JobWork)) fromStrs.Add("Job Work");
+            if (sourceTypes.Contains(InwardSourceType.OutwardReturn)) fromStrs.Add("Outward");
+
             var dto = new InwardDto
             {
                 Id = i.Id,
@@ -275,22 +388,32 @@ namespace net_backend.Controllers
                 Status = i.Status,
                 CreatedBy = i.CreatedBy,
                 CreatorName = i.Creator != null ? i.Creator.FirstName + " " + i.Creator.LastName : null,
+                IsActive = i.IsActive,
+                InwardFrom = string.Join(", ", fromStrs),
                 CreatedAt = i.CreatedAt,
                 Lines = i.Lines.Select(l => new InwardLineDto
                 {
                     Id = l.Id,
                     InwardId = l.InwardId,
                     ItemId = l.ItemId,
-                    ItemName = l.Item?.CurrentName,
-                    MainPartName = l.Item?.MainPartName,
+                    ItemName = l.Item?.CurrentName ?? "—",
+                    MainPartName = l.Item?.MainPartName ?? "—",
+                    ItemTypeName = l.ItemTypeName ?? l.Item?.ItemType?.Name,
+                    MaterialName = l.MaterialName ?? l.Item?.Material?.Name,
+                    DrawingNo = l.DrawingNo ?? l.Item?.DrawingNo,
+                    RevisionNo = l.RevisionNo ?? l.Item?.RevisionNo,
                     Quantity = l.Quantity,
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
                     MovementId = l.MovementId,
-                    IsQCPending = l.Movement?.IsQCPending ?? false,
+                    IsQCPending = l.Movement?.IsQCPending ?? (l.MovementId.HasValue ? true : true), // If movement exists but unknown, or no movement yet, it's pending
                     IsQCApproved = l.Movement?.IsQCApproved ?? false,
-                    SourceRefDisplay = l.SourceType == InwardSourceType.PO ? $"PO-{l.SourceRefId}" : l.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{l.SourceRefId}" : l.SourceType == InwardSourceType.JobWork ? $"JW-{l.SourceRefId}" : l.SourceRefId?.ToString()
+                    SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value]
+                                     : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
+                                     : (l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue && outs != null && outs.ContainsKey(l.SourceRefId.Value)) ? outs[l.SourceRefId.Value]
+                                     : l.SourceRefId?.ToString(),
+                    QCNo = (l.MovementId.HasValue && qcs != null && qcs.ContainsKey(l.MovementId.Value)) ? $"QC-{qcs[l.MovementId.Value]}" : "—"
                 }).ToList()
             };
             return dto;

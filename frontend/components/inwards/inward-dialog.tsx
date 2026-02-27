@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Loader2, Calendar, Package, FileText, Truck, Briefcase, Trash2, Info, Building2, ChevronRight, Plus
+    Loader2, Calendar, Package, Info, Plus, X
 } from "lucide-react";
 import api from "@/lib/api";
 import { Inward, InwardSourceType, Party } from "@/types";
@@ -36,6 +36,7 @@ interface InwardLineDraft {
     remarks: string;
     vendorId?: number;
     vendorName?: string;
+    included?: boolean;
 }
 
 export function InwardDialog({
@@ -53,6 +54,32 @@ export function InwardDialog({
     const [nextCode, setNextCode] = useState("");
     const [selectedSourceType, setSelectedSourceType] = useState<InwardSourceType>(InwardSourceType.PO);
     const [sourceSelectionOpen, setSourceSelectionOpen] = useState(false);
+
+    const uniqueSources = useMemo(() => {
+        const map = new Map<string, { type: InwardSourceType; id: number; display: string }>();
+        lines.forEach(l => {
+            const key = `${l.sourceType}-${l.sourceRefId}`;
+            if (!map.has(key)) {
+                map.set(key, { type: l.sourceType, id: l.sourceRefId, display: l.sourceRefDisplay });
+            }
+        });
+        return Array.from(map.values());
+    }, [lines]);
+
+    const displayHeader = useMemo(() => {
+        const typesInLines = new Set(lines.map(l => l.sourceType));
+        if (typesInLines.size === 1) {
+            const first = typesInLines.values().next().value;
+            if (first === InwardSourceType.PO) return "PO No.";
+            if (first === InwardSourceType.JobWork) return "Jobwork No.";
+            if (first === InwardSourceType.OutwardReturn) return "Outward No.";
+        }
+        return "Source No.";
+    }, [lines]);
+
+    const removeSourceGroup = (type: InwardSourceType, id: number) => {
+        setLines(prev => prev.filter(l => !(l.sourceType === type && l.sourceRefId === id)));
+    };
 
     const { data: inward, isLoading: loadingInward } = useQuery<Inward>({
         queryKey: ["inwards", inwardId],
@@ -72,6 +99,16 @@ export function InwardDialog({
         enabled: open
     });
 
+    const { data: autoNextCode } = useQuery<string>({
+        queryKey: ["inwards", "next-code"],
+        queryFn: async () => {
+            const res = await api.get("/inwards/next-code");
+            return res.data.data;
+        },
+        enabled: open && !isEditing,
+        staleTime: 0 // Always get fresh code for new entry
+    });
+
     useEffect(() => {
         if (!open) return;
         if (isEditing && inward) {
@@ -88,14 +125,15 @@ export function InwardDialog({
                 sourceType: l.sourceType,
                 sourceRefId: l.sourceRefId || 0,
                 sourceRefDisplay: l.sourceRefDisplay || "",
-                remarks: l.remarks || ""
+                remarks: l.remarks || "",
+                included: true
             })));
         } else if (!isEditing) {
             setVendorId(0);
             setInwardDate(format(new Date(), "yyyy-MM-dd"));
             setRemarks("");
             setLines([]);
-            api.get("/inwards/next-code").then(res => setNextCode(res.data.data));
+            if (autoNextCode) setNextCode(autoNextCode);
         }
     }, [open, isEditing, inward]);
 
@@ -114,7 +152,7 @@ export function InwardDialog({
             const next = [...prev];
             newItems.forEach(ni => {
                 const exists = next.find(x => x.sourceType === ni.sourceType && x.sourceRefId === ni.sourceRefId && x.itemId === ni.itemId);
-                if (!exists) next.push({ ...ni, quantity: 1 }); // Force quantity 1
+                if (!exists) next.push({ ...ni, quantity: 1, included: true }); // Force quantity 1
             });
             return next;
         });
@@ -125,8 +163,12 @@ export function InwardDialog({
         }
     };
 
-    const removeLine = (idx: number) => {
-        setLines(prev => prev.filter((_, i) => i !== idx));
+    const toggleLineIncluded = (idx: number) => {
+        setLines(prev => {
+            const next = [...prev];
+            next[idx] = { ...next[idx], included: !(next[idx].included !== false) };
+            return next;
+        });
     };
 
     const updateLineRemark = (idx: number, val: string) => {
@@ -137,15 +179,27 @@ export function InwardDialog({
         });
     };
 
+    const getImportButtonText = () => {
+        switch (selectedSourceType) {
+            case InwardSourceType.PO: return "Add Purchase Orders";
+            case InwardSourceType.JobWork: return "Add Job Works";
+            case InwardSourceType.OutwardReturn: return "Add Outwards";
+            default: return "Import Items";
+        }
+    };
+
     const handleSubmit = () => {
         if (!vendorId) return toast.error("Please select Vendor / Party");
         if (lines.length === 0) return toast.error("At least one item line is required");
+
+        const includedLines = lines.filter(l => l.included !== false);
+        if (includedLines.length === 0) return toast.error("Please include at least one item");
 
         const payload = {
             vendorId,
             inwardDate,
             remarks,
-            lines: lines.map(l => ({
+            lines: includedLines.map(l => ({
                 itemId: l.itemId,
                 quantity: 1, // Always 1 per requirement
                 sourceType: l.sourceType,
@@ -205,7 +259,12 @@ export function InwardDialog({
                                         <SearchableSelect
                                             options={vendors.map(v => ({ label: v.name, value: v.id }))}
                                             value={vendorId}
-                                            onChange={(id) => setVendorId(Number(id))}
+                                            onChange={(id) => {
+                                                setVendorId(Number(id));
+                                                if (Number(id)) {
+                                                    setSelectedSourceType(InwardSourceType.PO);
+                                                }
+                                            }}
                                             placeholder="Search vendors..."
                                         />
                                     </div>
@@ -224,7 +283,8 @@ export function InwardDialog({
                                         <select
                                             value={selectedSourceType}
                                             onChange={(e) => setSelectedSourceType(Number(e.target.value))}
-                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none"
+                                            disabled={!vendorId}
+                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {sourceOptions.map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -233,82 +293,105 @@ export function InwardDialog({
                                         <Button
                                             type="button"
                                             onClick={() => setSourceSelectionOpen(true)}
-                                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs uppercase tracking-widest gap-2 rounded-lg shadow-sm shadow-primary-200"
+                                            disabled={!vendorId}
+                                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest gap-2 rounded-lg shadow-sm shadow-primary-200"
                                         >
                                             <Plus className="w-4 h-4" />
-                                            Import Items
+                                            {getImportButtonText()}
                                         </Button>
                                     </div>
                                 </div>
                                 <div className="flex-1 flex items-center gap-2 px-4 opacity-50">
-                                    <Info className="w-4 h-4 text-secondary-400" />
                                     <p className="text-xs font-medium text-secondary-500">Choose source type and click import to load pending items from your masters.</p>
                                 </div>
                             </div>
 
+                            {/* Selected Sources Chips */}
+                            {uniqueSources.length > 0 && (
+                                <div className="flex flex-col gap-1.5 px-1">
+                                    <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest leading-none">Selected Sources</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {uniqueSources.map((src: { type: InwardSourceType; id: number; display: string }) => (
+                                            <span
+                                                key={`${src.type}-${src.id}`}
+                                                className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700 shadow-sm transition-all hover:bg-white"
+                                            >
+                                                <span className="opacity-50 text-[10px]">
+                                                    {src.type === InwardSourceType.PO ? "PO" : src.type === InwardSourceType.JobWork ? "JW" : "OUT"}
+                                                </span>
+                                                {src.display}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeSourceGroup(src.type, src.id)}
+                                                    className="p-0.5 rounded-full hover:bg-rose-100 text-primary-400 hover:text-rose-600 transition-colors"
+                                                    title="Remove entire source"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Items table */}
-                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm">
-                                <div className="flex-1 min-h-0 overflow-auto">
-                                    <table className="w-full border-collapse text-sm">
-                                        <thead className="sticky top-0 bg-[#fcfdfe] border-b border-secondary-200 z-10 font-sans shadow-sm">
+                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
+                                <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
+                                    <table className="w-full border-collapse text-sm min-w-[900px]">
+                                        <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
                                             <tr>
-                                                <th className="text-center py-3 px-4 font-black text-secondary-400 text-[10px] uppercase tracking-widest w-12">Sr</th>
-                                                <th className="text-left py-3 px-4 font-black text-secondary-400 text-[10px] uppercase tracking-widest">Item Specification</th>
-                                                <th className="text-left py-3 px-4 font-black text-secondary-400 text-[10px] uppercase tracking-widest w-48">
-                                                    Reference No.
+                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-16">Include</th>
+                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-12">Sr.No</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-40">
+                                                    {displayHeader}
                                                 </th>
-                                                <th className="text-left py-3 px-4 font-black text-secondary-400 text-[10px] uppercase tracking-widest">Line Remarks</th>
-                                                <th className="text-center py-3 px-4 font-black text-secondary-400 text-[10px] uppercase tracking-widest w-12"></th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Description</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Line Remarks</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-secondary-100">
+                                        <tbody className="divide-y divide-secondary-100 bg-white">
                                             {lines.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={5} className="py-20 text-center">
-                                                        <div className="flex flex-col items-center gap-3 opacity-20">
-                                                            <Package className="w-16 h-16" />
-                                                            <p className="text-sm font-black uppercase tracking-widest">No items added yet</p>
-                                                        </div>
+                                                    <td colSpan={5} className="py-12 text-center text-secondary-500 text-sm">
+                                                        No items. Select a vendor and click "{getImportButtonText()}" to begin.
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                lines.map((line, idx) => (
-                                                    <tr key={idx} className="hover:bg-primary-50/20 group transition-colors">
-                                                        <td className="py-2.5 px-4 text-center text-secondary-300 font-black text-xs">{idx + 1}</td>
-                                                        <td className="py-2.5 px-4">
-                                                            <div className="flex flex-col">
-                                                                <span className="font-bold text-secondary-900 leading-tight">{line.itemName}</span>
-                                                                <span className="text-[10px] text-secondary-500 font-medium">{line.mainPartName}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-2.5 px-4">
-                                                            <div className="inline-flex flex-col px-2.5 py-1 rounded bg-secondary-50 border border-secondary-100/50">
-                                                                <span className="text-[8px] font-black text-primary-500 uppercase leading-none mb-0.5">
-                                                                    {line.sourceType === InwardSourceType.PO ? "PO No" : line.sourceType === InwardSourceType.JobWork ? "JW No" : "Out No"}
-                                                                </span>
-                                                                <span className="font-bold text-secondary-700 text-xs tracking-tight">{line.sourceRefDisplay}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-2.5 px-4">
-                                                            <Input
-                                                                placeholder="Line notes..."
-                                                                value={line.remarks}
-                                                                onChange={(e) => updateLineRemark(idx, e.target.value)}
-                                                                className="h-8 border-transparent hover:border-secondary-200 focus:border-primary-400 text-sm italic bg-secondary-50/30 rounded-lg"
-                                                            />
-                                                        </td>
-                                                        <td className="py-2.5 px-4 text-center">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => removeLine(idx)}
-                                                                className="h-8 w-8 p-0 text-secondary-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))
+                                                lines.map((line, idx) => {
+                                                    const included = line.included !== false;
+                                                    return (
+                                                        <tr key={idx} className={cn("hover:bg-primary-50/30 transition-colors", !included && "opacity-60 bg-secondary-50/50")}>
+                                                            <td className="py-2.5 px-3 text-center align-middle">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={included}
+                                                                    onChange={() => toggleLineIncluded(idx)}
+                                                                    className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer mx-auto block"
+                                                                    title={included ? "Include in Inward" : "Exclude from Inward"}
+                                                                />
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
+                                                            <td className="py-2.5 px-3">
+                                                                <span className="font-semibold text-secondary-800 text-xs tracking-tight whitespace-nowrap">{line.sourceRefDisplay}</span>
+                                                            </td>
+                                                            <td className="py-2.5 px-3">
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="font-semibold text-secondary-900 truncate">{line.itemName}</span>
+                                                                    <span className="text-xs text-secondary-500 truncate">{line.mainPartName}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 min-w-[200px]">
+                                                                <Input
+                                                                    placeholder="Line notes..."
+                                                                    value={line.remarks}
+                                                                    onChange={(e) => updateLineRemark(idx, e.target.value)}
+                                                                    disabled={!included}
+                                                                    className="h-8 border-secondary-200 focus:border-primary-400 text-sm bg-secondary-50/30 rounded-lg disabled:opacity-50"
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
                                             )}
                                         </tbody>
                                     </table>
@@ -341,7 +424,7 @@ export function InwardDialog({
                                 disabled={mutation.isPending || lines.length === 0}
                                 className="h-10 px-10 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] rounded-lg shadow-lg shadow-primary-200 transition-all active:scale-95"
                             >
-                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Entry"}
+                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save Entry")}
                             </Button>
                         </footer>
                     </>
@@ -354,6 +437,7 @@ export function InwardDialog({
                 sourceType={selectedSourceType}
                 onSelect={handleAddItems}
                 alreadySelectedIds={lines.filter(l => l.sourceType === selectedSourceType).map(l => l.sourceRefId)}
+                vendorId={vendorId}
             />
         </Dialog>
     );

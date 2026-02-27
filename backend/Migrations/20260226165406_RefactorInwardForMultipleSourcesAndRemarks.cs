@@ -8,10 +8,6 @@ namespace net_backend.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_job_works_parties_ToPartyId",
-                table: "job_works");
-
             migrationBuilder.DropColumn(
                 name: "SourceRefId",
                 table: "inwards");
@@ -39,20 +35,10 @@ namespace net_backend.Migrations
                 nullable: false,
                 defaultValue: 0);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_job_works_parties_ToPartyId",
-                table: "job_works",
-                column: "ToPartyId",
-                principalTable: "parties",
-                principalColumn: "Id");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_job_works_parties_ToPartyId",
-                table: "job_works");
-
             migrationBuilder.DropColumn(
                 name: "Remarks",
                 table: "inward_lines");
@@ -78,14 +64,6 @@ namespace net_backend.Migrations
                 type: "int",
                 nullable: false,
                 defaultValue: 0);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_job_works_parties_ToPartyId",
-                table: "job_works",
-                column: "ToPartyId",
-                principalTable: "parties",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
         }
     }
 }

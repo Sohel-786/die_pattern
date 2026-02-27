@@ -248,14 +248,14 @@ export default function PurchaseIndentsPage() {
                                     />
                                 </TableHead>
                                 <TableHead className="w-16 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">PI No</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">Created Date</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">Created By</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">Approval Status</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">PI NO</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">CREATED DATE</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">APPROVAL STATUS</TableHead>
                                 {isAdmin && (
-                                    <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">Active Status</TableHead>
+                                    <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">ACTIVE</TableHead>
                                 )}
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6">Actions</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -305,9 +305,6 @@ export default function PurchaseIndentsPage() {
                                                 <div className="font-medium text-secondary-700 text-xs">{format(new Date(pi.createdAt), 'dd/MM/yyyy')}</div>
                                                 <div className="text-[10px] text-secondary-400 font-medium uppercase">{format(new Date(pi.createdAt), 'HH:mm')}</div>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-secondary-700 text-xs">{pi.creatorName}</div>
-                                            </td>
                                             <td className="px-4 py-3 text-center">
                                                 {getStatusBadge(pi.status)}
                                             </td>
@@ -320,7 +317,10 @@ export default function PurchaseIndentsPage() {
                                                     )}
                                                 </td>
                                             )}
-                                            <td className="px-4 py-3 text-right">
+                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
+                                                {pi.creatorName}
+                                            </td>
+                                            <td className="px-4 py-3 text-right pr-6">
                                                 <div className="flex items-center justify-end gap-1">
                                                     {permissions?.approvePI && pi.isActive && (
                                                         <DropdownMenu>
@@ -377,15 +377,15 @@ export default function PurchaseIndentsPage() {
                                                         </DropdownMenu>
                                                     )}
                                                     {pi.isActive && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setPreviewPIId(pi.id)}
-                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                        title="Preview"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setPreviewPIId(pi.id)}
+                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                            title="Preview"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
                                                     )}
                                                     {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && pi.isActive && (
                                                         <Button

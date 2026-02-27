@@ -209,7 +209,6 @@ export default function PurchaseOrdersPage() {
 
   const canEdit = (po: PO) =>
     po.isActive !== false &&
-    po.status === PoStatus.Pending &&
     !po.hasInward &&
     (permissions?.editPO === true || user?.role === Role.ADMIN);
   const hasApprovalAccess = permissions?.approvePO === true || user?.role === Role.ADMIN;
@@ -273,27 +272,30 @@ export default function PurchaseOrdersPage() {
             <TableHeader>
               <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
                 <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
-                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">Sr.No</TableHead>
+                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
-                  PO No.
+                  PO NO.
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
-                  PO Date
+                  PO DATE
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
-                  Party Name
+                  PARTY NAME
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
-                  Delivery Date
+                  DELIVERY DATE
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
-                  Approval Status
+                  APPROVAL STATUS
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
-                  Active
+                  ACTIVE
+                </TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">
+                  CREATED BY
                 </TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">
-                  Actions
+                  ACTIONS
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -362,7 +364,10 @@ export default function PurchaseOrdersPage() {
                           {po.isActive !== false ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
+                        {po.creatorName ?? "System"}
+                      </td>
+                      <td className="px-4 py-3 text-right pr-6">
                         <div className="flex items-center justify-end gap-1">
                           {hasApprovalAccess && po.isActive !== false && (
                             <DropdownMenu>
@@ -416,15 +421,15 @@ export default function PurchaseOrdersPage() {
                             </DropdownMenu>
                           )}
                           {po.isActive !== false && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setPreviewPOId(po.id)}
-                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                            title="Preview"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setPreviewPOId(po.id)}
+                              className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
                           )}
                           {canEdit(po) && (
                             <Button

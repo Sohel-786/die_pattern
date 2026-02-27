@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Loader2, Package, ChevronRight, CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { Search, Loader2, Package, CheckCircle2, Circle } from "lucide-react";
 import api from "@/lib/api";
 import { InwardSourceType } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
@@ -17,6 +17,7 @@ interface SourceSelectionDialogProps {
     sourceType: InwardSourceType;
     onSelect: (items: any[]) => void;
     alreadySelectedIds: number[];
+    vendorId: number;
 }
 
 export function SourceSelectionDialog({
@@ -24,7 +25,8 @@ export function SourceSelectionDialog({
     onClose,
     sourceType,
     onSelect,
-    alreadySelectedIds
+    alreadySelectedIds,
+    vendorId
 }: SourceSelectionDialogProps) {
     const [search, setSearch] = useState("");
     const [tempSelectedIds, setTempSelectedIds] = useState<number[]>([]);
@@ -37,14 +39,15 @@ export function SourceSelectionDialog({
     }, [isOpen]);
 
     const { data: sources = [], isLoading } = useQuery({
-        queryKey: ["inward-sources", sourceType],
+        queryKey: ["inward-sources", sourceType, vendorId],
         queryFn: async () => {
             let url = "";
             if (sourceType === InwardSourceType.PO) url = "/purchase-orders/approved";
             else if (sourceType === InwardSourceType.JobWork) url = "/job-works/pending";
             else if (sourceType === InwardSourceType.OutwardReturn) url = "/movements/outward-pending-return";
 
-            const res = await api.get(url);
+            const params = vendorId ? { vendorId } : {};
+            const res = await api.get(url, { params });
             return res.data.data ?? [];
         },
         enabled: isOpen
@@ -57,6 +60,9 @@ export function SourceSelectionDialog({
     };
 
     const filtered = sources.filter((s: any) => {
+        const sourcePartyId = sourceType === InwardSourceType.OutwardReturn ? s.toPartyId : s.vendorId;
+        if (sourcePartyId !== vendorId) return false;
+
         const term = search.toLowerCase();
         if (sourceType === InwardSourceType.PO) {
             return s.poNo?.toLowerCase().includes(term) || s.vendorName?.toLowerCase().includes(term);
@@ -82,7 +88,7 @@ export function SourceSelectionDialog({
         selectedSources.forEach((source: any) => {
             if (sourceType === InwardSourceType.PO) {
                 const items = (source.items || []).map((i: any) => ({
-                    itemId: i.purchaseIndentItem?.itemId || i.itemId,
+                    itemId: i.itemId,
                     itemName: i.currentName || i.itemName,
                     mainPartName: i.mainPartName,
                     quantity: 1,
@@ -101,7 +107,7 @@ export function SourceSelectionDialog({
                     quantity: 1,
                     sourceType: InwardSourceType.JobWork,
                     sourceRefId: source.id,
-                    sourceRefDisplay: source.jwNo,
+                    sourceRefDisplay: source.jobWorkNo,
                     vendorId: source.vendorId,
                     vendorName: source.vendorName
                 });
@@ -184,7 +190,7 @@ export function SourceSelectionDialog({
                                         party = item.vendorName;
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
                                     } else if (sourceType === InwardSourceType.JobWork) {
-                                        refNo = item.jwNo;
+                                        refNo = item.jobWorkNo;
                                         party = item.vendorName;
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
                                     } else {

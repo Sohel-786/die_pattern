@@ -385,7 +385,8 @@ export interface Inward {
   status: InwardStatus;
   createdBy: number;
   creatorName?: string | null;
-  createdAt: string;
+  isActive: boolean;
+  inwardFrom?: string | null;
   lines: InwardLine[];
 }
 
@@ -396,10 +397,15 @@ export interface InwardLine {
   itemName?: string;
   mainPartName?: string;
   quantity: number;
+  itemTypeName?: string;
+  materialName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
   sourceType: InwardSourceType;
   sourceRefId: number;
   sourceRefDisplay?: string;
   remarks?: string;
+  qcNo?: string | null;
   movementId?: number | null;
   isQCPending: boolean;
   isQCApproved: boolean;
