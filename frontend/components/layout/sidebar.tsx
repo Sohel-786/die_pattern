@@ -29,8 +29,10 @@ import {
 import { Role, UserPermission } from "@/types";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useAppSettings, useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useAppSettings, useCurrentUserPermissions, useCompany } from "@/hooks/use-settings";
 import { useLogout } from "@/hooks/use-auth-mutations";
+
+import { useLocationContext } from "@/contexts/location-context";
 
 interface SidebarProps {
   userRole: Role;
@@ -41,7 +43,7 @@ interface SidebarProps {
 }
 
 const SidebarText = ({ show, children, className = "" }: { show: boolean; children: React.ReactNode; className?: string }) => (
-  <AnimatePresence mode="popLayout">
+  <AnimatePresence>
     {show && (
       <motion.span
         initial={{ opacity: 0, x: -5 }}
@@ -60,11 +62,18 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
   const pathname = usePathname();
   const { data: appSettings } = useAppSettings();
   const { data: permissions } = useCurrentUserPermissions();
+  const { selected, allowedAccess, getAllPairs } = useLocationContext();
+  const { data: currentCompany } = useCompany(selected?.companyId);
+  const pairs = getAllPairs(allowedAccess);
+  const currentPair = selected
+    ? pairs.find((p) => p.companyId === selected.companyId && p.locationId === selected.locationId)
+    : null;
+
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     master: true,
     indent: false,
     order: false,
-    transaction: false,
+    transaction: true,
     qc: false,
     report: false
   });
@@ -85,12 +94,12 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
   const linkClass = (href: string, iconOnly = false) => {
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
-    const base = "flex items-center gap-2 rounded-md transition-all text-sm cursor-pointer " +
+    const base = "flex items-center gap-2 rounded-md transition-all text-sm cursor-pointer overflow-hidden " +
       (isActive ? "bg-primary-50 text-primary-600 font-medium shadow-sm" : "text-secondary-600 hover:bg-secondary-50 hover:text-primary-600");
     return iconOnly ? `${base} justify-center px-2 py-2.5` : `${base} px-4 py-2.5`;
   };
 
-  const sectionHeaderClass = "flex items-center justify-between w-full px-3 py-1.5 rounded-md text-secondary-700 hover:bg-secondary-50 transition-all text-sm font-medium";
+  const sectionHeaderClass = "flex items-center justify-between w-full px-3 py-1.5 rounded-md text-secondary-700 hover:bg-secondary-50 transition-all text-sm font-medium overflow-hidden";
 
   const renderMenuItem = (href: string, label: string, icon: any) => {
     const Icon = icon;
@@ -123,15 +132,15 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
       onMouseEnter={() => !expanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={`shrink-0 border-b border-secondary-200 bg-gradient-to-r from-primary-600 to-primary-700 flex transition-[padding] duration-300 ${showFullSidebar ? "min-h-[5.5rem] px-4 py-3 items-center gap-3" : "min-h-[3rem] px-2 py-2 items-center justify-center"}`}>
+      <div className={`shrink-0 border-b border-secondary-200 bg-gradient-to-r from-primary-600 to-primary-700 flex transition-all duration-300 ${showFullSidebar ? "min-h-[5.5rem] px-4 py-3 items-center gap-3" : "min-h-[3.5rem] px-2 py-2 items-center justify-center"}`}>
         {showFullSidebar ? (
           <>
-            <div className="min-w-0 flex-1 flex flex-col justify-center gap-1.5">
+            <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden">
               <SidebarText
                 show={showFullSidebar}
                 className="!ml-0 text-base font-bold text-white/90 truncate leading-tight block"
               >
-                {appSettings?.companyName || "Aira Euro"}
+                {currentCompany?.name || currentPair?.companyName || "Aira Euro"}
               </SidebarText>
               <SidebarText
                 show={showFullSidebar}
@@ -167,7 +176,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-2 px-2 scrollbar-hide">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 scrollbar-hide">
         <div className="space-y-0.5">
           {permissions?.viewDashboard && renderMenuItem("/dashboard", "Dashboard", LayoutDashboard)}
 
@@ -203,7 +212,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
           {/* Transactions Section: PI, PO, Inward, Job Work, Outward, QC as separate options */}
           {(permissions?.viewPI || permissions?.viewPO || permissions?.viewInward || permissions?.viewQC || permissions?.viewMovement) && (
-            <div className="pt-1">
+            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""}`}>
               {showFullSidebar ? (
                 <>
                   <button onClick={() => toggleMenu('transaction')} className={sectionHeaderClass}>
@@ -239,7 +248,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
 
           {/* Reports & Settings */}
-          <div className="pt-1 border-t border-secondary-100 mt-1 space-y-0.5">
+          <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""} space-y-0.5`}>
             {permissions?.viewReports && renderMenuItem("/reports", "Reports", BarChart3)}
             {permissions?.accessSettings && renderMenuItem("/settings", "Settings", Settings)}
           </div>

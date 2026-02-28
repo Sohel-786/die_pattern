@@ -28,7 +28,8 @@ namespace net_backend.Data
         public DbSet<InwardLine> InwardLines { get; set; } = default!;
         public DbSet<Outward> Outwards { get; set; } = default!;
         public DbSet<OutwardLine> OutwardLines { get; set; } = default!;
-        public DbSet<QualityControl> QualityControls { get; set; } = default!;
+        public DbSet<QualityControlEntry> QcEntries { get; set; } = default!;
+        public DbSet<QualityControlItem> QcItems { get; set; } = default!;
         public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
         public DbSet<User> Users { get; set; } = default!;
         public DbSet<UserPermission> UserPermissions { get; set; } = default!;
@@ -61,6 +62,10 @@ namespace net_backend.Data
 
         modelBuilder.Entity<Outward>()
             .HasIndex(o => o.OutwardNo)
+            .IsUnique();
+
+        modelBuilder.Entity<QualityControlEntry>()
+            .HasIndex(q => q.QcNo)
             .IsUnique();
 
             modelBuilder.Entity<PurchaseOrderItem>()
@@ -178,11 +183,41 @@ namespace net_backend.Data
                 .HasForeignKey(l => l.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<QualityControl>()
-                .HasOne(qc => qc.InwardLine)
+            modelBuilder.Entity<QualityControlEntry>()
+                .HasOne(q => q.Location)
                 .WithMany()
-                .HasForeignKey(qc => qc.InwardLineId)
+                .HasForeignKey(q => q.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QualityControlEntry>()
+                .HasOne(q => q.Party)
+                .WithMany()
+                .HasForeignKey(q => q.PartyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QualityControlEntry>()
+                .HasOne(q => q.Creator)
+                .WithMany()
+                .HasForeignKey(q => q.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QualityControlEntry>()
+                .HasOne(q => q.Approver)
+                .WithMany()
+                .HasForeignKey(q => q.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QualityControlItem>()
+                .HasOne(i => i.QcEntry)
+                .WithMany(e => e.Items)
+                .HasForeignKey(i => i.QcEntryId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<QualityControlItem>()
+                .HasOne(i => i.InwardLine)
+                .WithMany()
+                .HasForeignKey(i => i.InwardLineId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ItemChangeLog>()
                 .HasOne(pcl => pcl.Item)
@@ -196,11 +231,6 @@ namespace net_backend.Data
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<QualityControl>()
-                .HasOne(qc => qc.Checker)
-                .WithMany()
-                .HasForeignKey(qc => qc.CheckedBy)
-                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<UserPermission>()
                 .HasOne(up => up.User)

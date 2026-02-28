@@ -194,12 +194,8 @@ export default function SettingsPage() {
   // Software (company profile) – all fields are draft until Save
   const { data: appSettings, isLoading: settingsLoading } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
-  const uploadLogo = useUploadCompanyLogo();
-  const [companyName, setCompanyName] = useState("");
   const [softwareName, setSoftwareName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0d6efd");
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
 
   // Access
   // Access
@@ -212,7 +208,7 @@ export default function SettingsPage() {
 
   const resetSystem = useMutation({
     mutationFn: async () => {
-      const res = await api.post("/maintenance/reset-system");
+      const res = await api.post("/settings/reset-system");
       return res.data;
     },
     onSuccess: (data: any) => {
@@ -292,7 +288,6 @@ export default function SettingsPage() {
   const softwareSyncedFromServer = useRef(false);
   useEffect(() => {
     if (appSettings) {
-      setCompanyName(appSettings.companyName || "");
       setSoftwareName(appSettings.softwareName || "");
       setPrimaryColor(appSettings.primaryColor || "#0d6efd");
       softwareSyncedFromServer.current = true;
@@ -304,22 +299,13 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!setDraft) return;
     setDraft({
-      companyName,
       softwareName,
       primaryColor,
-      logoUrl:
-        logoPreviewUrl ||
-        (appSettings?.companyLogo
-          ? `${API_BASE}/storage/${appSettings.companyLogo}`
-          : null),
     });
   }, [
     setDraft,
-    companyName,
     softwareName,
     primaryColor,
-    logoPreviewUrl,
-    appSettings?.companyLogo,
   ]);
 
   // Clear draft when leaving Settings page
@@ -347,35 +333,19 @@ export default function SettingsPage() {
   const savedPrimaryColor = appSettings?.primaryColor ?? "#0d6efd";
   const hasUnsavedSoftware =
     softwareSyncedFromServer.current &&
-    (companyName !== savedCompanyName ||
-      softwareName !== savedSoftwareName ||
-      primaryColor !== savedPrimaryColor ||
-      logoFile !== null);
+    (softwareName !== savedSoftwareName ||
+      primaryColor !== savedPrimaryColor);
   const hasUnsavedPermissions =
     userPermissionsData != null &&
     localPermissions != null &&
     (!permissionsFlagsEqual(localPermissions, userPermissionsData.permissions));
 
   const revertSoftware = useCallback(() => {
-    setCompanyName(savedCompanyName);
     setSoftwareName(savedSoftwareName);
     setPrimaryColor(savedPrimaryColor);
-    setLogoPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    setLogoFile(null);
     applyPrimaryColor(savedPrimaryColor || undefined);
     setDraft?.(null);
-  }, [savedCompanyName, savedSoftwareName, savedPrimaryColor, setDraft]);
-
-  const clearLogoDraft = useCallback(() => {
-    setLogoPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    setLogoFile(null);
-  }, []);
+  }, [savedSoftwareName, savedPrimaryColor, setDraft]);
 
   const [localLocationAccess, setLocalLocationAccess] = useState<{ companyId: number; companyName: string; locationId: number; locationName: string }[]>([]);
   const [locationAccessAddCompanyId, setLocationAccessAddCompanyId] = useState<number | "">("");
@@ -425,9 +395,9 @@ export default function SettingsPage() {
     JSON.stringify(
       [...localLocationAccess].sort((a, b) => a.companyId - b.companyId || a.locationId - b.locationId)
     ) !==
-      JSON.stringify(
-        [...initialLocationAccessFlat].sort((a, b) => a.companyId - b.companyId || a.locationId - b.locationId)
-      );
+    JSON.stringify(
+      [...initialLocationAccessFlat].sort((a, b) => a.companyId - b.companyId || a.locationId - b.locationId)
+    );
 
   const hasUnsavedAccessChanges = hasUnsavedPermissions || hasUnsavedLocationAccess;
 
@@ -458,50 +428,18 @@ export default function SettingsPage() {
   }
 
   const handleSaveSoftware = () => {
-    if (logoFile) {
-      uploadLogo.mutate(logoFile, {
+    updateSettings.mutate(
+      {
+        softwareName: softwareName || undefined,
+        primaryColor: primaryColor || undefined,
+      },
+      {
         onSuccess: () => {
-          updateSettings.mutate(
-            {
-              companyName: companyName || undefined,
-              softwareName: softwareName || undefined,
-              primaryColor: primaryColor || undefined,
-            },
-            {
-              onSuccess: () => {
-                applyPrimaryColor(primaryColor || undefined);
-                clearLogoDraft();
-                setDraft?.(null);
-              },
-            },
-          );
+          applyPrimaryColor(primaryColor || undefined);
+          setDraft?.(null);
         },
-      });
-    } else {
-      updateSettings.mutate(
-        {
-          companyName: companyName || undefined,
-          softwareName: softwareName || undefined,
-          primaryColor: primaryColor || undefined,
-        },
-        {
-          onSuccess: () => {
-            applyPrimaryColor(primaryColor || undefined);
-            setDraft?.(null);
-          },
-        },
-      );
-    }
-  };
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
-      setLogoFile(file);
-      setLogoPreviewUrl(URL.createObjectURL(file));
-    }
-    e.target.value = "";
+      },
+    );
   };
 
   const handlePermissionChange = (
@@ -517,7 +455,7 @@ export default function SettingsPage() {
     const saveLocationAccess = () => {
       updateLocationAccess.mutate(
         localLocationAccess.map((a) => ({ companyId: a.companyId, locationId: a.locationId })),
-        { onError: () => {} }
+        { onError: () => { } }
       );
     };
     if (localPermissions) {
@@ -626,12 +564,6 @@ export default function SettingsPage() {
         u.username.toLowerCase().includes(searchTerm.toLowerCase()),
     ) || [];
 
-  const displayLogoUrl =
-    logoPreviewUrl ||
-    (appSettings?.companyLogo
-      ? `${API_BASE}/storage/${appSettings.companyLogo}`
-      : null);
-
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <motion.div
@@ -697,89 +629,44 @@ export default function SettingsPage() {
                     </p>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-                    <div className="flex flex-col sm:flex-row gap-8">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-28 h-28 rounded-xl border-2 border-dashed border-secondary-200 flex items-center justify-center overflow-hidden bg-secondary-50">
-                          {displayLogoUrl ? (
-                            <img
-                              src={displayLogoUrl}
-                              alt="Company logo"
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <Upload className="w-10 h-10 text-secondary-400" />
-                          )}
-                        </div>
-                        <div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoChange}
-                            className="hidden"
-                            id="logo-upload"
-                          />
-                          <Label
-                            htmlFor="logo-upload"
-                            className="cursor-pointer px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors inline-block"
-                          >
-                            {logoFile
-                              ? "Change logo (saved on Save changes)"
-                              : "Choose Company Logo"}
-                          </Label>
-                          {logoFile && (
-                            <p className="text-xs text-secondary-500 mt-1">
-                              New image selected — click Save changes to apply
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <Label htmlFor="companyName" className="text-black">
-                            Company Name
-                          </Label>
-                          <Input
-                            id="companyName"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            placeholder="e.g. Acme Corp"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="softwareName" className="text-black">
-                            Software Name
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <Label htmlFor="softwareName" className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
+                            Software Designation
                           </Label>
                           <Input
                             id="softwareName"
                             value={softwareName}
                             onChange={(e) => setSoftwareName(e.target.value)}
-                            placeholder="e.g. QC Item System"
-                            className="mt-1"
+                            placeholder="e.g. Die & Pattern System"
+                            className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
                           />
+                          <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-tight ml-1">The name displayed in browser tabs and UI headers.</p>
                         </div>
-                        <div>
-                          <Label htmlFor="primaryColor" className="text-black">
-                            Primary Color
+                        <div className="space-y-2">
+                          <Label htmlFor="primaryColor" className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
+                            Corporate Theme Color
                           </Label>
-                          <p className="text-xs text-secondary-500 mt-0.5 mb-1">
-                            Drives all primary shades across the site. Text
-                            remains black.
-                          </p>
-                          <div className="flex gap-2 mt-1">
-                            <input
-                              type="color"
-                              id="primaryColor"
-                              value={primaryColor}
-                              onChange={(e) => setPrimaryColor(e.target.value)}
-                              className="w-12 h-10 rounded border border-secondary-200 cursor-pointer"
-                            />
-                            <Input
-                              value={primaryColor}
-                              onChange={(e) => setPrimaryColor(e.target.value)}
-                              className="flex-1 font-mono text-sm"
-                            />
+                          <div className="flex gap-3">
+                            <div className="relative shrink-0">
+                              <input
+                                type="color"
+                                id="primaryColor"
+                                value={primaryColor}
+                                onChange={(e) => setPrimaryColor(e.target.value)}
+                                className="w-12 h-12 rounded-xl border-2 border-slate-200 cursor-pointer p-1 bg-white"
+                              />
+                            </div>
+                            <div className="flex-1 relative">
+                              <Input
+                                value={primaryColor}
+                                onChange={(e) => setPrimaryColor(e.target.value)}
+                                className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-mono text-sm uppercase"
+                              />
+                            </div>
                           </div>
+                          <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-tight ml-1">Primary accent color used for buttons, links, and highlights.</p>
                         </div>
                       </div>
                     </div>
@@ -800,12 +687,11 @@ export default function SettingsPage() {
                         onClick={handleSaveSoftware}
                         disabled={
                           updateSettings.isPending ||
-                          uploadLogo.isPending ||
                           !hasUnsavedSoftware
                         }
                         className="gap-2"
                       >
-                        {updateSettings.isPending || uploadLogo.isPending ? (
+                        {updateSettings.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Save className="w-4 h-4" />
@@ -816,97 +702,110 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
 
-                {/* {currentUser?.role === Role.ADMIN && (
-                  <Card className="border-red-200 shadow-sm overflow-hidden mt-6">
-                    <CardHeader className="bg-red-50 border-b border-red-100">
+                {currentUser?.role === Role.ADMIN && (
+                  <Card className="border-red-100 shadow-sm overflow-hidden mt-6 bg-red-50/10">
+                    <CardHeader className="bg-red-50/50 border-b border-red-100/50">
                       <div className="flex items-center gap-2 text-red-700">
-                        <AlertTriangle className="w-5 h-5" />
-                        <CardTitle className="text-lg">Danger Zone</CardTitle>
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        <CardTitle className="text-lg font-bold">Factory Reset & Security</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div>
-                          <h4 className="text-base font-semibold text-secondary-900">
-                            System Reset
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="space-y-1.5">
+                          <h4 className="text-base font-bold text-secondary-900 uppercase tracking-tight">
+                            Critical: System Factory Reset
                           </h4>
-                          <p className="text-sm text-secondary-600 mt-1 max-w-xl">
-                            Permanently delete all master entries, transactional
-                            data (issues/returns), and user accounts. Only your
-                            admin account and core settings will be preserved.
-                            <br />
-                            <span className="font-semibold text-red-600">
-                              This action cannot be undone.
-                            </span>
+                          <p className="text-sm text-secondary-600 max-w-2xl leading-relaxed">
+                            Permanently delete all master entries (Parties, Items), transactional
+                            records (PI, PO, Inwards, QC), and non-admin user accounts.
+                            Only your <span className="font-bold text-black underline decoration-red-500/30">Admin account</span>,
+                            one <span className="font-bold text-black underline decoration-red-500/30">Company</span>, and
+                            one <span className="font-bold text-black underline decoration-red-500/30">Location</span> will be preserved.
+                          </p>
+                          <p className="text-xs font-bold text-red-600 flex items-center gap-1.5 pt-1 uppercase tracking-wider">
+                            <Trash2 className="w-3 h-3" /> This action is irreversible and permanent.
                           </p>
                         </div>
                         <Button
                           variant="destructive"
-                          className="gap-2 whitespace-nowrap"
+                          className="h-12 px-8 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-200 gap-2 shrink-0 transition-all active:scale-95"
                           onClick={() => setIsResetDialogOpen(true)}
                         >
                           <Trash2 className="w-4 h-4" />
-                          Reset System
+                          Perform Reset
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
-                )} */}
+                )}
+
+                <Dialog
+                  isOpen={isResetDialogOpen}
+                  onClose={() => setIsResetDialogOpen(false)}
+                  title="Critical: Full System Reset"
+                  size="sm"
+                >
+                  <div className="space-y-6 pt-2">
+                    <div className="bg-red-50 p-5 rounded-2xl border border-red-100 flex items-start gap-4">
+                      <div className="p-2.5 bg-red-100 rounded-xl text-red-600 shadow-sm">
+                        <AlertTriangle className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-black text-red-900 uppercase tracking-wide">Warning: Irrecoverable Deletion</p>
+                        <ul className="space-y-1.5">
+                          {[
+                            "All Transactional History (Inwards, QC, Orders)",
+                            "All Master Records (Parties, Items, Materials)",
+                            "All Users except Primary Admin",
+                            "All Organization Settings outside Baseline"
+                          ].map((item, i) => (
+                            <li key={i} className="flex items-center gap-2 text-xs font-semibold text-red-800/80">
+                              <div className="w-1 h-1 rounded-full bg-red-400" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-orange-50 border border-orange-100/50">
+                      <p className="text-[11px] font-bold text-orange-800 uppercase tracking-tight text-center">
+                        System baseline (Standard Statuses & Categories) will be restored.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsResetDialogOpen(false)}
+                        className="flex-1 h-12 rounded-xl font-bold text-secondary-600 hover:bg-secondary-100"
+                        disabled={resetSystem.isPending}
+                      >
+                        Abort
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => resetSystem.mutate()}
+                        className="flex-1 h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-100"
+                        disabled={resetSystem.isPending}
+                      >
+                        {resetSystem.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Resetting...
+                          </>
+                        ) : (
+                          "Yes, Wipe Data"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </Dialog>
               </motion.div>
             )}
-
-            {/* <Dialog
-              isOpen={isResetDialogOpen}
-              onClose={() => setIsResetDialogOpen(false)}
-              title="Full System Reset?"
-              size="sm"
-            >
-              <div className="space-y-4">
-                <div className="bg-red-50 p-4 rounded-lg flex items-start gap-3 border border-red-100">
-                  <AlertTriangle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
-                  <div className="text-sm text-red-800">
-                    <p className="font-bold mb-1">Warning: Critical Action</p>
-                    <ul className="list-disc list-inside space-y-1 opacity-90">
-                      <li>All Master Entries will be deleted</li>
-                      <li>All Outward/Inward data will be wiped</li>
-                      <li>All stored images will be removed</li>
-                      <li>All users except the primary admin will be removed</li>
-                    </ul>
-                  </div>
-                </div>
-                <p className="text-secondary-600 text-sm italic">
-                  Initial system defaults (Standard Statuses, Categories, etc.)
-                  will be re-seeded for a fresh start.
-                </p>
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsResetDialogOpen(false)}
-                    className="flex-1"
-                    disabled={resetSystem.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => resetSystem.mutate()}
-                    className="flex-1"
-                    disabled={resetSystem.isPending}
-                  >
-                    {resetSystem.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Resetting...
-                      </>
-                    ) : (
-                      "Yes, Reset Everything"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </Dialog> */}
 
             {activeTab === "access" && (
               <motion.div
@@ -1413,226 +1312,226 @@ export default function SettingsPage() {
         size="lg"
       >
         <form
-            key={editingUser ? `edit-${editingUser.id}` : "add"}
-            onSubmit={handleSubmit(onSubmitUser)}
-            className="flex flex-col overflow-hidden"
-          >
-            <div className="overflow-y-auto p-6 space-y-6">
-              {/* Profile Basics Row */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">First Name <span className="text-rose-500">*</span></Label>
-                  <Input
-                    {...register("firstName")}
-                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                    placeholder="e.g. Rahul"
-                  />
-                  {errors.firstName && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.firstName.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Last Name <span className="text-rose-500">*</span></Label>
-                  <Input
-                    {...register("lastName")}
-                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                    placeholder="e.g. Sharma"
-                  />
-                  {errors.lastName && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.lastName.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Login Credentials Row */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Username <span className="text-rose-500">*</span></Label>
-                  <div className="relative group">
-                    <Input
-                      {...register("username")}
-                      className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium bg-slate-50/50 group-focus-within:bg-white"
-                      placeholder="rahul.s"
-                    />
-                  </div>
-                  {errors.username && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.username.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Password {editingUser ? "(Optional)" : "*"}</Label>
-                  <div className="relative group">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      {...register("password")}
-                      className="h-12 pl-4 pr-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                      placeholder={editingUser ? "Keep existing" : "••••••••"}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((p) => !p)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.password.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Contact & Role Row */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Contact Protocol {watch("role") !== Role.ADMIN ? "*" : ""}</Label>
-                  <Input
-                    {...register("mobileNumber")}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                      e.target.value = value;
-                      register("mobileNumber").onChange(e);
-                    }}
-                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                    placeholder="10-digit mobile"
-                  />
-                  {errors.mobileNumber && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.mobileNumber.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Role <span className="text-rose-500">*</span></Label>
-                  <select
-                    {...register("role")}
-                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
-                  >
-                    <option value={Role.USER}>User</option>
-                    <option value={Role.MANAGER}>Manager</option>
-                    <option value={Role.ADMIN}>Admin</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Organization Context Row */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Primary Company <span className="text-rose-500">*</span></Label>
-                  <select
-                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
-                    value={watch("companyId") ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : undefined;
-                      setValue("companyId", v);
-                      setValue("locationId", undefined);
-                    }}
-                  >
-                    <option value="">Select Company Context</option>
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                  {errors.companyId && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.companyId.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Assigned Location <span className="text-rose-500">*</span></Label>
-                  <select
-                    className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none disabled:bg-slate-50/50 disabled:text-slate-400"
-                    value={watch("locationId") ?? ""}
-                    onChange={(e) => setValue("locationId", e.target.value ? Number(e.target.value) : undefined)}
-                    disabled={!watch("companyId")}
-                  >
-                    <option value="">{watch("companyId") ? "Select Operational Site" : "Awaiting Company..."}</option>
-                    {locations
-                      .filter((l) => l.companyId === watch("companyId"))
-                      .map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                  </select>
-                  {errors.locationId && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.locationId.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Identity Row: Avatar & Status */}
-              <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="space-y-3">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Profile Identity</Label>
-                  <div className="flex flex-row flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setValue("avatar", null, { shouldValidate: true })}
-                      className={cn(
-                        "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
-                        !watch("avatar") ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
-                      )}
-                    >
-                      <img src={DEFAULT_AVATAR_PATH} alt="Def" className="w-full h-full object-cover" />
-                    </button>
-                    {AVATAR_OPTIONS.map((filename) => {
-                      const isSelected = watch("avatar") === filename;
-                      return (
-                        <button
-                          key={filename}
-                          type="button"
-                          onClick={() => setValue("avatar", filename, { shouldValidate: true })}
-                          className={cn(
-                            "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
-                            isSelected ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
-                          )}
-                        >
-                          <img src={`${AVATAR_PRESETS_PATH}/${filename}`} alt="" className="w-full h-full object-cover" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 mr-1">Account Activation</Label>
-                  <label className="relative inline-flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      {...register("isActive")}
-                      className="sr-only peer"
-                    />
-                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-slate-950 shadow-inner"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4 border-t border-secondary-100">
-              <Button
-                type="submit"
-                disabled={createUser.isPending || updateUser.isPending}
-                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
-              >
-                {createUser.isPending || updateUser.isPending ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="w-4 h-4" />
-                    Save
-                  </div>
+          key={editingUser ? `edit-${editingUser.id}` : "add"}
+          onSubmit={handleSubmit(onSubmitUser)}
+          className="flex flex-col overflow-hidden"
+        >
+          <div className="overflow-y-auto p-6 space-y-6">
+            {/* Profile Basics Row */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">First Name <span className="text-rose-500">*</span></Label>
+                <Input
+                  {...register("firstName")}
+                  className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                  placeholder="e.g. Rahul"
+                />
+                {errors.firstName && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.firstName.message}</p>
                 )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseUserForm}
-                className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Last Name <span className="text-rose-500">*</span></Label>
+                <Input
+                  {...register("lastName")}
+                  className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                  placeholder="e.g. Sharma"
+                />
+                {errors.lastName && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.lastName.message}</p>
+                )}
+              </div>
             </div>
-          </form>
+
+            {/* Login Credentials Row */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Username <span className="text-rose-500">*</span></Label>
+                <div className="relative group">
+                  <Input
+                    {...register("username")}
+                    className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium bg-slate-50/50 group-focus-within:bg-white"
+                    placeholder="rahul.s"
+                  />
+                </div>
+                {errors.username && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.username.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Password {editingUser ? "(Optional)" : "*"}</Label>
+                <div className="relative group">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    {...register("password")}
+                    className="h-12 pl-4 pr-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                    placeholder={editingUser ? "Keep existing" : "••••••••"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.password.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Contact & Role Row */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Contact Protocol {watch("role") !== Role.ADMIN ? "*" : ""}</Label>
+                <Input
+                  {...register("mobileNumber")}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    e.target.value = value;
+                    register("mobileNumber").onChange(e);
+                  }}
+                  className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                  placeholder="10-digit mobile"
+                />
+                {errors.mobileNumber && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.mobileNumber.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Role <span className="text-rose-500">*</span></Label>
+                <select
+                  {...register("role")}
+                  className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
+                >
+                  <option value={Role.USER}>User</option>
+                  <option value={Role.MANAGER}>Manager</option>
+                  <option value={Role.ADMIN}>Admin</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Organization Context Row */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Primary Company <span className="text-rose-500">*</span></Label>
+                <select
+                  className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none"
+                  value={watch("companyId") ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value ? Number(e.target.value) : undefined;
+                    setValue("companyId", v);
+                    setValue("locationId", undefined);
+                  }}
+                >
+                  <option value="">Select Company Context</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {errors.companyId && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.companyId.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Assigned Location <span className="text-rose-500">*</span></Label>
+                <select
+                  className="h-12 w-full px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-slate-950 transition-all appearance-none outline-none disabled:bg-slate-50/50 disabled:text-slate-400"
+                  value={watch("locationId") ?? ""}
+                  onChange={(e) => setValue("locationId", e.target.value ? Number(e.target.value) : undefined)}
+                  disabled={!watch("companyId")}
+                >
+                  <option value="">{watch("companyId") ? "Select Operational Site" : "Awaiting Company..."}</option>
+                  {locations
+                    .filter((l) => l.companyId === watch("companyId"))
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                </select>
+                {errors.locationId && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.locationId.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Identity Row: Avatar & Status */}
+            <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="space-y-3">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Profile Identity</Label>
+                <div className="flex flex-row flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setValue("avatar", null, { shouldValidate: true })}
+                    className={cn(
+                      "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
+                      !watch("avatar") ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                    )}
+                  >
+                    <img src={DEFAULT_AVATAR_PATH} alt="Def" className="w-full h-full object-cover" />
+                  </button>
+                  {AVATAR_OPTIONS.map((filename) => {
+                    const isSelected = watch("avatar") === filename;
+                    return (
+                      <button
+                        key={filename}
+                        type="button"
+                        onClick={() => setValue("avatar", filename, { shouldValidate: true })}
+                        className={cn(
+                          "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
+                          isSelected ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                        )}
+                      >
+                        <img src={`${AVATAR_PRESETS_PATH}/${filename}`} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 mr-1">Account Activation</Label>
+                <label className="relative inline-flex items-center cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    {...register("isActive")}
+                    className="sr-only peer"
+                  />
+                  <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-slate-950 shadow-inner"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-secondary-100">
+            <Button
+              type="submit"
+              disabled={createUser.isPending || updateUser.isPending}
+              className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
+            >
+              {createUser.isPending || updateUser.isPending ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Save className="w-4 h-4" />
+                  Save
+                </div>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseUserForm}
+              className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+          </div>
+        </form>
       </Dialog>
     </div>
   );

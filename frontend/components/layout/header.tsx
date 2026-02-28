@@ -2,7 +2,7 @@
 
 import { User } from '@/types';
 import { Avatar } from '@/components/ui/avatar';
-import { useAppSettings, useCurrentUserPermissions } from '@/hooks/use-settings';
+import { useAppSettings, useCurrentUserPermissions, useCompany } from '@/hooks/use-settings';
 import { useSoftwareProfileDraft } from '@/contexts/software-profile-draft-context';
 import { useLocationContext } from '@/contexts/location-context';
 import { LogOut, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
@@ -20,16 +20,24 @@ interface HeaderProps {
 export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) {
   const { data: appSettings } = useAppSettings();
   const { data: permissions } = useCurrentUserPermissions();
-  const profileDraft = useSoftwareProfileDraft()?.draft ?? null;
-  const logoUrl =
-    profileDraft?.logoUrl ??
-    (appSettings?.companyLogo ? `${API_BASE}/storage/${appSettings.companyLogo}` : null);
-  const hasLogo = Boolean(logoUrl);
   const { selected, allowedAccess, getAllPairs } = useLocationContext();
+
+  // Fetch the latest company details to ensure reactive logo updates from Company Master
+  const { data: currentCompany, isLoading: isCompanyLoading } = useCompany(selected?.companyId);
+
   const pairs = getAllPairs(allowedAccess);
   const currentPair = selected
     ? pairs.find((p) => p.companyId === selected.companyId && p.locationId === selected.locationId)
     : null;
+
+  // Prioritize the fresh company logo from the API once loaded. 
+  // Fallback to currentPair.companyLogo only during the initial load of the Company query.
+  const logoPath = !isCompanyLoading && currentCompany !== undefined
+    ? currentCompany.logoUrl
+    : currentPair?.companyLogo;
+
+  const logoUrl = logoPath ? `${API_BASE}${logoPath}` : null;
+  const hasLogo = Boolean(logoUrl);
   const hasMultipleLocations = pairs.length > 1;
 
   const isHorizontal = permissions?.navigationLayout === 'HORIZONTAL';

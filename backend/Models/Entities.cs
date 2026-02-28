@@ -8,9 +8,6 @@ namespace net_backend.Models
     public class AppSettings
     {
         public int Id { get; set; }
-        [Required]
-        public string CompanyName { get; set; } = "Die & Pattern System";
-        public string? CompanyLogo { get; set; }
         [MaxLength(255)]
         public string? SoftwareName { get; set; }
         [MaxLength(20)]
@@ -385,21 +382,48 @@ namespace net_backend.Models
         public virtual Item? Item { get; set; }
     }
 
-    [Table("quality_controls")]
-    public class QualityControl
+    [Table("qc_entries")]
+    public class QualityControlEntry
     {
         public int Id { get; set; }
-        public int InwardLineId { get; set; }
-        public bool IsApproved { get; set; }
-        public bool IsActive { get; set; } = true;
+        [Required]
+        public string QcNo { get; set; } = string.Empty;
+        public int LocationId { get; set; }
+        public int PartyId { get; set; }
+        public InwardSourceType SourceType { get; set; }
         public string? Remarks { get; set; }
-        public int CheckedBy { get; set; }
-        public DateTime CheckedAt { get; set; } = DateTime.Now;
+        public QcStatus Status { get; set; } = QcStatus.Pending;
+        public int CreatedBy { get; set; }
+        public int? ApprovedBy { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+        [ForeignKey("PartyId")]
+        public virtual Party? Party { get; set; }
+        [ForeignKey("CreatedBy")]
+        public virtual User? Creator { get; set; }
+        [ForeignKey("ApprovedBy")]
+        public virtual User? Approver { get; set; }
+        public virtual ICollection<QualityControlItem> Items { get; set; } = new List<QualityControlItem>();
+    }
+
+    [Table("qc_items")]
+    public class QualityControlItem
+    {
+        public int Id { get; set; }
+        public int QcEntryId { get; set; }
+        public int InwardLineId { get; set; }
+        public bool? IsApproved { get; set; } // Null = Pending, True = Approved, False = Rejected
+        public string? Remarks { get; set; }
+
+        [ForeignKey("QcEntryId")]
+        public virtual QualityControlEntry? QcEntry { get; set; }
         [ForeignKey("InwardLineId")]
         public virtual InwardLine? InwardLine { get; set; }
-        [ForeignKey("CheckedBy")]
-        public virtual User? Checker { get; set; }
     }
 
     [Table("item_change_logs")]

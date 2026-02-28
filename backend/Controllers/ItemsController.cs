@@ -20,21 +20,6 @@ namespace net_backend.Controllers
             _itemState = itemState;
         }
 
-        private static string MapProcessStateToDisplay(ItemProcessState state)
-        {
-            return state switch
-            {
-                ItemProcessState.NotInStock => "Not In Stock",
-                ItemProcessState.InPI => "PI Issued",
-                ItemProcessState.InPO => "PO Issued",
-                ItemProcessState.InwardDone => "Inward Done",
-                ItemProcessState.InQC => "In QC",
-                ItemProcessState.InJobwork => "In Job Work",
-                ItemProcessState.Outward => "In Outward",
-                ItemProcessState.InStock => "In Stock",
-                _ => "Not In Stock"
-            };
-        }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll(
@@ -108,7 +93,7 @@ namespace net_backend.Controllers
             foreach (var dto in data)
             {
                 var state = await _itemState.GetStateAsync(dto.Id, null);
-                dto.CurrentProcess = MapProcessStateToDisplay(state);
+                dto.CurrentProcess = _itemState.GetStateDisplay(state);
             }
 
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
@@ -142,7 +127,6 @@ namespace net_backend.Controllers
                     OwnerTypeName = p.OwnerType!.Name,
                     StatusId = p.StatusId,
                     StatusName = p.Status!.Name,
-
                     CurrentLocationId = p.CurrentLocationId,
                     CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
                     CurrentPartyId = p.CurrentPartyId,
@@ -150,6 +134,12 @@ namespace net_backend.Controllers
                     IsActive = p.IsActive
                 })
                 .ToListAsync();
+
+            foreach (var dto in data)
+            {
+                var state = await _itemState.GetStateAsync(dto.Id, null);
+                dto.CurrentProcess = _itemState.GetStateDisplay(state);
+            }
 
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }

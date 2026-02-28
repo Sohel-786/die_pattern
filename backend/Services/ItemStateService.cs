@@ -42,5 +42,21 @@ namespace net_backend.Services
             var state = await GetStateAsync(itemId);
             return state == ItemProcessState.InStock;
         }
+
+        public string GetStateDisplay(ItemProcessState state)
+        {
+            return state switch
+            {
+                ItemProcessState.NotInStock => "Not In Stock",
+                ItemProcessState.InPI => "PI Issued",
+                ItemProcessState.InPO => "PO Issued",
+                ItemProcessState.InwardDone => "Inward Done",
+                ItemProcessState.InQC => "In QC",
+                ItemProcessState.InJobwork => "In Job Work",
+                ItemProcessState.Outward => "In Outward",
+                ItemProcessState.InStock => "In Stock",
+                _ => "Not In Stock"
+            };
+        }
     }
 }

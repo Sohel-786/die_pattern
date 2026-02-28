@@ -3,10 +3,8 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
 export interface SoftwareProfileDraft {
-  companyName: string;
   softwareName: string;
   primaryColor: string;
-  logoUrl: string | null;
 }
 
 type ContextValue = {

@@ -74,8 +74,11 @@ export default function CompaniesPage() {
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => api.put(`/companies/${selectedItem?.id || data.id}`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
+      if (variables.id || selectedItem?.id) {
+        queryClient.invalidateQueries({ queryKey: ["companies", variables.id || selectedItem?.id] });
+      }
       toast.success("Details updated successfully");
       setIsDialogOpen(false);
       setSelectedItem(null);

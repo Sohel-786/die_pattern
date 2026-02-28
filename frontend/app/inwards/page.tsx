@@ -299,7 +299,7 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
                                                                                         {line.isQCApproved ? (
                                                                                             <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">Approved</span>
-                                                                                        ) : line.isQCPending || !line.movementId ? (
+                                                                                        ) : line.isQCPending ? (
                                                                                             <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Pending QC</span>
                                                                                         ) : (
                                                                                             <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">Rejected</span>

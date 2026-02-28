@@ -27,7 +27,7 @@ namespace net_backend.Controllers
             var settings = await _context.AppSettings.FirstOrDefaultAsync();
             if (settings == null)
             {
-                settings = new AppSettings { CompanyName = "QC Pattern System" };
+                settings = new AppSettings { SoftwareName = "Die & Pattern Management" };
                 _context.AppSettings.Add(settings);
                 await _context.SaveChangesAsync();
             }
@@ -48,7 +48,6 @@ namespace net_backend.Controllers
                 _context.AppSettings.Add(settings);
             }
 
-            if (request.CompanyName != null) settings.CompanyName = request.CompanyName;
             if (request.SoftwareName != null) settings.SoftwareName = request.SoftwareName;
             if (request.PrimaryColor != null) settings.PrimaryColor = request.PrimaryColor;
 
@@ -197,42 +196,88 @@ namespace net_backend.Controllers
             });
         }
 
-        [HttpPost("software/logo")]
-        public async Task<ActionResult<object>> UpdateLogo([FromForm] IFormFile logo)
+        [HttpPost("reset-system")]
+        public async Task<IActionResult> ResetSystem()
         {
-            if (!await CheckPermission("AccessSettings"))
-                return Forbidden();
+            // Only Admin can perform factory reset
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role != nameof(Role.ADMIN)) return Forbidden();
 
-            if (logo == null || logo.Length == 0)
-                return BadRequest(new ApiResponse<AppSettings> { Success = false, Message = "No logo file uploaded" });
-
-            var settings = await _context.AppSettings.FirstOrDefaultAsync();
-            if (settings == null)
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                settings = new AppSettings { CompanyName = "QC Pattern System" };
-                _context.AppSettings.Add(settings);
+                // 1. Wipe Transactional Data
+                _context.AuditLogs.RemoveRange(_context.AuditLogs);
+                _context.ItemChangeLogs.RemoveRange(_context.ItemChangeLogs);
+                _context.QcItems.RemoveRange(_context.QcItems);
+                _context.QcEntries.RemoveRange(_context.QcEntries);
+                _context.InwardLines.RemoveRange(_context.InwardLines);
+                _context.Inwards.RemoveRange(_context.Inwards);
+                _context.OutwardLines.RemoveRange(_context.OutwardLines);
+                _context.Outwards.RemoveRange(_context.Outwards);
+                _context.JobWorks.RemoveRange(_context.JobWorks);
+                _context.PurchaseOrderItems.RemoveRange(_context.PurchaseOrderItems);
+                _context.PurchaseOrders.RemoveRange(_context.PurchaseOrders);
+                _context.PurchaseIndentItems.RemoveRange(_context.PurchaseIndentItems);
+                _context.PurchaseIndents.RemoveRange(_context.PurchaseIndents);
+                
+                // 2. Wipe Masters
+                _context.Items.RemoveRange(_context.Items);
+                _context.Parties.RemoveRange(_context.Parties);
+                _context.Materials.RemoveRange(_context.Materials);
+                _context.ItemStatuses.RemoveRange(_context.ItemStatuses);
+                _context.ItemTypes.RemoveRange(_context.ItemTypes);
+                _context.OwnerTypes.RemoveRange(_context.OwnerTypes);
+
+                // 3. User related (Keep Admin 'mitul')
+                _context.UserLocationAccess.RemoveRange(_context.UserLocationAccess);
+                _context.UserPermissions.RemoveRange(_context.UserPermissions);
+                
+                var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "mitul");
+                if (adminUser != null)
+                {
+                    adminUser.DefaultCompanyId = null;
+                    adminUser.DefaultLocationId = null;
+                }
+                // Save immediately so admin is no longer pointing to things being deleted
+                await _context.SaveChangesAsync();
+
+                var otherUsers = _context.Users.Where(u => u.Username != "mitul");
+                _context.Users.RemoveRange(otherUsers);
+
+                // 4. Locations & Companies (Clear all; DbInitializer will re-seed the base ones)
+                _context.Locations.RemoveRange(_context.Locations);
+                _context.Companies.RemoveRange(_context.Companies);
+                _context.AppSettings.RemoveRange(_context.AppSettings);
+
+                await _context.SaveChangesAsync();
+
+                // 5. Re-initialize baseline data
+                DbInitializer.Initialize(_context);
+
+                // 6. Optional: Clear storage/uploads (except maybe system logos)
+                // We'll leave the storage directory but a production-grade reset might wipe it.
+                // Given the risk of deleting important manuals or drawings, we'll focus on DB records first.
+
+                await transaction.CommitAsync();
+
+                return Ok(new ApiResponse<string>
+                {
+                    Success = true,
+                    Message = "System has been reset successfully. All data removed except primary admin, base company and location.",
+                    Data = "Success"
+                });
             }
-
-            var fileName = $"logo-{Guid.NewGuid()}{Path.GetExtension(logo.FileName)}";
-            var uploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "storage", "settings");
-            Directory.CreateDirectory(uploads);
-            var filePath = Path.Combine(uploads, fileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            catch (Exception ex)
             {
-                await logo.CopyToAsync(fileStream);
+                await transaction.RollbackAsync();
+                var innerMsg = ex.InnerException != null ? $"\nInner: {ex.InnerException.Message}" : "";
+                return StatusCode(500, new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = $"Factory reset failed: {ex.Message}{innerMsg}"
+                });
             }
-
-            var relativePath = $"settings/{fileName}";
-            settings.CompanyLogo = relativePath;
-            settings.UpdatedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { 
-                Success = true, 
-                Data = settings, 
-                LogoUrl = $"/storage/{relativePath}" 
-            });
         }
 
         private async Task<bool> CheckPermission(string permissionKey)

@@ -54,7 +54,7 @@ export function OutwardDialog({ open, onOpenChange }: OutwardDialogProps) {
         queryKey: ["items", "active", "in-stock"],
         queryFn: async () => {
             const res = await api.get("/items/active");
-            return (res.data.data ?? []).filter((i: Item) => i.currentHolderType === HolderType.Location);
+            return (res.data.data ?? []).filter((i: Item) => i.currentProcess === "In Stock");
         },
         enabled: open
     });

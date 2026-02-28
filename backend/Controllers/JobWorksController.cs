@@ -120,6 +120,17 @@ namespace net_backend.Controllers
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
+
+            // Update Item State
+            var item = await _context.Items.FindAsync(dto.ItemId);
+            if (item != null)
+            {
+                item.CurrentProcess = ItemProcessState.InJobwork;
+                item.CurrentPartyId = dto.ToPartyId;
+                item.CurrentLocationId = null;
+                item.UpdatedAt = DateTime.Now;
+            }
+
             _context.JobWorks.Add(jw);
             await _context.SaveChangesAsync();
             return StatusCode(201, new ApiResponse<JobWork> { Data = jw });

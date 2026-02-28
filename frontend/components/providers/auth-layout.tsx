@@ -137,13 +137,6 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         if (Array.isArray(rawAccess)) {
           const access = rawAccess as CompanyLocationAccess[];
           setAllowedAccess(access);
-          const pairs = access.flatMap((c) =>
-            (c.locations || []).map((l) => ({ companyId: c.companyId, locationId: l.id }))
-          );
-          // Always set a default selection when we have at least one pair so API requests get X-Company-Id / X-Location-Id
-          if (pairs.length >= 1) {
-            setSelected({ companyId: pairs[0].companyId, locationId: pairs[0].locationId });
-          }
         }
       } catch (err) {
         localStorage.removeItem('user');

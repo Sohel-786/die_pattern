@@ -28,6 +28,7 @@ namespace net_backend.DTOs
     {
         public int CompanyId { get; set; }
         public string CompanyName { get; set; } = string.Empty;
+        public string? CompanyLogo { get; set; }
         public List<LocationOptionDto> Locations { get; set; } = new();
     }
 

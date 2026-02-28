@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Save, Package, Loader2, Calendar, Plus } from "lucide-react";
 import api from "@/lib/api";
-import { Item, Party, HolderType } from "@/types";
+import { Item, Party } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ export function JobWorkDialog({ open, onOpenChange }: JobWorkDialogProps) {
         queryKey: ["items", "active", "in-stock"],
         queryFn: async () => {
             const res = await api.get("/items/active");
-            return (res.data.data ?? []).filter((i: Item) => i.currentHolderType === HolderType.Location);
+            return (res.data.data ?? []).filter((i: Item) => i.currentProcess === "In Stock");
         },
         enabled: open
     });

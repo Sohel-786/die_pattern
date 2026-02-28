@@ -1,3 +1,8 @@
+// DATABASE ARCHITECTURE RULE:
+// - Schema changes handled ONLY via EF Core migrations.
+// - Data seeding handled ONLY via DbInitializer.
+// - No runtime schema patching allowed.
+
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -68,9 +73,6 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Configure Port (matching Node.js backend)
-// Port configuration will be handled by environment variables (e.g., ASPNETCORE_URLS)
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -100,212 +102,31 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Apply pending migrations and schema fallbacks so the app works on any environment (publish-only deploy, no explicit migrations).
+// Clean, migration-based database initialization
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
     var env = services.GetRequiredService<IWebHostEnvironment>();
+    
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        // Apply any pending migrations on startup (creates DB if missing, runs new migrations)
+        
+        // 1. Handle Schema: Apply pending migrations
         context.Database.Migrate();
-
-        // Ensure purchase_order_items has Rate (fallback if migration did not run)
-        EnsurePOItemSchema(context);
-
-        // Ensure companies has new master fields (fallback if AddCompanyMasterFields migration did not run)
-        EnsureCompanyMasterFieldsSchema(context);
-
-        // Ensure IsActive exists on purchase_indents and purchase_orders (fallback when DB was copied/restored or migrations skipped)
-        EnsureIsActiveColumnsSchema(context);
-
-        // Ensure purchase_orders has GstPercent, GstType, QuotationUrlsJson (fallback when deploy is publish-only, no migrations run)
-        EnsurePurchaseOrderColumnsSchema(context);
-
-        // Remove LocationId from purchase_indents if still present (fallback when clone has old schema before RemoveLocationIdFromPurchaseIndents migration)
-        EnsureRemovePILocationId(context);
-
-        // Ensure users.DefaultCompanyId / DefaultLocationId and user_location_access table exist
-        EnsureUserLocationSchema(context);
-
-        // Ensure job_works.ToPartyId exists (fallback from AddToPartyIdToJobWork migration)
-        EnsureJobWorkToPartyId(context);
-
+        
+        // 2. Handle Data: Seed initial/required data
         DbInitializer.Initialize(context);
-        logger.LogInformation("Database migrations and seeding completed.");
+        
+        logger.LogInformation("Database initialized successfully (migrations and seeding).");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "An error occurred while initializing the database.");
         if (env.IsProduction())
             throw;
-        logger.LogWarning("Continuing without database in Development. Set ConnectionStrings:DefaultConnection (e.g. LocalDB) and ensure SQL Server/LocalDB is running, then restart.");
     }
 }
 
 app.Run();
-
-static void EnsurePOItemSchema(ApplicationDbContext context)
-{
-    try
-    {
-        // Add Rate to purchase_order_items if missing (migrations handle moving PO-level rate to items and dropping Rate from purchase_orders)
-        context.Database.ExecuteSqlRaw(@"
-            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('purchase_order_items') AND name = 'Rate')
-                ALTER TABLE purchase_order_items ADD Rate DECIMAL(18,2) NOT NULL DEFAULT 0;
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct, or table may not exist yet */ }
-}
-
-static void EnsureCompanyMasterFieldsSchema(ApplicationDbContext context)
-{
-    try
-    {
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[companies]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Pan')
-                    ALTER TABLE [dbo].[companies] ADD [Pan] nvarchar(50) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'State')
-                    ALTER TABLE [dbo].[companies] ADD [State] nvarchar(100) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'City')
-                    ALTER TABLE [dbo].[companies] ADD [City] nvarchar(100) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Pincode')
-                    ALTER TABLE [dbo].[companies] ADD [Pincode] nvarchar(20) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Phone')
-                    ALTER TABLE [dbo].[companies] ADD [Phone] nvarchar(30) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[companies]') AND name = 'Email')
-                    ALTER TABLE [dbo].[companies] ADD [Email] nvarchar(255) NULL;
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct */ }
-}
-
-static void EnsureIsActiveColumnsSchema(ApplicationDbContext context)
-{
-    try
-    {
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[purchase_indents]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'IsActive')
-                    ALTER TABLE [dbo].[purchase_indents] ADD [IsActive] bit NOT NULL DEFAULT 1;
-            END
-            IF OBJECT_ID(N'[dbo].[purchase_orders]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'IsActive')
-                    ALTER TABLE [dbo].[purchase_orders] ADD [IsActive] bit NOT NULL DEFAULT 1;
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct */ }
-}
-
-static void EnsurePurchaseOrderColumnsSchema(ApplicationDbContext context)
-{
-    try
-    {
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[purchase_orders]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'GstPercent')
-                    ALTER TABLE [dbo].[purchase_orders] ADD [GstPercent] decimal(18,2) NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'GstType')
-                    ALTER TABLE [dbo].[purchase_orders] ADD [GstType] int NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_orders]') AND name = 'QuotationUrlsJson')
-                    ALTER TABLE [dbo].[purchase_orders] ADD [QuotationUrlsJson] nvarchar(max) NULL;
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct */ }
-}
-
-static void EnsureRemovePILocationId(ApplicationDbContext context)
-{
-    try
-    {
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[purchase_indents]') IS NOT NULL
-            BEGIN
-                IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'LocationId')
-                BEGIN
-                    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'FK_purchase_indents_locations_LocationId')
-                        ALTER TABLE [dbo].[purchase_indents] DROP CONSTRAINT [FK_purchase_indents_locations_LocationId];
-                    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'[dbo].[purchase_indents]') AND name = 'IX_purchase_indents_LocationId')
-                        DROP INDEX [IX_purchase_indents_LocationId] ON [dbo].[purchase_indents];
-                    ALTER TABLE [dbo].[purchase_indents] DROP COLUMN [LocationId];
-                END
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct or table may not exist yet */ }
-}
-
-static void EnsureUserLocationSchema(ApplicationDbContext context)
-{
-    try
-    {
-        // Add DefaultCompanyId / DefaultLocationId to users if missing
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[users]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'DefaultCompanyId')
-                    ALTER TABLE [dbo].[users] ADD [DefaultCompanyId] int NULL;
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'DefaultLocationId')
-                    ALTER TABLE [dbo].[users] ADD [DefaultLocationId] int NULL;
-            END
-        ");
-
-        // Create user_location_access table if missing
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[user_location_access]') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[user_location_access] (
-                    [Id]        int NOT NULL IDENTITY(1,1),
-                    [UserId]    int NOT NULL,
-                    [CompanyId] int NOT NULL,
-                    [LocationId] int NOT NULL,
-                    [CreatedAt] datetime2 NOT NULL,
-                    CONSTRAINT [PK_user_location_access] PRIMARY KEY ([Id]),
-                    CONSTRAINT [FK_user_location_access_users_UserId]
-                        FOREIGN KEY ([UserId]) REFERENCES [users]([Id]) ON DELETE CASCADE,
-                    CONSTRAINT [FK_user_location_access_companies_CompanyId]
-                        FOREIGN KEY ([CompanyId]) REFERENCES [companies]([Id]) ON DELETE NO ACTION,
-                    CONSTRAINT [FK_user_location_access_locations_LocationId]
-                        FOREIGN KEY ([LocationId]) REFERENCES [locations]([Id]) ON DELETE NO ACTION
-                );
-                CREATE UNIQUE INDEX [IX_user_location_access_UserId_CompanyId_LocationId]
-                    ON [dbo].[user_location_access] ([UserId], [CompanyId], [LocationId]);
-                CREATE INDEX [IX_user_location_access_CompanyId]
-                    ON [dbo].[user_location_access] ([CompanyId]);
-                CREATE INDEX [IX_user_location_access_LocationId]
-                    ON [dbo].[user_location_access] ([LocationId]);
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct */ }
-}
-
-static void EnsureJobWorkToPartyId(ApplicationDbContext context)
-{
-    try
-    {
-        context.Database.ExecuteSqlRaw(@"
-            IF OBJECT_ID(N'[dbo].[job_works]') IS NOT NULL
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[job_works]') AND name = 'ToPartyId')
-                BEGIN
-                    ALTER TABLE [dbo].[job_works] ADD [ToPartyId] int NULL;
-                    CREATE INDEX [IX_job_works_ToPartyId] ON [dbo].[job_works] ([ToPartyId]);
-                    ALTER TABLE [dbo].[job_works] ADD CONSTRAINT [FK_job_works_parties_ToPartyId]
-                        FOREIGN KEY ([ToPartyId]) REFERENCES [dbo].[parties]([Id]);
-                END
-            END
-        ");
-    }
-    catch (Exception) { /* Schema may already be correct */ }
-}

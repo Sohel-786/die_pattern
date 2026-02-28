@@ -28,11 +28,11 @@ export enum PoStatus {
 
 export type PurchaseType = 'Regular' | 'Urgent' | 'Critical';
 
-/** Item process state for PI selection: only NotInStock can be added to a PI. */
 export type ItemProcessState =
   | 'NotInStock'
   | 'InPI'
   | 'InPO'
+  | 'InwardDone'
   | 'InQC'
   | 'InJobwork'
   | 'Outward'
@@ -413,6 +413,62 @@ export interface InwardLine {
   movementId?: number | null;
   isQCPending: boolean;
   isQCApproved: boolean;
+}
+
+export enum QcStatus {
+  Pending = 'Pending',
+  Approved = 'Approved',
+  Rejected = 'Rejected',
+}
+
+export interface QC {
+  id: number;
+  qcNo: string;
+  partyId: number;
+  partyName?: string;
+  sourceType: InwardSourceType;
+  remarks?: string;
+  status: QcStatus;
+  createdBy: number;
+  creatorName?: string;
+  approvedBy?: number | null;
+  approverName?: string | null;
+  approvedAt?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  items: QCItem[];
+}
+
+export interface QCItem {
+  id: number;
+  inwardLineId: number;
+  itemId: number;
+  mainPartName?: string;
+  currentName?: string;
+  itemTypeName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  materialName?: string;
+  inwardNo?: string;
+  inwardId: number;
+  isApproved?: boolean | null;
+  remarks?: string;
+  sourceRefDisplay?: string;
+}
+
+export interface PendingQC {
+  inwardLineId: number;
+  itemId: number;
+  itemName?: string;
+  mainPartName?: string;
+  inwardId?: number;
+  inwardNo?: string;
+  sourceType?: InwardSourceType;
+  sourceRefDisplay?: string;
+  vendorName?: string;
+  isQCPending: boolean;
+  isQCApproved: boolean;
+  inwardDate: string;
 }
 
 export interface CreateInwardDto {

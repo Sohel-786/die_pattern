@@ -126,11 +126,12 @@ namespace net_backend.Controllers
                     .Where(l => l.Company != null && l.Company.IsActive)
                     .OrderBy(l => l.Company!.Name).ThenBy(l => l.Name)
                     .ToListAsync();
-                var byCompany = locs.GroupBy(l => new { l.CompanyId, CompanyName = l.Company!.Name }).ToList();
+                var byCompany = locs.GroupBy(l => new { l.CompanyId, CompanyName = l.Company!.Name, CompanyLogo = l.Company.LogoUrl }).ToList();
                 return byCompany.Select(g => new CompanyLocationAccessDto
                 {
                     CompanyId = g.Key.CompanyId,
                     CompanyName = g.Key.CompanyName,
+                    CompanyLogo = g.Key.CompanyLogo,
                     Locations = g.Select(l => new LocationOptionDto { Id = l.Id, Name = l.Name }).ToList()
                 }).ToList();
             }
@@ -140,11 +141,12 @@ namespace net_backend.Controllers
                 .Where(ula => ula.UserId == userId && ula.Company != null && ula.Location != null)
                 .OrderBy(ula => ula.Company!.Name).ThenBy(ula => ula.Location!.Name)
                 .ToListAsync();
-            var grouped = access.GroupBy(ula => new { ula.CompanyId, CompanyName = ula.Company!.Name }).ToList();
+            var grouped = access.GroupBy(ula => new { ula.CompanyId, CompanyName = ula.Company!.Name, CompanyLogo = ula.Company.LogoUrl }).ToList();
             return grouped.Select(g => new CompanyLocationAccessDto
             {
                 CompanyId = g.Key.CompanyId,
                 CompanyName = g.Key.CompanyName,
+                CompanyLogo = g.Key.CompanyLogo,
                 Locations = g.Select(ula => new LocationOptionDto { Id = ula.LocationId, Name = ula.Location!.Name }).Distinct().ToList()
             }).ToList();
         }

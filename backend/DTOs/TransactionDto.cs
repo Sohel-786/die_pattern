@@ -209,9 +209,65 @@ namespace net_backend.DTOs
 
     public class QCDto
     {
+        public int Id { get; set; }
+        public string QcNo { get; set; } = string.Empty;
+        public int PartyId { get; set; }
+        public string? PartyName { get; set; }
+        public InwardSourceType SourceType { get; set; }
+        public string? Remarks { get; set; }
+        public QcStatus Status { get; set; }
+        public int CreatedBy { get; set; }
+        public string? CreatorName { get; set; }
+        public int? ApprovedBy { get; set; }
+        public string? ApproverName { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<QCItemDto> Items { get; set; } = new();
+    }
+
+    public class QCItemDto
+    {
+        public int Id { get; set; }
         public int InwardLineId { get; set; }
+        public int ItemId { get; set; }
+        public string? MainPartName { get; set; }
+        public string? CurrentName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string? MaterialName { get; set; }
+        public string? InwardNo { get; set; }
+        public int InwardId { get; set; }
+        public string? SourceRefDisplay { get; set; }
+        public bool? IsApproved { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class CreateQCDto
+    {
+        public int PartyId { get; set; }
+        public InwardSourceType SourceType { get; set; }
+        public string? Remarks { get; set; }
+        public List<int> InwardLineIds { get; set; } = new();
+    }
+
+    public class ApproveQCItemDto
+    {
+        public int QCItemId { get; set; }
         public bool IsApproved { get; set; }
         public string? Remarks { get; set; }
+    }
+
+    public class RejectQCEntryDto
+    {
+        public string? Remarks { get; set; }
+    }
+
+    public class UpdateQCDto
+    {
+        public string? Remarks { get; set; }
+        public List<int> InwardLineIds { get; set; } = new();
     }
 
     public class InwardDto

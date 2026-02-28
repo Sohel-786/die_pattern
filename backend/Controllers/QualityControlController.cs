@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
+using net_backend.Services;
 
 namespace net_backend.Controllers
 {
@@ -10,31 +11,127 @@ namespace net_backend.Controllers
     [ApiController]
     public class QualityControlController : BaseController
     {
-        public QualityControlController(ApplicationDbContext context) : base(context)
+        private readonly ICodeGeneratorService _codeGenerator;
+        public QualityControlController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
         {
+            _codeGenerator = codeGenerator;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<IEnumerable<QCDto>>>> GetAll(
+            [FromQuery] int? partyId,
+            [FromQuery] List<int>? partyIds,
+            [FromQuery] QcStatus? status,
+            [FromQuery] bool? isActive,
+            [FromQuery] string? search,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            if (!await HasPermission("ViewQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var query = _context.QcEntries
+                .Where(q => q.LocationId == locationId)
+                .Include(q => q.Party)
+                .Include(q => q.Creator)
+                .Include(q => q.Approver)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Inward)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                            .ThenInclude(it => it!.ItemType)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                            .ThenInclude(it => it!.Material)
+                .OrderByDescending(q => q.CreatedAt)
+                .AsQueryable();
+
+            if (partyId.HasValue)
+                query = query.Where(q => q.PartyId == partyId.Value);
+            if (partyIds != null && partyIds.Any())
+                query = query.Where(q => partyIds.Contains(q.PartyId));
+            if (status.HasValue)
+                query = query.Where(q => q.Status == status.Value);
+            if (isActive.HasValue)
+                query = query.Where(q => q.IsActive == isActive.Value);
+            if (startDate.HasValue)
+                query = query.Where(q => q.CreatedAt >= startDate.Value);
+            if (endDate.HasValue)
+            {
+                var end = endDate.Value.Date.AddDays(1);
+                query = query.Where(q => q.CreatedAt < end);
+            }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                query = query.Where(q =>
+                    (q.QcNo != null && q.QcNo.ToLower().Contains(term)) ||
+                    (q.Party != null && q.Party.Name != null && q.Party.Name.ToLower().Contains(term)) ||
+                    (q.Remarks != null && q.Remarks.ToLower().Contains(term)));
+            }
+
+            var list = await query.ToListAsync();
+            var data = list.Select(MapToDto).ToList();
+            return Ok(new ApiResponse<IEnumerable<QCDto>> { Data = data });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApiResponse<QCDto>>> GetById(int id)
+        {
+            if (!await HasPermission("ViewQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries
+                .Include(q => q.Party)
+                .Include(q => q.Creator)
+                .Include(q => q.Approver)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Inward)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                            .ThenInclude(it => it!.ItemType)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                            .ThenInclude(it => it!.Material)
+                .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+
+            if (entry == null) return NotFound();
+            return Ok(new ApiResponse<QCDto> { Data = MapToDto(entry) });
         }
 
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PendingQCDto>>>> GetPending(
+            [FromQuery] int? partyId,
             [FromQuery] InwardSourceType? sourceType)
         {
+            if (!await HasPermission("CreateQC") && !await HasPermission("EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
+            
             var query = _context.InwardLines
                 .Include(l => l.Item)
                 .Include(l => l.Inward).ThenInclude(i => i!.Vendor)
-                .Where(l => l.IsQCPending && !l.IsQCApproved && l.Inward != null && l.Inward.IsActive && l.Inward.LocationId == locationId);
+                .Where(l => l.IsQCPending && !l.IsQCApproved && l.Inward != null && l.Inward.IsActive && l.Inward.LocationId == locationId)
+                .AsQueryable();
 
+            if (partyId.HasValue)
+                query = query.Where(l => l.Inward!.VendorId == partyId.Value);
             if (sourceType.HasValue)
                 query = query.Where(l => l.SourceType == sourceType.Value);
 
-            var list = await query.ToListAsync();
-            var data = list.Select(m => MapToDto(m)).ToList();
-            return Ok(new ApiResponse<IEnumerable<PendingQCDto>> { Data = data });
-        }
+            // Hide items already in an active Pending QC entry
+            var inActiveQc = await _context.QcItems
+                .Where(qi => qi.QcEntry!.IsActive && qi.QcEntry.Status == QcStatus.Pending)
+                .Select(qi => qi.InwardLineId)
+                .ToListAsync();
 
-        private static PendingQCDto MapToDto(InwardLine m)
-        {
-            return new PendingQCDto
+            query = query.Where(l => !inActiveQc.Contains(l.Id));
+
+            var list = await query.ToListAsync();
+            var data = list.Select(m => new PendingQCDto
             {
                 InwardLineId = m.Id,
                 ItemId = m.ItemId,
@@ -51,56 +148,357 @@ namespace net_backend.Controllers
                 IsQCPending = m.IsQCPending,
                 IsQCApproved = m.IsQCApproved,
                 InwardDate = m.Inward?.InwardDate ?? DateTime.Now
-            };
+            }).ToList();
+
+            return Ok(new ApiResponse<IEnumerable<PendingQCDto>> { Data = data });
         }
 
-        [HttpPost("perform")]
-        public async Task<ActionResult<ApiResponse<bool>>> Perform([FromBody] QCDto dto)
+        [HttpPost]
+        public async Task<ActionResult<ApiResponse<QualityControlEntry>>> Create([FromBody] CreateQCDto dto)
         {
             if (!await HasPermission("CreateQC")) return Forbidden();
-            if (dto.IsApproved && !await HasPermission("ApproveQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
-            var line = await _context.InwardLines
-                .Include(l => l.Item)
-                .Include(l => l.Inward)
-                .FirstOrDefaultAsync(l => l.Id == dto.InwardLineId && l.Inward!.LocationId == locationId);
+            if (dto.InwardLineIds == null || !dto.InwardLineIds.Any())
+                return BadRequest(new ApiResponse<QualityControlEntry> { Success = false, Message = "At least one item is required for QC." });
 
-            if (line == null) return NotFound("Inward Line not found");
-            if (!line.IsQCPending)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "This inward line is not pending QC or has already been processed." });
-
-            if (await _context.QualityControls.AnyAsync(q => q.InwardLineId == dto.InwardLineId))
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "QC entry already exists for this inward line." });
-
-            var qc = new QualityControl
+            var qcEntry = new QualityControlEntry
             {
-                InwardLineId = dto.InwardLineId,
-                IsApproved = dto.IsApproved,
+                QcNo = await _codeGenerator.GenerateCode("QC", locationId),
+                LocationId = locationId,
+                PartyId = dto.PartyId,
+                SourceType = dto.SourceType,
                 Remarks = dto.Remarks,
-                CheckedBy = CurrentUserId,
-                CheckedAt = DateTime.Now
+                CreatedBy = CurrentUserId,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                Status = QcStatus.Pending,
+                IsActive = true
             };
 
-            line.IsQCApproved = dto.IsApproved;
-            line.IsQCPending = false;
-
-            if (dto.IsApproved)
+            foreach (var lineId in dto.InwardLineIds)
             {
-                var item = line.Item;
+                var line = await _context.InwardLines.FindAsync(lineId);
+                if (line != null)
+                {
+                    qcEntry.Items.Add(new QualityControlItem
+                    {
+                        InwardLineId = lineId,
+                        IsApproved = null // Pending
+                    });
+                }
+            }
+
+            _context.QcEntries.Add(qcEntry);
+            await _context.SaveChangesAsync();
+
+            // Mark items as In QC so Item Master shows correct state
+            var itemIds = await _context.InwardLines
+                .Where(l => dto.InwardLineIds.Contains(l.Id))
+                .Select(l => l.ItemId)
+                .Distinct()
+                .ToListAsync();
+            var itemsToUpdate = await _context.Items.Where(i => itemIds.Contains(i.Id)).ToListAsync();
+            foreach (var item in itemsToUpdate)
+            {
+                item.CurrentProcess = ItemProcessState.InQC;
+                item.UpdatedAt = DateTime.Now;
+            }
+            if (itemsToUpdate.Any())
+                await _context.SaveChangesAsync();
+
+            return StatusCode(201, new ApiResponse<QualityControlEntry> { Data = qcEntry });
+        }
+
+        [HttpPost("{id}/approve-item")]
+        public async Task<ActionResult<ApiResponse<bool>>> ApproveItem(int id, [FromBody] ApproveQCItemDto dto)
+        {
+            if (!await HasPermission("ApproveQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var qi = await _context.QcItems
+                .Include(i => i.QcEntry)
+                .Include(i => i.InwardLine).ThenInclude(l => l!.Item)
+                .FirstOrDefaultAsync(i => i.Id == dto.QCItemId && i.QcEntryId == id && i.QcEntry!.LocationId == locationId);
+
+            if (qi == null) return NotFound();
+            if (qi.QcEntry!.Status != QcStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Resolution can only be changed for Pending QC entries." });
+
+            qi.IsApproved = dto.IsApproved;
+            qi.Remarks = dto.Remarks;
+
+            // Item-level reject: inward shows Rejected, item back In Stock
+            if (dto.IsApproved == false && qi.InwardLine != null)
+            {
+                qi.InwardLine.IsQCPending = false;
+                qi.InwardLine.IsQCApproved = false;
+                var item = qi.InwardLine.Item;
                 if (item != null)
                 {
                     item.CurrentProcess = ItemProcessState.InStock;
-                    item.CurrentLocationId = line.Inward!.LocationId;
+                    item.CurrentLocationId = locationId;
                     item.CurrentPartyId = null;
                     item.UpdatedAt = DateTime.Now;
                 }
             }
 
-            _context.QualityControls.Add(qc);
             await _context.SaveChangesAsync();
-
             return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        [HttpPost("{id}/approve")]
+        public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
+        {
+            if (!await HasPermission("ApproveQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+
+            if (entry == null) return NotFound();
+            if (entry.Status != QcStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending QC entries can be approved." });
+
+            if (entry.Items.Any(i => !i.IsApproved.HasValue))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "All items must be resolved (Approved or Rejected) before entry approval." });
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var qi in entry.Items)
+                {
+                    var line = qi.InwardLine;
+                    if (line == null) continue;
+
+                    if (qi.IsApproved == true)
+                    {
+                        line.IsQCPending = false;
+                        line.IsQCApproved = true;
+                        
+                        var item = line.Item;
+                        if (item != null)
+                        {
+                            item.CurrentProcess = ItemProcessState.InStock;
+                            item.CurrentLocationId = entry.LocationId;
+                            item.CurrentPartyId = null;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                    else
+                    {
+                        // Rejected: mark line as resolved (not pending), show Rejected in Inward; item back In Stock
+                        line.IsQCPending = false;
+                        line.IsQCApproved = false;
+
+                        var item = line.Item;
+                        if (item != null)
+                        {
+                            item.CurrentProcess = ItemProcessState.InStock;
+                            item.CurrentLocationId = entry.LocationId;
+                            item.CurrentPartyId = null;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                }
+
+                entry.Status = QcStatus.Approved;
+                entry.ApprovedBy = CurrentUserId;
+                entry.ApprovedAt = DateTime.Now;
+                entry.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Approval failed: " + ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/reject")]
+        public async Task<ActionResult<ApiResponse<bool>>> Reject(int id, [FromBody] RejectQCEntryDto? dto = null)
+        {
+            if (!await HasPermission("ApproveQC")) return Forbidden(); // Or RejectQC permission
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+
+            if (entry == null) return NotFound();
+            if (entry.Status != QcStatus.Pending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending QC entries can be rejected." });
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Rejecting the entry means ALL items are rejected; inward shows Rejected, items back In Stock
+                foreach (var qi in entry.Items)
+                {
+                    qi.IsApproved = false;
+                    var line = qi.InwardLine;
+                    if (line != null)
+                    {
+                        line.IsQCPending = false;
+                        line.IsQCApproved = false;
+                        var item = line.Item;
+                        if (item != null)
+                        {
+                            item.CurrentProcess = ItemProcessState.InStock;
+                            item.CurrentLocationId = entry.LocationId;
+                            item.CurrentPartyId = null;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                }
+
+                entry.Status = QcStatus.Rejected;
+                entry.Remarks = dto?.Remarks ?? entry.Remarks;
+                entry.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Rejection failed: " + ex.Message });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<QCDto>>> Update(int id, [FromBody] UpdateQCDto dto)
+        {
+            if (!await HasPermission("EditQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+            if (entry == null) return NotFound();
+            if (entry.Status != QcStatus.Pending)
+                return BadRequest(new ApiResponse<QCDto> { Success = false, Message = "Only pending QC entries can be updated." });
+
+            entry.Remarks = dto.Remarks ?? entry.Remarks;
+            entry.UpdatedAt = DateTime.Now;
+
+            if (dto.InwardLineIds != null && dto.InwardLineIds.Any())
+            {
+                var inActiveQc = await _context.QcItems
+                    .Where(qi => qi.QcEntry!.IsActive && qi.QcEntry.Status == QcStatus.Pending && qi.QcEntryId != id)
+                    .Select(qi => qi.InwardLineId)
+                    .ToListAsync();
+
+                var toAdd = dto.InwardLineIds.Where(lid => !entry.Items.Any(i => i.InwardLineId == lid)).ToList();
+                var toRemove = entry.Items.Where(i => !dto.InwardLineIds.Contains(i.InwardLineId)).ToList();
+
+                foreach (var lineId in toAdd)
+                {
+                    if (inActiveQc.Contains(lineId)) continue;
+                    var line = await _context.InwardLines
+                        .Include(l => l.Inward)
+                        .FirstOrDefaultAsync(l => l.Id == lineId && l.Inward != null && l.Inward.IsActive && l.Inward.LocationId == locationId);
+                    if (line == null || !line.IsQCPending || line.IsQCApproved) continue;
+                    entry.Items.Add(new QualityControlItem { InwardLineId = lineId, IsApproved = null });
+                }
+                foreach (var qi in toRemove)
+                    _context.QcItems.Remove(qi);
+            }
+
+            await _context.SaveChangesAsync();
+            var updated = await _context.QcEntries
+                .Include(q => q.Party)
+                .Include(q => q.Creator)
+                .Include(q => q.Approver)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Inward)
+                .Include(q => q.Items)
+                    .ThenInclude(i => i.InwardLine)
+                        .ThenInclude(l => l!.Item)
+                .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+            return Ok(new ApiResponse<QCDto> { Data = MapToDto(updated!) });
+        }
+
+        [HttpPatch("{id}/inactive")]
+        public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
+        {
+            if (!await HasPermission("EditQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+            if (entry == null) return NotFound();
+
+            if (entry.Status == QcStatus.Approved)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Approved QC entries cannot be deactivated." });
+
+            entry.IsActive = false;
+            entry.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        [HttpPatch("{id}/active")]
+        public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
+        {
+            if (!await HasPermission("EditQC")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
+            if (entry == null) return NotFound();
+
+            if (entry.Status == QcStatus.Approved)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Approved QC entries cannot be toggled." });
+
+            entry.IsActive = true;
+            entry.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        private static QCDto MapToDto(QualityControlEntry q)
+        {
+            return new QCDto
+            {
+                Id = q.Id,
+                QcNo = q.QcNo,
+                PartyId = q.PartyId,
+                PartyName = q.Party?.Name ?? "Unknown",
+                SourceType = q.SourceType,
+                Remarks = q.Remarks,
+                Status = q.Status,
+                CreatedBy = q.CreatedBy,
+                CreatorName = q.Creator != null ? q.Creator.FirstName + " " + q.Creator.LastName : null,
+                ApprovedBy = q.ApprovedBy,
+                ApproverName = q.Approver != null ? q.Approver.FirstName + " " + q.Approver.LastName : null,
+                ApprovedAt = q.ApprovedAt,
+                IsActive = q.IsActive,
+                CreatedAt = q.CreatedAt,
+                Items = q.Items.Select(i => new QCItemDto
+                {
+                    Id = i.Id,
+                    InwardLineId = i.InwardLineId,
+                    ItemId = i.InwardLine!.ItemId,
+                    MainPartName = i.InwardLine.Item?.MainPartName,
+                    CurrentName = i.InwardLine.Item?.CurrentName,
+                    ItemTypeName = i.InwardLine.ItemTypeName ?? i.InwardLine.Item?.ItemType?.Name,
+                    DrawingNo = i.InwardLine.DrawingNo,
+                    RevisionNo = i.InwardLine.RevisionNo,
+                    MaterialName = i.InwardLine.MaterialName ?? i.InwardLine.Item?.Material?.Name,
+                    InwardNo = i.InwardLine.Inward?.InwardNo,
+                    InwardId = i.InwardLine.InwardId,
+                    SourceRefDisplay = i.InwardLine.SourceType == InwardSourceType.PO ? $"PO-{i.InwardLine.SourceRefId}"
+                        : i.InwardLine.SourceType == InwardSourceType.JobWork ? $"JW-{i.InwardLine.SourceRefId}"
+                        : i.InwardLine.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{i.InwardLine.SourceRefId}"
+                        : i.InwardLine.SourceRefId?.ToString(),
+                    IsApproved = i.IsApproved,
+                    Remarks = i.Remarks
+                }).ToList()
+            };
         }
     }
 }

@@ -392,9 +392,10 @@ namespace net_backend.Controllers
 
             // Get all InwardLine IDs to fetch QC numbers
             var inwardLineIds = inwardDetails.Select(d => d.Id).Distinct().ToList();
-            var qcNumbers = await _context.QualityControls
+            var qcNumbers = await _context.QcItems
                 .Where(q => inwardLineIds.Contains(q.InwardLineId))
-                .ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
+                .Include(q => q.QcEntry)
+                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
             var inwardMap = inwardDetails
                 .GroupBy(x => $"{x.SourceRefId}_{x.ItemId}")
@@ -427,7 +428,7 @@ namespace net_backend.Controllers
                         var key = $"{p.Id}_{i.PurchaseIndentItem!.ItemId}";
                         var inv = inwardMap.ContainsKey(key) ? inwardMap[key] : null;
                         var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id) 
-                            ? "QC-" + qcNumbers[inv.Id] : null;
+                            ? qcNumbers[inv.Id] : null;
 
                         return new POItemDto
                         {
@@ -659,6 +660,23 @@ namespace net_backend.Controllers
             po.ApprovedBy = CurrentUserId;
             po.ApprovedAt = DateTime.Now;
             po.UpdatedAt = DateTime.Now;
+
+            // Load items to update their state
+            await _context.Entry(po).Collection(p => p.Items).LoadAsync();
+            foreach (var poItem in po.Items)
+            {
+                // We need to fetch the PI item to get the ItemId
+                var piItem = await _context.PurchaseIndentItems.FindAsync(poItem.PurchaseIndentItemId);
+                if (piItem != null)
+                {
+                    var item = await _context.Items.FindAsync(piItem.ItemId);
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.InPO;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });

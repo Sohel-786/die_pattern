@@ -6,6 +6,7 @@ export type LocationOption = { id: number; name: string };
 export type CompanyLocationAccess = {
   companyId: number;
   companyName: string;
+  companyLogo?: string;
   locations: LocationOption[];
 };
 
@@ -24,7 +25,7 @@ type ContextValue = {
   setSelected: (selected: SelectedOrgContext | null) => void;
   clearSelected: () => void;
   isSelectedValid: (selected: SelectedOrgContext | null, access?: CompanyLocationAccess[]) => boolean;
-  getAllPairs: (access?: CompanyLocationAccess[]) => Array<{ companyId: number; companyName: string; locationId: number; locationName: string }>;
+  getAllPairs: (access?: CompanyLocationAccess[]) => Array<{ companyId: number; companyName: string; companyLogo?: string; locationId: number; locationName: string }>;
 };
 
 const LocationContext = createContext<ContextValue | null>(null);
@@ -65,10 +66,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getAllPairs = useCallback((access: CompanyLocationAccess[] = allowedAccess) => {
-    const pairs: Array<{ companyId: number; companyName: string; locationId: number; locationName: string }> = [];
+    const pairs: Array<{ companyId: number; companyName: string; companyLogo?: string; locationId: number; locationName: string }> = [];
     for (const c of access) {
       for (const l of c.locations || []) {
-        pairs.push({ companyId: c.companyId, companyName: c.companyName, locationId: l.id, locationName: l.name });
+        pairs.push({ companyId: c.companyId, companyName: c.companyName, companyLogo: c.companyLogo, locationId: l.id, locationName: l.name });
       }
     }
     return pairs;

@@ -74,4 +74,11 @@ namespace net_backend.Models
         Outward = 6,
         InStock = 7
     }
+
+    public enum QcStatus
+    {
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2
+    }
 }

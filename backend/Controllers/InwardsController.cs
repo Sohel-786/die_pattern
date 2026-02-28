@@ -93,7 +93,10 @@ namespace net_backend.Controllers
             var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
             
             var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
-            var qcs = await _context.QualityControls.Where(q => lineIds.Contains(q.InwardLineId)).ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
+            var qcs = await _context.QcItems
+                .Where(q => lineIds.Contains(q.InwardLineId))
+                .Include(q => q.QcEntry)
+                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
             var data = list.Select(i => MapToDto(i, pos, jws, outs, qcs)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
@@ -134,7 +137,10 @@ namespace net_backend.Controllers
             var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
             
             var lineIds = inward.Lines.Select(l => l.Id).ToList();
-            var qcs = await _context.QualityControls.Where(q => lineIds.Contains(q.InwardLineId)).ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
+            var qcs = await _context.QcItems
+                .Where(q => lineIds.Contains(q.InwardLineId))
+                .Include(q => q.QcEntry)
+                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
             return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, outs, qcs) });
         }
@@ -192,7 +198,9 @@ namespace net_backend.Controllers
                     Quantity = l.Quantity,
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
-                    Remarks = l.Remarks
+                    Remarks = l.Remarks,
+                    IsQCPending = true,
+                    IsQCApproved = false
                 });
             }
 
@@ -203,7 +211,6 @@ namespace net_backend.Controllers
             await _context.SaveChangesAsync();
             
             await ProcessInwardMovementsAsync(inward);
-            await _context.SaveChangesAsync();
             
             return StatusCode(201, new ApiResponse<Inward> { Data = inward });
         }
@@ -267,7 +274,6 @@ namespace net_backend.Controllers
 
             await _context.SaveChangesAsync();
             await ProcessInwardMovementsAsync(inward);
-            await _context.SaveChangesAsync();
             
             return Ok(new ApiResponse<bool> { Data = true });
         }
@@ -283,12 +289,15 @@ namespace net_backend.Controllers
         {
             foreach (var line in inward.Lines)
             {
-                // Update Item Process State to InwardDone
-                var item = await _context.Items.FindAsync(line.ItemId);
+                var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == line.ItemId);
                 if (item != null)
                 {
+                    // Item is now back at location, awaiting QC
                     item.CurrentProcess = ItemProcessState.InwardDone;
+                    item.CurrentLocationId = inward.LocationId;
+                    item.CurrentPartyId = null; // No longer with vendor/party
                     item.UpdatedAt = DateTime.Now;
+                    _context.Items.Update(item);
                 }
 
                 // Update source status if necessary
@@ -302,6 +311,7 @@ namespace net_backend.Controllers
                     }
                 }
             }
+            await _context.SaveChangesAsync();
         }
 
         private async Task<int?> ValidateSourceRefAsync(int locationId, InwardSourceType sourceType, int sourceRefId)
@@ -349,7 +359,7 @@ namespace net_backend.Controllers
             Dictionary<int, string>? pos = null, 
             Dictionary<int, string>? jws = null,
             Dictionary<int, string>? outs = null,
-            Dictionary<int, int>? qcs = null)
+            Dictionary<int, string>? qcs = null)
         {
             var sourceTypes = i.Lines.Select(l => l.SourceType).Distinct().ToList();
             var fromStrs = new List<string>();
@@ -390,7 +400,9 @@ namespace net_backend.Controllers
                                      : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
                                      : (l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue && outs != null && outs.ContainsKey(l.SourceRefId.Value)) ? outs[l.SourceRefId.Value]
                                      : l.SourceRefId?.ToString(),
-                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? $"QC-{qcs[l.Id]}" : "—"
+                    IsQCPending = l.IsQCPending,
+                    IsQCApproved = l.IsQCApproved,
+                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id] : "—"
                 }).ToList()
             };
             return dto;

@@ -137,12 +137,13 @@ namespace net_backend.Controllers
                                     orderby inv.CreatedAt descending
                                     select inv.InwardNo).FirstOrDefault(),
                         QCNo = (from il in _context.InwardLines
-                                join qc in _context.QualityControls on il.Id equals qc.InwardLineId
+                                join qi in _context.QcItems on il.Id equals qi.InwardLineId
+                                join qe in _context.QcEntries on qi.QcEntryId equals qe.Id
                                 where il.SourceType == InwardSourceType.PO &&
                                       _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
-                                      qc.IsActive
-                                orderby qc.Id descending
-                                select "QC-" + qc.Id.ToString()).FirstOrDefault()
+                                      qe.IsActive
+                                orderby qe.CreatedAt descending
+                                select qe.QcNo).FirstOrDefault()
                     }).ToList()
                 })
                 .ToListAsync();
@@ -284,6 +285,17 @@ namespace net_backend.Controllers
             pi.ApprovedBy = CurrentUserId;
             pi.ApprovedAt = DateTime.Now;
             pi.UpdatedAt = DateTime.Now;
+
+            // Update item states to InPI
+            foreach (var piItem in pi.Items)
+            {
+                var item = await _context.Items.FindAsync(piItem.ItemId);
+                if (item != null)
+                {
+                    item.CurrentProcess = ItemProcessState.InPI;
+                    item.UpdatedAt = DateTime.Now;
+                }
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });
@@ -432,12 +444,13 @@ namespace net_backend.Controllers
                                 orderby inv.CreatedAt descending
                                 select inv.InwardNo).FirstOrDefault(),
                     QCNo = (from il in _context.InwardLines
-                            join qc in _context.QualityControls on il.Id equals qc.InwardLineId
+                            join qi in _context.QcItems on il.Id equals qi.InwardLineId
+                            join qe in _context.QcEntries on qi.QcEntryId equals qe.Id
                             where il.SourceType == InwardSourceType.PO &&
                                   _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
-                                  qc.IsActive
-                            orderby qc.Id descending
-                            select "QC-" + qc.Id.ToString()).FirstOrDefault()
+                                  qe.IsActive
+                            orderby qe.CreatedAt descending
+                            select qe.QcNo).FirstOrDefault()
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });

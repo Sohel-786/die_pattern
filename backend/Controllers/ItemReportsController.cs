@@ -12,10 +12,12 @@ namespace net_backend.Controllers
     public class ItemReportsController : BaseController
     {
         private readonly IExcelService _excelService;
+        private readonly IItemStateService _itemState;
 
-        public ItemReportsController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public ItemReportsController(ApplicationDbContext context, IExcelService excelService, IItemStateService itemState) : base(context)
         {
             _excelService = excelService;
+            _itemState = itemState;
         }
 
         [HttpGet("inventory-status")]
@@ -23,25 +25,33 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var data = await _context.Items
+            var items = await _context.Items
                 .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
                 .Include(p => p.CurrentParty)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.MainPartName,
-                    p.CurrentName,
-                    ItemType = p.ItemType!.Name,
-                    p.RevisionNo,
-                    Status = p.Status!.Name,
-                    Holder = p.CurrentProcess == ItemProcessState.NotInStock ? "Not in stock" : (p.CurrentProcess == ItemProcessState.InStock ? p.CurrentLocation!.Name : p.CurrentParty!.Name),
-                    CurrentProcess = p.CurrentProcess,
-                    p.IsActive
-                })
                 .ToListAsync();
+
+            var data = items.Select(p => new
+            {
+                p.Id,
+                p.MainPartName,
+                p.CurrentName,
+                ItemType = p.ItemType!.Name,
+                p.RevisionNo,
+                Status = p.Status!.Name,
+                Holder = p.CurrentProcess switch {
+                    ItemProcessState.NotInStock => "Not in stock",
+                    ItemProcessState.Outward => p.CurrentParty?.Name ?? "Vendor",
+                    ItemProcessState.InJobwork => p.CurrentParty?.Name ?? "Jobworker",
+                    ItemProcessState.InPI => p.CurrentParty?.Name ?? "Under PI",
+                    ItemProcessState.InPO => p.CurrentParty?.Name ?? "Under PO/Vendor",
+                    _ => p.CurrentLocation?.Name ?? "Location"
+                },
+                CurrentProcess = _itemState.GetStateDisplay(p.CurrentProcess),
+                p.IsActive
+            });
 
             return Ok(new ApiResponse<IEnumerable<object>> { Data = data });
         }
@@ -60,26 +70,27 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var qcQuery = _context.QualityControls.Where(q => q.InwardLine != null && q.InwardLine.Inward!.LocationId == locationId);
+            var qcQuery = _context.QcItems.Where(q => q.QcEntry!.LocationId == locationId);
             var total = await qcQuery.CountAsync();
-            var approved = await qcQuery.CountAsync(q => q.IsApproved);
-            var rejected = total - approved;
+            var approved = await qcQuery.CountAsync(q => q.IsApproved == true);
+            var rejected = await qcQuery.CountAsync(q => q.IsApproved == false);
 
-            var recent = await _context.QualityControls
-                .Where(q => q.InwardLine != null && q.InwardLine.Inward!.LocationId == locationId)
+            var recent = await _context.QcItems
+                .Where(q => q.QcEntry!.LocationId == locationId)
+                .Include(q => q.QcEntry)
+                    .ThenInclude(e => e!.Creator)
                 .Include(q => q.InwardLine)
                     .ThenInclude(m => m!.Item)
-                .Include(q => q.Checker)
-                .OrderByDescending(q => q.CheckedAt)
+                .OrderByDescending(q => q.QcEntry!.CreatedAt)
                 .Take(10)
                 .Select(q => new
                 {
                     q.Id,
                     ItemName = q.InwardLine!.Item!.CurrentName,
-                    q.IsApproved,
+                    IsApproved = q.IsApproved == true,
                     q.Remarks,
-                    CheckedBy = q.Checker!.FirstName + " " + q.Checker.LastName,
-                    Date = q.CheckedAt
+                    CheckedBy = q.QcEntry!.Creator!.FirstName + " " + q.QcEntry.Creator.LastName,
+                    Date = q.QcEntry.CreatedAt
                 })
                 .ToListAsync();
 

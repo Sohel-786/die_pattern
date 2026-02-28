@@ -157,3 +157,13 @@ export function useUpdateUserLocationAccess(userId: number) {
     },
   });
 }
+export function useCompany(id?: number) {
+  return useQuery({
+    queryKey: ['companies', id],
+    queryFn: async (): Promise<Company> => {
+      const response = await api.get(`/companies/${id}`);
+      return response.data.data;
+    },
+    enabled: !!id,
+  });
+}

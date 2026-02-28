@@ -8,52 +8,7 @@ namespace net_backend.Data
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            try
-            {
-                context.Database.Migrate();
-            }
-            catch (Exception ex)
-            {
-                // Handle cases where database is already created but __EFMigrationsHistory is out of sync
-                Console.WriteLine($"Migration skipped or failed: {ex.Message}");
-                try {
-                    // Create history table if it doesn't exist
-                    context.Database.ExecuteSqlRaw(@"
-                        IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
-                        CREATE TABLE [__EFMigrationsHistory] (
-                            [MigrationId] nvarchar(150) NOT NULL,
-                            [ProductVersion] nvarchar(32) NOT NULL,
-                            CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
-                        );
-                    ");
-
-                    // Mark migrations as applied if the tables already exist
-                    context.Database.ExecuteSqlRaw(@"
-                        IF OBJECT_ID(N'[app_settings]', 'U') IS NOT NULL
-                        BEGIN
-                            IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260221042232_InitialCreate')
-                                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260221042232_InitialCreate', '6.0.35');
-                            
-                            IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260221072509_AddPartyFields')
-                                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260221072509_AddPartyFields', '6.0.35');
-                        END
-                    ");
-
-                    context.Database.ExecuteSqlRaw(@"
-                        IF COL_LENGTH('parties', 'ContactPerson') IS NULL ALTER TABLE [parties] ADD [ContactPerson] nvarchar(max) NULL;
-                        IF COL_LENGTH('parties', 'CustomerType') IS NULL ALTER TABLE [parties] ADD [CustomerType] nvarchar(max) NULL;
-                        IF COL_LENGTH('parties', 'GstDate') IS NULL ALTER TABLE [parties] ADD [GstDate] datetime2 NULL;
-                        IF COL_LENGTH('parties', 'GstNo') IS NULL ALTER TABLE [parties] ADD [GstNo] nvarchar(max) NULL;
-                        IF COL_LENGTH('parties', 'PartyCategory') IS NULL ALTER TABLE [parties] ADD [PartyCategory] nvarchar(max) NULL;
-                        IF COL_LENGTH('parties', 'PartyCode') IS NULL ALTER TABLE [parties] ADD [PartyCode] nvarchar(max) NULL;
-                    ");
-                    Console.WriteLine("Manual patch and migration history synchronization applied successfully.");
-                } catch (Exception patchEx) {
-                    Console.WriteLine($"Patch failed: {patchEx.Message}");
-                }
-            }
-
-            // 1. Seed default Company and Location first so all data can be scoped to them (target id 1 when DB is empty)
+            // 1. Seed default Company and Location first
             if (!context.Companies.Any())
             {
                 context.Companies.Add(new Company
@@ -68,11 +23,11 @@ namespace net_backend.Data
 
             if (!context.Locations.Any())
             {
-                var companyId = context.Companies.OrderBy(c => c.Id).First().Id;
+                var firstCompany = context.Companies.OrderBy(c => c.Id).First();
                 context.Locations.Add(new Location
                 {
                     Name = "Aira Ho",
-                    CompanyId = companyId,
+                    CompanyId = firstCompany.Id,
                     IsActive = true,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
@@ -90,9 +45,9 @@ namespace net_backend.Data
                 adminUser = new User
                 {
                     Username = "mitul",
-                    Password = BCrypt.Net.BCrypt.HashPassword("admin"),
                     FirstName = "Mitul",
                     LastName = "Admin",
+                    Password = BCrypt.Net.BCrypt.HashPassword("admin"),
                     Role = Role.ADMIN,
                     IsActive = true,
                     DefaultCompanyId = seedCompanyId,
@@ -105,6 +60,7 @@ namespace net_backend.Data
             }
             else
             {
+                // Ensure default values are set for existing admin
                 if (adminUser.DefaultCompanyId == null || adminUser.DefaultLocationId == null)
                 {
                     adminUser.DefaultCompanyId = seedCompanyId;
@@ -114,7 +70,7 @@ namespace net_backend.Data
                 }
             }
 
-            // 3. Refresh Permissions for Admin
+            // 3. Ensure Permissions for Admin
             var adminPerm = context.UserPermissions.FirstOrDefault(p => p.UserId == adminUser.Id);
             if (adminPerm == null)
             {
@@ -122,9 +78,9 @@ namespace net_backend.Data
                 context.UserPermissions.Add(adminPerm);
             }
             
+            // Re-assert admin permissions (idempotent)
             adminPerm.ViewDashboard = true;
             adminPerm.ViewMaster = true;
-            
             adminPerm.ManageItem = true;
             adminPerm.ManageItemType = true;
             adminPerm.ManageMaterial = true;
@@ -133,26 +89,21 @@ namespace net_backend.Data
             adminPerm.ManageParty = true;
             adminPerm.ManageLocation = true;
             adminPerm.ManageCompany = true;
-
             adminPerm.ViewPI = true;
             adminPerm.CreatePI = true;
             adminPerm.EditPI = true;
             adminPerm.ApprovePI = true;
-
             adminPerm.ViewPO = true;
             adminPerm.CreatePO = true;
             adminPerm.EditPO = true;
             adminPerm.ApprovePO = true;
-
             adminPerm.ViewInward = true;
             adminPerm.CreateInward = true;
             adminPerm.EditInward = true;
-
             adminPerm.ViewQC = true;
             adminPerm.CreateQC = true;
             adminPerm.EditQC = true;
             adminPerm.ApproveQC = true;
-
             adminPerm.ViewMovement = true;
             adminPerm.CreateMovement = true;
             adminPerm.ManageChanges = true;
@@ -163,13 +114,11 @@ namespace net_backend.Data
             
             context.SaveChanges();
 
-            // 3. Seed App Settings
-            var settings = context.AppSettings.FirstOrDefault();
-            if (settings == null)
+            // 4. Seed App Settings
+            if (!context.AppSettings.Any())
             {
                 context.AppSettings.Add(new AppSettings 
                 { 
-                    CompanyName = "Aira Euro Automation Pvt Ltd", 
                     SoftwareName = "Die & Pattern Management",
                     CreatedAt = DateTime.Now, 
                     UpdatedAt = DateTime.Now 
@@ -177,7 +126,7 @@ namespace net_backend.Data
                 context.SaveChanges();
             }
 
-            // 4. Seed Initial Masters if empty
+            // 5. Seed Initial Masters if empty
             if (!context.ItemTypes.Any())
             {
                 context.ItemTypes.AddRange(new ItemType[] {
@@ -215,34 +164,39 @@ namespace net_backend.Data
 
             context.SaveChanges();
 
-            // 5. Assign all existing data to default company/location so it appears when that location is selected
+            // 6. Data Backfill: Ensure all existing data has at least default location/company scoping
             try
             {
                 var partiesToFix = context.Parties.Where(p => p.LocationId == null || p.LocationId == 0).ToList();
                 foreach (var p in partiesToFix) { p.LocationId = seedLocationId; }
+                
                 var itemsToFix = context.Items.Where(i => i.LocationId == null || i.LocationId == 0).ToList();
                 foreach (var i in itemsToFix) { i.LocationId = seedLocationId; }
+
                 var posToFix = context.PurchaseOrders.Where(po => po.LocationId == null || po.LocationId == 0).ToList();
                 foreach (var po in posToFix) { po.LocationId = seedLocationId; }
+
                 var jwToFix = context.JobWorks.Where(j => j.LocationId == null || j.LocationId == 0).ToList();
                 foreach (var j in jwToFix) { j.LocationId = seedLocationId; }
+
                 var inwardsToFix = context.Inwards.Where(i => i.LocationId == 0).ToList();
                 foreach (var i in inwardsToFix) { i.LocationId = seedLocationId; }
-                if (partiesToFix.Count > 0 || itemsToFix.Count > 0 || posToFix.Count > 0 || jwToFix.Count > 0 || inwardsToFix.Count > 0)
+
+                if (partiesToFix.Any() || itemsToFix.Any() || posToFix.Any() || jwToFix.Any() || inwardsToFix.Any())
                 {
                     context.SaveChanges();
-                    Console.WriteLine($"Location backfill: assigned {partiesToFix.Count} parties, {itemsToFix.Count} items, {posToFix.Count} POs, {jwToFix.Count} job works, {inwardsToFix.Count} inwards to location {seedLocationId}.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Location data backfill skipped: {ex.Message}");
+                Console.WriteLine($"Seeding backfill skipped: {ex.Message}");
             }
 
-            // 6. Location-scoped app: ensure every user has at least one UserLocationAccess (backfill using seed company/location)
+            // 7. Ensure every user has at least one UserLocationAccess entry
             try
             {
-                foreach (var user in context.Users.ToList())
+                var users = context.Users.ToList();
+                foreach (var user in users)
                 {
                     if (!context.UserLocationAccess.Any(ula => ula.UserId == user.Id))
                     {
@@ -253,6 +207,8 @@ namespace net_backend.Data
                             LocationId = seedLocationId,
                             CreatedAt = DateTime.Now
                         });
+                        
+                        // Also sync default choice if missing
                         if (user.DefaultCompanyId == null || user.DefaultLocationId == null)
                         {
                             user.DefaultCompanyId = seedCompanyId;
@@ -265,10 +221,9 @@ namespace net_backend.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"User location access backfill skipped: {ex.Message}");
+                Console.WriteLine($"User location access seeding skipped: {ex.Message}");
             }
-
-
         }
     }
 }
+

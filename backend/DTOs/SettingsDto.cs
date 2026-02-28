@@ -4,7 +4,6 @@ namespace net_backend.DTOs
 {
     public class UpdateSettingsRequest
     {
-        public string? CompanyName { get; set; }
         public string? SoftwareName { get; set; }
         public string? PrimaryColor { get; set; }
     }

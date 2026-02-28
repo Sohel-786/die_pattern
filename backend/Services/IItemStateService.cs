@@ -14,5 +14,8 @@ namespace net_backend.Services
 
         /// <summary>Returns true if the item can be used in In-Stock-only transactions (Jobwork, Outward, etc.).</summary>
         Task<bool> IsInStockAsync(int itemId);
+
+        /// <summary>Returns a user-friendly string representation of the process state.</summary>
+        string GetStateDisplay(ItemProcessState state);
     }
 }

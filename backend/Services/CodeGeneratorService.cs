@@ -56,6 +56,13 @@ namespace net_backend.Services
                     : await _context.JobWorks.CountAsync();
                 return $"JW-{count + 1:D4}";
             }
+            else if (type == "QC")
+            {
+                count = locationId.HasValue
+                    ? await _context.QcEntries.CountAsync(q => q.LocationId == locationId)
+                    : await _context.QcEntries.CountAsync();
+                return $"QC-{count + 1:D4}";
+            }
 
             return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
         }
