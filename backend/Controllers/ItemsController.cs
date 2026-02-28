@@ -27,6 +27,7 @@ namespace net_backend.Controllers
                 ItemProcessState.NotInStock => "Not In Stock",
                 ItemProcessState.InPI => "PI Issued",
                 ItemProcessState.InPO => "PO Issued",
+                ItemProcessState.InwardDone => "Inward Done",
                 ItemProcessState.InQC => "In QC",
                 ItemProcessState.InJobwork => "In Job Work",
                 ItemProcessState.Outward => "In Outward",
@@ -96,7 +97,6 @@ namespace net_backend.Controllers
                     OwnerTypeName = p.OwnerType!.Name,
                     StatusId = p.StatusId,
                     StatusName = p.Status!.Name,
-                    CurrentHolderType = p.CurrentHolderType,
                     CurrentLocationId = p.CurrentLocationId,
                     CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
                     CurrentPartyId = p.CurrentPartyId,
@@ -142,7 +142,7 @@ namespace net_backend.Controllers
                     OwnerTypeName = p.OwnerType!.Name,
                     StatusId = p.StatusId,
                     StatusName = p.Status!.Name,
-                    CurrentHolderType = p.CurrentHolderType,
+
                     CurrentLocationId = p.CurrentLocationId,
                     CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
                     CurrentPartyId = p.CurrentPartyId,
@@ -165,17 +165,6 @@ namespace net_backend.Controllers
             if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.LocationId == locationId && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
-            if (dto.CurrentHolderType == HolderType.Vendor && (!dto.CurrentPartyId.HasValue || dto.CurrentPartyId.Value <= 0))
-                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Vendor is required when custodian is Vendor" });
-
-            // At Location = in-stock at current (request) location; NotInStock = no holder
-            int? currentLocationId = null;
-            int? currentPartyId = null;
-            if (dto.CurrentHolderType == HolderType.Location)
-                currentLocationId = locationId;
-            else if (dto.CurrentHolderType == HolderType.Vendor && dto.CurrentPartyId > 0)
-                currentPartyId = dto.CurrentPartyId;
-
             var item = new Item
             {
                 MainPartName = dto.MainPartName.Trim(),
@@ -185,10 +174,10 @@ namespace net_backend.Controllers
                 RevisionNo = dto.RevisionNo,
                 MaterialId = dto.MaterialId,
                 OwnerTypeId = dto.OwnerTypeId,
-                StatusId = dto.StatusId,
-                CurrentHolderType = dto.CurrentHolderType,
-                CurrentLocationId = currentLocationId,
-                CurrentPartyId = currentPartyId,
+                StatusId = 1, // Defaulting to first status if UI doesn't send it
+                CurrentProcess = ItemProcessState.NotInStock,
+                CurrentLocationId = null,
+                CurrentPartyId = null,
                 LocationId = locationId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
@@ -244,9 +233,6 @@ namespace net_backend.Controllers
             var existing = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
-            if (dto.CurrentHolderType == HolderType.Vendor && (!dto.CurrentPartyId.HasValue || dto.CurrentPartyId.Value <= 0))
-                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Vendor is required when custodian is Vendor" });
-
             if (dto.CurrentName != null)
                 existing.CurrentName = dto.CurrentName.Trim();
             if (dto.ItemTypeId > 0)
@@ -269,9 +255,7 @@ namespace net_backend.Controllers
             }
             if (dto.RevisionNo != null)
                 existing.RevisionNo = dto.RevisionNo.Trim();
-            existing.CurrentHolderType = dto.CurrentHolderType;
-            existing.CurrentLocationId = dto.CurrentHolderType == HolderType.Location ? locationId : null;
-            existing.CurrentPartyId = dto.CurrentHolderType == HolderType.Vendor && dto.CurrentPartyId > 0 ? dto.CurrentPartyId : null;
+
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
@@ -303,8 +287,8 @@ namespace net_backend.Controllers
                 Material = i.Material?.Name,
                 Ownership = i.OwnerType?.Name,
                 Status = i.Status?.Name,
-                CustodianType = i.CurrentHolderType == HolderType.NotInStock ? "Not in stock" : i.CurrentHolderType.ToString(),
-                CustodianName = i.CurrentHolderType == HolderType.NotInStock ? "—" : (i.CurrentHolderType == HolderType.Location ? i.CurrentLocation?.Name : i.CurrentParty?.Name)
+                CustodianType = i.CurrentProcess == ItemProcessState.NotInStock ? "Not in stock" : (i.CurrentProcess == ItemProcessState.InStock ? "Location" : "Vendor"),
+                CustodianName = i.CurrentProcess == ItemProcessState.NotInStock ? "—" : (i.CurrentProcess == ItemProcessState.InStock ? i.CurrentLocation?.Name : i.CurrentParty?.Name)
             });
 
             var file = _excelService.GenerateExcel(data, "Die Pattern Masters");
@@ -341,25 +325,8 @@ namespace net_backend.Controllers
                     var ownerType = await _context.OwnerTypes.FirstOrDefaultAsync(o => o.Name == row.Data.Ownership);
                     var status = await _context.ItemStatuses.FirstOrDefaultAsync(s => s.Name == row.Data.Status);
                     
-                    var cType = row.Data.CustodianType?.Trim().ToLower().Replace(" ", "") ?? "";
-                    HolderType holderType;
-                    int? currentLocationId = null;
-                    int? partyId = null;
-                    if (cType == "notinstock")
-                    {
-                        holderType = HolderType.NotInStock;
-                    }
-                    else if (cType == "vendor")
-                    {
-                        holderType = HolderType.Vendor;
-                        partyId = (await _context.Parties.FirstOrDefaultAsync(p => p.LocationId == locationId && p.Name == row.Data.CustodianName))?.Id;
-                    }
-                    else
-                    {
-                        holderType = HolderType.Location;
-                        currentLocationId = locationId;
-                    }
-
+                    // Simplified for import logic: we assume anything not explicitly imported as location is not in stock.
+                    // For pure accuracy, imports should not directly place items in vendor/location without inward documents.
                     _context.Items.Add(new Item
                     {
                         MainPartName = row.Data.PartName.Trim(),
@@ -370,9 +337,9 @@ namespace net_backend.Controllers
                         MaterialId = material?.Id ?? 0,
                         OwnerTypeId = ownerType?.Id ?? 0,
                         StatusId = status?.Id ?? 0,
-                        CurrentHolderType = holderType,
-                        CurrentLocationId = currentLocationId,
-                        CurrentPartyId = partyId,
+                        CurrentProcess = ItemProcessState.NotInStock,
+                        CurrentLocationId = null,
+                        CurrentPartyId = null,
                         LocationId = locationId,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now,
@@ -443,29 +410,7 @@ namespace net_backend.Controllers
                 if (string.IsNullOrEmpty(d.Ownership) || !ownerTypes.Contains(d.Ownership.ToLower())) errors.Add("Invalid Ownership");
                 if (string.IsNullOrEmpty(d.Status) || !statuses.Contains(d.Status.ToLower())) errors.Add("Invalid Status");
 
-                // Custodian Validation: Location, Vendor, or NotInStock (Not in stock)
-                if (string.IsNullOrEmpty(d.CustodianType))
-                {
-                    errors.Add("Custodian Type is required (Location / Vendor / Not in stock)");
-                }
-                else
-                {
-                    var cType = d.CustodianType.Trim().ToLower().Replace(" ", "");
-                    if (cType != "location" && cType != "vendor" && cType != "notinstock")
-                    {
-                        errors.Add("Custodian Type must be 'Location', 'Vendor', or 'Not in stock'");
-                    }
-                    else if (cType == "vendor" && string.IsNullOrEmpty(d.CustodianName))
-                    {
-                        errors.Add("Custodian Name is required for Vendor");
-                    }
-                    else if (cType == "vendor" && !string.IsNullOrEmpty(d.CustodianName))
-                    {
-                        var cName = d.CustodianName.Trim().ToLower();
-                        if (!partyNames.Contains(cName))
-                            errors.Add($"Vendor/Party '{d.CustodianName}' not found");
-                    }
-                }
+                // We skip checking custodian types for import because flow handles it
 
                 if (errors.Any())
                     result.Invalid.Add(new ValidationEntry<ItemImportDto> { Row = row.RowNumber, Data = d, Message = string.Join(", ", errors) });
@@ -475,5 +420,6 @@ namespace net_backend.Controllers
 
             return result;
         }
+
     }
 }

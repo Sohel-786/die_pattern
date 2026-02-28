@@ -233,13 +233,14 @@ namespace net_backend.Controllers
         {
             var locationId = await GetCurrentLocationIdAsync();
             
-            var inwardedItems = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.Status == InwardStatus.Submitted)
-                .Select(l => new { l.SourceRefId, l.ItemId })
-                .Distinct()
+            // Group by SourceRefId and ItemId to count how many of each item have been inwarded
+            var inwardedCounts = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.IsActive && l.SourceRefId.HasValue)
+                .GroupBy(l => new { l.SourceRefId, l.ItemId })
+                .Select(g => new { g.Key.SourceRefId, g.Key.ItemId, Count = g.Count() })
                 .ToListAsync();
 
-            var inwardedSet = inwardedItems.Select(x => $"{x.SourceRefId}_{x.ItemId}").ToHashSet();
+            var inwardedMap = inwardedCounts.ToDictionary(x => $"{x.SourceRefId}_{x.ItemId}", x => x.Count);
 
             var query = _context.PurchaseOrders
                 .Where(p => p.LocationId == locationId && p.Status == PoStatus.Approved && p.IsActive);
@@ -255,20 +256,35 @@ namespace net_backend.Controllers
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
-            var data = pos.Where(p => {
-                var poItemIds = p.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToList();
-                if (poItemIds.Count == 0) return false;
-                return !poItemIds.All(id => inwardedSet.Contains($"{p.Id}_{id}"));
-            }).Select(p =>
-            {
-                var dto = new PODto
+            var data = pos.Select(p => {
+                // For each unique ItemId in the PO, calculate how many are remaining to be inwarded
+                var itemsWithStatus = p.Items
+                    .Where(poi => poi.PurchaseIndentItem != null)
+                    .GroupBy(poi => poi.PurchaseIndentItem!.ItemId)
+                    .SelectMany(g => {
+                        var itemId = g.Key;
+                        var orderedItems = g.ToList();
+                        var inwardedCount = inwardedMap.ContainsKey($"{p.Id}_{itemId}") ? inwardedMap[$"{p.Id}_{itemId}"] : 0;
+                        
+                        // Mark the first N items as inwarded, the rest as pending
+                        return orderedItems.Select((poi, index) => new { 
+                            Item = poi, 
+                            IsInwarded = index < inwardedCount 
+                        });
+                    })
+                    .ToList();
+
+                var remainingItems = itemsWithStatus.Where(x => !x.IsInwarded).Select(x => x.Item).ToList();
+                if (remainingItems.Count == 0) return null;
+
+                return new PODto
                 {
                     Id = p.Id,
                     PoNo = p.PoNo,
                     VendorId = p.VendorId,
                     VendorName = p.Vendor?.Name,
                     CreatedAt = p.CreatedAt,
-                    Items = p.Items.Where(i => i.PurchaseIndentItem != null && !inwardedSet.Contains($"{p.Id}_{i.PurchaseIndentItem.ItemId}")).Select(i => new POItemDto
+                    Items = remainingItems.Select(i => new POItemDto
                     {
                         Id = i.Id,
                         ItemId = i.PurchaseIndentItem!.ItemId,
@@ -277,10 +293,9 @@ namespace net_backend.Controllers
                         IsInwarded = false
                     }).ToList()
                 };
-                return dto;
-            });
+            }).Where(d => d != null).Select(d => d!).ToList();
 
-            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data.ToList() });
+            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data });
         }
 
         [HttpGet]
@@ -361,13 +376,34 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.IsActive);
 
             var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            var inwardedItems = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.Status == InwardStatus.Submitted)
-                .Select(l => new { l.SourceRefId, l.ItemId })
-                .Distinct()
+            
+            // Fetch inward details for these POs
+            var poIds = list.Select(p => p.Id).ToList();
+            var inwardDetails = await _context.InwardLines
+                .Include(l => l.Inward)
+                .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && poIds.Contains(l.SourceRefId.Value) && l.Inward!.IsActive)
+                .Select(l => new { 
+                    l.SourceRefId, 
+                    l.ItemId, 
+                    l.Inward!.InwardNo, 
+                    l.Id 
+                })
                 .ToListAsync();
-            var inwardedSet = inwardedItems.Select(x => $"{x.SourceRefId}_{x.ItemId}").ToHashSet();
-            var poIdsWithInward = inwardedItems.Select(x => x.SourceRefId ?? 0).Distinct().ToHashSet();
+
+            // Get all InwardLine IDs to fetch QC numbers
+            var inwardLineIds = inwardDetails.Select(d => d.Id).Distinct().ToList();
+            var qcNumbers = await _context.QualityControls
+                .Where(q => inwardLineIds.Contains(q.InwardLineId))
+                .ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
+
+            var inwardMap = inwardDetails
+                .GroupBy(x => $"{x.SourceRefId}_{x.ItemId}")
+                .ToDictionary(
+                    g => g.Key, 
+                    g => g.FirstOrDefault()
+                );
+
+            var poIdsWithInward = inwardDetails.Select(x => x.SourceRefId ?? 0).Distinct().ToHashSet();
 
             var data = list.Select(p =>
             {
@@ -387,21 +423,30 @@ namespace net_backend.Controllers
                     ApprovedBy = p.ApprovedBy,
                     ApproverName = p.Approver != null ? p.Approver.FirstName + " " + p.Approver.LastName : null,
                     ApprovedAt = p.ApprovedAt,
-                    Items = p.Items.Select(i => new POItemDto
-                    {
-                        Id = i.Id,
-                        PurchaseIndentItemId = i.PurchaseIndentItemId,
-                        ItemId = i.PurchaseIndentItem!.ItemId,
-                        MainPartName = i.PurchaseIndentItem!.Item!.MainPartName,
-                        CurrentName = i.PurchaseIndentItem.Item.CurrentName,
-                        ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
-                        DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
-                        RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
-                        MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
-                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
-                        PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
-                        Rate = i.Rate,
-                        IsInwarded = inwardedSet.Contains($"{p.Id}_{i.PurchaseIndentItem.ItemId}")
+                    Items = p.Items.Select(i => {
+                        var key = $"{p.Id}_{i.PurchaseIndentItem!.ItemId}";
+                        var inv = inwardMap.ContainsKey(key) ? inwardMap[key] : null;
+                        var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id) 
+                            ? "QC-" + qcNumbers[inv.Id] : null;
+
+                        return new POItemDto
+                        {
+                            Id = i.Id,
+                            PurchaseIndentItemId = i.PurchaseIndentItemId,
+                            ItemId = i.PurchaseIndentItem!.ItemId,
+                            MainPartName = i.PurchaseIndentItem!.Item!.MainPartName,
+                            CurrentName = i.PurchaseIndentItem.Item.CurrentName,
+                            ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
+                            DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
+                            RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
+                            MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
+                            PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                            PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
+                            Rate = i.Rate,
+                            IsInwarded = inv != null,
+                            InwardNo = inv?.InwardNo,
+                            QCNo = qcNo
+                        };
                     }).ToList()
                 };
                 MapToDto(p, dto);

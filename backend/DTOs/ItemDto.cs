@@ -17,7 +17,6 @@ namespace net_backend.DTOs
         public string? OwnerTypeName { get; set; }
         public int StatusId { get; set; }
         public string? StatusName { get; set; }
-        public HolderType CurrentHolderType { get; set; }
         public int? CurrentLocationId { get; set; }
         public string? CurrentLocationName { get; set; }
         public int? CurrentPartyId { get; set; }
@@ -36,10 +35,6 @@ namespace net_backend.DTOs
         public string? RevisionNo { get; set; }
         public int MaterialId { get; set; }
         public int OwnerTypeId { get; set; }
-        public int StatusId { get; set; }
-        public HolderType CurrentHolderType { get; set; }
-        public int? CurrentLocationId { get; set; }
-        public int? CurrentPartyId { get; set; }
     }
 
     public class UpdateItemDto
@@ -52,9 +47,6 @@ namespace net_backend.DTOs
         public int MaterialId { get; set; }
         public int OwnerTypeId { get; set; }
         public int StatusId { get; set; }
-        public HolderType CurrentHolderType { get; set; }
-        public int? CurrentLocationId { get; set; }
-        public int? CurrentPartyId { get; set; }
         public bool IsActive { get; set; }
     }
 

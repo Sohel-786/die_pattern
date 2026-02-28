@@ -86,6 +86,7 @@ export default function InwardsPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["inwards"] });
+            queryClient.invalidateQueries({ queryKey: ["inward-sources"] });
             toast.success("Inward status updated");
         },
         onError: () => toast.error("Failed to update status")

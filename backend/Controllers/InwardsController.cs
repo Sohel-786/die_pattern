@@ -48,7 +48,6 @@ namespace net_backend.Controllers
                     .ThenInclude(l => l.Item)
                         .ThenInclude(i => i.Material)
                 .Include(i => i.Lines)
-                    .ThenInclude(l => l.Movement)
                 .OrderByDescending(i => i.CreatedAt)
                 .AsQueryable();
 
@@ -72,7 +71,7 @@ namespace net_backend.Controllers
                 query = query.Where(i => i.Lines.Any(l => 
                     (l.SourceType == InwardSourceType.PO && _context.PurchaseOrders.Any(p => p.Id == l.SourceRefId && p.PoNo.Contains(sourceNo))) ||
                     (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.Contains(sourceNo))) ||
-                    (l.SourceType == InwardSourceType.OutwardReturn && _context.Movements.Any(m => m.Id == l.SourceRefId && m.MovementNo != null && m.MovementNo.Contains(sourceNo)))
+                    (l.SourceType == InwardSourceType.OutwardReturn && _context.Outwards.Any(o => o.Id == l.SourceRefId && o.OutwardNo != null && o.OutwardNo.Contains(sourceNo)))
                 ));
             }
 
@@ -88,12 +87,13 @@ namespace net_backend.Controllers
             var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var outIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
-            var movIds = list.SelectMany(i => i.Lines).Where(l => l.MovementId.HasValue).Select(l => l.MovementId!.Value).Distinct().ToList();
 
             var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
-            var outs = await _context.Movements.Where(m => outIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.MovementNo ?? $"OUT-{m.Id}");
-            var qcs = await _context.QualityControls.Where(q => movIds.Contains(q.MovementId)).ToDictionaryAsync(q => q.MovementId, q => q.Id);
+            var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
+            
+            var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
+            var qcs = await _context.QualityControls.Where(q => lineIds.Contains(q.InwardLineId)).ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
 
             var data = list.Select(i => MapToDto(i, pos, jws, outs, qcs)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
@@ -121,8 +121,6 @@ namespace net_backend.Controllers
                 .Include(i => i.Creator)
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Item)
-                .Include(i => i.Lines)
-                    .ThenInclude(l => l.Movement)
                 .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
 
@@ -130,12 +128,13 @@ namespace net_backend.Controllers
             var poIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var outIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
-            var movIds = inward.Lines.Where(l => l.MovementId.HasValue).Select(l => l.MovementId!.Value).Distinct().ToList();
 
             var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
-            var outs = await _context.Movements.Where(m => outIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.MovementNo ?? $"OUT-{m.Id}");
-            var qcs = await _context.QualityControls.Where(q => movIds.Contains(q.MovementId)).ToDictionaryAsync(q => q.MovementId, q => q.Id);
+            var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
+            
+            var lineIds = inward.Lines.Select(l => l.Id).ToList();
+            var qcs = await _context.QualityControls.Where(q => lineIds.Contains(q.InwardLineId)).ToDictionaryAsync(q => q.InwardLineId, q => q.Id);
 
             return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, outs, qcs) });
         }
@@ -238,8 +237,6 @@ namespace net_backend.Controllers
             // For now, let's just update the header. If items changed, they should recreate.
             // Actually, I'll clear lines and movements linked to this inward and recreate.
             
-            var existingMovements = await _context.Movements.Where(m => m.InwardId == inward.Id).ToListAsync();
-            _context.Movements.RemoveRange(existingMovements);
             _context.InwardLines.RemoveRange(inward.Lines);
             
             foreach (var l in dto.Lines)
@@ -286,39 +283,22 @@ namespace net_backend.Controllers
         {
             foreach (var line in inward.Lines)
             {
-                if (line.MovementId == null)
+                // Update Item Process State to InwardDone
+                var item = await _context.Items.FindAsync(line.ItemId);
+                if (item != null)
                 {
-                    var movement = new Movement
-                    {
-                        MovementNo = await _codeGenerator.GenerateCode("INW", inward.LocationId),
-                        Type = MovementType.Inward,
-                        ItemId = line.ItemId,
-                        FromType = HolderType.Vendor,
-                        FromPartyId = inward.VendorId,
-                        ToType = HolderType.Location,
-                        ToLocationId = inward.LocationId,
-                        ToPartyId = null,
-                        Remarks = line.Remarks ?? inward.Remarks,
-                        PurchaseOrderId = line.SourceType == InwardSourceType.PO ? line.SourceRefId : null,
-                        InwardId = inward.Id,
-                        IsQCPending = true,
-                        IsQCApproved = false,
-                        CreatedBy = CurrentUserId,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.Movements.Add(movement);
-                    await _context.SaveChangesAsync(); // Save to get Id
-                    line.MovementId = movement.Id;
+                    item.CurrentProcess = ItemProcessState.InwardDone;
+                    item.UpdatedAt = DateTime.Now;
+                }
 
-                    // Update source status if necessary
-                    if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
+                // Update source status if necessary
+                if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
+                {
+                    var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
+                    if (jw != null)
                     {
-                        var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
-                        if (jw != null)
-                        {
-                            jw.Status = JobWorkStatus.Completed;
-                            jw.UpdatedAt = DateTime.Now;
-                        }
+                        jw.Status = JobWorkStatus.Completed;
+                        jw.UpdatedAt = DateTime.Now;
                     }
                 }
             }
@@ -336,7 +316,7 @@ namespace net_backend.Controllers
                 var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToHashSet();
                 
                 var inwardedFromPo = await _context.InwardLines
-                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId)
+                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive)
                     .Select(l => l.ItemId)
                     .ToListAsync();
 
@@ -347,18 +327,18 @@ namespace net_backend.Controllers
             }
             else if (sourceType == InwardSourceType.OutwardReturn)
             {
-                var mov = await _context.Movements.FirstOrDefaultAsync(m => m.Id == sourceRefId && m.Type == MovementType.Outward);
-                if (mov == null) throw new ArgumentException("Invalid Outward movement reference.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId);
+                var outward = await _context.Outwards.FirstOrDefaultAsync(o => o.Id == sourceRefId);
+                if (outward == null) throw new ArgumentException("Invalid Outward reference.");
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive);
                 if (alreadyInwarded) throw new ArgumentException("This Outward challan has already been inwarded.");
-                vendorId = mov.ToPartyId;
+                vendorId = outward.PartyId;
             }
             else if (sourceType == InwardSourceType.JobWork)
             {
                 var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
                 if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
                 if (jw.Status != JobWorkStatus.Pending) throw new ArgumentException("Only pending Job Work entries (not yet inwarded) can be used for Inward.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId);
+                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive);
                 if (alreadyInwarded) throw new ArgumentException("This Job Work has already been inwarded.");
             }
             return vendorId;
@@ -406,14 +386,11 @@ namespace net_backend.Controllers
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
-                    MovementId = l.MovementId,
-                    IsQCPending = l.Movement?.IsQCPending ?? (l.MovementId.HasValue ? true : true), // If movement exists but unknown, or no movement yet, it's pending
-                    IsQCApproved = l.Movement?.IsQCApproved ?? false,
                     SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value]
                                      : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
                                      : (l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue && outs != null && outs.ContainsKey(l.SourceRefId.Value)) ? outs[l.SourceRefId.Value]
                                      : l.SourceRefId?.ToString(),
-                    QCNo = (l.MovementId.HasValue && qcs != null && qcs.ContainsKey(l.MovementId.Value)) ? $"QC-{qcs[l.MovementId.Value]}" : "—"
+                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? $"QC-{qcs[l.Id]}" : "—"
                 }).ToList()
             };
             return dto;

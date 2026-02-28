@@ -18,6 +18,7 @@ import { PurchaseIndent, PurchaseIndentStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
 import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
+import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,6 +45,7 @@ export default function PurchaseIndentsPage() {
     const [approvalTarget, setApprovalTarget] = useState<{ pi: PurchaseIndent; action: "approve" | "reject" } | null>(null);
     const [revertTarget, setRevertTarget] = useState<PurchaseIndent | null>(null);
     const [previewPIId, setPreviewPIId] = useState<number | null>(null);
+    const [previewPOId, setPreviewPOId] = useState<number | null>(null);
     const [poDialogOpen, setPoDialogOpen] = useState(false);
     const [preSelectedPiItemIds, setPreSelectedPiItemIds] = useState<number[]>([]);
     const { user } = useAuth();
@@ -262,7 +264,9 @@ export default function PurchaseIndentsPage() {
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={6} className="h-16 px-6"><div className="h-4 bg-secondary-100 rounded-full w-full" /></TableCell>
+                                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-16 px-6">
+                                            <div className="h-4 bg-secondary-100 rounded-full w-full" />
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : indents.length > 0 ? (
@@ -423,64 +427,110 @@ export default function PurchaseIndentsPage() {
 
                                         <AnimatePresence>
                                             {expandedPIId === pi.id && (
-                                                <TableRow key={`expand-${pi.id}`} className="bg-secondary-50/50">
-                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0">
+                                                <TableRow key={`expand-${pi.id}`} className="bg-secondary-50/50 border-b border-secondary-100">
+                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0 bg-secondary-50/30">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
                                                             className="overflow-hidden"
                                                         >
-                                                            <div className="px-12 py-4 bg-secondary-50/50 border-x border-secondary-100 shadow-inner">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow className="bg-secondary-50 border-b border-secondary-100">
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 tracking-widest">Name</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 tracking-widest">Type</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 tracking-widest text-right">PO No</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 tracking-widest text-right w-28">Open PO</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            {pi.items.map((item: any) => (
-                                                                                <TableRow key={item.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30 transition-colors">
-                                                                                    <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className="text-[11px] font-bold text-secondary-900 uppercase">{item.currentName}</span>
-                                                                                            <span className="text-[9px] font-bold text-secondary-400 uppercase tracking-tighter">{item.mainPartName}</span>
-                                                                                        </div>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2">
-                                                                                        <span className="text-[10px] font-bold text-primary-600 uppercase bg-primary-50 px-2 py-0.5 rounded-full border border-primary-100">{item.itemTypeName}</span>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-right">
-                                                                                        <span className={`text-[11px] font-black uppercase ${item.poNo !== '-' && item.poNo ? 'text-indigo-600 tracking-tighter' : 'text-secondary-300'}`}>
-                                                                                            {item.poNo ?? '—'}
-                                                                                        </span>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-right">
-                                                                                        {item.poId ? (
-                                                                                            <Button
-                                                                                                variant="ghost"
-                                                                                                size="sm"
-                                                                                                className="h-7 px-2 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
-                                                                                                onClick={() => router.push(`/purchase-orders?openPoId=${item.poId}`)}
-                                                                                            >
-                                                                                                Open PO
-                                                                                            </Button>
-                                                                                        ) : (
-                                                                                            <span className="text-[10px] text-secondary-400">—</span>
-                                                                                        )}
-                                                                                    </TableCell>
+                                                            <div className="p-4">
+                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
+                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                            Indent Items
+                                                                        </p>
+                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                            Total Items: {pi.items?.length || 0}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="overflow-x-auto">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-24 text-center">SR.NO</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Item Description</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Type</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">PO No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">Inward No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">QC No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-right pr-6">Action</TableHead>
                                                                                 </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {(pi.items || []).map((item, iidx) => (
+                                                                                    <TableRow key={item.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 transition-colors whitespace-nowrap">
+                                                                                        <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center w-12">
+                                                                                            {iidx + 1}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2">
+                                                                                            <div className="flex flex-col min-w-0">
+                                                                                                <span className="font-bold text-secondary-900 text-[13px] tracking-tight truncate">
+                                                                                                    {item.currentName}
+                                                                                                </span>
+                                                                                                <span className="text-[11px] text-secondary-500 font-medium tracking-tight truncate">
+                                                                                                    {item.mainPartName}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2">
+                                                                                            <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px] uppercase">
+                                                                                                {item.itemTypeName}
+                                                                                            </span>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-indigo-600 text-[13px] tracking-tight">
+                                                                                            {item.poNo && item.poNo !== '-' ? (
+                                                                                                <span className="bg-indigo-50 px-2.5 py-1 rounded-md text-indigo-700 border border-indigo-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                                    {item.poNo}
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending PO</span>
+                                                                                            )}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-amber-600 text-[13px] tracking-tight">
+                                                                                            {item.inwardNo ? (
+                                                                                                <span className="bg-amber-50 px-2.5 py-1 rounded-md text-amber-700 border border-amber-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                                    {item.inwardNo}
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending Inward</span>
+                                                                                            )}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-emerald-600 text-[13px] tracking-tight">
+                                                                                            {item.qcNo ? (
+                                                                                                <span className="bg-emerald-50 px-2.5 py-1 rounded-md text-emerald-700 border border-emerald-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                                    {item.qcNo}
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending QC</span>
+                                                                                            )}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-right pr-6">
+                                                                                            {item.poId ? (
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="sm"
+                                                                                                    className="h-7 px-3 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-md transition-all"
+                                                                                                    onClick={() => {
+                                                                                                        if (item.poId) setPreviewPOId(item.poId);
+                                                                                                    }}
+                                                                                                >
+                                                                                                    Open PO
+                                                                                                </Button>
+                                                                                            ) : (
+                                                                                                <span className="text-[11px] text-secondary-300 font-medium">—</span>
+                                                                                            )}
+                                                                                        </TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
                                                                 </div>
                                                                 {pi.remarks && (
-                                                                    <div className="mt-4 p-3 bg-secondary-50 rounded-xl border border-secondary-100 italic text-[11px] text-secondary-500">
-                                                                        <span className="font-bold not-italic uppercase text-[10px] text-secondary-400 block mb-1">Remarks:</span>
+                                                                    <div className="mt-3 p-3 bg-secondary-50/50 rounded-xl border border-secondary-200/50 italic text-[12px] text-secondary-500 shadow-sm">
+                                                                        <span className="font-black not-italic uppercase text-[10px] text-secondary-400 block mb-1 tracking-widest">Indent Remarks</span>
                                                                         {pi.remarks}
                                                                     </div>
                                                                 )}
@@ -494,7 +544,7 @@ export default function PurchaseIndentsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
+                                    <td colSpan={isAdmin ? 9 : 8} className="py-16 text-center text-secondary-400 italic font-medium">
                                         No indents found matching parameters.
                                     </td>
                                 </TableRow>
@@ -601,6 +651,13 @@ export default function PurchaseIndentsPage() {
                 <PurchaseIndentPreviewModal
                     piId={previewPIId}
                     onClose={() => setPreviewPIId(null)}
+                />
+            )}
+
+            {previewPOId != null && (
+                <PurchaseOrderPreviewModal
+                    poId={previewPOId}
+                    onClose={() => setPreviewPOId(null)}
                 />
             )}
 

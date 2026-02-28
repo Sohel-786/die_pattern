@@ -267,73 +267,8 @@ namespace net_backend.Data
             {
                 Console.WriteLine($"User location access backfill skipped: {ex.Message}");
             }
-            // 7. Fix existing Inward QC statuses (fallback for records created before the pending flag fix)
-            try
-            {
-                var movementsToFix = context.Movements
-                    .Where(m => m.Type == MovementType.Inward && !m.IsQCPending && !m.IsQCApproved)
-                    .ToList();
-                
-                if (movementsToFix.Any())
-                {
-                    foreach (var m in movementsToFix)
-                    {
-                        m.IsQCPending = true;
-                    }
-                    context.SaveChanges();
-                    Console.WriteLine($"QC Status backfill: marked {movementsToFix.Count} inward movements as Pending QC.");
-                }
 
-                // 8. Backfill InwardLine snapshots
-                var linesToFix = context.InwardLines
-                    .Include(l => l.Item)
-                        .ThenInclude(i => i!.ItemType)
-                    .Include(l => l.Item)
-                        .ThenInclude(i => i!.Material)
-                    .Where(l => l.ItemTypeName == null)
-                    .ToList();
 
-                if (linesToFix.Any())
-                {
-                    foreach (var l in linesToFix)
-                    {
-                        if (l.Item != null)
-                        {
-                            l.ItemTypeName = l.ItemTypeName ?? l.Item.ItemType?.Name;
-                            l.MaterialName = l.MaterialName ?? l.Item.Material?.Name;
-                            l.DrawingNo = l.DrawingNo ?? l.Item.DrawingNo;
-                            l.RevisionNo = l.RevisionNo ?? l.Item.RevisionNo;
-                        }
-                    }
-                    context.SaveChanges();
-                    Console.WriteLine($"InwardLine snapshot backfill: updated {linesToFix.Count} lines.");
-                }
-
-                // 9. Backfill missing MovementIds on InwardLines
-                var linesWithoutMovements = context.InwardLines
-                    .Include(l => l.Inward)
-                    .Where(l => l.MovementId == null)
-                    .ToList();
-
-                if (linesWithoutMovements.Any())
-                {
-                    foreach (var l in linesWithoutMovements)
-                    {
-                        // Try to find an existing Inward movement for this item and inward
-                        var existingMov = context.Movements.FirstOrDefault(m => m.InwardId == l.InwardId && m.ItemId == l.ItemId && m.Type == MovementType.Inward);
-                        if (existingMov != null)
-                        {
-                            l.MovementId = existingMov.Id;
-                        }
-                    }
-                    context.SaveChanges();
-                    Console.WriteLine($"InwardLine MovementId backfill: updated {linesWithoutMovements.Count(l => l.MovementId != null)} lines.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Backfill patch skipped: {ex.Message}");
-            }
         }
     }
 }

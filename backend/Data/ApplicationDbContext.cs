@@ -26,7 +26,8 @@ namespace net_backend.Data
         public DbSet<JobWork> JobWorks { get; set; } = default!;
         public DbSet<Inward> Inwards { get; set; } = default!;
         public DbSet<InwardLine> InwardLines { get; set; } = default!;
-        public DbSet<Movement> Movements { get; set; } = default!;
+        public DbSet<Outward> Outwards { get; set; } = default!;
+        public DbSet<OutwardLine> OutwardLines { get; set; } = default!;
         public DbSet<QualityControl> QualityControls { get; set; } = default!;
         public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
         public DbSet<User> Users { get; set; } = default!;
@@ -37,26 +38,30 @@ namespace net_backend.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Unique constraints
-            modelBuilder.Entity<Item>()
-                .HasIndex(p => p.MainPartName)
-                .IsUnique();
+        // Unique constraints
+        modelBuilder.Entity<Item>()
+            .HasIndex(p => p.MainPartName)
+            .IsUnique();
 
-            modelBuilder.Entity<PurchaseIndent>()
-                .HasIndex(p => p.PiNo)
-                .IsUnique();
+        modelBuilder.Entity<PurchaseIndent>()
+            .HasIndex(p => p.PiNo)
+            .IsUnique();
 
-            modelBuilder.Entity<PurchaseOrder>()
-                .HasIndex(p => p.PoNo)
-                .IsUnique();
+        modelBuilder.Entity<PurchaseOrder>()
+            .HasIndex(p => p.PoNo)
+            .IsUnique();
 
-            modelBuilder.Entity<JobWork>()
-                .HasIndex(j => j.JobWorkNo)
-                .IsUnique();
+        modelBuilder.Entity<JobWork>()
+            .HasIndex(j => j.JobWorkNo)
+            .IsUnique();
 
-            modelBuilder.Entity<Inward>()
-                .HasIndex(i => i.InwardNo)
-                .IsUnique();
+        modelBuilder.Entity<Inward>()
+            .HasIndex(i => i.InwardNo)
+            .IsUnique();
+
+        modelBuilder.Entity<Outward>()
+            .HasIndex(o => o.OutwardNo)
+            .IsUnique();
 
             modelBuilder.Entity<PurchaseOrderItem>()
                 .Property(poi => poi.Rate)
@@ -143,28 +148,40 @@ namespace net_backend.Data
                 .HasForeignKey(l => l.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<InwardLine>()
-                .HasOne(l => l.Movement)
-                .WithMany(m => m.Lines)
-                .HasForeignKey(l => l.MovementId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            modelBuilder.Entity<Movement>()
-                .HasOne(m => m.Item)
+            modelBuilder.Entity<Outward>()
+                .HasOne(o => o.Location)
                 .WithMany()
-                .HasForeignKey(m => m.ItemId)
+                .HasForeignKey(o => o.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Movement>()
-                .HasOne(m => m.Inward)
+            modelBuilder.Entity<Outward>()
+                .HasOne(o => o.Party)
                 .WithMany()
-                .HasForeignKey(m => m.InwardId)
+                .HasForeignKey(o => o.PartyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Outward>()
+                .HasOne(o => o.Creator)
+                .WithMany()
+                .HasForeignKey(o => o.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OutwardLine>()
+                .HasOne(l => l.Outward)
+                .WithMany(o => o.Lines)
+                .HasForeignKey(l => l.OutwardId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OutwardLine>()
+                .HasOne(l => l.Item)
+                .WithMany()
+                .HasForeignKey(l => l.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<QualityControl>()
-                .HasOne(qc => qc.Movement)
+                .HasOne(qc => qc.InwardLine)
                 .WithMany()
-                .HasForeignKey(qc => qc.MovementId)
+                .HasForeignKey(qc => qc.InwardLineId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ItemChangeLog>()

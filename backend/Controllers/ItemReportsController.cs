@@ -37,8 +37,8 @@ namespace net_backend.Controllers
                     ItemType = p.ItemType!.Name,
                     p.RevisionNo,
                     Status = p.Status!.Name,
-                    Holder = p.CurrentHolderType == HolderType.NotInStock ? "Not in stock" : (p.CurrentHolderType == HolderType.Location ? p.CurrentLocation!.Name : p.CurrentParty!.Name),
-                    p.CurrentHolderType,
+                    Holder = p.CurrentProcess == ItemProcessState.NotInStock ? "Not in stock" : (p.CurrentProcess == ItemProcessState.InStock ? p.CurrentLocation!.Name : p.CurrentParty!.Name),
+                    CurrentProcess = p.CurrentProcess,
                     p.IsActive
                 })
                 .ToListAsync();
@@ -51,30 +51,7 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var data = await _context.Movements
-                .Where(m => m.FromLocationId == locationId || m.ToLocationId == locationId || (m.Item != null && m.Item.LocationId == locationId))
-                .Include(m => m.Item)
-                .Include(m => m.FromLocation)
-                .Include(m => m.FromParty)
-                .Include(m => m.ToLocation)
-                .Include(m => m.ToParty)
-                .Include(m => m.Creator)
-                .OrderByDescending(m => m.CreatedAt)
-                .Select(m => new
-                {
-                    m.Id,
-                    Date = m.CreatedAt,
-                    m.Type,
-                    ItemName = m.Item!.CurrentName,
-                    From = m.FromType == HolderType.Location ? m.FromLocation!.Name : m.FromParty!.Name,
-                    To = m.ToType == HolderType.Location ? m.ToLocation!.Name : m.ToParty!.Name,
-                    m.Remarks,
-                    m.Reason,
-                    User = m.Creator!.FirstName + " " + m.Creator.LastName,
-                    m.IsQCApproved
-                })
-                .ToListAsync();
-
+            var data = new List<object>(); // Movements are now handled via separate flow ledgers
             return Ok(new ApiResponse<IEnumerable<object>> { Data = data });
         }
 
@@ -83,14 +60,14 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var qcQuery = _context.QualityControls.Where(q => q.Movement != null && q.Movement.ToLocationId == locationId);
+            var qcQuery = _context.QualityControls.Where(q => q.InwardLine != null && q.InwardLine.Inward!.LocationId == locationId);
             var total = await qcQuery.CountAsync();
             var approved = await qcQuery.CountAsync(q => q.IsApproved);
             var rejected = total - approved;
 
             var recent = await _context.QualityControls
-                .Where(q => q.Movement != null && q.Movement.ToLocationId == locationId)
-                .Include(q => q.Movement)
+                .Where(q => q.InwardLine != null && q.InwardLine.Inward!.LocationId == locationId)
+                .Include(q => q.InwardLine)
                     .ThenInclude(m => m!.Item)
                 .Include(q => q.Checker)
                 .OrderByDescending(q => q.CheckedAt)
@@ -98,7 +75,7 @@ namespace net_backend.Controllers
                 .Select(q => new
                 {
                     q.Id,
-                    ItemName = q.Movement!.Item!.CurrentName,
+                    ItemName = q.InwardLine!.Item!.CurrentName,
                     q.IsApproved,
                     q.Remarks,
                     CheckedBy = q.Checker!.FirstName + " " + q.Checker.LastName,

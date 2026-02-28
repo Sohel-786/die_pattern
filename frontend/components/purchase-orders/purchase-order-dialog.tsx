@@ -58,6 +58,7 @@ export function PurchaseOrderDialog({
   onPreviewRequest,
 }: PurchaseOrderDialogProps) {
   const isEditing = !!po?.id;
+  const isReadOnly = isEditing && po?.status !== PoStatus.Pending;
   const queryClient = useQueryClient();
 
   const [vendorId, setVendorId] = useState<number>(0);
@@ -498,7 +499,11 @@ export function PurchaseOrderDialog({
                   <select
                     value={purchaseType}
                     onChange={(e) => setPurchaseType(e.target.value as PurchaseType)}
-                    className="w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    disabled={isReadOnly}
+                    className={cn(
+                      "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                    )}
                   >
                     <option value="Regular">Regular</option>
                     <option value="Urgent">Urgent</option>
@@ -513,6 +518,7 @@ export function PurchaseOrderDialog({
                       value={vendorId}
                       onChange={(val) => setVendorId(Number(val))}
                       placeholder="Search parties..."
+                      disabled={isReadOnly}
                     />
                   </div>
                 </div>
@@ -530,18 +536,22 @@ export function PurchaseOrderDialog({
                     value={quotationNo}
                     onChange={(e) => setQuotationNo(e.target.value)}
                     className="h-9 mt-0.5 border-secondary-200 text-sm"
+                    readOnly={isReadOnly}
                   />
                 </div>
                 <div className="col-span-9 flex items-end gap-2 flex-wrap">
                   <div className="w-48 min-w-0">
                     <Label className="text-xs font-semibold text-secondary-600">Quotation Upload *</Label>
-                    <div className="mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors">
-                      <label className="flex items-center gap-1.5 cursor-pointer shrink-0 h-full py-1 w-full">
+                    <div className={cn(
+                      "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
+                      isReadOnly && "opacity-50 cursor-not-allowed hover:border-secondary-200"
+                    )}>
+                      <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", isReadOnly ? "cursor-not-allowed" : "cursor-pointer")}>
                         <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
                         <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
                           {uploading ? "Saving..." : effectiveQuotationCount === 0 ? "PDF / Images" : "PDF / Images"}
                         </span>
-                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
                       </label>
                     </div>
                   </div>
@@ -555,7 +565,12 @@ export function PurchaseOrderDialog({
                   >
                     View ({effectiveQuotationCount})
                   </Button>
-                  <Button type="button" onClick={() => setIsPiSelectionOpen(true)} className="h-9 shrink-0 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2">
+                  <Button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={() => setIsPiSelectionOpen(true)}
+                    className="h-9 shrink-0 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2 disabled:opacity-50"
+                  >
                     <Plus className="w-4 h-4" />
                     Add PI
                   </Button>
@@ -585,9 +600,13 @@ export function PurchaseOrderDialog({
                         {pi.piNo}
                         <button
                           type="button"
-                          onClick={() => removePiFromSelection(pi.id)}
-                          className="p-0.5 rounded hover:bg-rose-100 text-secondary-500 hover:text-rose-600 transition-colors"
-                          title="Remove this PI and all its items from the PO"
+                          onClick={() => !isReadOnly && removePiFromSelection(pi.id)}
+                          className={cn(
+                            "p-0.5 rounded transition-colors text-secondary-500",
+                            isReadOnly ? "cursor-not-allowed opacity-30" : "hover:bg-rose-100 hover:text-rose-600"
+                          )}
+                          title={isReadOnly ? "" : "Remove this PI and all its items from the PO"}
+                          disabled={isReadOnly}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -636,9 +655,10 @@ export function PurchaseOrderDialog({
                                 <input
                                   type="checkbox"
                                   checked={included}
-                                  onChange={() => toggleItemIncluded(i.purchaseIndentItemId)}
-                                  className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                                  title={included ? "Include in PO" : "Exclude from PO"}
+                                  onChange={() => !isReadOnly && toggleItemIncluded(i.purchaseIndentItemId)}
+                                  disabled={isReadOnly}
+                                  className={cn("h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500", !isReadOnly ? "cursor-pointer" : "cursor-not-allowed")}
+                                  title={isReadOnly ? "" : included ? "Include in PO" : "Exclude from PO"}
                                 />
                               </td>
                               <td className="py-2.5 px-3 text-secondary-700 font-medium whitespace-nowrap">{display.piNo ?? "—"}</td>
@@ -661,7 +681,8 @@ export function PurchaseOrderDialog({
                                   type="number"
                                   value={i.gstPercent}
                                   onChange={(e) => updateItemGstPercent(i.purchaseIndentItemId, parseFloat(e.target.value) || 0)}
-                                  className="h-8 w-16 text-center text-sm border-secondary-200 rounded"
+                                  readOnly={isReadOnly}
+                                  className={cn("h-8 w-16 text-center text-sm border-secondary-200 rounded", isReadOnly && "bg-secondary-50")}
                                 />
                               </td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap min-w-[100px]">
@@ -670,7 +691,8 @@ export function PurchaseOrderDialog({
                                   inputMode="decimal"
                                   value={i.rate || ""}
                                   onChange={(e) => updateItemRate(i.purchaseIndentItemId, parseFloat(e.target.value) || 0)}
-                                  className="h-8 w-36 min-w-[8rem] text-center text-sm border-secondary-200 rounded mx-auto"
+                                  readOnly={isReadOnly}
+                                  className={cn("h-8 w-36 min-w-[8rem] text-center text-sm border-secondary-200 rounded mx-auto", isReadOnly && "bg-secondary-50")}
                                   placeholder="0"
                                 />
                               </td>
@@ -691,8 +713,9 @@ export function PurchaseOrderDialog({
                   <Textarea
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
+                    readOnly={isReadOnly}
                     placeholder="Optional remarks..."
-                    className="mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none"
+                    className={cn("mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none", isReadOnly && "bg-secondary-50")}
                   />
                 </div>
               </div>
@@ -728,8 +751,9 @@ export function PurchaseOrderDialog({
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={isReadOnly}
                       className="h-9 w-9 p-0 shrink-0"
-                      onClick={() => deliveryDateInputRef.current?.showPicker?.()}
+                      onClick={() => !isReadOnly && deliveryDateInputRef.current?.showPicker?.()}
                       title="Pick delivery date"
                     >
                       <Calendar className="w-4 h-4" />

@@ -123,7 +123,7 @@ export function InwardDialog({
                 mainPartName: l.mainPartName || "",
                 quantity: l.quantity,
                 sourceType: l.sourceType,
-                sourceRefId: l.sourceRefId || 0,
+                sourceRefId: l.sourceRefId,
                 sourceRefDisplay: l.sourceRefDisplay || "",
                 remarks: l.remarks || "",
                 included: true
@@ -135,12 +135,13 @@ export function InwardDialog({
             setLines([]);
             if (autoNextCode) setNextCode(autoNextCode);
         }
-    }, [open, isEditing, inward]);
+    }, [open, isEditing, inward, autoNextCode]);
 
     const mutation = useMutation({
         mutationFn: (data: any) => isEditing ? api.put(`/inwards/${inwardId}`, data) : api.post("/inwards", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["inwards"] });
+            queryClient.invalidateQueries({ queryKey: ["inward-sources"] });
             toast.success(isEditing ? "Inward updated" : "Inward receipt saved");
             onOpenChange(false);
         },
@@ -411,20 +412,20 @@ export function InwardDialog({
                         </div>
 
                         {/* Footer: simplified as per request */}
-                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-8 py-4 flex items-center justify-end gap-4 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
+                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => onOpenChange(false)}
-                                className="h-10 px-8 font-black uppercase tracking-widest text-[10px] text-secondary-400 hover:text-secondary-900 transition-colors"
+                                className="h-9 px-5 font-semibold"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={mutation.isPending || lines.length === 0}
-                                className="h-10 px-10 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] rounded-lg shadow-lg shadow-primary-200 transition-all active:scale-95"
+                                className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                             >
-                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save Entry")}
+                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
                             </Button>
                         </footer>
                     </>

@@ -37,13 +37,10 @@ namespace net_backend.Services
             }
             else if (type == "OUT")
             {
-                count = await _context.Movements.CountAsync(m => m.Type == Models.MovementType.Outward);
-                prefix = "MOV-OUT";
-            }
-            else if (type == "INW")
-            {
-                count = await _context.Movements.CountAsync(m => m.Type == Models.MovementType.Inward);
-                prefix = "MOV-INW";
+                count = locationId.HasValue
+                    ? await _context.Outwards.CountAsync(o => o.LocationId == locationId)
+                    : await _context.Outwards.CountAsync();
+                return $"OUT-{count + 1:D4}";
             }
             else if (type == "INWARD")
             {

@@ -21,9 +21,9 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
 
             var totalItems = await _context.Items.CountAsync(p => p.LocationId == locationId && p.IsActive);
-            var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Vendor && p.IsActive);
-            var itemsAtLocation = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.Location && p.IsActive);
-            var itemsNotInStock = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentHolderType == HolderType.NotInStock && p.IsActive);
+            var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.Outward && p.IsActive);
+            var itemsAtLocation = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.InStock && p.IsActive);
+            var itemsNotInStock = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.NotInStock && p.IsActive);
 
             var pendingPI = await _context.PurchaseIndents.CountAsync(pi => pi.Status == PurchaseIndentStatus.Pending);
             var pendingPO = await _context.PurchaseOrders.CountAsync(po => po.LocationId == locationId && po.Status == PoStatus.Pending);
@@ -45,17 +45,7 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            var recentSystemAdjustments = await _context.Movements
-                .Include(m => m.Item)
-                .Where(m => m.Type == MovementType.SystemReturn && (m.ToLocationId == locationId || m.FromLocationId == locationId))
-                .OrderByDescending(m => m.CreatedAt)
-                .Take(5)
-                .Select(m => new {
-                    m.Item!.MainPartName,
-                    m.Reason,
-                    m.CreatedAt
-                })
-                .ToListAsync();
+            var recentSystemAdjustments = new List<object>();
 
             var result = new
             {

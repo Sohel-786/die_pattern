@@ -163,7 +163,7 @@ namespace net_backend.Models
         public int OwnerTypeId { get; set; }
         public int StatusId { get; set; }
 
-        public HolderType CurrentHolderType { get; set; }
+        public ItemProcessState CurrentProcess { get; set; } = ItemProcessState.NotInStock;
         public int? CurrentLocationId { get; set; }
         public int? CurrentPartyId { get; set; }
 
@@ -337,75 +337,67 @@ namespace net_backend.Models
         public InwardSourceType SourceType { get; set; }
         public int? SourceRefId { get; set; }
         public string? Remarks { get; set; }
-        public int? MovementId { get; set; }
-
-        [ForeignKey("InwardId")]
-        public virtual Inward? Inward { get; set; }
-        [ForeignKey("ItemId")]
-        public virtual Item? Item { get; set; }
-        [ForeignKey("MovementId")]
-        public virtual Movement? Movement { get; set; }
-    }
-
-    [Table("movements")]
-    public class Movement
-    {
-        public int Id { get; set; }
-        public string? MovementNo { get; set; }
-        public MovementType Type { get; set; }
-        public int ItemId { get; set; }
-        
-        public HolderType FromType { get; set; }
-        public int? FromLocationId { get; set; }
-        public int? FromPartyId { get; set; }
-
-        public HolderType ToType { get; set; }
-        public int? ToLocationId { get; set; }
-        public int? ToPartyId { get; set; }
-
-        public string? Remarks { get; set; }
-        public string? Reason { get; set; } // Mandatory for SystemReturn
-        
-        public int? PurchaseOrderId { get; set; }
-        public int? InwardId { get; set; }
-        
-        public bool IsQCPending { get; set; } = false;
+        public bool IsQCPending { get; set; } = true;
         public bool IsQCApproved { get; set; } = false;
 
-        public int CreatedBy { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        [ForeignKey("ItemId")]
-        public virtual Item? Item { get; set; }
-        [ForeignKey("FromLocationId")]
-        public virtual Location? FromLocation { get; set; }
-        [ForeignKey("FromPartyId")]
-        public virtual Party? FromParty { get; set; }
-        [ForeignKey("ToLocationId")]
-        public virtual Location? ToLocation { get; set; }
-        [ForeignKey("ToPartyId")]
-        public virtual Party? ToParty { get; set; }
-        [ForeignKey("PurchaseOrderId")]
-        public virtual PurchaseOrder? PurchaseOrder { get; set; }
         [ForeignKey("InwardId")]
         public virtual Inward? Inward { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
+    }
+
+    [Table("outwards")]
+    public class Outward
+    {
+        public int Id { get; set; }
+        public string OutwardNo { get; set; } = string.Empty;
+        public DateTime OutwardDate { get; set; } = DateTime.Now;
+        public int LocationId { get; set; }
+        public int PartyId { get; set; }
+        public string? Remarks { get; set; }
+        public bool IsActive { get; set; } = true;
+        
+        public int CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+        [ForeignKey("PartyId")]
+        public virtual Party? Party { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
-        public virtual ICollection<InwardLine> Lines { get; set; } = new List<InwardLine>();
+        public virtual ICollection<OutwardLine> Lines { get; set; } = new List<OutwardLine>();
+    }
+
+    [Table("outward_lines")]
+    public class OutwardLine
+    {
+        public int Id { get; set; }
+        public int OutwardId { get; set; }
+        public int ItemId { get; set; }
+        public int Quantity { get; set; } = 1;
+        public string? Remarks { get; set; }
+
+        [ForeignKey("OutwardId")]
+        public virtual Outward? Outward { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
     }
 
     [Table("quality_controls")]
     public class QualityControl
     {
         public int Id { get; set; }
-        public int MovementId { get; set; }
+        public int InwardLineId { get; set; }
         public bool IsApproved { get; set; }
+        public bool IsActive { get; set; } = true;
         public string? Remarks { get; set; }
         public int CheckedBy { get; set; }
         public DateTime CheckedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("MovementId")]
-        public virtual Movement? Movement { get; set; }
+        [ForeignKey("InwardLineId")]
+        public virtual InwardLine? InwardLine { get; set; }
         [ForeignKey("CheckedBy")]
         public virtual User? Checker { get; set; }
     }

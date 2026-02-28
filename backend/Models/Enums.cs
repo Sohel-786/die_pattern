@@ -37,12 +37,7 @@ namespace net_backend.Models
         UGST
     }
 
-    public enum MovementType
-    {
-        Outward,
-        Inward,
-        SystemReturn
-    }
+
 
     /// <summary>Source of an Inward document: PO, return from vendor (Outward), or Job Work.</summary>
     public enum InwardSourceType
@@ -65,13 +60,7 @@ namespace net_backend.Models
         Completed = 2
     }
 
-    /// <summary>Where the item is held: at current location (in-stock), at vendor, or not in stock.</summary>
-    public enum HolderType
-    {
-        Location = 0,   // In-stock at location (current request location)
-        Vendor = 1,
-        NotInStock = 2
-    }
+
 
     /// <summary>Single global process state for an item: one item can only be in one of these at a time.</summary>
     public enum ItemProcessState
@@ -79,9 +68,10 @@ namespace net_backend.Models
         NotInStock = 0,
         InPI = 1,
         InPO = 2,
-        InQC = 3,
-        InJobwork = 4,
-        Outward = 5,
-        InStock = 6
+        InwardDone = 3,  // Inward received, no QC entry created yet
+        InQC = 4,        // QC entry created (awaiting approval)
+        InJobwork = 5,
+        Outward = 6,
+        InStock = 7
     }
 }

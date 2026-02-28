@@ -15,57 +15,43 @@ namespace net_backend.Controllers
         }
 
         [HttpGet("pending")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<MovementDto>>>> GetPending(
+        public async Task<ActionResult<ApiResponse<IEnumerable<PendingQCDto>>>> GetPending(
             [FromQuery] InwardSourceType? sourceType)
         {
             var locationId = await GetCurrentLocationIdAsync();
-            var query = _context.Movements
-                .Include(m => m.Item)
-                .Include(m => m.ToLocation)
-                .Include(m => m.ToParty)
-                .Include(m => m.Inward)
-                .Include(m => m.PurchaseOrder)
-                .Where(m => m.IsQCPending && !m.IsQCApproved && m.ToLocationId == locationId);
+            var query = _context.InwardLines
+                .Include(l => l.Item)
+                .Include(l => l.Inward).ThenInclude(i => i!.Vendor)
+                .Where(l => l.IsQCPending && !l.IsQCApproved && l.Inward != null && l.Inward.IsActive && l.Inward.LocationId == locationId);
 
             if (sourceType.HasValue)
-                query = query.Where(m => m.Lines.Any(l => l.SourceType == sourceType.Value));
+                query = query.Where(l => l.SourceType == sourceType.Value);
 
             var list = await query.ToListAsync();
             var data = list.Select(m => MapToDto(m)).ToList();
-            return Ok(new ApiResponse<IEnumerable<MovementDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<PendingQCDto>> { Data = data });
         }
 
-        private static MovementDto MapToDto(Movement m)
+        private static PendingQCDto MapToDto(InwardLine m)
         {
-            var dto = new MovementDto
+            return new PendingQCDto
             {
-                Id = m.Id,
-                Type = m.Type,
+                InwardLineId = m.Id,
                 ItemId = m.ItemId,
                 ItemName = m.Item?.CurrentName,
                 MainPartName = m.Item?.MainPartName,
-                FromType = m.FromType,
-                FromName = m.FromParty?.Name ?? m.FromLocation?.Name,
-                ToType = m.ToType,
-                ToName = m.ToType == HolderType.Location ? m.ToLocation?.Name : m.ToParty?.Name,
-                Remarks = m.Remarks,
-                Reason = m.Reason,
-                PurchaseOrderId = m.PurchaseOrderId,
-                PoNo = m.PurchaseOrder?.PoNo,
                 InwardId = m.InwardId,
                 InwardNo = m.Inward?.InwardNo,
-                SourceType = m.Lines.FirstOrDefault()?.SourceType,
-                SourceRefDisplay = m.Lines.FirstOrDefault() != null
-                    ? (m.Lines.First().SourceType == InwardSourceType.PO ? $"PO-{m.Lines.First().SourceRefId}"
-                        : m.Lines.First().SourceType == InwardSourceType.OutwardReturn ? $"Outward #{m.Lines.First().SourceRefId}"
-                        : m.Lines.First().SourceType == InwardSourceType.JobWork ? $"JW-{m.Lines.First().SourceRefId}"
-                        : m.Lines.First().SourceRefId?.ToString())
-                    : null,
+                SourceType = m.SourceType,
+                SourceRefDisplay = m.SourceType == InwardSourceType.PO ? $"PO-{m.SourceRefId}"
+                    : m.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{m.SourceRefId}"
+                    : m.SourceType == InwardSourceType.JobWork ? $"JW-{m.SourceRefId}"
+                    : m.SourceRefId?.ToString(),
+                VendorName = m.Inward?.Vendor?.Name,
                 IsQCPending = m.IsQCPending,
                 IsQCApproved = m.IsQCApproved,
-                CreatedAt = m.CreatedAt
+                InwardDate = m.Inward?.InwardDate ?? DateTime.Now
             };
-            return dto;
         }
 
         [HttpPost("perform")]
@@ -75,38 +61,38 @@ namespace net_backend.Controllers
             if (dto.IsApproved && !await HasPermission("ApproveQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
-            var movement = await _context.Movements
-                .Include(m => m.Item)
-                .FirstOrDefaultAsync(m => m.Id == dto.MovementId && m.ToLocationId == locationId);
+            var line = await _context.InwardLines
+                .Include(l => l.Item)
+                .Include(l => l.Inward)
+                .FirstOrDefaultAsync(l => l.Id == dto.InwardLineId && l.Inward!.LocationId == locationId);
 
-            if (movement == null) return NotFound("Movement not found");
-            if (!movement.IsQCPending)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "This movement is not pending QC or has already been processed." });
+            if (line == null) return NotFound("Inward Line not found");
+            if (!line.IsQCPending)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "This inward line is not pending QC or has already been processed." });
 
-            if (await _context.QualityControls.AnyAsync(q => q.MovementId == dto.MovementId))
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "QC entry already exists for this movement (duplicate not allowed)." });
+            if (await _context.QualityControls.AnyAsync(q => q.InwardLineId == dto.InwardLineId))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "QC entry already exists for this inward line." });
 
             var qc = new QualityControl
             {
-                MovementId = dto.MovementId,
+                InwardLineId = dto.InwardLineId,
                 IsApproved = dto.IsApproved,
                 Remarks = dto.Remarks,
                 CheckedBy = CurrentUserId,
                 CheckedAt = DateTime.Now
             };
 
-            movement.IsQCApproved = dto.IsApproved;
-            movement.IsQCPending = false;
+            line.IsQCApproved = dto.IsApproved;
+            line.IsQCPending = false;
 
             if (dto.IsApproved)
             {
-                // Update stock holder only on approval
-                var item = movement.Item;
+                var item = line.Item;
                 if (item != null)
                 {
-                    item.CurrentHolderType = movement.ToType;
-                    item.CurrentLocationId = movement.ToLocationId;
-                    item.CurrentPartyId = movement.ToPartyId;
+                    item.CurrentProcess = ItemProcessState.InStock;
+                    item.CurrentLocationId = line.Inward!.LocationId;
+                    item.CurrentPartyId = null;
                     item.UpdatedAt = DateTime.Now;
                 }
             }

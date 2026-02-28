@@ -35,6 +35,8 @@ namespace net_backend.DTOs
         public string? PoNo { get; set; }
         public int? PoId { get; set; }
         public bool IsInPO { get; set; }
+        public string? InwardNo { get; set; }
+        public string? QCNo { get; set; }
     }
 
     public class CreatePurchaseIndentDto
@@ -102,6 +104,8 @@ namespace net_backend.DTOs
         /// <summary>Line amount = Rate (one unit per die/pattern, before GST)</summary>
         public decimal LineAmount => Math.Round(Rate, 2);
         public bool IsInwarded { get; set; }
+        public string? InwardNo { get; set; }
+        public string? QCNo { get; set; }
     }
 
     /// <summary>Per-item input for PO creation/update. Each die/pattern has its own rate.</summary>
@@ -142,48 +146,70 @@ namespace net_backend.DTOs
         }
     }
 
-    public class MovementDto
+    public class OutwardDto
     {
         public int Id { get; set; }
-        public string? MovementNo { get; set; }
-        public MovementType Type { get; set; }
+        public string OutwardNo { get; set; } = string.Empty;
+        public DateTime OutwardDate { get; set; }
+        public int PartyId { get; set; }
+        public string? PartyName { get; set; }
+        public string? Remarks { get; set; }
+        public int CreatedBy { get; set; }
+        public string? CreatorName { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; }
+        public List<OutwardLineDto> Lines { get; set; } = new();
+    }
+
+    public class OutwardLineDto
+    {
+        public int Id { get; set; }
+        public int OutwardId { get; set; }
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
         public string? MainPartName { get; set; }
-        public HolderType FromType { get; set; }
-        public string? FromName { get; set; }
-        public HolderType ToType { get; set; }
-        public string? ToName { get; set; }
-        public int? ToPartyId { get; set; }
-        public string? ToPartyName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? MaterialName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public int Quantity { get; set; }
         public string? Remarks { get; set; }
-        public string? Reason { get; set; }
-        public int? PurchaseOrderId { get; set; }
-        public string? PoNo { get; set; }
-        public int? InwardId { get; set; }
-        public string? InwardNo { get; set; }
-        public InwardSourceType? SourceType { get; set; }
-        public string? SourceRefDisplay { get; set; }
-        public bool IsQCPending { get; set; }
-        public bool IsQCApproved { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 
-    public class CreateMovementDto
+    public class CreateOutwardDto
     {
-        public MovementType Type { get; set; }
-        public int ItemId { get; set; }
-        public HolderType ToType { get; set; }
-        public int? ToLocationId { get; set; }
-        public int? ToPartyId { get; set; }
+        public DateTime? OutwardDate { get; set; }
+        public int PartyId { get; set; }
         public string? Remarks { get; set; }
-        public string? Reason { get; set; }
-        public int? PurchaseOrderId { get; set; }
+        public List<CreateOutwardLineDto> Lines { get; set; } = new();
+    }
+
+    public class CreateOutwardLineDto
+    {
+        public int ItemId { get; set; }
+        public int Quantity { get; set; } = 1;
+        public string? Remarks { get; set; }
+    }
+
+    public class PendingQCDto
+    {
+        public int InwardLineId { get; set; }
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
+        public string? MainPartName { get; set; }
+        public string? InwardNo { get; set; }
+        public int? InwardId { get; set; }
+        public InwardSourceType? SourceType { get; set; }
+        public string? SourceRefDisplay { get; set; }
+        public string? VendorName { get; set; }
+        public bool IsQCPending { get; set; }
+        public bool IsQCApproved { get; set; }
+        public DateTime InwardDate { get; set; }
     }
 
     public class QCDto
     {
-        public int MovementId { get; set; }
+        public int InwardLineId { get; set; }
         public bool IsApproved { get; set; }
         public string? Remarks { get; set; }
     }
@@ -221,7 +247,6 @@ namespace net_backend.DTOs
         public int? SourceRefId { get; set; }
         public string? SourceRefDisplay { get; set; }
         public string? Remarks { get; set; }
-        public int? MovementId { get; set; }
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
         public string? QCNo { get; set; }

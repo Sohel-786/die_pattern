@@ -303,7 +303,7 @@ export default function PurchaseOrdersPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
-                    <TableCell colSpan={8} className="h-16 px-6">
+                    <TableCell colSpan={10} className="h-16 px-6">
                       <div className="h-4 bg-secondary-100 rounded-full w-full" />
                     </TableCell>
                   </TableRow>
@@ -431,7 +431,7 @@ export default function PurchaseOrdersPage() {
                               <Eye className="w-4 h-4" />
                             </Button>
                           )}
-                          {canEdit(po) && (
+                          {(permissions?.editPO || user?.role === Role.ADMIN) && po.isActive !== false && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -478,116 +478,151 @@ export default function PurchaseOrdersPage() {
                           key={`expand-${po.id}`}
                           className="bg-secondary-50/50 border-b border-secondary-100"
                         >
-                          <td colSpan={9} className="p-0">
+                          <td colSpan={10} className="p-0 bg-secondary-50/30">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               className="overflow-hidden"
                             >
-                              <div className="px-6 py-4 bg-secondary-50/50 border-x border-secondary-100">
-                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                  <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
-                                    Items
-                                  </p>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow className="bg-secondary-50 border-b border-secondary-100">
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12">
-                                          Sr.No
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                          PI No.
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                          Name
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-24">
-                                          Type
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                          Drawing No. / Rev
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                          Material
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
-                                          GST %
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
-                                          Unit Rate (₹)
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
-                                          Tax
-                                        </TableHead>
-                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center whitespace-nowrap">
-                                          Total
-                                        </TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {po.items?.map((i) => {
-                                        const gstPct = po.gstPercent ?? 18;
-                                        const tax =
-                                          ((i.rate ?? 0) * gstPct) / 100;
-                                        const total = (i.rate ?? 0) + tax;
-                                        return (
-                                          <TableRow
-                                            key={i.id}
-                                            className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30"
-                                          >
-                                            <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">
-                                              {po.items.indexOf(i) + 1}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">
-                                              {i.piNo ?? "—"}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2">
-                                              <div className="flex flex-col min-w-0">
-                                                <span className="font-semibold text-secondary-900 text-sm truncate">
-                                                  {i.currentName ?? "—"}
-                                                </span>
-                                                <span className="text-xs text-secondary-500 truncate">
-                                                  {i.mainPartName ?? "—"}
-                                                </span>
-                                              </div>
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm whitespace-nowrap">
-                                              {i.itemTypeName ?? "—"}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2">
-                                              <div className="flex flex-col min-w-0">
-                                                <span className="font-medium text-secondary-800 text-sm truncate">
-                                                  {i.drawingNo ?? "N/A"}
-                                                </span>
-                                                <span className="text-xs text-secondary-500">
-                                                  R{i.revisionNo ?? "0"}
-                                                </span>
-                                              </div>
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm whitespace-nowrap">
-                                              {i.materialName ?? "—"}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-center text-sm">
-                                              {gstPct}%
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-center font-medium text-secondary-900 text-sm tabular-nums">
-                                              {((i.rate ?? 0)).toLocaleString(
-                                                undefined,
-                                                { minimumFractionDigits: 2 }
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-center text-secondary-600 text-sm tabular-nums">
-                                              ₹ {tax.toFixed(2)}
-                                            </TableCell>
-                                            <TableCell className="px-4 py-2 text-center font-semibold text-secondary-900 text-sm tabular-nums">
-                                              ₹ {total.toFixed(2)}
-                                            </TableCell>
-                                          </TableRow>
-                                        );
-                                      })}
-                                    </TableBody>
-                                  </Table>
+                              <div className="p-4">
+                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
+                                  <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                      Purchase Order Items
+                                    </p>
+                                    <span className="text-[10px] font-medium text-secondary-400">
+                                      Total Items: {po.items?.length || 0}
+                                    </span>
+                                  </div>
+                                  <div className="overflow-x-auto">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">
+                                            SR.NO
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            PI NO.
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            ITEM DESCRIPTION
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            TYPE
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            DRAWING / REV
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            INWARD NO.
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">
+                                            QC STATUS
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            MATERIAL
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center whitespace-nowrap">
+                                            GST %
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                            UNIT RATE (₹)
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                            TAX
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap pr-6">
+                                            TOTAL
+                                          </TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {po.items?.map((i) => {
+                                          const gstPct = po.gstPercent ?? 18;
+                                          const tax =
+                                            ((i.rate ?? 0) * gstPct) / 100;
+                                          const total = (i.rate ?? 0) + tax;
+                                          return (
+                                            <TableRow
+                                              key={i.id}
+                                              className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 whitespace-nowrap"
+                                            >
+                                              <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">
+                                                {po.items.indexOf(i) + 1}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-700 font-semibold text-[13px]">
+                                                {i.piNo ?? "—"}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2">
+                                                <div className="flex flex-col min-w-0">
+                                                  <span className="font-bold text-secondary-900 text-[13px] tracking-tight">
+                                                    {i.currentName ?? "—"}
+                                                  </span>
+                                                  <span className="text-[11px] text-secondary-500 font-medium tracking-tight">
+                                                    {i.mainPartName ?? "—"}
+                                                  </span>
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                                {i.itemTypeName ?? "—"}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2">
+                                                <div className="flex flex-col min-w-0">
+                                                  <span className="font-bold text-secondary-800 text-[13px] tracking-tight">
+                                                    {i.drawingNo ?? "N/A"}
+                                                  </span>
+                                                  <span className="text-[11px] font-semibold text-secondary-400">
+                                                    {i.revisionNo ? `R${i.revisionNo}` : "R0"}
+                                                  </span>
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2">
+                                                {i.inwardNo ? (
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px]">
+                                                    {i.inwardNo}
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-secondary-400 text-[11px] italic font-medium">Not Inwarded</span>
+                                                )}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-center">
+                                                {i.qcNo ? (
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 font-bold text-[11px]">
+                                                    {i.qcNo}
+                                                  </span>
+                                                ) : i.inwardNo ? (
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 font-bold text-[11px]">
+                                                    Pending QC
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-secondary-300 text-[11px]">—</span>
+                                                )}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                                {i.materialName ?? "—"}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-center text-[13px] font-medium text-secondary-500 tabular-nums">
+                                                {gstPct}%
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-right font-bold text-secondary-900 text-[13px] tabular-nums">
+                                                {((i.rate ?? 0)).toLocaleString(
+                                                  undefined,
+                                                  { minimumFractionDigits: 2 }
+                                                )}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-right text-secondary-500 text-[13px] font-medium tabular-nums">
+                                                ₹{tax.toFixed(2)}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-right font-black text-secondary-900 text-[13px] tabular-nums pr-6">
+                                                ₹{total.toFixed(2)}
+                                              </TableCell>
+                                            </TableRow>
+                                          );
+                                        })}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
                                 </div>
                               </div>
                             </motion.div>
@@ -600,7 +635,7 @@ export default function PurchaseOrdersPage() {
               ) : (
                 <TableRow>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="py-16 text-center text-secondary-400 italic font-medium"
                   >
                     No purchase orders found.

@@ -128,7 +128,21 @@ namespace net_backend.Controllers
                             .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                             .Select(poi => poi.PurchaseOrderId)
                             .FirstOrDefault(),
-                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                        IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive),
+                        InwardNo = (from il in _context.InwardLines
+                                    join inv in _context.Inwards on il.InwardId equals inv.Id
+                                    where il.SourceType == InwardSourceType.PO &&
+                                          _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                          inv.IsActive
+                                    orderby inv.CreatedAt descending
+                                    select inv.InwardNo).FirstOrDefault(),
+                        QCNo = (from il in _context.InwardLines
+                                join qc in _context.QualityControls on il.Id equals qc.InwardLineId
+                                where il.SourceType == InwardSourceType.PO &&
+                                      _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                      qc.IsActive
+                                orderby qc.Id descending
+                                select "QC-" + qc.Id.ToString()).FirstOrDefault()
                     }).ToList()
                 })
                 .ToListAsync();
@@ -393,6 +407,7 @@ namespace net_backend.Controllers
                 {
                     Id = i.Id,
                     PurchaseIndentId = i.PurchaseIndentId,
+                    PiNo = pi.PiNo,
                     ItemId = i.ItemId,
                     MainPartName = i.Item!.MainPartName,
                     CurrentName = i.Item.CurrentName,
@@ -408,7 +423,21 @@ namespace net_backend.Controllers
                         .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                         .Select(poi => poi.PurchaseOrderId)
                         .FirstOrDefault(),
-                    IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                    IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive),
+                    InwardNo = (from il in _context.InwardLines
+                                join inv in _context.Inwards on il.InwardId equals inv.Id
+                                where il.SourceType == InwardSourceType.PO &&
+                                      _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                      inv.IsActive
+                                orderby inv.CreatedAt descending
+                                select inv.InwardNo).FirstOrDefault(),
+                    QCNo = (from il in _context.InwardLines
+                            join qc in _context.QualityControls on il.Id equals qc.InwardLineId
+                            where il.SourceType == InwardSourceType.PO &&
+                                  _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                  qc.IsActive
+                            orderby qc.Id descending
+                            select "QC-" + qc.Id.ToString()).FirstOrDefault()
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });

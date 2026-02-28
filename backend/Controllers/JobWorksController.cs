@@ -34,7 +34,7 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             
             var inwardedJws = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.JobWork && l.Inward!.Status == InwardStatus.Submitted && l.SourceRefId.HasValue)
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.Inward!.IsActive && l.SourceRefId.HasValue)
                 .Select(l => l.SourceRefId!.Value)
                 .Distinct()
                 .ToListAsync();

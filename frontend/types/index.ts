@@ -287,6 +287,8 @@ export interface PurchaseIndentItem {
   piNo?: string;
   poNo?: string;
   poId?: number | null;
+  inwardNo?: string;
+  qcNo?: string;
 }
 
 export interface PO {
@@ -329,6 +331,8 @@ export interface POItem {
   piNo: string;
   rate: number;
   lineAmount?: number; // same as rate (one unit per die/pattern)
+  inwardNo?: string;
+  qcNo?: string;
 }
 
 export interface CreatePOItem {

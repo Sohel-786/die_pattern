@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260227110152_AddQualityControlIsActive")]
+    partial class AddQualityControlIsActive
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -226,12 +228,6 @@ namespace net_backend.Migrations
                     b.Property<int>("InwardId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsQCApproved")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsQCPending")
-                        .HasColumnType("bit");
-
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
@@ -240,6 +236,9 @@ namespace net_backend.Migrations
 
                     b.Property<string>("MaterialName")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("MovementId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -262,6 +261,8 @@ namespace net_backend.Migrations
 
                     b.HasIndex("ItemId");
 
+                    b.HasIndex("MovementId");
+
                     b.ToTable("inward_lines");
                 });
 
@@ -276,6 +277,9 @@ namespace net_backend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CurrentHolderType")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CurrentLocationId")
                         .HasColumnType("int");
 
@@ -284,9 +288,6 @@ namespace net_backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("CurrentPartyId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CurrentProcess")
                         .HasColumnType("int");
 
                     b.Property<string>("DrawingNo")
@@ -534,7 +535,7 @@ namespace net_backend.Migrations
                     b.ToTable("materials");
                 });
 
-            modelBuilder.Entity("net_backend.Models.Outward", b =>
+            modelBuilder.Entity("net_backend.Models.Movement", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -548,69 +549,70 @@ namespace net_backend.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<int?>("FromLocationId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("FromPartyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FromType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InwardId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsQCApproved")
                         .HasColumnType("bit");
 
-                    b.Property<int>("LocationId")
+                    b.Property<bool>("IsQCPending")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ItemId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("OutwardDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("MovementNo")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("OutwardNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("PartyId")
+                    b.Property<int?>("PurchaseOrderId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<int?>("ToLocationId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ToPartyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
 
-                    b.HasIndex("LocationId");
+                    b.HasIndex("FromLocationId");
 
-                    b.HasIndex("OutwardNo")
-                        .IsUnique();
+                    b.HasIndex("FromPartyId");
 
-                    b.HasIndex("PartyId");
-
-                    b.ToTable("outwards");
-                });
-
-            modelBuilder.Entity("net_backend.Models.OutwardLine", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<int>("ItemId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("OutwardId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Remarks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
+                    b.HasIndex("InwardId");
 
                     b.HasIndex("ItemId");
 
-                    b.HasIndex("OutwardId");
+                    b.HasIndex("PurchaseOrderId");
 
-                    b.ToTable("outward_lines");
+                    b.HasIndex("ToLocationId");
+
+                    b.HasIndex("ToPartyId");
+
+                    b.ToTable("movements");
                 });
 
             modelBuilder.Entity("net_backend.Models.OwnerType", b =>
@@ -882,14 +884,14 @@ namespace net_backend.Migrations
                     b.Property<int>("CheckedBy")
                         .HasColumnType("int");
 
-                    b.Property<int>("InwardLineId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
+
+                    b.Property<int>("MovementId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
@@ -898,7 +900,7 @@ namespace net_backend.Migrations
 
                     b.HasIndex("CheckedBy");
 
-                    b.HasIndex("InwardLineId");
+                    b.HasIndex("MovementId");
 
                     b.ToTable("quality_controls");
                 });
@@ -1171,9 +1173,16 @@ namespace net_backend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("net_backend.Models.Movement", "Movement")
+                        .WithMany("Lines")
+                        .HasForeignKey("MovementId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Inward");
 
                     b.Navigation("Item");
+
+                    b.Navigation("Movement");
                 });
 
             modelBuilder.Entity("net_backend.Models.Item", b =>
@@ -1292,50 +1301,60 @@ namespace net_backend.Migrations
                     b.Navigation("Company");
                 });
 
-            modelBuilder.Entity("net_backend.Models.Outward", b =>
+            modelBuilder.Entity("net_backend.Models.Movement", b =>
                 {
                     b.HasOne("net_backend.Models.User", "Creator")
                         .WithMany()
                         .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("net_backend.Models.Location", "Location")
+                    b.HasOne("net_backend.Models.Location", "FromLocation")
                         .WithMany()
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("FromLocationId");
 
-                    b.HasOne("net_backend.Models.Party", "Party")
+                    b.HasOne("net_backend.Models.Party", "FromParty")
                         .WithMany()
-                        .HasForeignKey("PartyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("FromPartyId");
 
-                    b.Navigation("Creator");
+                    b.HasOne("net_backend.Models.Inward", "Inward")
+                        .WithMany()
+                        .HasForeignKey("InwardId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Location");
-
-                    b.Navigation("Party");
-                });
-
-            modelBuilder.Entity("net_backend.Models.OutwardLine", b =>
-                {
                     b.HasOne("net_backend.Models.Item", "Item")
                         .WithMany()
                         .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("net_backend.Models.Outward", "Outward")
-                        .WithMany("Lines")
-                        .HasForeignKey("OutwardId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("net_backend.Models.PurchaseOrder", "PurchaseOrder")
+                        .WithMany()
+                        .HasForeignKey("PurchaseOrderId");
+
+                    b.HasOne("net_backend.Models.Location", "ToLocation")
+                        .WithMany()
+                        .HasForeignKey("ToLocationId");
+
+                    b.HasOne("net_backend.Models.Party", "ToParty")
+                        .WithMany()
+                        .HasForeignKey("ToPartyId");
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("FromLocation");
+
+                    b.Navigation("FromParty");
+
+                    b.Navigation("Inward");
 
                     b.Navigation("Item");
 
-                    b.Navigation("Outward");
+                    b.Navigation("PurchaseOrder");
+
+                    b.Navigation("ToLocation");
+
+                    b.Navigation("ToParty");
                 });
 
             modelBuilder.Entity("net_backend.Models.Party", b =>
@@ -1443,15 +1462,15 @@ namespace net_backend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("net_backend.Models.InwardLine", "InwardLine")
+                    b.HasOne("net_backend.Models.Movement", "Movement")
                         .WithMany()
-                        .HasForeignKey("InwardLineId")
+                        .HasForeignKey("MovementId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Checker");
 
-                    b.Navigation("InwardLine");
+                    b.Navigation("Movement");
                 });
 
             modelBuilder.Entity("net_backend.Models.User", b =>
@@ -1519,7 +1538,7 @@ namespace net_backend.Migrations
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("net_backend.Models.Outward", b =>
+            modelBuilder.Entity("net_backend.Models.Movement", b =>
                 {
                     b.Navigation("Lines");
                 });
