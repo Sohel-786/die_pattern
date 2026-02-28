@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using System.Text.Json;
 
 namespace net_backend.Controllers
 {
@@ -12,10 +13,87 @@ namespace net_backend.Controllers
     public class InwardsController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
+        private readonly IWebHostEnvironment _env;
 
-        public InwardsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        public InwardsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env) : base(context)
         {
             _codeGenerator = codeGenerator;
+            _env = env;
+        }
+
+        // ── Helper: resolve a storage folder for an inward ───────────────────────────
+        private string GetInwardStorageDir(string companyName, string locationName, string inwardNo)
+        {
+            var safe = (string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Trim();
+            var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+            return Path.Combine(root, "wwwroot", "storage",
+                safe(companyName), safe(locationName), "inward-attachments", safe(inwardNo));
+        }
+
+        // ── Temp upload (no inward number yet – stored in temp, returned as URL) ─────
+        [HttpPost("upload-attachment")]
+        public async Task<ActionResult<ApiResponse<object>>> UploadAttachment([FromForm] IFormFile? file)
+        {
+            if (!await HasPermission("CreateInward") && !await HasPermission("EditInward")) return Forbidden();
+            var uploadFile = file ?? Request.Form.Files?.FirstOrDefault();
+            if (uploadFile == null || uploadFile.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded." });
+
+            const long maxBytes = 20 * 1024 * 1024;
+            if (uploadFile.Length > maxBytes)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
+
+            var allowed = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp" };
+            var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Only PDF and image files are allowed." });
+
+            try
+            {
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var dir = Path.Combine(root, "wwwroot", "storage", "inward-attachments-temp");
+                Directory.CreateDirectory(dir);
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
+                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
+                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await uploadFile.CopyToAsync(stream);
+                var url = $"/storage/inward-attachments-temp/{fileName}";
+                return Ok(new ApiResponse<object> { Data = new { url } });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Upload failed: " + ex.Message });
+            }
+        }
+
+        // ── Delete a specific attachment file ─────────────────────────────────────────
+        [HttpDelete("attachment")]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteAttachment([FromQuery] string? url)
+        {
+            if (!await HasPermission("EditInward") && !await HasPermission("CreateInward")) return Forbidden();
+            if (string.IsNullOrWhiteSpace(url))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "URL is required." });
+
+            try
+            {
+                var decoded = Uri.UnescapeDataString(url.Trim());
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var wwwroot = Path.Combine(root, "wwwroot");
+                // The URL is relative, e.g. /storage/companyName/locationName/inward-attachments/INW-001/file.pdf
+                var relativePath = decoded.TrimStart('/');
+                var filePath = Path.GetFullPath(Path.Combine(wwwroot, relativePath));
+                if (!filePath.StartsWith(Path.GetFullPath(wwwroot), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid file path." });
+                if (System.IO.File.Exists(filePath))
+                    System.IO.File.Delete(filePath);
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Delete failed: " + ex.Message });
+            }
         }
 
         [HttpGet("next-code")]
@@ -161,7 +239,9 @@ namespace net_backend.Controllers
                 LocationId = locationId,
                 VendorId = dto.VendorId,
                 Remarks = dto.Remarks,
-                Status = InwardStatus.Submitted, // Directly Submitted
+                AttachmentUrlsJson = dto.AttachmentUrls != null && dto.AttachmentUrls.Count > 0
+                    ? JsonSerializer.Serialize(dto.AttachmentUrls) : null,
+                Status = InwardStatus.Submitted,
                 CreatedBy = CurrentUserId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
@@ -230,6 +310,9 @@ namespace net_backend.Controllers
             inward.InwardDate = dto.InwardDate ?? inward.InwardDate;
             inward.VendorId = dto.VendorId;
             inward.Remarks = dto.Remarks;
+            inward.AttachmentUrlsJson = dto.AttachmentUrls != null
+                ? (dto.AttachmentUrls.Count > 0 ? JsonSerializer.Serialize(dto.AttachmentUrls) : null)
+                : inward.AttachmentUrlsJson;
             inward.UpdatedAt = DateTime.Now;
 
             var itemIds = dto.Lines.Select(l => l.ItemId).Distinct().ToList();
@@ -381,6 +464,9 @@ namespace net_backend.Controllers
                 IsActive = i.IsActive,
                 InwardFrom = string.Join(", ", fromStrs),
                 CreatedAt = i.CreatedAt,
+                AttachmentUrls = string.IsNullOrWhiteSpace(i.AttachmentUrlsJson)
+                    ? new List<string>()
+                    : (JsonSerializer.Deserialize<List<string>>(i.AttachmentUrlsJson) ?? new List<string>()),
                 Lines = i.Lines.Select(l => new InwardLineDto
                 {
                     Id = l.Id,

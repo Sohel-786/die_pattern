@@ -306,6 +306,8 @@ namespace net_backend.Models
         public int? VendorId { get; set; }
         public string? Remarks { get; set; }
         public InwardStatus Status { get; set; } = InwardStatus.Draft;
+        /// <summary>JSON array of attachment file URLs (Party Invoice/Challan).</summary>
+        public string? AttachmentUrlsJson { get; set; }
         public int CreatedBy { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -393,6 +395,8 @@ namespace net_backend.Models
         public InwardSourceType SourceType { get; set; }
         public string? Remarks { get; set; }
         public QcStatus Status { get; set; } = QcStatus.Pending;
+        /// <summary>JSON array of attachment file URLs (Inspection Documents).</summary>
+        public string? AttachmentUrlsJson { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }

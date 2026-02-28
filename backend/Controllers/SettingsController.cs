@@ -14,10 +14,12 @@ namespace net_backend.Controllers
     public class SettingsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public SettingsController(ApplicationDbContext context)
+        public SettingsController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         [AllowAnonymous]
@@ -255,9 +257,32 @@ namespace net_backend.Controllers
                 // 5. Re-initialize baseline data
                 DbInitializer.Initialize(_context);
 
-                // 6. Optional: Clear storage/uploads (except maybe system logos)
-                // We'll leave the storage directory but a production-grade reset might wipe it.
-                // Given the risk of deleting important manuals or drawings, we'll focus on DB records first.
+                // 6. Wipe transaction attachment storage
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var storageRoot = Path.Combine(root, "wwwroot", "storage");
+                var wipeSubDirs = new[] { "inward-attachments-temp", "qc-attachments-temp", "po-quotations" };
+                foreach (var sub in wipeSubDirs)
+                {
+                    var fullPath = Path.Combine(storageRoot, sub);
+                    if (Directory.Exists(fullPath))
+                        Directory.Delete(fullPath, recursive: true);
+                }
+                // Wipe per-company/location inward and qc attachment folders (any company subfolder that has these)
+                if (Directory.Exists(storageRoot))
+                {
+                    foreach (var companyDir in Directory.GetDirectories(storageRoot))
+                    {
+                        // Skip company-logos folder
+                        if (Path.GetFileName(companyDir).Equals("company-logos", StringComparison.OrdinalIgnoreCase)) continue;
+                        foreach (var locationDir in Directory.GetDirectories(companyDir))
+                        {
+                            var inwAttach = Path.Combine(locationDir, "inward-attachments");
+                            if (Directory.Exists(inwAttach)) Directory.Delete(inwAttach, recursive: true);
+                            var qcAttach = Path.Combine(locationDir, "qc-attachments");
+                            if (Directory.Exists(qcAttach)) Directory.Delete(qcAttach, recursive: true);
+                        }
+                    }
+                }
 
                 await transaction.CommitAsync();
 

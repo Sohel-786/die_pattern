@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
@@ -12,10 +13,12 @@ namespace net_backend.Controllers
     public class CompaniesController : BaseController
     {
         private readonly IExcelService _excelService;
+        private readonly IWebHostEnvironment _env;
 
-        public CompaniesController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public CompaniesController(ApplicationDbContext context, IExcelService excelService, IWebHostEnvironment env) : base(context)
         {
             _excelService = excelService;
+            _env = env;
         }
 
         [HttpGet("export")]
@@ -167,7 +170,7 @@ namespace net_backend.Controllers
         }
 
         [HttpPost("upload-logo")]
-        public async Task<ActionResult<ApiResponse<object>>> UploadLogo([FromForm] IFormFile? file)
+        public async Task<ActionResult<ApiResponse<object>>> UploadLogo([FromForm] IFormFile? file, [FromQuery] string? companyName)
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
 
@@ -180,20 +183,27 @@ namespace net_backend.Controllers
             if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "Only image files (jpg, png, gif, webp) are allowed." });
 
-            const long maxBytes = 5 * 1024 * 1024; // 5 MB
+            const long maxBytes = 5 * 1024 * 1024;
             if (uploadFile.Length > maxBytes)
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 5 MB." });
 
             try
             {
-                var root = Directory.GetCurrentDirectory();
-                var dir = Path.Combine(root, "wwwroot", "storage", "company-logos");
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                // Structured path: wwwroot/storage/company-logos/{companyName}/
+                var safeName = string.IsNullOrWhiteSpace(companyName)
+                    ? "unknown"
+                    : string.Concat(companyName.Trim().Split(Path.GetInvalidFileNameChars())).Trim();
+                var dir = Path.Combine(root, "wwwroot", "storage", "company-logos", safeName);
                 Directory.CreateDirectory(dir);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.Combine(dir, fileName);
+                var fileName = $"logo{ext}";
+                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
+                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
                 await using (var stream = new FileStream(filePath, FileMode.Create))
                     await uploadFile.CopyToAsync(stream);
-                var url = $"/storage/company-logos/{fileName}";
+                // Append cache-buster timestamp so the browser doesn't show stale image
+                var url = $"/storage/company-logos/{safeName}/{fileName}?v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
                 return Ok(new ApiResponse<object> { Data = new { logoUrl = url }, Message = "Logo uploaded." });
             }
             catch (Exception ex)

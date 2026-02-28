@@ -280,7 +280,7 @@ export default function InwardDetailPage() {
                                         </div>
                                         <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">System Timestamp</span>
                                     </div>
-                                    <span className="text-[11px] font-black text-secondary-900 tabular-nums">{format(new Date(inward.createdAt), "dd MMM yyyy, HH:mm:ss")}</span>
+                                    <span className="text-[11px] font-black text-secondary-900 tabular-nums">{format(new Date(inward.createdAt || inward.inwardDate), "dd MMM yyyy, HH:mm:ss")}</span>
                                 </div>
                                 <div className="flex justify-between items-center group pt-2">
                                     <div className="flex items-center gap-3">

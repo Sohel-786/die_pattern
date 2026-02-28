@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Package, Plus, X } from "lucide-react";
+import { Loader2, Package, Plus, X, Upload } from "lucide-react";
 import api from "@/lib/api";
 import { QC, QcStatus, Party, InwardSourceType, PendingQC } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QCItemSelectionDialog } from "./qc-item-selection-dialog";
+import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,12 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     const [remarks, setRemarks] = useState("");
     const [selectedItems, setSelectedItems] = useState<SelectedQCItem[]>([]);
     const [isItemSelectionOpen, setIsItemSelectionOpen] = useState(false);
+
+    const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
+    const [pendingAttachmentFiles, setPendingAttachmentFiles] = useState<File[]>([]);
+    const [attachmentUrlsToDelete, setAttachmentUrlsToDelete] = useState<string[]>([]);
+    const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     const { data: qcDetail } = useQuery<QC>({
         queryKey: ["quality-control", qc?.id],
@@ -64,11 +71,17 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                     included: true,
                 }))
             );
+            setAttachmentUrls((qcDetail.attachmentUrls as string[]) || []);
+            setPendingAttachmentFiles([]);
+            setAttachmentUrlsToDelete([]);
         } else if (!isEditing) {
             setPartyId(0);
             setSourceType("");
             setRemarks("");
             setSelectedItems([]);
+            setAttachmentUrls([]);
+            setPendingAttachmentFiles([]);
+            setAttachmentUrlsToDelete([]);
         }
     }, [open, isEditing, qcDetail]);
 
@@ -105,15 +118,66 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     const includedItems = useMemo(() => selectedItems.filter((i) => i.included !== false), [selectedItems]);
     const includedIds = useMemo(() => includedItems.map((i) => i.inwardLineId), [includedItems]);
 
-    const handleSubmit = () => {
+    const ALLOWED_ATTACHMENT_EXT = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"];
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files?.length) return;
+        const valid: File[] = [];
+        for (let i = 0; i < files.length; i++) {
+            const ext = "." + (files[i].name.split(".").pop() || "").toLowerCase();
+            if (ALLOWED_ATTACHMENT_EXT.includes(ext)) valid.push(files[i]);
+        }
+        if (valid.length === 0) {
+            toast.error("Only PDF and images (PNG, JPG, JPEG, GIF, WEBP) are allowed.");
+            e.target.value = "";
+            return;
+        }
+        setPendingAttachmentFiles((prev) => [...prev, ...valid]);
+        toast.success("File(s) added. They will be uploaded when you save.");
+        e.target.value = "";
+    };
+
+    const removeAttachmentUrl = (url: string) => {
+        setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    };
+    const removePendingAttachment = (index: number) => {
+        setPendingAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
+
+    const handleSubmit = async () => {
         if (!partyId) return toast.error("Please select Party");
         if (sourceType === "") return toast.error("Please select Source Type");
         if (includedIds.length === 0) return toast.error("Include at least one item in this QC entry");
 
-        if (isEditing) {
-            mutation.mutate({ remarks, inwardLineIds: includedIds });
-        } else {
-            mutation.mutate({ partyId, sourceType, remarks, inwardLineIds: includedIds });
+        setUploading(true);
+        try {
+            const newUrls: string[] = [];
+            for (let i = 0; i < pendingAttachmentFiles.length; i++) {
+                const form = new FormData();
+                form.append("file", pendingAttachmentFiles[i], pendingAttachmentFiles[i].name);
+                const res = await api.post("/quality-control/upload-attachment", form);
+                const url = res.data?.data?.url;
+                if (url) newUrls.push(url);
+            }
+            for (const url of attachmentUrlsToDelete) {
+                try { await api.delete("/quality-control/attachment", { params: { url } }); } catch { }
+            }
+            const keptUrls = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u));
+            const finalUrls = [...keptUrls, ...newUrls];
+
+            const payload: any = { remarks, attachmentUrls: finalUrls, inwardLineIds: includedIds };
+            if (!isEditing) {
+                payload.partyId = partyId;
+                payload.sourceType = sourceType;
+            }
+
+            await mutation.mutateAsync(payload);
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || "Upload failed.");
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -213,34 +277,62 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                         </select>
                                     </div>
                                 </div>
-                                <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600">Remarks</Label>
-                                    <Input
-                                        value={remarks}
-                                        onChange={(e) => setRemarks(e.target.value)}
-                                        placeholder="Optional remarks..."
-                                        disabled={isReadOnly}
-                                        className="h-9 mt-0.5 border-secondary-200 text-sm"
-                                    />
+                                <div className="col-span-12 flex flex-col gap-2 border-t border-secondary-100 pt-4 mt-2">
+                                    <div className="flex items-end gap-2 flex-wrap">
+                                        <div className="w-48 min-w-0">
+                                            <Label className="text-xs font-semibold text-secondary-600">Inspection Documents</Label>
+                                            <div className={cn(
+                                                "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
+                                                (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200"
+                                            )}>
+                                                <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", isReadOnly || uploading ? "cursor-not-allowed" : "cursor-pointer")}>
+                                                    <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
+                                                    <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
+                                                        {uploading ? "Saving..." : effectiveAttachmentCount === 0 ? "PDF / Images" : "PDF / Images"}
+                                                    </span>
+                                                    <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 shrink-0"
+                                            onClick={() => setAttachmentListDialogOpen(true)}
+                                            disabled={effectiveAttachmentCount === 0}
+                                        >
+                                            View ({effectiveAttachmentCount})
+                                        </Button>
+
+                                        {!isReadOnly && (
+                                            <div className="ml-auto pl-4 border-l border-secondary-200 flex items-center h-9">
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setIsItemSelectionOpen(true)}
+                                                    disabled={!partyId || sourceType === ""}
+                                                    className="h-9 px-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest gap-2 rounded-lg shadow-sm"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    {getAddButtonText()}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-2">
+                                        <Label className="text-xs font-semibold text-secondary-600">Remarks</Label>
+                                        <Input
+                                            value={remarks}
+                                            onChange={(e) => setRemarks(e.target.value)}
+                                            placeholder="Optional remarks..."
+                                            disabled={isReadOnly}
+                                            className="h-9 mt-0.5 border-secondary-200 text-sm"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm">
-                                <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Select items from inward entries</span>
-                                {!isReadOnly && (
-                                    <Button
-                                        type="button"
-                                        onClick={() => setIsItemSelectionOpen(true)}
-                                        disabled={!partyId || sourceType === ""}
-                                        className="h-9 px-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest gap-2 rounded-lg shadow-sm"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        {getAddButtonText()}
-                                    </Button>
-                                )}
-                            </div>
-
-                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm">
+                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
                                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                                     <table className="w-full border-collapse text-sm min-w-[800px]">
                                         <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
@@ -322,10 +414,10 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                             {!isReadOnly && (
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={mutation.isPending || includedIds.length === 0}
+                                    disabled={mutation.isPending || uploading || includedIds.length === 0}
                                     className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                                 >
-                                    {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                    {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                                     {isEditing ? "Update" : "Save"}
                                 </Button>
                             )}
@@ -333,6 +425,18 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                     </>
                 )}
             </div>
+
+            <AttachmentListDialog
+                open={attachmentListDialogOpen}
+                onClose={() => setAttachmentListDialogOpen(false)}
+                urls={attachmentUrls}
+                urlsToDelete={attachmentUrlsToDelete}
+                pendingFiles={pendingAttachmentFiles}
+                onRemoveUrl={removeAttachmentUrl}
+                onRemovePending={removePendingAttachment}
+                isEditing={isEditing}
+                title="QC Attachments"
+            />
 
             <QCItemSelectionDialog
                 isOpen={isItemSelectionOpen}

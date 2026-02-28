@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using System.Text.Json;
 
 namespace net_backend.Controllers
 {
@@ -12,9 +13,76 @@ namespace net_backend.Controllers
     public class QualityControlController : BaseController
     {
         private readonly ICodeGeneratorService _codeGenerator;
-        public QualityControlController(ApplicationDbContext context, ICodeGeneratorService codeGenerator) : base(context)
+        private readonly IWebHostEnvironment _env;
+
+        public QualityControlController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env) : base(context)
         {
             _codeGenerator = codeGenerator;
+            _env = env;
+        }
+
+        // ── Temp Upload (stored in temp dir, URL returned to client) ──────────────────
+        [HttpPost("upload-attachment")]
+        public async Task<ActionResult<ApiResponse<object>>> UploadAttachment([FromForm] IFormFile? file)
+        {
+            if (!await HasPermission("CreateQC") && !await HasPermission("EditQC")) return Forbidden();
+            var uploadFile = file ?? Request.Form.Files?.FirstOrDefault();
+            if (uploadFile == null || uploadFile.Length == 0)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded." });
+
+            const long maxBytes = 20 * 1024 * 1024;
+            if (uploadFile.Length > maxBytes)
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
+
+            var allowed = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp" };
+            var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+                return BadRequest(new ApiResponse<object> { Success = false, Message = "Only PDF and image files are allowed." });
+
+            try
+            {
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var dir = Path.Combine(root, "wwwroot", "storage", "qc-attachments-temp");
+                Directory.CreateDirectory(dir);
+                var fileName = $"{Guid.NewGuid()}{ext}";
+                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
+                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
+                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await uploadFile.CopyToAsync(stream);
+                var url = $"/storage/qc-attachments-temp/{fileName}";
+                return Ok(new ApiResponse<object> { Data = new { url } });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<object> { Success = false, Message = "Upload failed: " + ex.Message });
+            }
+        }
+
+        // ── Delete Attachment ──────────────────────────────────────────────────────
+        [HttpDelete("attachment")]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteAttachment([FromQuery] string? url)
+        {
+            if (!await HasPermission("EditQC") && !await HasPermission("CreateQC")) return Forbidden();
+            if (string.IsNullOrWhiteSpace(url))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "URL is required." });
+            try
+            {
+                var decoded = Uri.UnescapeDataString(url.Trim());
+                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var wwwroot = Path.Combine(root, "wwwroot");
+                var relativePath = decoded.TrimStart('/');
+                var filePath = Path.GetFullPath(Path.Combine(wwwroot, relativePath));
+                if (!filePath.StartsWith(Path.GetFullPath(wwwroot), StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid file path." });
+                if (System.IO.File.Exists(filePath))
+                    System.IO.File.Delete(filePath);
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<bool> { Success = false, Message = "Delete failed: " + ex.Message });
+            }
         }
 
         [HttpGet]
@@ -169,6 +237,8 @@ namespace net_backend.Controllers
                 PartyId = dto.PartyId,
                 SourceType = dto.SourceType,
                 Remarks = dto.Remarks,
+                AttachmentUrlsJson = dto.AttachmentUrls != null && dto.AttachmentUrls.Count > 0
+                    ? JsonSerializer.Serialize(dto.AttachmentUrls) : null,
                 CreatedBy = CurrentUserId,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
@@ -386,6 +456,8 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<QCDto> { Success = false, Message = "Only pending QC entries can be updated." });
 
             entry.Remarks = dto.Remarks ?? entry.Remarks;
+            if (dto.AttachmentUrls != null)
+                entry.AttachmentUrlsJson = dto.AttachmentUrls.Count > 0 ? JsonSerializer.Serialize(dto.AttachmentUrls) : null;
             entry.UpdatedAt = DateTime.Now;
 
             if (dto.InwardLineIds != null && dto.InwardLineIds.Any())
@@ -470,6 +542,9 @@ namespace net_backend.Controllers
                 PartyName = q.Party?.Name ?? "Unknown",
                 SourceType = q.SourceType,
                 Remarks = q.Remarks,
+                AttachmentUrls = string.IsNullOrWhiteSpace(q.AttachmentUrlsJson)
+                    ? new List<string>()
+                    : (JsonSerializer.Deserialize<List<string>>(q.AttachmentUrlsJson) ?? new List<string>()),
                 Status = q.Status,
                 CreatedBy = q.CreatedBy,
                 CreatorName = q.Creator != null ? q.Creator.FirstName + " " + q.Creator.LastName : null,

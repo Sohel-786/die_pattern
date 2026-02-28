@@ -116,7 +116,9 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const res = await api.post("/companies/upload-logo", formData, {
+            // Pass company name so backend stores at company-logos/{companyName}/logo.ext
+            const currentName = watch("name")?.trim() || "unknown";
+            const res = await api.post(`/companies/upload-logo?companyName=${encodeURIComponent(currentName)}`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             const data = res.data as Record<string, unknown>;
@@ -174,9 +176,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                             onDragLeave={() => setDragActive(false)}
                             onDrop={handleLogoDrop}
                             onClick={() => fileInputRef.current?.click()}
-                            className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${
-                                dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
-                            } ${logoUploading ? "pointer-events-none opacity-70" : ""}`}
+                            className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
+                                } ${logoUploading ? "pointer-events-none opacity-70" : ""}`}
                         >
                             {logoUrl ? (
                                 <>
@@ -213,65 +214,65 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0 pb-1">
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Number <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <FileDigit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input id="company-gst" {...register("gstNo")} className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 24AAFCA0525L1ZY" />
-                            </div>
-                            {errors.gstNo && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.gstNo.message}</p>}
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Number <span className="text-red-500">*</span></Label>
+                        <div className="relative">
+                            <FileDigit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input id="company-gst" {...register("gstNo")} className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 24AAFCA0525L1ZY" />
                         </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-pan" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">PAN (optional)</Label>
-                            <Input id="company-pan" {...register("pan")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. AAFCA1234A" />
+                        {errors.gstNo && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.gstNo.message}</p>}
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-pan" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">PAN (optional)</Label>
+                        <Input id="company-pan" {...register("pan")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. AAFCA1234A" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 min-w-0 flex-shrink-0 pt-2">
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-state" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">State</Label>
+                        <Input id="company-state" {...register("state")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Gujarat" />
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-city" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">City</Label>
+                        <Input id="company-city" {...register("city")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Ahmedabad" />
+                    </div>
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Pincode</Label>
+                        <Input id="company-pincode" {...register("pincode")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 382405" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0">
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-phone" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Phone</Label>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input id="company-phone" {...register("phone")} type="tel" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. +91 98765 43210" />
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-3 gap-4 min-w-0 flex-shrink-0 pt-2">
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-state" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">State</Label>
-                            <Input id="company-state" {...register("state")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Gujarat" />
+                    <div className="space-y-1.5 min-w-0">
+                        <Label htmlFor="company-email" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Email</Label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input id="company-email" {...register("email")} type="email" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. info@company.com" />
                         </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-city" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">City</Label>
-                            <Input id="company-city" {...register("city")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Ahmedabad" />
-                        </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Pincode</Label>
-                            <Input id="company-pincode" {...register("pincode")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 382405" />
-                        </div>
+                        {errors.email && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.email.message}</p>}
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0">
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-phone" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Phone</Label>
+                {!!item && (
+                    <div className="flex items-center flex-shrink-0 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" className="sr-only" checked={isActive} onChange={(e) => setValue("isActive", e.target.checked)} />
                             <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input id="company-phone" {...register("phone")} type="tel" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. +91 98765 43210" />
+                                <div className={`w-9 h-4 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}></div>
+                                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? "translate-x-5" : "translate-x-0"}`}></div>
                             </div>
-                        </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-email" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Email</Label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input id="company-email" {...register("email")} type="email" className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. info@company.com" />
-                            </div>
-                            {errors.email && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.email.message}</p>}
-                        </div>
+                            <span className="text-xs font-bold text-secondary-700 select-none">Active</span>
+                        </label>
                     </div>
-
-                    {!!item && (
-                        <div className="flex items-center flex-shrink-0 pt-1">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="sr-only" checked={isActive} onChange={(e) => setValue("isActive", e.target.checked)} />
-                                <div className="relative">
-                                    <div className={`w-9 h-4 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}></div>
-                                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? "translate-x-5" : "translate-x-0"}`}></div>
-                                </div>
-                                <span className="text-xs font-bold text-secondary-700 select-none">Active</span>
-                            </label>
-                        </div>
-                    )}
+                )}
 
                 <div className="flex gap-3 pt-4 mt-2 border-t border-secondary-100 flex-shrink-0">
                     <Button

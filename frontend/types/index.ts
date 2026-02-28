@@ -392,6 +392,9 @@ export interface Inward {
   isActive: boolean;
   inwardFrom?: string | null;
   lines: InwardLine[];
+  createdAt?: string;
+  updatedAt?: string;
+  attachmentUrls?: string[];
 }
 
 export interface InwardLine {
@@ -437,6 +440,7 @@ export interface QC {
   isActive: boolean;
   createdAt: string;
   items: QCItem[];
+  attachmentUrls?: string[];
 }
 
 export interface QCItem {

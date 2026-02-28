@@ -215,6 +215,7 @@ namespace net_backend.DTOs
         public string? PartyName { get; set; }
         public InwardSourceType SourceType { get; set; }
         public string? Remarks { get; set; }
+        public List<string> AttachmentUrls { get; set; } = new();
         public QcStatus Status { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
@@ -249,6 +250,7 @@ namespace net_backend.DTOs
         public int PartyId { get; set; }
         public InwardSourceType SourceType { get; set; }
         public string? Remarks { get; set; }
+        public List<string>? AttachmentUrls { get; set; }
         public List<int> InwardLineIds { get; set; } = new();
     }
 
@@ -267,6 +269,7 @@ namespace net_backend.DTOs
     public class UpdateQCDto
     {
         public string? Remarks { get; set; }
+        public List<string>? AttachmentUrls { get; set; }
         public List<int> InwardLineIds { get; set; } = new();
     }
 
@@ -278,6 +281,7 @@ namespace net_backend.DTOs
         public int? VendorId { get; set; }
         public string? VendorName { get; set; }
         public string? Remarks { get; set; }
+        public List<string> AttachmentUrls { get; set; } = new();
         public InwardStatus Status { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
@@ -313,6 +317,7 @@ namespace net_backend.DTOs
         public DateTime? InwardDate { get; set; }
         public int? VendorId { get; set; }
         public string? Remarks { get; set; }
+        public List<string>? AttachmentUrls { get; set; }
         public List<CreateInwardLineDto> Lines { get; set; } = new();
     }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Loader2, Calendar, Package, Info, Plus, X
+    Loader2, Calendar, Package, Info, Plus, X, Upload
 } from "lucide-react";
 import api from "@/lib/api";
 import { Inward, InwardSourceType, Party } from "@/types";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SourceSelectionDialog } from "./source-selection-dialog";
+import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,12 @@ export function InwardDialog({
     const [nextCode, setNextCode] = useState("");
     const [selectedSourceType, setSelectedSourceType] = useState<InwardSourceType>(InwardSourceType.PO);
     const [sourceSelectionOpen, setSourceSelectionOpen] = useState(false);
+
+    const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
+    const [pendingAttachmentFiles, setPendingAttachmentFiles] = useState<File[]>([]);
+    const [attachmentUrlsToDelete, setAttachmentUrlsToDelete] = useState<string[]>([]);
+    const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     const uniqueSources = useMemo(() => {
         const map = new Map<string, { type: InwardSourceType; id: number; display: string }>();
@@ -128,11 +135,17 @@ export function InwardDialog({
                 remarks: l.remarks || "",
                 included: true
             })));
+            setAttachmentUrls((inward.attachmentUrls as string[]) || []);
+            setPendingAttachmentFiles([]);
+            setAttachmentUrlsToDelete([]);
         } else if (!isEditing) {
             setVendorId(0);
             setInwardDate(format(new Date(), "yyyy-MM-dd"));
             setRemarks("");
             setLines([]);
+            setAttachmentUrls([]);
+            setPendingAttachmentFiles([]);
+            setAttachmentUrlsToDelete([]);
             if (autoNextCode) setNextCode(autoNextCode);
         }
     }, [open, isEditing, inward, autoNextCode]);
@@ -189,26 +202,76 @@ export function InwardDialog({
         }
     };
 
-    const handleSubmit = () => {
+    const ALLOWED_ATTACHMENT_EXT = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"];
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files?.length) return;
+        const valid: File[] = [];
+        for (let i = 0; i < files.length; i++) {
+            const ext = "." + (files[i].name.split(".").pop() || "").toLowerCase();
+            if (ALLOWED_ATTACHMENT_EXT.includes(ext)) valid.push(files[i]);
+        }
+        if (valid.length === 0) {
+            toast.error("Only PDF and images (PNG, JPG, JPEG, GIF, WEBP) are allowed.");
+            e.target.value = "";
+            return;
+        }
+        setPendingAttachmentFiles((prev) => [...prev, ...valid]);
+        toast.success("File(s) added. They will be uploaded when you save.");
+        e.target.value = "";
+    };
+
+    const removeAttachmentUrl = (url: string) => {
+        setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    };
+    const removePendingAttachment = (index: number) => {
+        setPendingAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
+
+    const handleSubmit = async () => {
         if (!vendorId) return toast.error("Please select Vendor / Party");
         if (lines.length === 0) return toast.error("At least one item line is required");
 
         const includedLines = lines.filter(l => l.included !== false);
         if (includedLines.length === 0) return toast.error("Please include at least one item");
 
-        const payload = {
-            vendorId,
-            inwardDate,
-            remarks,
-            lines: includedLines.map(l => ({
-                itemId: l.itemId,
-                quantity: 1, // Always 1 per requirement
-                sourceType: l.sourceType,
-                sourceRefId: l.sourceRefId,
-                remarks: l.remarks
-            }))
-        };
-        mutation.mutate(payload);
+        setUploading(true);
+        try {
+            const newUrls: string[] = [];
+            for (let i = 0; i < pendingAttachmentFiles.length; i++) {
+                const form = new FormData();
+                form.append("file", pendingAttachmentFiles[i], pendingAttachmentFiles[i].name);
+                const res = await api.post("/inwards/upload-attachment", form);
+                const url = res.data?.data?.url;
+                if (url) newUrls.push(url);
+            }
+            for (const url of attachmentUrlsToDelete) {
+                try { await api.delete("/inwards/attachment", { params: { url } }); } catch { }
+            }
+            const keptUrls = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u));
+            const finalUrls = [...keptUrls, ...newUrls];
+
+            const payload = {
+                vendorId,
+                inwardDate,
+                remarks,
+                attachmentUrls: finalUrls,
+                lines: includedLines.map(l => ({
+                    itemId: l.itemId,
+                    quantity: 1, // Always 1 per requirement
+                    sourceType: l.sourceType,
+                    sourceRefId: l.sourceRefId,
+                    remarks: l.remarks
+                }))
+            };
+            await mutation.mutateAsync(payload);
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || "Upload failed.");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const selectedVendor = vendors.find(v => v.id === vendorId);
@@ -276,9 +339,9 @@ export function InwardDialog({
                                 </div>
                             </div>
 
-                            {/* Source Selection - Dropdown Replacement */}
-                            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm">
-                                <div className="flex flex-col gap-1 pr-4 border-r border-secondary-100">
+                            {/* Source Selection & Attachment */}
+                            <div className="flex items-center justify-between gap-3 bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm flex-wrap">
+                                <div className="flex flex-col gap-1 pr-4">
                                     <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Select Source Type</span>
                                     <div className="flex items-center gap-2">
                                         <select
@@ -302,8 +365,32 @@ export function InwardDialog({
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="flex-1 flex items-center gap-2 px-4 opacity-50">
-                                    <p className="text-xs font-medium text-secondary-500">Choose source type and click import to load pending items from your masters.</p>
+                                <div className="flex items-end gap-2 pr-4 border-l border-secondary-100 pl-4">
+                                    <div className="w-48 min-w-0">
+                                        <Label className="text-[10px] font-black uppercase text-secondary-400 tracking-widest block leading-none mb-1">Attachment Upload</Label>
+                                        <div className={cn(
+                                            "flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
+                                            uploading && "opacity-50 cursor-not-allowed"
+                                        )}>
+                                            <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", uploading ? "cursor-not-allowed" : "cursor-pointer")}>
+                                                <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
+                                                <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
+                                                    {uploading ? "Saving..." : effectiveAttachmentCount === 0 ? "PDF / Images" : "PDF / Images"}
+                                                </span>
+                                                <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 shrink-0"
+                                        onClick={() => setAttachmentListDialogOpen(true)}
+                                        disabled={effectiveAttachmentCount === 0}
+                                    >
+                                        View ({effectiveAttachmentCount})
+                                    </Button>
                                 </div>
                             </div>
 
@@ -422,15 +509,27 @@ export function InwardDialog({
                             </Button>
                             <Button
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending || lines.length === 0}
+                                disabled={mutation.isPending || uploading || lines.length === 0}
                                 className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                             >
-                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
+                                {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
                             </Button>
                         </footer>
                     </>
                 )}
             </div>
+
+            <AttachmentListDialog
+                open={attachmentListDialogOpen}
+                onClose={() => setAttachmentListDialogOpen(false)}
+                urls={attachmentUrls}
+                urlsToDelete={attachmentUrlsToDelete}
+                pendingFiles={pendingAttachmentFiles}
+                onRemoveUrl={removeAttachmentUrl}
+                onRemovePending={removePendingAttachment}
+                isEditing={isEditing}
+                title="Inward Attachments"
+            />
 
             <SourceSelectionDialog
                 isOpen={sourceSelectionOpen}
