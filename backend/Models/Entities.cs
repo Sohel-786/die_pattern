@@ -276,12 +276,15 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string JobWorkNo { get; set; } = string.Empty;
-        public int? LocationId { get; set; }
-        public int? ToPartyId { get; set; }
-        public int ItemId { get; set; }
+        public int LocationId { get; set; }
+        public int ToPartyId { get; set; }
         public string? Description { get; set; }
+        public string? Remarks { get; set; }
         public JobWorkStatus Status { get; set; } = JobWorkStatus.Pending;
+        /// <summary>JSON array of attachment file URLs.</summary>
+        public string? AttachmentUrlsJson { get; set; }
         public int CreatedBy { get; set; }
+        public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
@@ -289,10 +292,25 @@ namespace net_backend.Models
         public virtual Location? Location { get; set; }
         [ForeignKey("ToPartyId")]
         public virtual Party? ToParty { get; set; }
-        [ForeignKey("ItemId")]
-        public virtual Item? Item { get; set; }
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
+        public virtual ICollection<JobWorkItem> Items { get; set; } = new List<JobWorkItem>();
+    }
+
+    [Table("job_work_items")]
+    public class JobWorkItem
+    {
+        public int Id { get; set; }
+        public int JobWorkId { get; set; }
+        public int ItemId { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
+        public string? Remarks { get; set; }
+
+        [ForeignKey("JobWorkId")]
+        public virtual JobWork? JobWork { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
     }
 
     [Table("inwards")]

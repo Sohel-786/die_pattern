@@ -341,25 +341,52 @@ namespace net_backend.DTOs
         public decimal? GstPercent { get; set; }
     }
 
+    public class JobWorkItemDto
+    {
+        public int Id { get; set; }
+        public int ItemId { get; set; }
+        public string? ItemName { get; set; }
+        public string? MainPartName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? MaterialName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
+        public string? Remarks { get; set; }
+    }
+
     public class JobWorkDto
     {
         public int Id { get; set; }
         public string JobWorkNo { get; set; } = string.Empty;
-        public int ItemId { get; set; }
-        public string? ItemName { get; set; }
-        public string? MainPartName { get; set; }
-        public int? VendorId { get; set; }
-        public string? VendorName { get; set; }
+        public int ToPartyId { get; set; }
+        public string? ToPartyName { get; set; }
         public string? Description { get; set; }
+        public string? Remarks { get; set; }
         public JobWorkStatus Status { get; set; }
+        public List<string> AttachmentUrls { get; set; } = new();
+        public List<JobWorkItemDto> Items { get; set; } = new();
+        public string? CreatorName { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class CreateJobWorkItemDto
+    {
+        public int ItemId { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
+        public string? Remarks { get; set; }
     }
 
     public class CreateJobWorkDto
     {
-        public int ItemId { get; set; }
-        public int? ToPartyId { get; set; }
+        public int ToPartyId { get; set; }
         public string? Description { get; set; }
+        public string? Remarks { get; set; }
+        public List<string>? AttachmentUrls { get; set; }
+        public List<CreateJobWorkItemDto> Items { get; set; } = new();
     }
 
     public class UpdateJobWorkStatusDto

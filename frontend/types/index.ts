@@ -500,14 +500,47 @@ export interface CreateInwardLineDto {
   gstPercent?: number | null;
 }
 
+export interface JobWorkItem {
+  id: number;
+  jobWorkId: number;
+  itemId: number;
+  itemName?: string;
+  mainPartName?: string;
+  itemTypeName?: string;
+  materialName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  rate?: number | null;
+  gstPercent?: number | null;
+  remarks?: string;
+}
+
 export interface JobWork {
   id: number;
   jobWorkNo: string;
-  itemId: number;
-  itemName?: string;
+  toPartyId: number;
+  toPartyName?: string;
   description?: string | null;
+  remarks?: string | null;
   status: JobWorkStatus;
+  attachmentUrls: string[];
+  items: JobWorkItem[];
+  creatorName?: string;
+  isActive: boolean;
   createdAt: string;
+}
+
+export interface CreateJobWorkDto {
+  toPartyId: number;
+  description?: string;
+  remarks?: string;
+  attachmentUrls?: string[];
+  items: {
+    itemId: number;
+    rate?: number | null;
+    gstPercent?: number | null;
+    remarks?: string;
+  }[];
 }
 
 export interface DashboardMetrics {

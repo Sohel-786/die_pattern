@@ -379,6 +379,8 @@ namespace net_backend.Controllers
 
         private async Task ProcessInwardMovementsAsync(Inward inward)
         {
+            var jwIdsToCheck = new HashSet<int>();
+
             foreach (var line in inward.Lines)
             {
                 var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == line.ItemId);
@@ -392,17 +394,39 @@ namespace net_backend.Controllers
                     _context.Items.Update(item);
                 }
 
-                // Update source status if necessary
                 if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
                 {
-                    var jw = await _context.JobWorks.FindAsync(line.SourceRefId.Value);
-                    if (jw != null)
+                    jwIdsToCheck.Add(line.SourceRefId.Value);
+                }
+            }
+
+            foreach (var jwId in jwIdsToCheck)
+            {
+                var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == jwId);
+                if (jw != null)
+                {
+                    // Check if all items in this JW have been inwarded correctly at some point across history
+                    var originalItemIds = jw.Items.Select(i => i.ItemId).ToList();
+                    
+                    var inwardedItemIds = await _context.InwardLines
+                        .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == jwId && l.Inward != null && l.Inward.IsActive)
+                        .Select(l => l.ItemId)
+                        .ToListAsync();
+
+                    var inwardedSet = inwardedItemIds.ToHashSet();
+                    
+                    if (originalItemIds.All(id => inwardedSet.Contains(id)))
                     {
                         jw.Status = JobWorkStatus.Completed;
                         jw.UpdatedAt = DateTime.Now;
                     }
+                    else
+                    {
+                        jw.Status = JobWorkStatus.InTransit; // Or keep as is, but InTransit makes sense if some are done
+                    }
                 }
             }
+
             await _context.SaveChangesAsync();
         }
 
@@ -429,11 +453,22 @@ namespace net_backend.Controllers
             }
             else if (sourceType == InwardSourceType.JobWork)
             {
-                var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
+                var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
                 if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
-                if (jw.Status != JobWorkStatus.Pending) throw new ArgumentException("Only pending Job Work entries (not yet inwarded) can be used for Inward.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive);
-                if (alreadyInwarded) throw new ArgumentException("This Job Work has already been inwarded.");
+                if (jw.Status == JobWorkStatus.Completed) throw new ArgumentException("This Job Work is already fully completed.");
+                
+                var inwardedFromJw = await _context.InwardLines
+                    .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive)
+                    .Select(l => l.ItemId)
+                    .ToListAsync();
+                
+                var inwardedSet = inwardedFromJw.ToHashSet();
+                var jwItemIds = jw.Items.Select(i => i.ItemId).ToList();
+                
+                if (jwItemIds.Count > 0 && jwItemIds.All(id => inwardedSet.Contains(id)))
+                    throw new ArgumentException("This Job Work is already fully inwarded.");
+                
+                vendorId = jw.ToPartyId;
             }
             return vendorId;
         }

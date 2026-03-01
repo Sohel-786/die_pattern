@@ -24,6 +24,7 @@ namespace net_backend.Data
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; } = default!;
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; } = default!;
         public DbSet<JobWork> JobWorks { get; set; } = default!;
+        public DbSet<JobWorkItem> JobWorkItems { get; set; } = default!;
         public DbSet<Inward> Inwards { get; set; } = default!;
         public DbSet<InwardLine> InwardLines { get; set; } = default!;
         public DbSet<Outward> Outwards { get; set; } = default!;
@@ -111,11 +112,19 @@ namespace net_backend.Data
                 .HasForeignKey(poi => poi.PurchaseIndentItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<JobWork>()
-                .HasOne(j => j.Item)
-                .WithMany()
-                .HasForeignKey(j => j.ItemId)
-                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<JobWorkItem>()
+                .HasOne(jwi => jwi.JobWork)
+                .WithMany(jw => jw.Items)
+                .HasForeignKey(jwi => jwi.JobWorkId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<JobWorkItem>()
+                .Property(jwi => jwi.Rate)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<JobWorkItem>()
+                .Property(jwi => jwi.GstPercent)
+                .HasColumnType("decimal(18,2)");
 
             modelBuilder.Entity<JobWork>()
                 .HasOne(j => j.Creator)
@@ -152,6 +161,14 @@ namespace net_backend.Data
                 .WithMany()
                 .HasForeignKey(l => l.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InwardLine>()
+                .Property(l => l.Rate)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<InwardLine>()
+                .Property(l => l.GstPercent)
+                .HasColumnType("decimal(18,2)");
 
             modelBuilder.Entity<Outward>()
                 .HasOne(o => o.Location)
