@@ -65,6 +65,10 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                     inwardNo: it.inwardNo ?? "",
                     sourceRefDisplay: it.sourceRefDisplay ?? "—",
                     sourceType: qcDetail.sourceType,
+                    itemTypeName: it.itemTypeName,
+                    drawingNo: it.drawingNo,
+                    revisionNo: it.revisionNo,
+                    materialName: it.materialName,
                     isQCPending: true,
                     isQCApproved: false,
                     inwardDate: new Date().toISOString(),
@@ -189,6 +193,13 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
         } finally {
             setUploading(false);
         }
+    };
+
+    const toggleItemIncluded = (inwardLineId: number) => {
+        if (isReadOnly) return;
+        setSelectedItems((prev) =>
+            prev.map((i) => (i.inwardLineId === inwardLineId ? { ...i, included: !i.included } : i))
+        );
     };
 
     const handleAddItems = (items: PendingQC[]) => {
@@ -338,41 +349,80 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
 
                             <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
                                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
-                                    <table className="w-full border-collapse text-sm min-w-[800px]">
-                                        <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
+                                    <table className="w-full border-collapse text-sm min-w-[1000px]">
+                                        <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10 font-bold uppercase tracking-wider text-[11px] text-secondary-600">
                                             <tr>
-                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-12">Sr.No</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-28">Inward No.</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-32">Source Ref</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider">Item Description</th>
+                                                <th className="text-center py-2.5 px-3 w-16">Include</th>
+                                                <th className="text-center py-2.5 px-3 w-12">Sr.No</th>
+                                                <th className="text-left py-2.5 px-3 w-32">Inward No.</th>
+                                                <th className="text-left py-2.5 px-3 w-32">Source Ref</th>
+                                                <th className="text-left py-2.5 px-3 min-w-[200px]">Item Description</th>
+                                                <th className="text-left py-2.5 px-3 w-32">Type</th>
+                                                <th className="text-left py-2.5 px-3 w-40">Drawing No. / Rev</th>
+                                                <th className="text-left py-2.5 px-3 w-32">Material</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100 bg-white">
                                             {selectedItems.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={4} className="py-12 text-center text-secondary-500 text-sm">
-                                                        No items. Select Party and Source Type, then click &quot;{getAddButtonText()}&quot; to add inward items.
+                                                    <td colSpan={8} className="py-12 text-center text-secondary-500 text-sm">
+                                                        No items selected. Click &quot;{getAddButtonText()}&quot; to begin.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 selectedItems.map((item, idx) => {
+                                                    const isIncluded = item.included !== false;
                                                     return (
                                                         <tr
                                                             key={item.inwardLineId}
-                                                            className="hover:bg-primary-50/30 transition-colors"
+                                                            className={cn(
+                                                                "transition-all duration-200",
+                                                                !isIncluded ? "bg-secondary-50/50 opacity-60" : "hover:bg-primary-50/30"
+                                                            )}
                                                         >
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isIncluded}
+                                                                    onChange={() => toggleItemIncluded(item.inwardLineId)}
+                                                                    disabled={isReadOnly}
+                                                                    className={cn(
+                                                                        "h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500",
+                                                                        !isReadOnly ? "cursor-pointer" : "cursor-not-allowed"
+                                                                    )}
+                                                                />
+                                                            </td>
                                                             <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
                                                             <td className="py-2.5 px-3">
-                                                                <span className="font-semibold text-primary-700 text-xs tracking-tight whitespace-nowrap">{item.inwardNo}</span>
+                                                                <span className="font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded text-[11px] tracking-tight whitespace-nowrap border border-primary-100 italic">
+                                                                    {item.inwardNo}
+                                                                </span>
                                                             </td>
                                                             <td className="py-2.5 px-3">
-                                                                <span className="font-semibold text-secondary-800 text-xs tracking-tight whitespace-nowrap">{item.sourceRefDisplay || "—"}</span>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-secondary-800 text-[11px] tracking-tighter uppercase">{item.sourceRefDisplay || "—"}</span>
+                                                                    <span className="text-[9px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                                                                        {item.sourceType === InwardSourceType.PO ? "Purchase Order" : "Job Work"}
+                                                                    </span>
+                                                                </div>
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0">
-                                                                    <span className="font-semibold text-secondary-900 truncate">{item.itemName}</span>
-                                                                    <span className="text-xs text-secondary-500 truncate">{item.mainPartName || ""}</span>
+                                                                    <span className="font-bold text-secondary-900 text-sm truncate uppercase italic tracking-tight">{item.itemName}</span>
+                                                                    <span className="text-[10px] font-bold text-secondary-500 truncate uppercase">{item.mainPartName || ""}</span>
                                                                 </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-secondary-700 font-medium text-xs uppercase tracking-tight">
+                                                                {item.itemTypeName || "—"}
+                                                            </td>
+                                                            <td className="py-2.5 px-3">
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="font-bold text-secondary-800 text-xs truncate">{item.drawingNo ?? "N/A"}</span>
+                                                                    <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">R{item.revisionNo ?? "0"}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-secondary-700 font-medium text-xs uppercase tracking-tight">
+                                                                {item.materialName || "—"}
                                                             </td>
                                                         </tr>
                                                     );

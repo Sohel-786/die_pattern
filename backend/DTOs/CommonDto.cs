@@ -15,11 +15,12 @@ namespace net_backend.DTOs
         public string? State { get; set; }
         public string? City { get; set; }
         public string? Pincode { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactNumber { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
+        public bool UseAsParty { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -33,11 +34,12 @@ namespace net_backend.DTOs
         public string? State { get; set; }
         public string? City { get; set; }
         public string? Pincode { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactNumber { get; set; }
         public string? LogoUrl { get; set; }
-        public DateTime? GstDate { get; set; }
-        public bool? IsActive { get; set; }
+        public DateTime GstDate { get; set; }
+        public bool UseAsParty { get; set; } = false;
+        public bool IsActive { get; set; } = true;
     }
 
     public class LocationDto
@@ -65,11 +67,12 @@ namespace net_backend.DTOs
         public string? State { get; set; }
         public string? City { get; set; }
         public string? Pincode { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactNumber { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
+        public bool? UseAsParty { get; set; }
         public bool IsActive { get; set; }
     }
 

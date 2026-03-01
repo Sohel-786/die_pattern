@@ -38,8 +38,8 @@ namespace net_backend.Controllers
                 c.State,
                 c.City,
                 c.Pincode,
-                c.Phone,
-                c.Email,
+                c.ContactPerson,
+                c.ContactNumber,
                 IsActive = c.IsActive ? "Yes" : "No",
                 CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm")
             });
@@ -90,8 +90,8 @@ namespace net_backend.Controllers
                             State = d.State?.Trim(),
                             City = d.City?.Trim(),
                             Pincode = d.Pincode?.Trim(),
-                            Phone = d.Phone?.Trim(),
-                            Email = d.Email?.Trim(),
+                            ContactPerson = d.ContactPerson?.Trim(),
+                            ContactNumber = d.ContactNumber?.Trim(),
                             GstDate = d.GstDate,
                             IsActive = true,
                             CreatedAt = DateTime.Now,
@@ -137,6 +137,7 @@ namespace net_backend.Controllers
 
             var processedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var processedGsts  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var phoneRegex = new Regex(@"^[6-9]\d{9}$");
 
             foreach (var row in rows)
             {
@@ -161,6 +162,13 @@ namespace net_backend.Controllers
                 if (!item.GstDate.HasValue)
                 {
                     validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "GST Date is mandatory." });
+                    continue;
+                }
+
+                // ── Contact Number validation (Indian 10-digit) ──────────────
+                if (!string.IsNullOrWhiteSpace(item.ContactNumber) && !phoneRegex.IsMatch(item.ContactNumber.Trim()))
+                {
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Invalid Contact Number. Must be a valid 10-digit Indian number." });
                     continue;
                 }
 
@@ -269,11 +277,12 @@ namespace net_backend.Controllers
                     State = c.State,
                     City = c.City,
                     Pincode = c.Pincode,
-                    Phone = c.Phone,
-                    Email = c.Email,
+                    ContactPerson = c.ContactPerson,
+                    ContactNumber = c.ContactNumber,
                     LogoUrl = c.LogoUrl,
                     GstNo = c.GstNo,
                     GstDate = c.GstDate,
+                    UseAsParty = c.UseAsParty,
                     IsActive = c.IsActive,
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt
@@ -296,11 +305,12 @@ namespace net_backend.Controllers
                     State = c.State,
                     City = c.City,
                     Pincode = c.Pincode,
-                    Phone = c.Phone,
-                    Email = c.Email,
+                    ContactPerson = c.ContactPerson,
+                    ContactNumber = c.ContactNumber,
                     LogoUrl = c.LogoUrl,
                     GstNo = c.GstNo,
                     GstDate = c.GstDate,
+                    UseAsParty = c.UseAsParty,
                     IsActive = c.IsActive,
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt
@@ -322,11 +332,12 @@ namespace net_backend.Controllers
                 State = company.State,
                 City = company.City,
                 Pincode = company.Pincode,
-                Phone = company.Phone,
-                Email = company.Email,
+                ContactPerson = company.ContactPerson,
+                ContactNumber = company.ContactNumber,
                 LogoUrl = company.LogoUrl,
                 GstNo = company.GstNo,
                 GstDate = company.GstDate,
+                UseAsParty = company.UseAsParty,
                 IsActive = company.IsActive,
                 CreatedAt = company.CreatedAt,
                 UpdatedAt = company.UpdatedAt
@@ -347,21 +358,53 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "GST number is required" });
 
             if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == request.Name.Trim().ToLower()))
-                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name already exists" });
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"Company name '{request.Name}' already exists in Company Master." });
+
+            if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == request.Name.Trim().ToLower()))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"A Party with the name '{request.Name}' already exists in Party Master. Please use a unique name." });
+
+            // ── GST format + cross-master uniqueness ──────────────────────────
+            var gstNorm = request.GstNo.Trim().ToUpper();
+            var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+            if (!gstRegex.IsMatch(gstNorm))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is exactly 15 alphanumeric characters." });
+
+            // Check in Companies
+            if (await _context.Companies.AnyAsync(c => c.GstNo != null && c.GstNo.ToUpper() == gstNorm))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already registered with another company." });
+
+            // Check in Parties
+            var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+            if (existingPartyGst != null)
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already assigned to party '{existingPartyGst.Name}' in Party Master." });
+
+            if (request.UseAsParty)
+            {
+                if (string.IsNullOrWhiteSpace(request.ContactPerson))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Contact Person is mandatory when 'Use as Party' is enabled." });
+                if (string.IsNullOrWhiteSpace(request.ContactNumber))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Contact Number is mandatory when 'Use as Party' is enabled." });
+            }
+
+            // ── Phone number validation ───────────────────────────────────
+            var phoneRegex = new Regex(@"^[6-9]\d{9}$");
+            if (!string.IsNullOrWhiteSpace(request.ContactNumber) && !phoneRegex.IsMatch(request.ContactNumber.Trim()))
+                return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Invalid Contact Number format. Must be a 10-digit numeric value starting with 6-9." });
 
             var company = new Company
             {
                 Name = request.Name.Trim(),
                 Address = request.Address.Trim(),
-                GstNo = request.GstNo.Trim(),
+                GstNo = gstNorm,
                 State = request.State?.Trim(),
                 City = request.City?.Trim(),
                 Pincode = request.Pincode?.Trim(),
-                Phone = request.Phone?.Trim(),
-                Email = request.Email?.Trim(),
+                ContactPerson = request.ContactPerson?.Trim(),
+                ContactNumber = request.ContactNumber?.Trim(),
                 LogoUrl = request.LogoUrl?.Trim(),
                 GstDate = request.GstDate,
-                IsActive = request.IsActive ?? true,
+                UseAsParty = request.UseAsParty,
+                IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -376,11 +419,12 @@ namespace net_backend.Controllers
                 State = company.State,
                 City = company.City,
                 Pincode = company.Pincode,
-                Phone = company.Phone,
-                Email = company.Email,
+                ContactPerson = company.ContactPerson,
+                ContactNumber = company.ContactNumber,
                 LogoUrl = company.LogoUrl,
                 GstNo = company.GstNo,
                 GstDate = company.GstDate,
+                UseAsParty = company.UseAsParty,
                 IsActive = company.IsActive,
                 CreatedAt = company.CreatedAt,
                 UpdatedAt = company.UpdatedAt
@@ -398,19 +442,75 @@ namespace net_backend.Controllers
 
             if (request.Name != null)
             {
-                if (await _context.Companies.AnyAsync(c => c.Id != id && c.Name.ToLower() == request.Name.Trim().ToLower()))
-                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name already exists" });
-                existing.Name = request.Name.Trim();
+                var nameTrimmed = request.Name.Trim();
+                if (await _context.Companies.AnyAsync(c => c.Id != id && c.Name.ToLower() == nameTrimmed.ToLower()))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"Company name '{nameTrimmed}' already exists in Company Master." });
+                
+                if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == nameTrimmed.ToLower()))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"A Party with the name '{nameTrimmed}' already exists in Party Master." });
+
+                existing.Name = nameTrimmed;
             }
             if (request.Address != null) existing.Address = request.Address.Trim();
-            if (request.GstNo != null) existing.GstNo = request.GstNo.Trim();
+            
+            // ── GST format + global uniqueness ──────────────────────────────
+            if (request.GstNo != null)
+            {
+                var gstNorm = request.GstNo.Trim().ToUpper();
+                var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+                if (!gstRegex.IsMatch(gstNorm))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is 15 alphanumeric characters." });
+
+                // Check in Companies
+                if (await _context.Companies.AnyAsync(c => c.Id != id && c.GstNo != null && c.GstNo.ToUpper() == gstNorm))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already registered with another company." });
+                
+                // Check in Parties
+                var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+                if (existingPartyGst != null)
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already assigned to party '{existingPartyGst.Name}' in Party Master." });
+
+                existing.GstNo = gstNorm;
+            }
+
             if (request.State != null) existing.State = request.State.Trim();
             if (request.City != null) existing.City = request.City.Trim();
             if (request.Pincode != null) existing.Pincode = request.Pincode.Trim();
-            if (request.Phone != null) existing.Phone = request.Phone.Trim();
-            if (request.Email != null) existing.Email = request.Email.Trim();
-            if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
+            if (request.ContactPerson != null) existing.ContactPerson = request.ContactPerson.Trim();
             if (request.GstDate.HasValue) existing.GstDate = request.GstDate;
+            if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
+
+            // ── Phone number validation ───────────────────────────────────
+            if (request.ContactNumber != null)
+            {
+                var phoneNorm = request.ContactNumber.Trim();
+                var phoneRegex = new Regex(@"^[6-9]\d{9}$");
+                if (!string.IsNullOrWhiteSpace(phoneNorm) && !phoneRegex.IsMatch(phoneNorm))
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Invalid Contact Number format. Must be a 10-digit numeric value starting with 6-9." });
+                
+                existing.ContactNumber = phoneNorm;
+            }
+
+            // ── UseAsParty validation + logic ──────────────────────────────
+            if (request.UseAsParty.HasValue || existing.UseAsParty)
+            {
+                var effectiveUseAsParty = request.UseAsParty ?? existing.UseAsParty;
+
+                if (existing.UseAsParty && request.UseAsParty.HasValue && !request.UseAsParty.Value)
+                    return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Existing 'Use as Party' status cannot be disabled once enabled." });
+
+                if (effectiveUseAsParty)
+                {
+                    if (string.IsNullOrWhiteSpace(existing.ContactPerson))
+                        return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Contact Person is mandatory when 'Use as Party' is enabled." });
+                    if (string.IsNullOrWhiteSpace(existing.ContactNumber))
+                        return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Contact Number is mandatory when 'Use as Party' is enabled." });
+                }
+                
+                if (request.UseAsParty.HasValue)
+                    existing.UseAsParty = request.UseAsParty.Value;
+            }
+
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
@@ -423,11 +523,12 @@ namespace net_backend.Controllers
                 State = existing.State,
                 City = existing.City,
                 Pincode = existing.Pincode,
-                Phone = existing.Phone,
-                Email = existing.Email,
+                ContactPerson = existing.ContactPerson,
+                ContactNumber = existing.ContactNumber,
                 LogoUrl = existing.LogoUrl,
                 GstNo = existing.GstNo,
                 GstDate = existing.GstDate,
+                UseAsParty = existing.UseAsParty,
                 IsActive = existing.IsActive,
                 CreatedAt = existing.CreatedAt,
                 UpdatedAt = existing.UpdatedAt

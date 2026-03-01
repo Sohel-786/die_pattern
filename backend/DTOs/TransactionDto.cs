@@ -101,6 +101,7 @@ namespace net_backend.DTOs
         public string? PiNo { get; set; }
         public int? PurchaseIndentId { get; set; }
         public decimal Rate { get; set; }
+        public decimal? GstPercent { get; set; }
         /// <summary>Line amount = Rate (one unit per die/pattern, before GST)</summary>
         public decimal LineAmount => Math.Round(Rate, 2);
         public bool IsInwarded { get; set; }
@@ -197,6 +198,10 @@ namespace net_backend.DTOs
         public int ItemId { get; set; }
         public string? ItemName { get; set; }
         public string? MainPartName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string? MaterialName { get; set; }
         public string? InwardNo { get; set; }
         public int? InwardId { get; set; }
         public InwardSourceType? SourceType { get; set; }
@@ -310,6 +315,10 @@ namespace net_backend.DTOs
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
         public string? QCNo { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
+        public decimal? SourceRate { get; set; }
+        public decimal? SourceGstPercent { get; set; }
     }
 
     public class CreateInwardDto
@@ -328,6 +337,8 @@ namespace net_backend.DTOs
         public InwardSourceType SourceType { get; set; }
         public int? SourceRefId { get; set; }
         public string? Remarks { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
     }
 
     public class JobWorkDto

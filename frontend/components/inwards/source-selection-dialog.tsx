@@ -93,7 +93,11 @@ export function SourceSelectionDialog({
                     sourceRefId: source.id,
                     sourceRefDisplay: source.poNo,
                     vendorId: source.vendorId,
-                    vendorName: source.vendorName
+                    vendorName: source.vendorName,
+                    sourceRate: i.rate,
+                    sourceGstPercent: i.gstPercent,
+                    rate: i.rate,
+                    gstPercent: i.gstPercent
                 }));
                 allItems = [...allItems, ...items];
             } else if (sourceType === InwardSourceType.JobWork) {

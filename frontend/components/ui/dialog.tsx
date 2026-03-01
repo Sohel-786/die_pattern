@@ -210,7 +210,7 @@ export function Dialog({
               aria-modal="true"
               aria-labelledby="dialog-title"
               className={cn(
-                "bg-white rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none",
+                "bg-white rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none overflow-hidden",
                 sizeClasses[size],
                 className
               )}

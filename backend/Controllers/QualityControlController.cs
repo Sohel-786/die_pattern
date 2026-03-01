@@ -188,7 +188,8 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             
             var query = _context.InwardLines
-                .Include(l => l.Item)
+                .Include(l => l.Item).ThenInclude(i => i!.ItemType)
+                .Include(l => l.Item).ThenInclude(i => i!.Material)
                 .Include(l => l.Inward).ThenInclude(i => i!.Vendor)
                 .Where(l => l.IsQCPending && !l.IsQCApproved && l.Inward != null && l.Inward.IsActive && l.Inward.LocationId == locationId)
                 .AsQueryable();
@@ -213,6 +214,10 @@ namespace net_backend.Controllers
                 ItemId = m.ItemId,
                 ItemName = m.Item?.CurrentName,
                 MainPartName = m.Item?.MainPartName,
+                ItemTypeName = m.ItemTypeName ?? m.Item?.ItemType?.Name,
+                DrawingNo = m.DrawingNo ?? m.Item?.DrawingNo,
+                RevisionNo = m.RevisionNo ?? m.Item?.RevisionNo,
+                MaterialName = m.MaterialName ?? m.Item?.Material?.Name,
                 InwardId = m.InwardId,
                 InwardNo = m.Inward?.InwardNo,
                 SourceType = m.SourceType,

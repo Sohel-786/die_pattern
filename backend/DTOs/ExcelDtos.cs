@@ -27,8 +27,8 @@ namespace net_backend.DTOs
         public string? State { get; set; }
         public string? City { get; set; }
         public string? Pincode { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactNumber { get; set; }
         public DateTime? GstDate { get; set; }
     }
 

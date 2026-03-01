@@ -267,6 +267,9 @@ export default function InwardsPage() {
                                                                                                 : "SOURCE NO."}
                                                                                 </TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">PO REF RATE</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">INW RATE</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">GST%</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
@@ -285,6 +288,15 @@ export default function InwardsPage() {
                                                                                             <span className="font-semibold text-secondary-900 text-sm">{line.itemName ?? "—"}</span>
                                                                                             <span className="text-xs text-secondary-500">{line.mainPartName ?? "—"}</span>
                                                                                         </div>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-500 text-[10px] text-right">
+                                                                                        {line.sourceType === InwardSourceType.PO ? `₹${line.sourceRate?.toLocaleString() ?? "0"} @ ${line.sourceGstPercent ?? "0"}%` : "—"}
+                                                                                    </TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
+                                                                                        {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
+                                                                                    </TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
+                                                                                        {line.gstPercent ? `${line.gstPercent}%` : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.itemTypeName ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2">

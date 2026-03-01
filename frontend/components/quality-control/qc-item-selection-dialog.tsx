@@ -94,13 +94,15 @@ export function QCItemSelectionDialog({
                     ) : (
                         <table className="w-full">
                             <thead className="sticky top-0 bg-white border-b border-secondary-200 z-10">
-                                <tr className="text-left text-[10px] font-black text-secondary-500 uppercase tracking-widest">
-                                    <th className="px-4 py-3 w-12">Select</th>
-                                    <th className="px-4 py-3 text-center">Inward Details</th>
+                                <tr className="text-left text-[10px] font-black text-secondary-500 uppercase tracking-widest bg-secondary-50/30">
+                                    <th className="px-4 py-3 w-12 text-center">Select</th>
+                                    <th className="px-4 py-3 text-center">Inward</th>
                                     <th className="px-4 py-3">Source Ref</th>
-                                    <th className="px-4 py-3">Item Name</th>
-                                    <th className="px-4 py-3">Main Part Name</th>
-                                    <th className="px-4 py-3 text-right">Inward Date</th>
+                                    <th className="px-4 py-3">Item Description</th>
+                                    <th className="px-4 py-3">Type</th>
+                                    <th className="px-4 py-3">Drawing / Rev</th>
+                                    <th className="px-4 py-3">Material</th>
+                                    <th className="px-4 py-3 text-right whitespace-nowrap">Inward Date</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-secondary-100">
@@ -112,23 +114,23 @@ export function QCItemSelectionDialog({
                                             key={item.inwardLineId}
                                             onClick={() => toggleSelection(item)}
                                             className={cn(
-                                                "transition-all duration-200 border-transparent hover:bg-primary-50 cursor-pointer",
-                                                isSelected && "bg-primary-50/50"
+                                                "transition-all duration-200 border-transparent hover:bg-primary-50/50 cursor-pointer",
+                                                isSelected && "bg-primary-50/80"
                                             )}
                                         >
-                                            <td className="px-4 py-4">
+                                            <td className="px-4 py-3 text-center">
                                                 {isSelected ? (
-                                                    <CheckCircle2 className="w-5 h-5 text-primary-600 fill-primary-50" />
+                                                    <CheckCircle2 className="w-5 h-5 text-primary-600 fill-primary-50 mx-auto" />
                                                 ) : (
-                                                    <Circle className="w-5 h-5 text-secondary-300" />
+                                                    <Circle className="w-5 h-5 text-secondary-300 mx-auto" />
                                                 )}
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className="text-[11px] font-black text-primary-600 bg-primary-50 px-2 py-1 rounded-md uppercase tracking-tight shadow-sm border border-primary-100 italic">
+                                            <td className="px-4 py-3 text-center">
+                                                <span className="text-[10px] font-bold text-primary-700 bg-primary-100/50 px-2 py-0.5 rounded border border-primary-200 uppercase tabular-nums">
                                                     {item.inwardNo}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-4 py-3">
                                                 <div className="flex flex-col italic">
                                                     <span className="text-[11px] font-bold text-secondary-700 uppercase">{item.sourceRefDisplay || "—"}</span>
                                                     <span className="text-[9px] text-secondary-400 font-black uppercase tracking-widest">
@@ -137,12 +139,28 @@ export function QCItemSelectionDialog({
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-sm font-bold text-secondary-900 uppercase italic">{item.itemName}</td>
-                                            <td className="px-4 py-4 text-[11px] font-bold text-secondary-500 uppercase italic">{item.mainPartName || "—"}</td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold text-secondary-500 italic">
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-secondary-900 uppercase italic tracking-tight">{item.itemName}</span>
+                                                    <span className="text-[10px] font-medium text-secondary-500 uppercase">{item.mainPartName || "—"}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-[11px] font-bold text-secondary-600 uppercase italic whitespace-nowrap">
+                                                {item.itemTypeName || "—"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col italic">
+                                                    <span className="text-[11px] font-bold text-secondary-700">{item.drawingNo || "N/A"}</span>
+                                                    <span className="text-[9px] text-secondary-400 font-bold uppercase tracking-widest">REV: {item.revisionNo || "0"}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-[11px] font-bold text-secondary-600 uppercase italic">
+                                                {item.materialName || "—"}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold text-secondary-500 italic tabular-nums">
                                                     <Clock className="w-3 h-3 text-primary-400" />
-                                                    {format(new Date(item.inwardDate), 'dd MMM yy')}
+                                                    {format(new Date(item.inwardDate), 'dd-MMM-yy')}
                                                 </div>
                                             </td>
                                         </tr>

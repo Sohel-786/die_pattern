@@ -38,6 +38,10 @@ interface InwardLineDraft {
     vendorId?: number;
     vendorName?: string;
     included?: boolean;
+    rate?: number | null;
+    gstPercent?: number | null;
+    sourceRate?: number | null;
+    sourceGstPercent?: number | null;
 }
 
 export function InwardDialog({
@@ -132,6 +136,10 @@ export function InwardDialog({
                 sourceRefId: l.sourceRefId,
                 sourceRefDisplay: l.sourceRefDisplay || "",
                 remarks: l.remarks || "",
+                rate: l.rate,
+                gstPercent: l.gstPercent,
+                sourceRate: l.sourceRate,
+                sourceGstPercent: l.sourceGstPercent,
                 included: true
             })));
             setAttachmentUrls((inward.attachmentUrls as string[]) || []);
@@ -165,7 +173,7 @@ export function InwardDialog({
             const next = [...prev];
             newItems.forEach(ni => {
                 const exists = next.find(x => x.sourceType === ni.sourceType && x.sourceRefId === ni.sourceRefId && x.itemId === ni.itemId);
-                if (!exists) next.push({ ...ni, quantity: 1, included: true }); // Force quantity 1
+                if (!exists) next.push({ ...ni, quantity: 1, included: true });
             });
             return next;
         });
@@ -261,7 +269,9 @@ export function InwardDialog({
                     quantity: 1, // Always 1 per requirement
                     sourceType: l.sourceType,
                     sourceRefId: l.sourceRefId,
-                    remarks: l.remarks
+                    remarks: l.remarks,
+                    rate: l.rate,
+                    gstPercent: l.gstPercent
                 }))
             };
             await mutation.mutateAsync(payload);
@@ -431,6 +441,9 @@ export function InwardDialog({
                                                     {displayHeader}
                                                 </th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Description</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PO Ref</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Inw Rate</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">Inw GST%</th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Line Remarks</th>
                                             </tr>
                                         </thead>
@@ -464,6 +477,50 @@ export function InwardDialog({
                                                                     <span className="font-semibold text-secondary-900 truncate">{line.itemName}</span>
                                                                     <span className="text-xs text-secondary-500 truncate">{line.mainPartName}</span>
                                                                 </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3">
+                                                                {line.sourceType === InwardSourceType.PO ? (
+                                                                    <div className="flex flex-col text-[10px] text-secondary-500 font-medium">
+                                                                        <span>Rate: ₹{line.sourceRate?.toLocaleString() || "0"}</span>
+                                                                        <span>GST: {line.sourceGstPercent ? `${line.sourceGstPercent}%` : "0%"}</span>
+                                                                    </div>
+                                                                ) : "—"}
+                                                            </td>
+                                                            <td className="py-2.5 px-3">
+                                                                {line.sourceType === InwardSourceType.PO ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={line.rate || ""}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value === "" ? null : Number(e.target.value);
+                                                                            setLines(prev => {
+                                                                                const next = [...prev];
+                                                                                next[idx] = { ...next[idx], rate: val };
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        placeholder="0.00"
+                                                                        className="h-8 border-secondary-200 text-right text-xs font-semibold"
+                                                                    />
+                                                                ) : "—"}
+                                                            </td>
+                                                            <td className="py-2.5 px-3">
+                                                                {line.sourceType === InwardSourceType.PO ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={line.gstPercent || ""}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value === "" ? null : Number(e.target.value);
+                                                                            setLines(prev => {
+                                                                                const next = [...prev];
+                                                                                next[idx] = { ...next[idx], gstPercent: val };
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        placeholder="0%"
+                                                                        className="h-8 border-secondary-200 text-right text-xs"
+                                                                    />
+                                                                ) : "—"}
                                                             </td>
                                                             <td className="py-2.5 px-3 min-w-[200px]">
                                                                 <Input

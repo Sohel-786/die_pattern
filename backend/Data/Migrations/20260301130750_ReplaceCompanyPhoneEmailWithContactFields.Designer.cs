@@ -3,17 +3,19 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
 #nullable disable
 
-namespace net_backend.Migrations
+namespace net_backend.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260301130750_ReplaceCompanyPhoneEmailWithContactFields")]
+    partial class ReplaceCompanyPhoneEmailWithContactFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -218,9 +220,6 @@ namespace net_backend.Migrations
                     b.Property<string>("DrawingNo")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("GstPercent")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("InwardId")
                         .HasColumnType("int");
 
@@ -241,9 +240,6 @@ namespace net_backend.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("Rate")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");

@@ -48,13 +48,14 @@ namespace net_backend.Models
         public string? City { get; set; }
         [MaxLength(20)]
         public string? Pincode { get; set; }
+        [MaxLength(100)]
+        public string? ContactPerson { get; set; }
         [MaxLength(30)]
-        public string? Phone { get; set; }
-        [MaxLength(255)]
-        public string? Email { get; set; }
+        public string? ContactNumber { get; set; }
         public string? LogoUrl { get; set; }
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
+        public bool UseAsParty { get; set; } = false;
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
@@ -337,6 +338,8 @@ namespace net_backend.Models
         public string? Remarks { get; set; }
         public bool IsQCPending { get; set; } = true;
         public bool IsQCApproved { get; set; } = false;
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
 
         [ForeignKey("InwardId")]
         public virtual Inward? Inward { get; set; }

@@ -3,17 +3,19 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
 #nullable disable
 
-namespace net_backend.Migrations
+namespace net_backend.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260301122501_AddUseAsPartyToCompany")]
+    partial class AddUseAsPartyToCompany
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -105,16 +107,12 @@ namespace net_backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("ContactNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("ContactPerson")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime?>("GstDate")
                         .HasColumnType("datetime2");
@@ -131,6 +129,10 @@ namespace net_backend.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("Pincode")
                         .HasMaxLength(20)
@@ -218,9 +220,6 @@ namespace net_backend.Migrations
                     b.Property<string>("DrawingNo")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("GstPercent")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<int>("InwardId")
                         .HasColumnType("int");
 
@@ -241,9 +240,6 @@ namespace net_backend.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("Rate")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");

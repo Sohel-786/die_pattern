@@ -290,6 +290,8 @@ namespace net_backend.Controllers
                         ItemId = i.PurchaseIndentItem!.ItemId,
                         MainPartName = i.PurchaseIndentItem!.Item?.MainPartName,
                         CurrentName = i.PurchaseIndentItem!.Item?.CurrentName,
+                        Rate = i.Rate,
+                        GstPercent = p.GstPercent,
                         IsInwarded = false
                     }).ToList()
                 };
@@ -444,6 +446,7 @@ namespace net_backend.Controllers
                             PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
                             PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                             Rate = i.Rate,
+                            GstPercent = p.GstPercent,
                             IsInwarded = inv != null,
                             InwardNo = inv?.InwardNo,
                             QCNo = qcNo
@@ -570,6 +573,7 @@ namespace net_backend.Controllers
                     PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
                     PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                     Rate = i.Rate,
+                    GstPercent = po.GstPercent,
                     IsInwarded = inwardedSetForPo.Contains(i.PurchaseIndentItem.ItemId)
                 }).ToList()
             };

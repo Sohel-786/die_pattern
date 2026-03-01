@@ -119,11 +119,12 @@ export interface Company {
   state?: string | null;
   city?: string | null;
   pincode?: string | null;
-  phone?: string | null;
-  email?: string | null;
+  contactPerson?: string | null;
+  contactNumber?: string | null;
   logoUrl?: string | null;
   gstNo?: string | null;
   gstDate?: string | null;
+  useAsParty: boolean;
   isActive: boolean;
 }
 
@@ -328,6 +329,7 @@ export interface POItem {
   materialName?: string;
   piNo: string;
   rate: number;
+  gstPercent?: number | null;
   lineAmount?: number; // same as rate (one unit per die/pattern)
   inwardNo?: string;
   qcNo?: string;
@@ -410,6 +412,10 @@ export interface InwardLine {
   sourceRefId: number;
   sourceRefDisplay?: string;
   remarks?: string;
+  rate?: number | null;
+  gstPercent?: number | null;
+  sourceRate?: number | null;
+  sourceGstPercent?: number | null;
   qcNo?: string | null;
   movementId?: number | null;
   isQCPending: boolean;
@@ -463,6 +469,10 @@ export interface PendingQC {
   itemId: number;
   itemName?: string;
   mainPartName?: string;
+  itemTypeName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  materialName?: string;
   inwardId?: number;
   inwardNo?: string;
   sourceType?: InwardSourceType;
@@ -486,6 +496,8 @@ export interface CreateInwardLineDto {
   sourceType: InwardSourceType;
   sourceRefId: number;
   remarks?: string;
+  rate?: number | null;
+  gstPercent?: number | null;
 }
 
 export interface JobWork {

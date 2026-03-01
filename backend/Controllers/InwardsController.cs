@@ -164,7 +164,12 @@ namespace net_backend.Controllers
             var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
 
-            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
+            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var poRates = await _context.PurchaseOrderItems
+                .Include(poi => poi.PurchaseIndentItem)
+                .Where(poi => poIds.Contains(poi.PurchaseOrderId))
+                .ToDictionaryAsync(poi => $"{poi.PurchaseOrderId}_{poi.PurchaseIndentItem!.ItemId}", poi => poi.Rate);
+            
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
             
             var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
@@ -173,7 +178,7 @@ namespace net_backend.Controllers
                 .Include(q => q.QcEntry)
                 .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
-            var data = list.Select(i => MapToDto(i, pos, jws, null, qcs)).ToList();
+            var data = list.Select(i => MapToDto(i, pos, jws, null, qcs, poRates)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
         }
 
@@ -206,7 +211,12 @@ namespace net_backend.Controllers
             var poIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
 
-            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
+            var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var poRates = await _context.PurchaseOrderItems
+                .Include(poi => poi.PurchaseIndentItem)
+                .Where(poi => poIds.Contains(poi.PurchaseOrderId))
+                .ToDictionaryAsync(poi => $"{poi.PurchaseOrderId}_{poi.PurchaseIndentItem!.ItemId}", poi => poi.Rate);
+
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
             
             var lineIds = inward.Lines.Select(l => l.Id).ToList();
@@ -215,7 +225,7 @@ namespace net_backend.Controllers
                 .Include(q => q.QcEntry)
                 .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
-            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, null, qcs) });
+            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, null, qcs, poRates) });
         }
 
         [HttpPost]
@@ -274,6 +284,8 @@ namespace net_backend.Controllers
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
+                    Rate = l.Rate,
+                    GstPercent = l.GstPercent,
                     IsQCPending = true,
                     IsQCApproved = false
                 });
@@ -346,7 +358,9 @@ namespace net_backend.Controllers
                     Quantity = l.Quantity,
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
-                    Remarks = l.Remarks
+                    Remarks = l.Remarks,
+                    Rate = l.Rate,
+                    GstPercent = l.GstPercent
                 });
             }
 
@@ -426,10 +440,11 @@ namespace net_backend.Controllers
 
         private static InwardDto MapToDto(
             Inward i, 
-            Dictionary<int, string>? pos = null, 
+            Dictionary<int, PurchaseOrder>? pos = null, 
             Dictionary<int, string>? jws = null,
             Dictionary<int, string>? outs = null,
-            Dictionary<int, string>? qcs = null)
+            Dictionary<int, string>? qcs = null,
+            Dictionary<string, decimal>? poRates = null)
         {
             var sourceTypes = i.Lines.Select(l => l.SourceType).Distinct().ToList();
             var fromStrs = new List<string>();
@@ -468,12 +483,20 @@ namespace net_backend.Controllers
                     SourceType = l.SourceType,
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
-                    SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value]
+                    SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value].PoNo
                                      : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
                                      : l.SourceRefId?.ToString(),
                     IsQCPending = l.IsQCPending,
                     IsQCApproved = l.IsQCApproved,
-                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id] : "—"
+                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id] : "—",
+                    Rate = l.Rate,
+                    GstPercent = l.GstPercent,
+                    SourceRate = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && poRates != null && poRates.ContainsKey($"{l.SourceRefId}_{l.ItemId}")) 
+                                   ? poRates[$"{l.SourceRefId}_{l.ItemId}"]
+                                   : null,
+                    SourceGstPercent = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value))
+                                   ? pos[l.SourceRefId.Value].GstPercent
+                                   : null
                 }).ToList()
             };
             return dto;

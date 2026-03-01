@@ -18,6 +18,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 // Indian GSTIN: 2-digit state code + 10-char PAN + entity no. + Z + check digit
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PHONE_REGEX = /^[6-9]\d{9}$/;
 
 const GST_SEGMENTS = [
     { label: "State", pos: [0, 2], color: "bg-blue-500" },
@@ -83,7 +84,10 @@ const partySchema = z.object({
     partyCategory: z.string().min(1, "Party Category is required"),
     customerType: z.string().min(1, "Customer Type is required"),
     contactPerson: z.string().min(1, "Contact Person is required"),
-    phoneNumber: z.string().min(1, "Contact No. is required"),
+    phoneNumber: z.string()
+        .min(1, "Contact No. is required")
+        .length(10, "Phone number must be exactly 10 digits")
+        .regex(PHONE_REGEX, "Invalid phone number. Must be a 10-digit Indian number starting with 6-9."),
     gstNo: z.string()
         .min(1, "GST No. is required")
         .length(15, "GST No. must be exactly 15 characters")
@@ -236,8 +240,21 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             <Input
                                 id="phoneNumber"
                                 {...register("phoneNumber")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                maxLength={10}
+                                autoComplete="off"
+                                className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium ${errors.phoneNumber ? "border-rose-400" : ""}`}
                                 placeholder="e.g. 9979260161"
+                                onKeyDown={(e) => {
+                                    const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
+                                    if (allow.includes(e.key)) return;
+                                    if (!/^[0-9]$/.test(e.key)) { e.preventDefault(); return; }
+                                    const current = watch("phoneNumber") || "";
+                                    if (current.length >= 10) { e.preventDefault(); }
+                                }}
+                                onChange={(e) => {
+                                    const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
+                                    setValue("phoneNumber", raw, { shouldValidate: true });
+                                }}
                             />
                             {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.phoneNumber.message}</p>}
                         </div>
@@ -328,8 +345,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                                 field.onChange(date ? date.toISOString().split('T')[0] : "");
                                             }}
                                             className={`h-10 shadow-sm text-sm font-medium ${errors.gstDate
-                                                    ? "border-rose-400 focus:ring-rose-400"
-                                                    : "border-secondary-300 focus:ring-primary-500"
+                                                ? "border-rose-400 focus:ring-rose-400"
+                                                : "border-secondary-300 focus:ring-primary-500"
                                                 }`}
                                         />
                                         {errors.gstDate && (

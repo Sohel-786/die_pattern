@@ -137,6 +137,7 @@ namespace net_backend.Controllers
 
             var processedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var processedGsts  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var phoneRegex = new Regex(@"^[6-9]\d{9}$");
 
             foreach (var row in rows)
             {
@@ -165,6 +166,13 @@ namespace net_backend.Controllers
                 if (!gstRegex.IsMatch(gstNorm))
                 {
                     validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = $"Invalid GST format '{gstNorm}'. Must be a valid 15-character Indian GSTIN." });
+                    continue;
+                }
+
+                // ── Phone validation (Indian 10-digit) ───────────────────────
+                if (!string.IsNullOrWhiteSpace(item.PhoneNumber) && !phoneRegex.IsMatch(item.PhoneNumber.Trim()))
+                {
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Invalid Phone Number. Must be a valid 10-digit Indian number." });
                     continue;
                 }
 
@@ -253,15 +261,31 @@ namespace net_backend.Controllers
             if (!gstRegex.IsMatch(gstNorm))
                 return BadRequest(new ApiResponse<Party> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is exactly 15 alphanumeric characters (e.g. 24AABCU9603R1ZA)." });
 
-            // ── 3. Company-scoped party name uniqueness ──────────────────────
-            var nameTrimmed = party.Name.Trim();
-            if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Name.ToLower() == nameTrimmed.ToLower()))
-                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company. Party names must be unique per company." });
+            // ── Phone validation ──────────────────────────────────────────
+            var phoneRegex = new Regex(@"^[6-9]\d{9}$");
+            if (!string.IsNullOrWhiteSpace(party.PhoneNumber) && !phoneRegex.IsMatch(party.PhoneNumber.Trim()))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "Invalid Phone Number. Must be a 10-digit numeric value starting with 6-9." });
 
-            // ── 4. Global GST uniqueness (GSTIN is nationally unique in India) 
-            var existingGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
-            if (existingGst != null)
-                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingGst.Name}'. A GSTIN can only be assigned to one party." });
+            // ── 3. Cross-master Name uniqueness ──────────────────────────────
+            var nameTrimmed = party.Name.Trim();
+            // Check in Parties (company-scoped)
+            if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Name.ToLower() == nameTrimmed.ToLower()))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company." });
+            
+            // Check in Companies (global)
+            if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == nameTrimmed.ToLower()))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A Company with the name '{nameTrimmed}' already exists in Company Master. Use a unique name or link to the existing company." });
+
+            // ── 4. Global GST uniqueness (Cross-master) ────────────────────────
+            // Check in Parties
+            var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+            if (existingPartyGst != null)
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingPartyGst.Name}' in Party Master." });
+
+            // Check in Companies
+            var existingCompanyGst = await _context.Companies.FirstOrDefaultAsync(c => c.GstNo != null && c.GstNo.ToUpper() == gstNorm);
+            if (existingCompanyGst != null)
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under company '{existingCompanyGst.Name}' in Company Master." });
 
             // ── 5. Persist ──────────────────────────────────────────────────
             party.Name = nameTrimmed;
@@ -289,8 +313,15 @@ namespace net_backend.Controllers
                 var nameTrimmed = request.Name.Trim();
                 if (string.IsNullOrWhiteSpace(nameTrimmed))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name cannot be empty." });
+                
+                // Check in Parties
                 if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Id != id && p.Name.ToLower() == nameTrimmed.ToLower()))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company." });
+                
+                // Check in Companies
+                if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == nameTrimmed.ToLower()))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A Company with the name '{nameTrimmed}' already exists in Company Master." });
+
                 existing.Name = nameTrimmed;
             }
 
@@ -305,9 +336,15 @@ namespace net_backend.Controllers
                 if (!gstRegex.IsMatch(gstNorm))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is exactly 15 alphanumeric characters (e.g. 24AABCU9603R1ZA)." });
 
-                var existingGst = await _context.Parties.FirstOrDefaultAsync(p => p.Id != id && p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
-                if (existingGst != null)
-                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingGst.Name}'. A GSTIN can only be assigned to one party." });
+                // Check in Parties
+                var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.Id != id && p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+                if (existingPartyGst != null)
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingPartyGst.Name}' in Party Master." });
+
+                // Check in Companies
+                var existingCompanyGst = await _context.Companies.FirstOrDefaultAsync(c => c.GstNo != null && c.GstNo.ToUpper() == gstNorm);
+                if (existingCompanyGst != null)
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under company '{existingCompanyGst.Name}' in Company Master." });
 
                 existing.GstNo = gstNorm;
             }
@@ -330,8 +367,14 @@ namespace net_backend.Controllers
                 existing.ContactPerson = request.ContactPerson;
             }
             if (request.PhoneNumber != null) {
-                if (string.IsNullOrWhiteSpace(request.PhoneNumber)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Phone Number cannot be empty." });
-                existing.PhoneNumber = request.PhoneNumber;
+                var phoneNorm = request.PhoneNumber.Trim();
+                if (string.IsNullOrWhiteSpace(phoneNorm)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Phone Number cannot be empty." });
+                
+                var phoneRegex = new Regex(@"^[6-9]\d{9}$");
+                if (!phoneRegex.IsMatch(phoneNorm))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = "Invalid Phone Number. Must be a 10-digit numeric value starting with 6-9." });
+
+                existing.PhoneNumber = phoneNorm;
             }
             if (request.Email != null) existing.Email = request.Email;
             // ── GstDate mandatory check on update ───────────────────────────
