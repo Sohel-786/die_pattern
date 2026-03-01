@@ -26,6 +26,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PiSelectionDialog } from "./pi-selection-dialog";
 import { QuotationListDialog } from "./quotation-list-dialog";
 import { toast } from "react-hot-toast";
+import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -726,38 +727,13 @@ export function PurchaseOrderDialog({
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
                   <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date *</Label>
-                  <div className="mt-0.5 flex items-center gap-1 w-40">
-                    <input
-                      ref={deliveryDateInputRef}
-                      type="date"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      min={todayStr}
+                  <div className="mt-0.5 w-40">
+                    <DatePicker
                       value={deliveryDate}
-                      onChange={(e) => {
-                        setDeliveryDate(e.target.value);
-                        e.target.blur();
-                      }}
-                      className="absolute w-0 h-0 opacity-0 pointer-events-none"
-                    />
-                    <Input
-                      readOnly
-                      value={deliveryDate ? format(new Date(deliveryDate + "T00:00:00"), "dd-MMM-yyyy") : ""}
-                      placeholder="Select date"
-                      className="h-9 flex-1 min-w-0 text-sm border-secondary-200 bg-white cursor-pointer"
-                      onClick={() => deliveryDateInputRef.current?.showPicker?.()}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
+                      onChange={(date) => setDeliveryDate(date ? format(date, "yyyy-MM-dd") : "")}
                       disabled={isReadOnly}
-                      className="h-9 w-9 p-0 shrink-0"
-                      onClick={() => !isReadOnly && deliveryDateInputRef.current?.showPicker?.()}
-                      title="Pick delivery date"
-                    >
-                      <Calendar className="w-4 h-4" />
-                    </Button>
+                      className="h-9 w-full text-sm border-secondary-200 bg-white"
+                    />
                   </div>
                 </div>
                 <div>

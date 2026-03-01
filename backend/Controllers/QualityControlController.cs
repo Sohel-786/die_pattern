@@ -85,6 +85,14 @@ namespace net_backend.Controllers
             }
         }
 
+        [HttpGet("next-code")]
+        public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
+        {
+            var locationId = await GetCurrentLocationIdAsync();
+            var code = await _codeGenerator.GenerateCode("QC", locationId);
+            return Ok(new ApiResponse<string> { Data = code });
+        }
+
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<QCDto>>>> GetAll(
             [FromQuery] int? partyId,
@@ -209,7 +217,6 @@ namespace net_backend.Controllers
                 InwardNo = m.Inward?.InwardNo,
                 SourceType = m.SourceType,
                 SourceRefDisplay = m.SourceType == InwardSourceType.PO ? $"PO-{m.SourceRefId}"
-                    : m.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{m.SourceRefId}"
                     : m.SourceType == InwardSourceType.JobWork ? $"JW-{m.SourceRefId}"
                     : m.SourceRefId?.ToString(),
                 VendorName = m.Inward?.Vendor?.Name,
@@ -568,7 +575,6 @@ namespace net_backend.Controllers
                     InwardId = i.InwardLine.InwardId,
                     SourceRefDisplay = i.InwardLine.SourceType == InwardSourceType.PO ? $"PO-{i.InwardLine.SourceRefId}"
                         : i.InwardLine.SourceType == InwardSourceType.JobWork ? $"JW-{i.InwardLine.SourceRefId}"
-                        : i.InwardLine.SourceType == InwardSourceType.OutwardReturn ? $"Outward #{i.InwardLine.SourceRefId}"
                         : i.InwardLine.SourceRefId?.ToString(),
                     IsApproved = i.IsApproved,
                     Remarks = i.Remarks

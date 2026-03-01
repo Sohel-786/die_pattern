@@ -5,6 +5,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using System.Text.RegularExpressions;
 
 namespace net_backend.Controllers
 {
@@ -33,7 +34,7 @@ namespace net_backend.Controllers
                 c.Name,
                 c.Address,
                 c.GstNo,
-                c.Pan,
+                GstDate = c.GstDate.HasValue ? c.GstDate.Value.ToString("yyyy-MM-dd") : "",
                 c.State,
                 c.City,
                 c.Pincode,
@@ -85,13 +86,13 @@ namespace net_backend.Controllers
                         {
                             Name = d.Name.Trim(),
                             Address = d.Address?.Trim(),
-                            GstNo = d.GstNo?.Trim(),
-                            Pan = d.Pan?.Trim(),
+                            GstNo = d.GstNo?.Trim().ToUpper(),
                             State = d.State?.Trim(),
                             City = d.City?.Trim(),
                             Pincode = d.Pincode?.Trim(),
                             Phone = d.Phone?.Trim(),
                             Email = d.Email?.Trim(),
+                            GstDate = d.GstDate,
                             IsActive = true,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
@@ -123,47 +124,89 @@ namespace net_backend.Controllers
         private async Task<ValidationResultDto<CompanyImportDto>> ValidateCompanies(List<ExcelRow<CompanyImportDto>> rows)
         {
             var validation = new ValidationResultDto<CompanyImportDto>();
+            var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+
+            // Load all existing company names and GST numbers for dedup checks
             var existingNames = await _context.Companies
                 .Select(c => c.Name.ToLower())
                 .ToListAsync();
-            var processedInFile = new HashSet<string>();
+            var existingGstMap = await _context.Companies
+                .Where(c => c.GstNo != null)
+                .Select(c => new { GstNo = c.GstNo!.ToUpper(), c.Name })
+                .ToDictionaryAsync(c => c.GstNo, c => c.Name);
+
+            var processedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var processedGsts  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var row in rows)
             {
                 var item = row.Data;
+
+                // ── Mandatory field checks ────────────────────────────────────
                 if (string.IsNullOrWhiteSpace(item.Name))
                 {
-                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Name is mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Company Name is mandatory." });
                     continue;
                 }
                 if (string.IsNullOrWhiteSpace(item.Address))
                 {
-                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Address is mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Address is mandatory." });
                     continue;
                 }
                 if (string.IsNullOrWhiteSpace(item.GstNo))
                 {
-                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "GST number is mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "GST No. is mandatory." });
+                    continue;
+                }
+                if (!item.GstDate.HasValue)
+                {
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "GST Date is mandatory." });
                     continue;
                 }
 
                 var nameLower = item.Name.Trim().ToLower();
+                var gstNorm   = item.GstNo.Trim().ToUpper();
 
-                if (processedInFile.Contains(nameLower))
+                // ── GST format validation ───────────────────────────────────
+                if (!gstRegex.IsMatch(gstNorm))
                 {
-                    validation.Duplicates.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name in file" });
+                    validation.Invalid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = $"Invalid GST format '{gstNorm}'. Must be a valid 15-character Indian GSTIN (e.g. 24AABCU9603R1ZA)." });
                     continue;
                 }
 
+                // ── Duplicate company name in file ───────────────────────────
+                if (processedNames.Contains(nameLower))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate company name in file." });
+                    continue;
+                }
+
+                // ── Duplicate GST in file ──────────────────────────────────
+                if (processedGsts.Contains(gstNorm))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = $"Duplicate GST No. '{gstNorm}' in file." });
+                    continue;
+                }
+
+                // ── Company name already exists in DB ──────────────────────────
                 if (existingNames.Contains(nameLower))
                 {
-                    validation.AlreadyExists.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
-                    processedInFile.Add(nameLower);
+                    validation.AlreadyExists.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = $"Company '{item.Name.Trim()}' already exists." });
+                    processedNames.Add(nameLower);
+                    continue;
+                }
+
+                // ── GST already exists in DB ─────────────────────────────────
+                if (existingGstMap.TryGetValue(gstNorm, out var existingOwner))
+                {
+                    validation.AlreadyExists.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item, Message = $"GST No. '{gstNorm}' is already registered under company '{existingOwner}'." });
+                    processedGsts.Add(gstNorm);
                     continue;
                 }
 
                 validation.Valid.Add(new ValidationEntry<CompanyImportDto> { Row = row.RowNumber, Data = item });
-                processedInFile.Add(nameLower);
+                processedNames.Add(nameLower);
+                processedGsts.Add(gstNorm);
             }
 
             return validation;
@@ -216,17 +259,13 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
-            var allowed = await GetAllowedLocationIdsAsync();
-            var companyIds = allowed.Select(x => x.companyId).ToHashSet();
             var companies = await _context.Companies
-                .Where(c => companyIds.Contains(c.Id))
                 .OrderBy(c => c.Name)
                 .Select(c => new CompanyDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Address = c.Address,
-                    Pan = c.Pan,
                     State = c.State,
                     City = c.City,
                     Pincode = c.Pincode,
@@ -246,17 +285,14 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetActive()
         {
-            var allowed = await GetAllowedLocationIdsAsync();
-            var companyIds = allowed.Select(x => x.companyId).ToHashSet();
             var companies = await _context.Companies
-                .Where(c => companyIds.Contains(c.Id) && c.IsActive)
+                .Where(c => c.IsActive)
                 .OrderBy(c => c.Name)
                 .Select(c => new CompanyDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Address = c.Address,
-                    Pan = c.Pan,
                     State = c.State,
                     City = c.City,
                     Pincode = c.Pincode,
@@ -283,7 +319,6 @@ namespace net_backend.Controllers
                 Id = company.Id,
                 Name = company.Name,
                 Address = company.Address,
-                Pan = company.Pan,
                 State = company.State,
                 City = company.City,
                 Pincode = company.Pincode,
@@ -319,7 +354,6 @@ namespace net_backend.Controllers
                 Name = request.Name.Trim(),
                 Address = request.Address.Trim(),
                 GstNo = request.GstNo.Trim(),
-                Pan = request.Pan?.Trim(),
                 State = request.State?.Trim(),
                 City = request.City?.Trim(),
                 Pincode = request.Pincode?.Trim(),
@@ -339,7 +373,6 @@ namespace net_backend.Controllers
                 Id = company.Id,
                 Name = company.Name,
                 Address = company.Address,
-                Pan = company.Pan,
                 State = company.State,
                 City = company.City,
                 Pincode = company.Pincode,
@@ -371,7 +404,6 @@ namespace net_backend.Controllers
             }
             if (request.Address != null) existing.Address = request.Address.Trim();
             if (request.GstNo != null) existing.GstNo = request.GstNo.Trim();
-            if (request.Pan != null) existing.Pan = request.Pan.Trim();
             if (request.State != null) existing.State = request.State.Trim();
             if (request.City != null) existing.City = request.City.Trim();
             if (request.Pincode != null) existing.Pincode = request.Pincode.Trim();
@@ -388,7 +420,6 @@ namespace net_backend.Controllers
                 Id = existing.Id,
                 Name = existing.Name,
                 Address = existing.Address,
-                Pan = existing.Pan,
                 State = existing.State,
                 City = existing.City,
                 Pincode = existing.Pincode,

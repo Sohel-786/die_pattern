@@ -100,7 +100,17 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
             const res = await api.get(`/quality-control/pending?partyId=${partyId}&sourceType=${sourceType}`);
             return res.data.data;
         },
-        enabled: open && partyId > 0 && sourceType !== "",
+        enabled: open && !!partyId && !!sourceType,
+    });
+
+    const { data: nextCode } = useQuery<string>({
+        queryKey: ["quality-control", "next-code"],
+        queryFn: async () => {
+            const res = await api.get("/quality-control/next-code");
+            return res.data.data;
+        },
+        enabled: open && !isEditing,
+        staleTime: 0,
     });
 
     const mutation = useMutation({
@@ -181,16 +191,6 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
         }
     };
 
-    const toggleIncluded = (inwardLineId: number) => {
-        setSelectedItems((prev) =>
-            prev.map((i) => (i.inwardLineId === inwardLineId ? { ...i, included: !(i.included !== false) } : i))
-        );
-    };
-
-    const removeItem = (inwardLineId: number) => {
-        setSelectedItems((prev) => prev.filter((i) => i.inwardLineId !== inwardLineId));
-    };
-
     const handleAddItems = (items: PendingQC[]) => {
         const existingIds = new Set(selectedItems.map((i) => i.inwardLineId));
         const toAdd = items.filter((i) => !existingIds.has(i.inwardLineId)).map((i) => ({ ...i, included: true }));
@@ -200,13 +200,11 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     const sourceOptions = [
         { label: "Purchase Order", value: InwardSourceType.PO },
         { label: "Job Work", value: InwardSourceType.JobWork },
-        { label: "Outward Return", value: InwardSourceType.OutwardReturn },
     ];
 
     const getAddButtonText = () => {
         if (sourceType === InwardSourceType.PO) return "Add Inward Items (from PO)";
         if (sourceType === InwardSourceType.JobWork) return "Add Inward Items (from Job Work)";
-        if (sourceType === InwardSourceType.OutwardReturn) return "Add Inward Items (from Outward)";
         return "Add Inward Items";
     };
 
@@ -230,18 +228,24 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                     <>
                         <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">
                             <div className="grid grid-cols-12 gap-4 items-end bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm">
-                                {isEditing && (
-                                    <div className="col-span-2">
-                                        <Label className="text-xs font-semibold text-secondary-600">QC No.</Label>
-                                        <Input
-                                            value={qcDetail?.qcNo ?? ""}
-                                            readOnly
-                                            className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-semibold"
-                                        />
-                                    </div>
-                                )}
-                                <div className={isEditing ? "col-span-3" : "col-span-4"}>
-                                    <Label className="text-xs font-semibold text-secondary-600">Party *</Label>
+                                <div className="col-span-2">
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">QC No.</Label>
+                                    <Input
+                                        value={isEditing ? (qcDetail?.qcNo ?? "") : (nextCode ?? "...")}
+                                        readOnly
+                                        className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-bold text-primary-700 disabled:opacity-100"
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">QC Date</Label>
+                                    <Input
+                                        value={format(isEditing && qcDetail?.createdAt ? new Date(qcDetail.createdAt) : new Date(), "dd-MMM-yyyy")}
+                                        readOnly
+                                        className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-bold text-secondary-700 disabled:opacity-100"
+                                    />
+                                </div>
+                                <div className="col-span-4">
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Vendor / Party *</Label>
                                     <div className="mt-0.5">
                                         <SearchableSelect
                                             options={parties.map((p) => ({ label: p.name, value: p.id }))}
@@ -255,8 +259,8 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                         />
                                     </div>
                                 </div>
-                                <div className={isEditing ? "col-span-3" : "col-span-4"}>
-                                    <Label className="text-xs font-semibold text-secondary-600">Source Type *</Label>
+                                <div className="col-span-4">
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Source Type *</Label>
                                     <div className="mt-0.5">
                                         <select
                                             value={sourceType}
@@ -337,41 +341,26 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                     <table className="w-full border-collapse text-sm min-w-[800px]">
                                         <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
                                             <tr>
-                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-16">Include</th>
                                                 <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-12">Sr.No</th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-28">Inward No.</th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-32">Source Ref</th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider">Item Description</th>
-                                                {!isReadOnly && (
-                                                    <th className="text-right py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider w-16">Remove</th>
-                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100 bg-white">
                                             {selectedItems.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={isReadOnly ? 5 : 6} className="py-12 text-center text-secondary-500 text-sm">
+                                                    <td colSpan={4} className="py-12 text-center text-secondary-500 text-sm">
                                                         No items. Select Party and Source Type, then click &quot;{getAddButtonText()}&quot; to add inward items.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 selectedItems.map((item, idx) => {
-                                                    const included = item.included !== false;
                                                     return (
                                                         <tr
                                                             key={item.inwardLineId}
-                                                            className={cn("hover:bg-primary-50/30 transition-colors", !included && "opacity-60 bg-secondary-50/50")}
+                                                            className="hover:bg-primary-50/30 transition-colors"
                                                         >
-                                                            <td className="py-2.5 px-3 text-center align-middle">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={included}
-                                                                    onChange={() => toggleIncluded(item.inwardLineId)}
-                                                                    disabled={isReadOnly}
-                                                                    className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer mx-auto block disabled:opacity-50"
-                                                                    title={included ? "Include in QC" : "Exclude from QC (available for future QC)"}
-                                                                />
-                                                            </td>
                                                             <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
                                                             <td className="py-2.5 px-3">
                                                                 <span className="font-semibold text-primary-700 text-xs tracking-tight whitespace-nowrap">{item.inwardNo}</span>
@@ -385,18 +374,6 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                                                     <span className="text-xs text-secondary-500 truncate">{item.mainPartName || ""}</span>
                                                                 </div>
                                                             </td>
-                                                            {!isReadOnly && (
-                                                                <td className="py-2.5 px-3 text-right">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeItem(item.inwardLineId)}
-                                                                        className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                                                        title="Remove from list"
-                                                                    >
-                                                                        <X className="w-4 h-4" />
-                                                                    </button>
-                                                                </td>
-                                                            )}
                                                         </tr>
                                                     );
                                                 })

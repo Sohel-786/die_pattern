@@ -79,7 +79,6 @@ export function InwardDialog({
             const first = typesInLines.values().next().value;
             if (first === InwardSourceType.PO) return "PO No.";
             if (first === InwardSourceType.JobWork) return "Jobwork No.";
-            if (first === InwardSourceType.OutwardReturn) return "Outward No.";
         }
         return "Source No.";
     }, [lines]);
@@ -197,7 +196,6 @@ export function InwardDialog({
         switch (selectedSourceType) {
             case InwardSourceType.PO: return "Add Purchase Orders";
             case InwardSourceType.JobWork: return "Add Job Works";
-            case InwardSourceType.OutwardReturn: return "Add Outwards";
             default: return "Import Items";
         }
     };
@@ -280,8 +278,7 @@ export function InwardDialog({
 
     const sourceOptions = [
         { label: "Purchase Order", value: InwardSourceType.PO },
-        { label: "Job Work", value: InwardSourceType.JobWork },
-        { label: "Outward Return", value: InwardSourceType.OutwardReturn }
+        { label: "Job Work", value: InwardSourceType.JobWork }
     ];
 
     return (
@@ -405,7 +402,7 @@ export function InwardDialog({
                                                 className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700 shadow-sm transition-all hover:bg-white"
                                             >
                                                 <span className="opacity-50 text-[10px]">
-                                                    {src.type === InwardSourceType.PO ? "PO" : src.type === InwardSourceType.JobWork ? "JW" : "OUT"}
+                                                    {src.type === InwardSourceType.PO ? "PO" : "JW"}
                                                 </span>
                                                 {src.display}
                                                 <button

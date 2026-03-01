@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MultiSelectSearch } from "@/components/ui/multi-select-search";
 import type { MultiSelectSearchOption } from "@/components/ui/multi-select-search";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { POFiltersState } from "@/lib/po-filters";
 import { hasActivePOFilters } from "@/lib/po-filters";
@@ -143,50 +145,46 @@ export function POFilters({
             <div className="min-w-0">
               <label className={filterLabelClass}>Purchase Order Date Wise</label>
               <div className="flex gap-2">
-                <div className="relative flex-1 min-w-0">
-                  <Input
-                    type="date"
+                <div className="flex-1 min-w-0">
+                  <DatePicker
                     value={filters.poDateFrom}
-                    onChange={(e) => update({ poDateFrom: e.target.value })}
-                    className={cn(inputClass, "h-9 w-full pr-9")}
-                    aria-label="PO date from"
+                    onChange={(date) => update({ poDateFrom: date ? format(date, "yyyy-MM-dd") : "" })}
+                    className="h-9 w-full border-secondary-200"
+                    placeholder="From"
+                    clearable={true}
                   />
-                  <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
                 </div>
-                <div className="relative flex-1 min-w-0">
-                  <Input
-                    type="date"
+                <div className="flex-1 min-w-0">
+                  <DatePicker
                     value={filters.poDateTo}
-                    onChange={(e) => update({ poDateTo: e.target.value })}
-                    className={cn(inputClass, "h-9 w-full pr-9")}
-                    aria-label="PO date to"
+                    onChange={(date) => update({ poDateTo: date ? format(date, "yyyy-MM-dd") : "" })}
+                    className="h-9 w-full border-secondary-200"
+                    placeholder="To"
+                    clearable={true}
                   />
-                  <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
                 </div>
               </div>
             </div>
             <div className="min-w-0">
               <label className={filterLabelClass}>Delivery Date Wise</label>
               <div className="flex gap-2">
-                <div className="relative flex-1 min-w-0">
-                  <Input
-                    type="date"
+                <div className="flex-1 min-w-0">
+                  <DatePicker
                     value={filters.deliveryDateFrom}
-                    onChange={(e) => update({ deliveryDateFrom: e.target.value })}
-                    className={cn(inputClass, "h-9 w-full pr-9")}
-                    aria-label="Delivery date from"
+                    onChange={(date) => update({ deliveryDateFrom: date ? format(date, "yyyy-MM-dd") : "" })}
+                    className="h-9 w-full border-secondary-200"
+                    placeholder="From"
+                    clearable={true}
                   />
-                  <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
                 </div>
-                <div className="relative flex-1 min-w-0">
-                  <Input
-                    type="date"
+                <div className="flex-1 min-w-0">
+                  <DatePicker
                     value={filters.deliveryDateTo}
-                    onChange={(e) => update({ deliveryDateTo: e.target.value })}
-                    className={cn(inputClass, "h-9 w-full pr-9")}
-                    aria-label="Delivery date to"
+                    onChange={(date) => update({ deliveryDateTo: date ? format(date, "yyyy-MM-dd") : "" })}
+                    className="h-9 w-full border-secondary-200"
+                    placeholder="To"
+                    clearable={true}
                   />
-                  <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
                 </div>
               </div>
             </div>

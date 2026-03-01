@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Company } from "@/types";
@@ -13,13 +13,14 @@ import { useEffect, useRef, useState } from "react";
 import { Save, X, Building2, MapPin, FileDigit, Phone, Mail, ImagePlus, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "react-hot-toast";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const schema = z.object({
     name: z.string().min(1, "Company name is required"),
     address: z.string().min(1, "Address is required"),
-    gstNo: z.string().min(1, "GST number is required"),
+    gstNo: z.string().length(15, "GST number must be exactly 15 characters").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format"),
+    gstDate: z.string().min(1, "GST registration date is required"),
     logoUrl: z.string().optional(),
-    pan: z.string().optional(),
     state: z.string().optional(),
     city: z.string().optional(),
     pincode: z.string().optional(),
@@ -46,14 +47,15 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
         formState: { errors },
         setValue,
         watch,
+        control,
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
             name: "",
             address: "",
             gstNo: "",
+            gstDate: "",
             logoUrl: "",
-            pan: "",
             state: "",
             city: "",
             pincode: "",
@@ -77,8 +79,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 name: item.name,
                 address: item.address ?? "",
                 gstNo: item.gstNo ?? "",
+                gstDate: item.gstDate ? new Date(item.gstDate).toISOString().split('T')[0] : "",
                 logoUrl: item.logoUrl ?? "",
-                pan: item.pan ?? "",
                 state: item.state ?? "",
                 city: item.city ?? "",
                 pincode: item.pincode ?? "",
@@ -91,8 +93,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 name: "",
                 address: "",
                 gstNo: "",
+                gstDate: "",
                 logoUrl: "",
-                pan: "",
                 state: "",
                 city: "",
                 pincode: "",
@@ -218,13 +220,34 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                         <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Number <span className="text-red-500">*</span></Label>
                         <div className="relative">
                             <FileDigit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                            <Input id="company-gst" {...register("gstNo")} className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 24AAFCA0525L1ZY" />
+                            <Input
+                                id="company-gst"
+                                {...register("gstNo")}
+                                maxLength={15}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                    setValue("gstNo", value);
+                                }}
+                                className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                placeholder="e.g. 24AAFCA0525L1ZY"
+                            />
                         </div>
                         {errors.gstNo && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.gstNo.message}</p>}
                     </div>
                     <div className="space-y-1.5 min-w-0">
-                        <Label htmlFor="company-pan" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">PAN (optional)</Label>
-                        <Input id="company-pan" {...register("pan")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. AAFCA1234A" />
+                        <Label htmlFor="company-gst-date" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Date <span className="text-red-500">*</span></Label>
+                        <Controller
+                            control={control}
+                            name="gstDate"
+                            render={({ field }) => (
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : "")}
+                                    className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                />
+                            )}
+                        />
+                        {errors.gstDate && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.gstDate.message}</p>}
                     </div>
                 </div>
 

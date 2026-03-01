@@ -60,8 +60,7 @@ export enum MovementType {
 
 export enum InwardSourceType {
   PO = 0,
-  OutwardReturn = 1,
-  JobWork = 2,
+  JobWork = 1,
 }
 
 export enum InwardStatus {
@@ -117,7 +116,6 @@ export interface Company {
   id: number;
   name: string;
   address?: string | null;
-  pan?: string | null;
   state?: string | null;
   city?: string | null;
   pincode?: string | null;

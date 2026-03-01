@@ -42,8 +42,6 @@ namespace net_backend.Models
         [Required]
         public string Name { get; set; } = string.Empty;
         public string? Address { get; set; }
-        [MaxLength(50)]
-        public string? Pan { get; set; }
         [MaxLength(100)]
         public string? State { get; set; }
         [MaxLength(100)]
@@ -86,7 +84,7 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
-        public int? LocationId { get; set; }
+        public int? CompanyId { get; set; }
         public string? PartyCategory { get; set; }
         public string? PartyCode { get; set; }
         public string? CustomerType { get; set; }
@@ -99,9 +97,10 @@ namespace net_backend.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public int? LocationId { get; set; } // Kept for schema compatibility or migration if needed, but logic will use CompanyId
 
-        [ForeignKey("LocationId")]
-        public virtual Location? Location { get; set; }
+        [ForeignKey("CompanyId")]
+        public virtual Company? Company { get; set; }
     }
 
     [Table("item_types")]

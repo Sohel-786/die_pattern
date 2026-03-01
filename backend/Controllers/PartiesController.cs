@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using System.Text.RegularExpressions;
 
 namespace net_backend.Controllers
 {
@@ -21,9 +22,9 @@ namespace net_backend.Controllers
         public async Task<IActionResult> Export()
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
+            var companyId = await GetCurrentCompanyIdAsync();
             var parties = await _context.Parties
-                .Where(p => p.LocationId == locationId)
+                .Where(p => p.CompanyId == companyId)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             var data = parties.Select(p => new {
@@ -35,7 +36,7 @@ namespace net_backend.Controllers
                 PhoneNumber = p.PhoneNumber ?? "",
                 Email = p.Email ?? "",
                 GstNo = p.GstNo ?? "",
-                GstDate = p.GstDate,
+                GstDate = p.GstDate.HasValue ? p.GstDate.Value.ToString("yyyy-MM-dd") : "",
                 IsActive = p.IsActive ? "Yes" : "No",
                 CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm")
             });
@@ -74,8 +75,8 @@ namespace net_backend.Controllers
                     var result = _excelService.ImportExcel<PartyImportDto>(stream);
                     var validation = await ValidateParties(result.Data);
                     var newParties = new List<Party>();
+                    var companyId = await GetCurrentCompanyIdAsync();
 
-                    var locationId = await GetCurrentLocationIdAsync();
                     foreach (var validRow in validation.Valid)
                     {
                         newParties.Add(new Party
@@ -86,11 +87,11 @@ namespace net_backend.Controllers
                             Address = validRow.Data.Address!,
                             ContactPerson = validRow.Data.ContactPerson!,
                             PhoneNumber = validRow.Data.PhoneNumber!,
-                            Email = validRow.Data.Email,
-                            GstNo = validRow.Data.GstNo!,
+                            Email = validRow.Data.Email?.Trim(),
+                            GstNo = validRow.Data.GstNo!.Trim().ToUpper(),    // normalize: always uppercase
                             GstDate = validRow.Data.GstDate,
                             IsActive = true,
-                            LocationId = locationId,
+                            CompanyId = companyId,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
                         });
@@ -121,42 +122,85 @@ namespace net_backend.Controllers
         private async Task<ValidationResultDto<PartyImportDto>> ValidateParties(List<ExcelRow<PartyImportDto>> rows)
         {
             var validation = new ValidationResultDto<PartyImportDto>();
-            var locationId = await GetCurrentLocationIdAsync();
+            var companyId = await GetCurrentCompanyIdAsync();
+            var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+
+            // Load existing data for this company (name lookup) and all parties (GST lookup)
             var existingNames = await _context.Parties
-                .Where(p => p.LocationId == locationId)
+                .Where(p => p.CompanyId == companyId)
                 .Select(p => p.Name.ToLower())
                 .ToListAsync();
-            var processedInFile = new HashSet<string>();
+            var existingGstMap = await _context.Parties
+                .Where(p => p.GstNo != null)
+                .Select(p => new { GstNo = p.GstNo!.ToUpper(), p.Name })
+                .ToDictionaryAsync(p => p.GstNo, p => p.Name);
+
+            var processedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var processedGsts  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var row in rows)
             {
                 var item = row.Data;
-                if (string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.PartyCategory) || 
-                    string.IsNullOrWhiteSpace(item.CustomerType) || string.IsNullOrWhiteSpace(item.ContactPerson) || 
-                    string.IsNullOrWhiteSpace(item.PhoneNumber) || string.IsNullOrWhiteSpace(item.GstNo) || 
+
+                // ── Mandatory fields ─────────────────────────────────────────
+                if (string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.PartyCategory) ||
+                    string.IsNullOrWhiteSpace(item.CustomerType) || string.IsNullOrWhiteSpace(item.ContactPerson) ||
+                    string.IsNullOrWhiteSpace(item.PhoneNumber) || string.IsNullOrWhiteSpace(item.GstNo) ||
                     string.IsNullOrWhiteSpace(item.Address))
                 {
-                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name, Category, Customer Type, Contact Person, Contact No., GST No., and Address are mandatory" });
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name, Category, Customer Type, Contact Person, Contact No., GST No., and Address are mandatory." });
+                    continue;
+                }
+
+                if (!item.GstDate.HasValue)
+                {
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "GST Date is mandatory." });
                     continue;
                 }
 
                 var nameLower = item.Name.Trim().ToLower();
+                var gstNorm   = item.GstNo.Trim().ToUpper();
 
-                if (processedInFile.Contains(nameLower))
+                // ── GST format ───────────────────────────────────────────────
+                if (!gstRegex.IsMatch(gstNorm))
                 {
-                    validation.Duplicates.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate Name in file" });
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = $"Invalid GST format '{gstNorm}'. Must be a valid 15-character Indian GSTIN." });
                     continue;
                 }
 
+                // ── Duplicate name in file ───────────────────────────────────
+                if (processedNames.Contains(nameLower))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Duplicate party name in file." });
+                    continue;
+                }
+
+                // ── Duplicate GST in file ────────────────────────────────────
+                if (processedGsts.Contains(gstNorm))
+                {
+                    validation.Duplicates.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = $"Duplicate GST No. '{gstNorm}' in file." });
+                    continue;
+                }
+
+                // ── Name already exists in DB (company-scoped) ───────────────
                 if (existingNames.Contains(nameLower))
                 {
-                    validation.AlreadyExists.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Already exists in database" });
-                    processedInFile.Add(nameLower);
+                    validation.AlreadyExists.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = $"Party '{item.Name.Trim()}' already exists in this company." });
+                    processedNames.Add(nameLower);
+                    continue;
+                }
+
+                // ── GST already exists in DB (globally unique) ───────────────
+                if (existingGstMap.TryGetValue(gstNorm, out var existingOwner))
+                {
+                    validation.AlreadyExists.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = $"GST No. '{gstNorm}' is already registered under party '{existingOwner}'." });
+                    processedGsts.Add(gstNorm);
                     continue;
                 }
 
                 validation.Valid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item });
-                processedInFile.Add(nameLower);
+                processedNames.Add(nameLower);
+                processedGsts.Add(gstNorm);
             }
 
             return validation;
@@ -166,9 +210,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll()
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
+            var companyId = await GetCurrentCompanyIdAsync();
             var parties = await _context.Parties
-                .Where(p => p.LocationId == locationId)
+                .Where(p => p.CompanyId == companyId)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
@@ -177,9 +221,9 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive()
         {
-            var locationId = await GetCurrentLocationIdAsync();
+            var companyId = await GetCurrentCompanyIdAsync();
             var parties = await _context.Parties
-                .Where(p => p.LocationId == locationId && p.IsActive)
+                .Where(p => p.CompanyId == companyId && p.IsActive)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
@@ -189,18 +233,40 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Party>>> Create([FromBody] Party party)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
-            if (await _context.Parties.AnyAsync(p => p.LocationId == locationId && p.Name.ToLower() == party.Name.Trim().ToLower()))
-                return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
+            var companyId = await GetCurrentCompanyIdAsync();
 
-            if (string.IsNullOrWhiteSpace(party.PartyCategory) || string.IsNullOrWhiteSpace(party.CustomerType) ||
+            // ── 1. Mandatory field check ─────────────────────────────────────
+            if (string.IsNullOrWhiteSpace(party.Name) ||
+                string.IsNullOrWhiteSpace(party.PartyCategory) || string.IsNullOrWhiteSpace(party.CustomerType) ||
                 string.IsNullOrWhiteSpace(party.ContactPerson) || string.IsNullOrWhiteSpace(party.PhoneNumber) ||
                 string.IsNullOrWhiteSpace(party.GstNo) || string.IsNullOrWhiteSpace(party.Address))
             {
-                return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields must be provided" });
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields (Name, Category, Customer Type, Contact Person, Contact No., GST No., Address) must be provided." });
             }
 
-            party.LocationId = locationId;
+            if (!party.GstDate.HasValue)
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "GST Date is required." });
+
+            // ── 2. GST format validation (Indian GSTIN – 15 chars) ──────────
+            var gstNorm = party.GstNo.Trim().ToUpper();
+            var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+            if (!gstRegex.IsMatch(gstNorm))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is exactly 15 alphanumeric characters (e.g. 24AABCU9603R1ZA)." });
+
+            // ── 3. Company-scoped party name uniqueness ──────────────────────
+            var nameTrimmed = party.Name.Trim();
+            if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Name.ToLower() == nameTrimmed.ToLower()))
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company. Party names must be unique per company." });
+
+            // ── 4. Global GST uniqueness (GSTIN is nationally unique in India) 
+            var existingGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+            if (existingGst != null)
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingGst.Name}'. A GSTIN can only be assigned to one party." });
+
+            // ── 5. Persist ──────────────────────────────────────────────────
+            party.Name = nameTrimmed;
+            party.GstNo = gstNorm;
+            party.CompanyId = companyId;
             party.CreatedAt = DateTime.Now;
             party.UpdatedAt = DateTime.Now;
             _context.Parties.Add(party);
@@ -213,42 +279,66 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] UpdatePartyRequest request)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
-            var existing = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
-            if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found" });
+            var companyId = await GetCurrentCompanyIdAsync();
+            var existing = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.CompanyId == companyId);
+            if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found or access denied." });
 
-            if (request.Name != null) 
+            // ── Name uniqueness (company-scoped, exclude self) ───────────────
+            if (request.Name != null)
             {
-                if (await _context.Parties.AnyAsync(p => p.LocationId == locationId && p.Id != id && p.Name.ToLower() == request.Name.Trim().ToLower()))
-                    return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name already exists" });
-                existing.Name = request.Name.Trim();
+                var nameTrimmed = request.Name.Trim();
+                if (string.IsNullOrWhiteSpace(nameTrimmed))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party name cannot be empty." });
+                if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Id != id && p.Name.ToLower() == nameTrimmed.ToLower()))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company." });
+                existing.Name = nameTrimmed;
             }
+
+            // ── GST format + global uniqueness (exclude self) ────────────────
+            if (request.GstNo != null)
+            {
+                var gstNorm = request.GstNo.Trim().ToUpper();
+                if (string.IsNullOrWhiteSpace(gstNorm))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = "GST No. cannot be empty." });
+
+                var gstRegex = new Regex(@"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$");
+                if (!gstRegex.IsMatch(gstNorm))
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"Invalid GST number format '{gstNorm}'. A valid Indian GSTIN is exactly 15 alphanumeric characters (e.g. 24AABCU9603R1ZA)." });
+
+                var existingGst = await _context.Parties.FirstOrDefaultAsync(p => p.Id != id && p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+                if (existingGst != null)
+                    return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingGst.Name}'. A GSTIN can only be assigned to one party." });
+
+                existing.GstNo = gstNorm;
+            }
+
+            // ── Other fields ────────────────────────────────────────────────
             if (request.PartyCategory != null) {
-                if (string.IsNullOrWhiteSpace(request.PartyCategory)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party Category cannot be empty" });
+                if (string.IsNullOrWhiteSpace(request.PartyCategory)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Party Category cannot be empty." });
                 existing.PartyCategory = request.PartyCategory;
             }
             if (request.CustomerType != null) {
-                if (string.IsNullOrWhiteSpace(request.CustomerType)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Customer Type cannot be empty" });
+                if (string.IsNullOrWhiteSpace(request.CustomerType)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Customer Type cannot be empty." });
                 existing.CustomerType = request.CustomerType;
             }
             if (request.Address != null) {
-                if (string.IsNullOrWhiteSpace(request.Address)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Address cannot be empty" });
+                if (string.IsNullOrWhiteSpace(request.Address)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Address cannot be empty." });
                 existing.Address = request.Address;
             }
             if (request.ContactPerson != null) {
-                if (string.IsNullOrWhiteSpace(request.ContactPerson)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Contact Person cannot be empty" });
+                if (string.IsNullOrWhiteSpace(request.ContactPerson)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Contact Person cannot be empty." });
                 existing.ContactPerson = request.ContactPerson;
             }
             if (request.PhoneNumber != null) {
-                if (string.IsNullOrWhiteSpace(request.PhoneNumber)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Phone Number cannot be empty" });
+                if (string.IsNullOrWhiteSpace(request.PhoneNumber)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "Phone Number cannot be empty." });
                 existing.PhoneNumber = request.PhoneNumber;
             }
-            if (request.GstNo != null) {
-                if (string.IsNullOrWhiteSpace(request.GstNo)) return BadRequest(new ApiResponse<Party> { Success = false, Message = "GST No cannot be empty" });
-                existing.GstNo = request.GstNo;
-            }
             if (request.Email != null) existing.Email = request.Email;
-            if (request.GstDate != null) existing.GstDate = request.GstDate;
+            // ── GstDate mandatory check on update ───────────────────────────
+            if (request.GstDate.HasValue)
+                existing.GstDate = request.GstDate;
+            else if (existing.GstDate == null)
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "GST Date is required." });
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;
 
@@ -260,8 +350,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
-            var party = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
+            var companyId = await GetCurrentCompanyIdAsync();
+            var party = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.CompanyId == companyId);
             if (party == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Party not found" });
 
             _context.Parties.Remove(party);

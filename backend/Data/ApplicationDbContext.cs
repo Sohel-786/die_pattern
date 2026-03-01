@@ -269,9 +269,9 @@ namespace net_backend.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Party>()
-                .HasOne(p => p.Location)
+                .HasOne(p => p.Company)
                 .WithMany()
-                .HasForeignKey(p => p.LocationId)
+                .HasForeignKey(p => p.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Item>()

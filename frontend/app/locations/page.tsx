@@ -68,6 +68,8 @@ export default function LocationsPage() {
       toast.success("Location registered successfully");
       setSelectedItem(null);
       setDialogKey(prev => prev + 1); // Reset for next entry
+      // Refresh allowed location access in header without page reload
+      window.dispatchEvent(new CustomEvent("refreshLocationAccess"));
     },
     onError: (err: any) => toast.error(err.response?.data?.message || "Registration failed")
   });

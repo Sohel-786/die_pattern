@@ -44,7 +44,6 @@ export function SourceSelectionDialog({
             let url = "";
             if (sourceType === InwardSourceType.PO) url = "/purchase-orders/approved";
             else if (sourceType === InwardSourceType.JobWork) url = "/job-works/pending";
-            else if (sourceType === InwardSourceType.OutwardReturn) url = "/movements/outward-pending-return";
 
             const params = vendorId ? { vendorId } : {};
             const res = await api.get(url, { params });
@@ -60,7 +59,7 @@ export function SourceSelectionDialog({
     };
 
     const filtered = sources.filter((s: any) => {
-        const sourcePartyId = sourceType === InwardSourceType.OutwardReturn ? s.toPartyId : s.vendorId;
+        const sourcePartyId = s.vendorId;
         if (sourcePartyId !== vendorId) return false;
 
         const term = search.toLowerCase();
@@ -68,8 +67,6 @@ export function SourceSelectionDialog({
             return s.poNo?.toLowerCase().includes(term) || s.vendorName?.toLowerCase().includes(term);
         } else if (sourceType === InwardSourceType.JobWork) {
             return s.jwNo?.toLowerCase().includes(term) || s.vendorName?.toLowerCase().includes(term);
-        } else {
-            return (s.movementNo || s.id.toString()).toLowerCase().includes(term) || s.toPartyName?.toLowerCase().includes(term);
         }
     }).filter((s: any) => !alreadySelectedIds.includes(s.id));
 
@@ -110,18 +107,6 @@ export function SourceSelectionDialog({
                     sourceRefDisplay: source.jobWorkNo,
                     vendorId: source.vendorId,
                     vendorName: source.vendorName
-                });
-            } else if (sourceType === InwardSourceType.OutwardReturn) {
-                allItems.push({
-                    itemId: source.itemId,
-                    itemName: source.itemName,
-                    mainPartName: source.mainPartName,
-                    quantity: 1,
-                    sourceType: InwardSourceType.OutwardReturn,
-                    sourceRefId: source.id,
-                    sourceRefDisplay: source.movementNo || `OUT-${source.id}`,
-                    vendorId: source.toPartyId,
-                    vendorName: source.toPartyName
                 });
             }
         });
@@ -189,13 +174,9 @@ export function SourceSelectionDialog({
                                         refNo = item.poNo;
                                         party = item.vendorName;
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
-                                    } else if (sourceType === InwardSourceType.JobWork) {
+                                    } else {
                                         refNo = item.jobWorkNo;
                                         party = item.vendorName;
-                                        dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
-                                    } else {
-                                        refNo = item.movementNo || `OUT-${item.id}`;
-                                        party = item.toPartyName;
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
                                     }
 

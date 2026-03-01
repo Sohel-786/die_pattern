@@ -5,7 +5,6 @@ import { ArrowLeft, Send, Loader2, Package, FileText, Truck, Briefcase, Info, Ca
 import api from "@/lib/api";
 import { Inward, InwardSourceType, InwardStatus } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useRouter, useParams } from "next/navigation";
 import { format } from "date-fns";
@@ -15,7 +14,6 @@ import { cn } from "@/lib/utils";
 
 const SOURCE_LABELS: Record<InwardSourceType, string> = {
     [InwardSourceType.PO]: "Purchase Order",
-    [InwardSourceType.OutwardReturn]: "Outward Return",
     [InwardSourceType.JobWork]: "Job Work",
 };
 
@@ -207,7 +205,7 @@ export default function InwardDetailPage() {
                                             <td className="py-5 px-8">
                                                 <div className="flex flex-col">
                                                     <span className="text-[9px] font-black text-secondary-400 uppercase leading-none mb-1 tracking-widest flex items-center gap-1.5">
-                                                        {line.sourceType === InwardSourceType.PO ? <FileText className="w-3 h-3" /> : line.sourceType === InwardSourceType.OutwardReturn ? <Truck className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
+                                                        {line.sourceType === InwardSourceType.PO ? <FileText className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
                                                         {SOURCE_LABELS[line.sourceType]}
                                                     </span>
                                                     <span className="font-black text-primary-600 tracking-tight text-sm">

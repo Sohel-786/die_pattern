@@ -120,11 +120,11 @@ namespace net_backend.Controllers
                 .Include(i => i.Vendor)
                 .Include(i => i.Creator)
                 .Include(i => i.Lines)
-                    .ThenInclude(l => l.Item)
-                        .ThenInclude(i => i.ItemType)
+                    .ThenInclude(l => l.Item!)
+                        .ThenInclude(i => i!.ItemType)
                 .Include(i => i.Lines)
-                    .ThenInclude(l => l.Item)
-                        .ThenInclude(i => i.Material)
+                    .ThenInclude(l => l.Item!)
+                        .ThenInclude(i => i!.Material)
                 .Include(i => i.Lines)
                 .OrderByDescending(i => i.CreatedAt)
                 .AsQueryable();
@@ -148,8 +148,7 @@ namespace net_backend.Controllers
                 // This is a bit expensive but requested: filter by source number across POs and JWs
                 query = query.Where(i => i.Lines.Any(l => 
                     (l.SourceType == InwardSourceType.PO && _context.PurchaseOrders.Any(p => p.Id == l.SourceRefId && p.PoNo.Contains(sourceNo))) ||
-                    (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.Contains(sourceNo))) ||
-                    (l.SourceType == InwardSourceType.OutwardReturn && _context.Outwards.Any(o => o.Id == l.SourceRefId && o.OutwardNo != null && o.OutwardNo.Contains(sourceNo)))
+                    (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.Contains(sourceNo)))
                 ));
             }
 
@@ -164,11 +163,9 @@ namespace net_backend.Controllers
             // Pre-fetch source numbers for display
             var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
-            var outIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
 
             var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
-            var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
             
             var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
             var qcs = await _context.QcItems
@@ -176,7 +173,7 @@ namespace net_backend.Controllers
                 .Include(q => q.QcEntry)
                 .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
-            var data = list.Select(i => MapToDto(i, pos, jws, outs, qcs)).ToList();
+            var data = list.Select(i => MapToDto(i, pos, jws, null, qcs)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
         }
 
@@ -208,11 +205,9 @@ namespace net_backend.Controllers
             // Fetch source details for single result too
             var poIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
-            var outIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
 
             var pos = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
-            var outs = await _context.Outwards.Where(o => outIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.OutwardNo ?? $"OUT-{o.Id}");
             
             var lineIds = inward.Lines.Select(l => l.Id).ToList();
             var qcs = await _context.QcItems
@@ -220,7 +215,7 @@ namespace net_backend.Controllers
                 .Include(q => q.QcEntry)
                 .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
 
-            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, outs, qcs) });
+            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, null, qcs) });
         }
 
         [HttpPost]
@@ -362,7 +357,7 @@ namespace net_backend.Controllers
         }
 
         [HttpPost("{id}/submit")]
-        public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
+        public ActionResult<ApiResponse<bool>> Submit(int id)
         {
             // Legacy endpoint, keep for compatibility but now handled in Create
             return Ok(new ApiResponse<bool> { Data = true });
@@ -418,14 +413,6 @@ namespace net_backend.Controllers
                     throw new ArgumentException("This PO is already fully inwarded.");
                 vendorId = po.VendorId;
             }
-            else if (sourceType == InwardSourceType.OutwardReturn)
-            {
-                var outward = await _context.Outwards.FirstOrDefaultAsync(o => o.Id == sourceRefId);
-                if (outward == null) throw new ArgumentException("Invalid Outward reference.");
-                var alreadyInwarded = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive);
-                if (alreadyInwarded) throw new ArgumentException("This Outward challan has already been inwarded.");
-                vendorId = outward.PartyId;
-            }
             else if (sourceType == InwardSourceType.JobWork)
             {
                 var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
@@ -448,7 +435,6 @@ namespace net_backend.Controllers
             var fromStrs = new List<string>();
             if (sourceTypes.Contains(InwardSourceType.PO)) fromStrs.Add("Purchase Order");
             if (sourceTypes.Contains(InwardSourceType.JobWork)) fromStrs.Add("Job Work");
-            if (sourceTypes.Contains(InwardSourceType.OutwardReturn)) fromStrs.Add("Outward");
 
             var dto = new InwardDto
             {
@@ -484,7 +470,6 @@ namespace net_backend.Controllers
                     Remarks = l.Remarks,
                     SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value]
                                      : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
-                                     : (l.SourceType == InwardSourceType.OutwardReturn && l.SourceRefId.HasValue && outs != null && outs.ContainsKey(l.SourceRefId.Value)) ? outs[l.SourceRefId.Value]
                                      : l.SourceRefId?.ToString(),
                     IsQCPending = l.IsQCPending,
                     IsQCApproved = l.IsQCApproved,

@@ -195,6 +195,7 @@ export default function CompaniesPage() {
               <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
                 <th className="px-4 py-3 font-semibold w-16 text-center">Sr.No</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
+                <th className="px-4 py-3 font-semibold">GST Details</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold text-right">Actions</th>
               </tr>
@@ -217,6 +218,16 @@ export default function CompaniesPage() {
                     <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
                     <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight">
                       {company.name}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs font-bold text-secondary-900">{company.gstNo}</span>
+                        {company.gstDate && (
+                          <span className="text-[10px] text-secondary-500 font-medium">
+                            Reg: {new Date(company.gstDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${company.isActive
@@ -258,7 +269,7 @@ export default function CompaniesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-secondary-500 italic">
+                  <td colSpan={5} className="py-12 text-center text-secondary-500 italic">
                     No companies found matching your criteria.
                   </td>
                 </tr>

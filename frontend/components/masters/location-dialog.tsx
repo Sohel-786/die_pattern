@@ -88,13 +88,19 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                                 options={companies.map(c => ({ value: c.id, label: c.name }))}
                                 value={companyId || ""}
                                 onChange={(val) => {
-                                    setValue("companyId", Number(val), { shouldValidate: true });
+                                    if (!item) setValue("companyId", Number(val), { shouldValidate: true });
                                 }}
                                 placeholder="Select Parent Unit..."
                                 id="parent-company"
+                                disabled={!!item}
                             />
+                            {!!item && (
+                                <p className="text-[11px] text-secondary-400 mt-1 font-medium italic flex items-center gap-1">
+                                    <span>🔒</span> Company cannot be changed after a location is created.
+                                </p>
+                            )}
                         </div>
-                        {errors.companyId && <p className="text-xs font-medium text-rose-500 mt-1">{errors.companyId.message}</p>}
+                        {errors.companyId && !item && <p className="text-xs font-medium text-rose-500 mt-1">{errors.companyId.message}</p>}
                     </div>
 
                     <div className="space-y-2">

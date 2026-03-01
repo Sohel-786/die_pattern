@@ -102,13 +102,11 @@ export default function QualityControlPage() {
             typeof sourceType === "number"
                 ? sourceType
                 : typeof sourceType === "string"
-                  ? (sourceType === "PO" ? 0 : sourceType === "OutwardReturn" ? 1 : sourceType === "JobWork" ? 2 : -1)
-                  : -1;
+                    ? (sourceType === "PO" ? 0 : sourceType === "JobWork" ? 2 : -1)
+                    : -1;
         switch (n) {
             case 0:
                 return "Purchase Order";
-            case 1:
-                return "Outward Return";
             case 2:
                 return "Job Work";
             default:

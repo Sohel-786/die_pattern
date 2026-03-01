@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Party } from "@/types";
@@ -12,8 +12,71 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
-import { Save, X, ShieldCheck, Power, User, Phone, Mail, MapPin } from "lucide-react";
+import { Save, X, ShieldCheck, Power, User, Phone, Mail, MapPin, ShieldAlert } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { DatePicker } from "@/components/ui/date-picker";
+
+// Indian GSTIN: 2-digit state code + 10-char PAN + entity no. + Z + check digit
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+const GST_SEGMENTS = [
+    { label: "State", pos: [0, 2], color: "bg-blue-500" },
+    { label: "PAN", pos: [2, 12], color: "bg-violet-500" },
+    { label: "Entity", pos: [12, 13], color: "bg-amber-500" },
+    { label: "Blank", pos: [13, 14], color: "bg-secondary-400" },
+    { label: "Check", pos: [14, 15], color: "bg-green-500" },
+];
+
+function GstSegmentGuide({ value }: { value: string }) {
+    const len = value.length;
+    const activeSegment = GST_SEGMENTS.find(s => len >= s.pos[0] && len < s.pos[1]);
+
+    return (
+        <div className="mt-1.5 space-y-1.5">
+            {/* Visual blocks */}
+            <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden">
+                {GST_SEGMENTS.map((seg) => {
+                    const filled = Math.min(len, seg.pos[1]) - seg.pos[0];
+                    const total = seg.pos[1] - seg.pos[0];
+                    const pct = Math.max(0, Math.min(1, filled / total));
+                    return (
+                        <div key={seg.label} className="flex-1 bg-secondary-100 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full transition-all duration-150 ${seg.color}`}
+                                style={{ width: `${pct * 100}%` }}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+            {/* Labels */}
+            <div className="flex gap-0.5">
+                {GST_SEGMENTS.map((seg) => (
+                    <div
+                        key={seg.label}
+                        className={`flex-1 text-center text-[9px] font-bold uppercase tracking-wider transition-colors ${activeSegment?.label === seg.label
+                            ? "text-primary-700"
+                            : len >= seg.pos[1]
+                                ? "text-secondary-400 line-through"
+                                : "text-secondary-300"
+                            }`}
+                    >
+                        {seg.label}
+                    </div>
+                ))}
+            </div>
+            {/* Segment format hint */}
+            <p className="text-[10px] text-secondary-400 font-mono tracking-widest">
+                <span className="text-blue-500 font-bold">XX</span>
+                <span className="text-violet-500 font-bold">AAAAA0000A</span>
+                <span className="text-amber-500 font-bold">1</span>
+                <span className="text-secondary-400 font-bold">Z</span>
+                <span className="text-green-500 font-bold">5</span>
+                <span className="text-secondary-400 ml-2 not-italic text-[9px]">← GSTIN format (15 chars)</span>
+            </p>
+        </div>
+    );
+}
 
 const partySchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -21,10 +84,13 @@ const partySchema = z.object({
     customerType: z.string().min(1, "Customer Type is required"),
     contactPerson: z.string().min(1, "Contact Person is required"),
     phoneNumber: z.string().min(1, "Contact No. is required"),
-    gstNo: z.string().min(1, "GST No is required"),
+    gstNo: z.string()
+        .min(1, "GST No. is required")
+        .length(15, "GST No. must be exactly 15 characters")
+        .regex(GST_REGEX, "Invalid GST format — e.g. 24AABCU9603R1ZA"),
     address: z.string().min(1, "Address is required"),
     email: z.string().email("Invalid email").optional().nullable().or(z.literal("")),
-    gstDate: z.string().optional().nullable(),
+    gstDate: z.string({ required_error: "GST Date is required" }).min(1, "GST Date is required"),
     isActive: z.boolean().default(true),
 });
 
@@ -47,6 +113,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
         formState: { errors },
         setValue,
         watch,
+        control,
     } = useForm<PartyFormValues>({
         resolver: zodResolver(partySchema),
         defaultValues: {
@@ -192,21 +259,87 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             <Label htmlFor="gstNo" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
                                 GST No <span className="text-red-500">*</span>
                             </Label>
-                            <Input
-                                id="gstNo"
-                                {...register("gstNo")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
-                                placeholder="24AASFJ2163R1Z0"
-                            />
-                            {errors.gstNo && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.gstNo.message}</p>}
+                            <div className="relative">
+                                <Input
+                                    id="gstNo"
+                                    value={watch("gstNo") || ""}
+                                    maxLength={15}
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono font-bold uppercase tracking-widest pr-10 ${watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
+                                        ? "border-green-400 focus:ring-green-400 text-green-700"
+                                        : errors.gstNo
+                                            ? "border-rose-400 focus:ring-rose-400"
+                                            : ""
+                                        }`}
+                                    placeholder="24AABCU9603R1ZA"
+                                    onKeyDown={(e) => {
+                                        // Allow: backspace, delete, tab, escape, arrows, home, end
+                                        const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
+                                        if (allow.includes(e.key)) return;
+                                        // Block non-alphanumeric
+                                        if (!/^[a-zA-Z0-9]$/.test(e.key)) {
+                                            e.preventDefault();
+                                            return;
+                                        }
+                                        // Block if at max length
+                                        const current = watch("gstNo") || "";
+                                        if (current.length >= 15) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    onChange={(e) => {
+                                        // Auto-uppercase and strip non-alphanumeric, enforce max 15
+                                        const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
+                                        setValue("gstNo", raw, { shouldValidate: true });
+                                    }}
+                                />
+                                {/* Live validity icon */}
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    {watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "") ? (
+                                        <span className="text-green-500 text-xs font-bold">✓</span>
+                                    ) : watch("gstNo")?.length === 15 ? (
+                                        <ShieldAlert className="w-4 h-4 text-rose-500" />
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-secondary-400">{watch("gstNo")?.length ?? 0}/15</span>
+                                    )}
+                                </div>
+                            </div>
+                            <GstSegmentGuide value={watch("gstNo") || ""} />
+                            {errors.gstNo && (
+                                <p className="text-xs text-rose-500 mt-1 font-medium flex items-center gap-1">
+                                    <ShieldAlert className="w-3 h-3 shrink-0" />
+                                    {errors.gstNo.message}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="gstDate" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">GST Date</Label>
-                            <Input
-                                id="gstDate"
-                                type="date"
-                                {...register("gstDate")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                            <Label htmlFor="gstDate" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
+                                GST Date <span className="text-red-500">*</span>
+                            </Label>
+                            <Controller
+                                control={control}
+                                name="gstDate"
+                                render={({ field }) => (
+                                    <>
+                                        <DatePicker
+                                            value={field.value || ""}
+                                            onChange={(date) => {
+                                                field.onChange(date ? date.toISOString().split('T')[0] : "");
+                                            }}
+                                            className={`h-10 shadow-sm text-sm font-medium ${errors.gstDate
+                                                    ? "border-rose-400 focus:ring-rose-400"
+                                                    : "border-secondary-300 focus:ring-primary-500"
+                                                }`}
+                                        />
+                                        {errors.gstDate && (
+                                            <p className="text-xs text-rose-500 mt-1 font-medium flex items-center gap-1">
+                                                <ShieldAlert className="w-3 h-3 shrink-0" />
+                                                {errors.gstDate.message}
+                                            </p>
+                                        )}
+                                    </>
+                                )}
                             />
                         </div>
                     </div>

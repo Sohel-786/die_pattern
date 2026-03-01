@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -104,51 +104,51 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
   const isHorizontal = permissions?.navigationLayout === 'HORIZONTAL';
 
-  useEffect(() => {
-    const validateAndGetUser = async () => {
-      if (pathname === '/login') {
-        setLoading(false);
-        return;
-      }
+  const validateAndGetUser = useCallback(async () => {
+    if (pathname === '/login') {
+      setLoading(false);
+      return;
+    }
 
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch {
-          localStorage.removeItem('user');
-        }
-      }
-
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
       try {
-        const response = await api.post('/auth/validate');
-        if (response.data.user) {
-          setUser(response.data.user);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
-
-        // allowed location access can come as AllowedLocationAccess (Pascal) or allowedLocationAccess (camel)
-        const rawAccess =
-          response.data?.allowedLocationAccess ??
-          response.data?.AllowedLocationAccess ??
-          response.data?.data?.allowedLocationAccess ??
-          response.data?.data?.AllowedLocationAccess ??
-          [];
-        if (Array.isArray(rawAccess)) {
-          const access = rawAccess as CompanyLocationAccess[];
-          setAllowedAccess(access);
-        }
-      } catch (err) {
+        setUser(JSON.parse(storedUser));
+      } catch {
         localStorage.removeItem('user');
-        setUser(null);
-        router.push('/login');
-      } finally {
-        setLoading(false);
       }
-    };
+    }
 
+    try {
+      const response = await api.post('/auth/validate');
+      if (response.data.user) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+
+      // allowed location access can come as AllowedLocationAccess (Pascal) or allowedLocationAccess (camel)
+      const rawAccess =
+        response.data?.allowedLocationAccess ??
+        response.data?.AllowedLocationAccess ??
+        response.data?.data?.allowedLocationAccess ??
+        response.data?.data?.AllowedLocationAccess ??
+        [];
+      if (Array.isArray(rawAccess)) {
+        const access = rawAccess as CompanyLocationAccess[];
+        setAllowedAccess(access);
+      }
+    } catch (err) {
+      localStorage.removeItem('user');
+      setUser(null);
+      router.push('/login');
+    } finally {
+      setLoading(false);
+    }
+  }, [pathname, router, setAllowedAccess]);
+
+  useEffect(() => {
     validateAndGetUser();
-  }, [router, pathname]);
+  }, [validateAndGetUser]);
 
   // If backend rejects request due to missing/invalid org context, show selector
   useEffect(() => {
@@ -156,13 +156,18 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       if (pathname !== "/login") setOrgDialogOpen(true);
     };
     const onOpenOrgDialog = () => setOrgDialogOpen(true);
+    const onRefreshAccess = () => {
+      validateAndGetUser();
+    };
     window.addEventListener("orgContextRequired", onOrgRequired as any);
     window.addEventListener("openOrgDialog", onOpenOrgDialog);
+    window.addEventListener("refreshLocationAccess", onRefreshAccess);
     return () => {
       window.removeEventListener("orgContextRequired", onOrgRequired as any);
       window.removeEventListener("openOrgDialog", onOpenOrgDialog);
+      window.removeEventListener("refreshLocationAccess", onRefreshAccess);
     };
-  }, [pathname]);
+  }, [pathname, validateAndGetUser]);
 
   // Ensure we have a selected (company, location) context when needed.
   useEffect(() => {

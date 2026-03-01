@@ -43,7 +43,6 @@ namespace net_backend.Models
     public enum InwardSourceType
     {
         PO,
-        OutwardReturn,
         JobWork
     }
 
