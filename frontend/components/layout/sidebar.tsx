@@ -146,7 +146,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                 show={showFullSidebar}
                 className="!ml-0 text-sm font-semibold text-white truncate leading-tight block"
               >
-                {appSettings?.softwareName || "Pattern Management"}
+                {appSettings?.softwareName || "Die & Pattern Management"}
               </SidebarText>
               <SidebarText
                 show={showFullSidebar}

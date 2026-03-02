@@ -248,6 +248,8 @@ namespace net_backend.DTOs
         public string? SourceRefDisplay { get; set; }
         public bool? IsApproved { get; set; }
         public string? Remarks { get; set; }
+        public DateTime? InwardDate { get; set; }
+        public DateTime? SourceDate { get; set; }
     }
 
     public class CreateQCDto
@@ -319,6 +321,7 @@ namespace net_backend.DTOs
         public decimal? GstPercent { get; set; }
         public decimal? SourceRate { get; set; }
         public decimal? SourceGstPercent { get; set; }
+        public DateTime? SourceDate { get; set; }
     }
 
     public class CreateInwardDto
@@ -354,6 +357,11 @@ namespace net_backend.DTOs
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
+        public string? InwardNo { get; set; }
+        public string? QCNo { get; set; }
+        public bool IsQCPending { get; set; }
+        public bool IsQCApproved { get; set; }
+        public bool IsInwarded { get; set; }
     }
 
     public class JobWorkDto

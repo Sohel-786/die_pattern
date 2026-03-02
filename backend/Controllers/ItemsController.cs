@@ -66,35 +66,35 @@ namespace net_backend.Controllers
                     (p.DrawingNo != null && p.DrawingNo.ToLower().Contains(s)));
             }
 
-            var data = await query
-                .Select(p => new ItemDto
-                {
-                    Id = p.Id,
-                    MainPartName = p.MainPartName,
-                    CurrentName = p.CurrentName,
-                    ItemTypeId = p.ItemTypeId,
-                    ItemTypeName = p.ItemType!.Name,
-                    DrawingNo = p.DrawingNo,
-                    RevisionNo = p.RevisionNo,
-                    MaterialId = p.MaterialId,
-                    MaterialName = p.Material!.Name,
-                    OwnerTypeId = p.OwnerTypeId,
-                    OwnerTypeName = p.OwnerType!.Name,
-                    StatusId = p.StatusId,
-                    StatusName = p.Status!.Name,
-                    CurrentLocationId = p.CurrentLocationId,
-                    CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
-                    CurrentPartyId = p.CurrentPartyId,
-                    CurrentPartyName = p.CurrentParty != null ? p.CurrentParty.Name : null,
-                    IsActive = p.IsActive
-                })
-                .ToListAsync();
-
-            foreach (var dto in data)
+            // Materialize first so we can use switch expressions and service methods in-memory
+            var items = await query.ToListAsync();
+            var data = items.Select(p => new ItemDto
             {
-                var state = await _itemState.GetStateAsync(dto.Id, null);
-                dto.CurrentProcess = _itemState.GetStateDisplay(state);
-            }
+                Id = p.Id,
+                MainPartName = p.MainPartName,
+                CurrentName = p.CurrentName,
+                ItemTypeId = p.ItemTypeId,
+                ItemTypeName = p.ItemType?.Name ?? "",
+                DrawingNo = p.DrawingNo,
+                RevisionNo = p.RevisionNo,
+                MaterialId = p.MaterialId,
+                MaterialName = p.Material?.Name ?? "",
+                OwnerTypeId = p.OwnerTypeId,
+                OwnerTypeName = p.OwnerType?.Name ?? "",
+                StatusId = p.StatusId,
+                StatusName = p.Status?.Name ?? "",
+                CurrentLocationId = p.CurrentLocationId,
+                CurrentLocationName = p.CurrentLocation?.Name,
+                CurrentPartyId = p.CurrentPartyId,
+                CurrentPartyName = p.CurrentParty?.Name,
+                CurrentProcess = _itemState.GetStateDisplay(p.CurrentProcess),
+                CurrentHolderType = p.CurrentProcess switch {
+                    ItemProcessState.InStock or ItemProcessState.InQC or ItemProcessState.InwardDone => "Location",
+                    ItemProcessState.InJobwork or ItemProcessState.Outward or ItemProcessState.InPO => "Vendor",
+                    _ => "NotInStock"
+                },
+                IsActive = p.IsActive
+            }).ToList();
 
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }
@@ -103,7 +103,8 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetActive()
         {
             var locationId = await GetCurrentLocationIdAsync();
-            var data = await _context.Items
+            // Materialize first so we can use switch expressions and service methods in-memory
+            var items = await _context.Items
                 .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
@@ -112,34 +113,35 @@ namespace net_backend.Controllers
                 .Include(p => p.CurrentLocation)
                 .Include(p => p.CurrentParty)
                 .Where(p => p.IsActive && !string.IsNullOrEmpty(p.DrawingNo))
-                .Select(p => new ItemDto
-                {
-                    Id = p.Id,
-                    MainPartName = p.MainPartName,
-                    CurrentName = p.CurrentName,
-                    ItemTypeId = p.ItemTypeId,
-                    ItemTypeName = p.ItemType!.Name,
-                    DrawingNo = p.DrawingNo,
-                    RevisionNo = p.RevisionNo,
-                    MaterialId = p.MaterialId,
-                    MaterialName = p.Material!.Name,
-                    OwnerTypeId = p.OwnerTypeId,
-                    OwnerTypeName = p.OwnerType!.Name,
-                    StatusId = p.StatusId,
-                    StatusName = p.Status!.Name,
-                    CurrentLocationId = p.CurrentLocationId,
-                    CurrentLocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : null,
-                    CurrentPartyId = p.CurrentPartyId,
-                    CurrentPartyName = p.CurrentParty != null ? p.CurrentParty.Name : null,
-                    IsActive = p.IsActive
-                })
                 .ToListAsync();
 
-            foreach (var dto in data)
+            var data = items.Select(p => new ItemDto
             {
-                var state = await _itemState.GetStateAsync(dto.Id, null);
-                dto.CurrentProcess = _itemState.GetStateDisplay(state);
-            }
+                Id = p.Id,
+                MainPartName = p.MainPartName,
+                CurrentName = p.CurrentName,
+                ItemTypeId = p.ItemTypeId,
+                ItemTypeName = p.ItemType?.Name ?? "",
+                DrawingNo = p.DrawingNo,
+                RevisionNo = p.RevisionNo,
+                MaterialId = p.MaterialId,
+                MaterialName = p.Material?.Name ?? "",
+                OwnerTypeId = p.OwnerTypeId,
+                OwnerTypeName = p.OwnerType?.Name ?? "",
+                StatusId = p.StatusId,
+                StatusName = p.Status?.Name ?? "",
+                CurrentLocationId = p.CurrentLocationId,
+                CurrentLocationName = p.CurrentLocation?.Name,
+                CurrentPartyId = p.CurrentPartyId,
+                CurrentPartyName = p.CurrentParty?.Name,
+                CurrentProcess = _itemState.GetStateDisplay(p.CurrentProcess),
+                CurrentHolderType = p.CurrentProcess switch {
+                    ItemProcessState.InStock or ItemProcessState.InQC or ItemProcessState.InwardDone => "Location",
+                    ItemProcessState.InJobwork or ItemProcessState.Outward or ItemProcessState.InPO => "Vendor",
+                    _ => "NotInStock"
+                },
+                IsActive = p.IsActive
+            }).ToList();
 
             return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
         }
@@ -155,6 +157,7 @@ namespace net_backend.Controllers
             if (!string.IsNullOrEmpty(dto.DrawingNo) && await _context.Items.AnyAsync(p => p.LocationId == locationId && p.DrawingNo != null && p.DrawingNo.ToLower() == dto.DrawingNo.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Drawing Number must be unique" });
 
+            var s = dto.CurrentHolderType?.Trim().ToLower() ?? "";
             var item = new Item
             {
                 MainPartName = dto.MainPartName.Trim(),
@@ -164,11 +167,16 @@ namespace net_backend.Controllers
                 RevisionNo = dto.RevisionNo,
                 MaterialId = dto.MaterialId,
                 OwnerTypeId = dto.OwnerTypeId,
-                StatusId = 1, // Defaulting to first status if UI doesn't send it
-                CurrentProcess = ItemProcessState.NotInStock,
-                CurrentLocationId = null,
-                CurrentPartyId = null,
+                StatusId = dto.StatusId > 0 ? dto.StatusId : 1, // Use provided status or default to 1
+                CurrentProcess = s switch {
+                    var x when x == "location" || x == "at location" || x == "at_location" || x == "instock" || x == "inwarddone" || x == "inqc" => ItemProcessState.InStock,
+                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.Outward,
+                    _ => ItemProcessState.NotInStock
+                },
+                CurrentLocationId = (s == "location" || s == "at location" || s == "at_location" || s == "instock" || s == "inwarddone" || s == "inqc") ? (dto.CurrentLocationId ?? locationId) : null,
+                CurrentPartyId = (s == "vendor" || s == "party" || s == "at vendor" || s == "outward" || s == "injobwork" || s == "inpo") ? dto.CurrentPartyId : null,
                 LocationId = locationId,
+                IsActive = dto.IsActive,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
@@ -245,6 +253,18 @@ namespace net_backend.Controllers
             }
             if (dto.RevisionNo != null)
                 existing.RevisionNo = dto.RevisionNo.Trim();
+
+            if (dto.CurrentHolderType != null)
+            {
+                var s = dto.CurrentHolderType.Trim().ToLower();
+                existing.CurrentProcess = s switch {
+                    var x when x == "location" || x == "at location" || x == "at_location" || x == "instock" || x == "inwarddone" || x == "inqc" => ItemProcessState.InStock,
+                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.Outward,
+                    _ => ItemProcessState.NotInStock
+                };
+                existing.CurrentLocationId = (s == "location" || s == "at location" || s == "at_location" || s == "instock") ? (dto.CurrentLocationId ?? locationId) : null;
+                existing.CurrentPartyId = (s == "vendor" || s == "party" || s == "at vendor" || s == "outward") ? dto.CurrentPartyId : null;
+            }
 
             existing.IsActive = dto.IsActive;
             existing.UpdatedAt = DateTime.Now;

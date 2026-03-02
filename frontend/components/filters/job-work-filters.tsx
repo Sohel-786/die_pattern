@@ -48,7 +48,7 @@ export function JobWorkFilters({
     return (
         <Card
             className={cn(
-                "overflow-visible shrink-0 rounded-xl border border-secondary-200 bg-white shadow-sm w-full font-sans",
+                "overflow-visible shrink-0 rounded-xl border border-secondary-200 bg-white shadow-sm w-full",
                 className
             )}
         >
@@ -76,7 +76,7 @@ export function JobWorkFilters({
                                     variant="outline"
                                     size="sm"
                                     onClick={onClear}
-                                    className="h-9 px-4 text-xs font-bold rounded-lg transition-colors whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                                    className="h-9 px-4 text-xs font-medium rounded-lg transition-colors whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
                                 >
                                     <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                                     Clear Filter
@@ -85,8 +85,8 @@ export function JobWorkFilters({
                         )}
                     </div>
 
-                    {/* Row 2: Status, Party, Date Range */}
-                    <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full pb-3">
+                    {/* Row 2: Status, Party, Entry State (Active/Inactive) */}
+                    <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Status</label>
                             <select
@@ -101,7 +101,7 @@ export function JobWorkFilters({
                             </select>
                         </div>
 
-                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full font-mono">
+                        <div className="col-span-2 min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>Party (Send To)</label>
                             <MultiSelectSearch
                                 options={partyOptions}
@@ -112,7 +112,23 @@ export function JobWorkFilters({
                             />
                         </div>
 
-                        <div className="col-span-2 min-w-0">
+                        <div className="min-w-0">
+                            <label className={filterLabelClass}>Entry State</label>
+                            <select
+                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                                className={selectClass}
+                            >
+                                <option value="">All</option>
+                                <option value="true">Active Only</option>
+                                <option value="false">Inactive Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Row 3: Date Range */}
+                    <div className="flex gap-4 px-4 pb-4 pt-1 w-full">
+                        <div className="flex-1 min-w-0 max-w-md">
                             <label className={filterLabelClass}>Date Range (Created)</label>
                             <div className="flex gap-2">
                                 <div className="flex-1 min-w-0">
@@ -134,20 +150,6 @@ export function JobWorkFilters({
                                     />
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Hidden Active Toggle for now to keep UI clean, but can add if needed */}
-                        <div className="hidden min-w-0">
-                            <label className={filterLabelClass}>Entry State</label>
-                            <select
-                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                className={selectClass}
-                            >
-                                <option value="">All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
                         </div>
                     </div>
                 </div>

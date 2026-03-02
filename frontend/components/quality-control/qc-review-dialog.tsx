@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
-import { QC, QcStatus } from "@/types";
+import { QC, QcStatus, InwardSourceType } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -104,80 +105,105 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
             isOpen={open}
             onClose={() => onOpenChange(false)}
             title={`Review QC — ${qc.qcNo}`}
-            size="full"
+            size="2xl"
             overlayClassName="z-[1100]"
+            contentScroll={false}
         >
-            <div className="flex flex-col h-[85vh] max-h-[900px] font-sans">
-                <div className="p-6 bg-secondary-50/50 border-b border-secondary-200 shrink-0 space-y-4">
-                    <div className="flex justify-between items-start gap-4 flex-wrap">
-                        <div>
-                            <p className="text-sm font-bold text-secondary-900">{qc.qcNo}</p>
-                            <p className="text-xs text-secondary-500">Party: {qc.partyName}</p>
+            <div className="flex flex-col font-sans h-full">
+                {/* Information Header Section */}
+                <div className="px-6 py-4 bg-secondary-50/50 border-b border-secondary-100 flex justify-between items-center gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest leading-none mb-1">Party Name</span>
+                        <span className="text-sm font-semibold text-secondary-900">{qc.partyName}</span>
+                    </div>
+
+                    <div className="flex gap-4 items-center">
+                        <div className="flex flex-col items-center px-3 border-r border-secondary-200">
+                            <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest leading-none mb-1">Approved</span>
+                            <span className="text-sm font-bold text-green-600">{qc.items.filter((it) => statusMap[it.id] === true).length}</span>
                         </div>
-                        <div className="text-right text-sm font-medium text-secondary-600">
-                            {qc.items.filter((it) => statusMap[it.id] === true).length} approved,{" "}
-                            {qc.items.filter((it) => statusMap[it.id] === false).length} rejected,{" "}
-                            {qc.items.filter((it) => statusMap[it.id] === null).length} pending
+                        <div className="flex flex-col items-center px-3 border-r border-secondary-200">
+                            <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest leading-none mb-1">Rejected</span>
+                            <span className="text-sm font-bold text-rose-600">{qc.items.filter((it) => statusMap[it.id] === false).length}</span>
+                        </div>
+                        <div className="flex flex-col items-center px-3">
+                            <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest leading-none mb-1">Pending</span>
+                            <span className="text-sm font-bold text-amber-600">{qc.items.filter((it) => statusMap[it.id] === null).length}</span>
                         </div>
                     </div>
-                    {!isReadOnly && (
-                        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-secondary-200">
-                            <Button
-                                onClick={handleApproveEntry}
-                                disabled={anyItemResolved || approveEntryMutation.isPending || !allItemsResolved}
-                                className="h-9 px-5 bg-green-600 hover:bg-green-700 text-white font-semibold gap-2 disabled:opacity-50"
-                            >
-                                {approveEntryMutation.isPending ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <CheckCircle2 className="w-4 h-4" />
-                                )}
-                                Approve entire QC entry
-                            </Button>
-                            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                                <Textarea
-                                    value={rejectEntryRemark}
-                                    onChange={(e) => setRejectEntryRemark(e.target.value)}
-                                    placeholder="Rejection remark (optional)"
-                                    className="min-h-[36px] text-xs border-secondary-200 resize-none flex-1 max-w-md"
-                                />
-                                <Button
-                                    onClick={handleRejectEntry}
-                                    disabled={anyItemResolved || rejectEntryMutation.isPending}
-                                    variant="outline"
-                                    className="h-9 px-5 border-rose-200 text-rose-700 hover:bg-rose-50 font-semibold gap-2 disabled:opacity-50 shrink-0"
-                                >
-                                    {rejectEntryMutation.isPending ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <XCircle className="w-4 h-4" />
-                                    )}
-                                    Reject entire QC entry
-                                </Button>
-                            </div>
-                            {anyItemResolved && (
-                                <p className="text-[11px] text-amber-600 font-medium w-full">
-                                    One or more items are already resolved. Use item-level Approve/Reject only.
-                                </p>
-                            )}
-                        </div>
-                    )}
                 </div>
 
-                <div className="flex-1 overflow-hidden flex flex-col p-6 min-h-0">
-                    <div className="flex-1 border border-secondary-200 rounded-xl overflow-hidden bg-white">
-                        <div className="overflow-auto flex-1">
-                            <table className="w-full text-left text-sm">
-                                <thead className="sticky top-0 bg-secondary-50 border-b border-secondary-200 text-[10px] font-bold text-secondary-600 uppercase tracking-wider z-10">
+                {/* Bulk Action Section */}
+                {!isReadOnly && (
+                    <div className="px-6 py-4 bg-white border-b border-secondary-100 space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    onClick={handleApproveEntry}
+                                    disabled={anyItemResolved || approveEntryMutation.isPending || !allItemsResolved}
+                                    className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-tight text-[11px] gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-40 whitespace-nowrap transition-all active:scale-[0.98]"
+                                >
+                                    {approveEntryMutation.isPending ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                    )}
+                                    Approve Entire QC
+                                </Button>
+
+                                <div className="h-8 w-[1px] bg-secondary-200 mx-1" />
+
+                                <div className="flex items-center gap-2 max-w-xl w-full">
+                                    <Input
+                                        value={rejectEntryRemark}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRejectEntryRemark(e.target.value)}
+                                        placeholder="Add rejection remark for entire entry..."
+                                        className="h-10 text-xs border-secondary-200 focus:ring-rose-500 bg-secondary-50/20"
+                                    />
+                                    <Button
+                                        onClick={handleRejectEntry}
+                                        disabled={anyItemResolved || rejectEntryMutation.isPending}
+                                        className="h-10 px-6 bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50 font-black uppercase tracking-tight text-[11px] gap-2 disabled:opacity-40 shrink-0 whitespace-nowrap transition-all active:scale-[0.98]"
+                                    >
+                                        {rejectEntryMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <XCircle className="w-3.5 h-3.5" />
+                                        )}
+                                        Reject Entire QC
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {anyItemResolved && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-100">
+                                    <span className="text-[10px] text-amber-700 font-bold uppercase flex items-center gap-1">
+                                        Note: Use item-level actions below
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Table Content - Scrollable if > 5 items */}
+                <div className="p-6 overflow-hidden min-h-0">
+                    <div className={cn(
+                        "border border-secondary-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col",
+                        qc.items.length > 5 ? "max-h-[450px]" : ""
+                    )}>
+                        <div className="overflow-auto scroll-smooth">
+                            <table className="w-full text-left text-sm border-collapse">
+                                <thead className="sticky top-0 bg-secondary-50 border-b border-secondary-200 text-[10px] font-bold text-secondary-600 uppercase tracking-wider z-20">
                                     <tr>
                                         <th className="px-4 py-3 w-12 text-center">#</th>
-                                        <th className="px-4 py-3">Item</th>
-                                        <th className="px-4 py-3">Inward No. / Source</th>
-                                        <th className="px-4 py-3 text-center w-48">Approve / Reject</th>
-                                        <th className="px-4 py-3">Remarks</th>
+                                        <th className="px-4 py-3">Item Details</th>
+                                        <th className="px-4 py-3">Source & Inward</th>
+                                        <th className="px-4 py-3 text-center w-56">Approve / Reject</th>
+                                        <th className="px-4 py-3 w-64">Remarks</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-secondary-100">
+                                <tbody className="divide-y divide-secondary-100 bg-white">
                                     {qc.items.map((it, idx) => {
                                         const isItemApproved = statusMap[it.id] === true;
                                         const isItemRejected = statusMap[it.id] === false;
@@ -186,71 +212,78 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                                             <tr
                                                 key={it.id}
                                                 className={cn(
-                                                    "transition-colors",
-                                                    isItemApproved && "bg-green-50/30",
-                                                    isItemRejected && "bg-rose-50/30"
+                                                    "transition-colors group",
+                                                    isItemApproved && "bg-green-50/50",
+                                                    isItemRejected && "bg-rose-50/50",
+                                                    !isItemApproved && !isItemRejected && "hover:bg-secondary-50/50"
                                                 )}
                                             >
-                                                <td className="px-4 py-3 text-secondary-500 text-center">{idx + 1}</td>
+                                                <td className="px-4 py-3 text-secondary-400 font-medium text-center">{idx + 1}</td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold text-secondary-900">{it.currentName}</span>
-                                                        <span className="text-xs text-secondary-500">{it.mainPartName || "—"}</span>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="font-bold text-secondary-900 leading-tight">{it.currentName}</span>
+                                                        <span className="text-xs text-secondary-500 font-medium">{it.mainPartName || "—"}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-primary-700 text-xs">{it.inwardNo}</span>
-                                                        <span className="text-xs text-secondary-500">{it.sourceRefDisplay || "—"}</span>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[11px] font-bold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100 w-fit">
+                                                            {it.inwardNo}
+                                                        </span>
+                                                        <span className="text-[10px] text-secondary-500 font-bold uppercase tracking-tight pl-1">
+                                                            {it.sourceRefDisplay || "—"}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     {isReadOnly ? (
-                                                        <span
-                                                            className={cn(
-                                                                "inline-flex px-2 py-1 rounded-full text-[10px] font-semibold uppercase",
-                                                                isItemApproved && "bg-green-50 text-green-700 border border-green-200",
-                                                                isItemRejected && "bg-rose-50 text-rose-700 border border-rose-200",
-                                                                statusMap[it.id] === null && "bg-amber-50 text-amber-700 border border-amber-200"
-                                                            )}
-                                                        >
-                                                            {isItemApproved ? "Approved" : isItemRejected ? "Rejected" : "Pending"}
-                                                        </span>
+                                                        <div className="flex justify-center">
+                                                            <span
+                                                                className={cn(
+                                                                    "inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border",
+                                                                    isItemApproved && "bg-green-50 text-green-700 border-green-200",
+                                                                    isItemRejected && "bg-rose-50 text-rose-700 border-rose-200",
+                                                                    statusMap[it.id] === null && "bg-amber-50 text-amber-700 border border-amber-200"
+                                                                )}
+                                                            >
+                                                                {isItemApproved ? "Approved" : isItemRejected ? "Rejected" : "Pending"}
+                                                            </span>
+                                                        </div>
                                                     ) : (
                                                         <div className="flex gap-2 justify-center">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleItemToggle(it.id, true)}
                                                                 className={cn(
-                                                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all",
+                                                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all shadow-sm",
                                                                     isItemApproved
-                                                                        ? "bg-green-600 border-green-600 text-white"
-                                                                        : "bg-white border-secondary-200 text-secondary-600 hover:border-green-300 hover:bg-green-50"
+                                                                        ? "bg-green-600 border-green-600 text-white shadow-green-200"
+                                                                        : "bg-white border-secondary-200 text-secondary-600 hover:border-green-300 hover:bg-green-50 hover:text-green-700"
                                                                 )}
                                                             >
-                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
                                                                 Approve
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleItemToggle(it.id, false)}
                                                                 className={cn(
-                                                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all",
+                                                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all shadow-sm",
                                                                     isItemRejected
-                                                                        ? "bg-rose-600 border-rose-600 text-white"
-                                                                        : "bg-white border-secondary-200 text-secondary-600 hover:border-rose-300 hover:bg-rose-50"
+                                                                        ? "bg-rose-600 border-rose-600 text-white shadow-rose-200"
+                                                                        : "bg-white border-secondary-200 text-secondary-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
                                                                 )}
                                                             >
-                                                                <XCircle className="w-4 h-4" />
+                                                                <XCircle className="w-3.5 h-3.5" />
                                                                 Reject
                                                             </button>
                                                         </div>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <Textarea
+                                                    <Input
                                                         value={remarksMap[it.id] || ""}
-                                                        onChange={(e) => setRemarksMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
+                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRemarksMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
                                                         onBlur={() => {
                                                             if (statusMap[it.id] !== null) {
                                                                 approveItemMutation.mutate({
@@ -260,9 +293,9 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                                                                 });
                                                             }
                                                         }}
-                                                        placeholder="Item remarks..."
+                                                        placeholder="Add inspection notes..."
                                                         disabled={isReadOnly}
-                                                        className="text-xs min-h-[44px] border-secondary-200 resize-none"
+                                                        className="h-8 text-[11px] border-secondary-200 focus:ring-primary-500 bg-transparent group-hover:bg-white transition-colors"
                                                     />
                                                 </td>
                                             </tr>
@@ -274,12 +307,13 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                     </div>
                 </div>
 
-                <div className="p-6 bg-white border-t border-secondary-200 flex justify-between items-center shrink-0">
-                    <p className="text-xs text-secondary-500">
-                        Resolve each item with Approve or Reject. Once any item is resolved, full-entry Approve/Reject are disabled; use item-level actions only.
-                    </p>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-5 font-semibold">
-                        Close
+                <div className="p-6 bg-secondary-50/50 border-t border-secondary-200 flex justify-end items-center shrink-0">
+                    <Button
+                        variant="secondary"
+                        onClick={() => onOpenChange(false)}
+                        className="h-10 px-8 font-bold border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-all rounded-lg"
+                    >
+                        Close Review
                     </Button>
                 </div>
             </div>

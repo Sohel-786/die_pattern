@@ -36,8 +36,9 @@ namespace net_backend.Controllers
             // JW items that are NOT yet Inwarded
             var query = _context.JobWorkItems
                 .Include(i => i.JobWork)
+                    .ThenInclude(jw => jw!.ToParty)
                 .Include(i => i.Item)
-                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.Status == JobWorkStatus.Pending && i.JobWork.IsActive)
+                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.IsActive && i.JobWork.Status != JobWorkStatus.Completed)
                 .AsQueryable();
 
             if (vendorId.HasValue && vendorId > 0)
@@ -55,21 +56,26 @@ namespace net_backend.Controllers
 
             var data = list
                 .Where(i => !inwardedSet.Contains($"{i.JobWorkId}_{i.ItemId}"))
-                .Select(i => new JobWorkDto
-                {
-                    Id = i.JobWorkId,
-                    JobWorkNo = i.JobWork!.JobWorkNo,
-                    ToPartyId = i.JobWork.ToPartyId,
-                    Status = i.JobWork.Status,
-                    CreatedAt = i.JobWork.CreatedAt,
-                    Items = new List<JobWorkItemDto> { 
-                        new JobWorkItemDto { 
+                .GroupBy(i => i.JobWorkId)
+                .Select(g => {
+                    var first = g.First();
+                    return new JobWorkDto
+                    {
+                        Id = g.Key,
+                        JobWorkNo = first.JobWork!.JobWorkNo,
+                        ToPartyId = first.JobWork.ToPartyId,
+                        ToPartyName = first.JobWork.ToParty?.Name,
+                        Status = first.JobWork.Status,
+                        CreatedAt = first.JobWork.CreatedAt,
+                        Items = g.Select(i => new JobWorkItemDto { 
                             Id = i.Id, 
                             ItemId = i.ItemId, 
                             ItemName = i.Item?.CurrentName, 
-                            MainPartName = i.Item?.MainPartName 
-                        } 
-                    }
+                            MainPartName = i.Item?.MainPartName,
+                            Rate = i.Rate,
+                            GstPercent = i.GstPercent
+                        }).ToList()
+                    };
                 }).ToList();
 
             return Ok(new ApiResponse<IEnumerable<JobWorkDto>> { Data = data });
@@ -89,7 +95,12 @@ namespace net_backend.Controllers
             var query = _context.JobWorks
                 .Include(j => j.Creator)
                 .Include(j => j.ToParty)
-                .Include(j => j.Items).ThenInclude(i => i.Item)
+                .Include(j => j.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(i => i!.ItemType)
+                .Include(j => j.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(i => i!.Material)
                 .Where(j => j.LocationId == locationId)
                 .AsQueryable();
 
@@ -97,7 +108,17 @@ namespace net_backend.Controllers
                 query = query.Where(j => j.Status == status.Value);
             
             if (isActive.HasValue)
+            {
                 query = query.Where(j => j.IsActive == isActive.Value);
+            }
+            else
+            {
+                // If no state filter, default to showing only active records for non-admins
+                if (!await IsAdmin())
+                {
+                    query = query.Where(j => j.IsActive);
+                }
+            }
 
             if (partyIds != null && partyIds.Length > 0)
                 query = query.Where(j => partyIds.Contains(j.ToPartyId));
@@ -119,7 +140,20 @@ namespace net_backend.Controllers
             }
 
             var list = await query.OrderByDescending(j => j.CreatedAt).ToListAsync();
-            var data = list.Select(MapToDto).ToList();
+            
+            var jobWorkIds = list.Select(j => j.Id).ToList();
+            var inwardLines = await _context.InwardLines
+                .Include(l => l.Inward)
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jobWorkIds.Contains(l.SourceRefId.Value) && l.Inward!.IsActive)
+                .ToListAsync();
+
+            var lineIds = inwardLines.Select(l => l.Id).ToList();
+            var qcItems = await _context.QcItems
+                .Include(q => q.QcEntry)
+                .Where(q => lineIds.Contains(q.InwardLineId))
+                .ToListAsync();
+
+            var data = list.Select(jw => MapToDto(jw, inwardLines, qcItems)).ToList();
             return Ok(new ApiResponse<IEnumerable<JobWorkDto>> { Data = data });
         }
 
@@ -140,7 +174,19 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
             
             if (jw == null) return NotFound();
-            return Ok(new ApiResponse<JobWorkDto> { Data = MapToDto(jw) });
+
+            var inwardLines = await _context.InwardLines
+                .Include(l => l.Inward)
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == id && l.Inward!.IsActive)
+                .ToListAsync();
+
+            var lineIds = inwardLines.Select(l => l.Id).ToList();
+            var qcItems = await _context.QcItems
+                .Include(q => q.QcEntry)
+                .Where(q => lineIds.Contains(q.InwardLineId))
+                .ToListAsync();
+
+            return Ok(new ApiResponse<JobWorkDto> { Data = MapToDto(jw, inwardLines, qcItems) });
         }
 
         [HttpPost]
@@ -248,6 +294,9 @@ namespace net_backend.Controllers
             var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
             if (jw == null) return NotFound();
 
+            if (!jw.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Inactive Job Work entries cannot be updated. Please reactivate the entry first if you need to make changes." });
+
             if (dto.Items == null || dto.Items.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
 
@@ -294,6 +343,13 @@ namespace net_backend.Controllers
                 }
             }
 
+            // Check for inwarded items to prevent their removal or editing of sensitive fields
+            var inwardedItems = await _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == id && l.Inward!.IsActive)
+                .Select(l => l.ItemId)
+                .ToListAsync();
+            var inwardedSet = new HashSet<int>(inwardedItems);
+
             jw.ToPartyId = dto.ToPartyId;
             jw.Description = dto.Description;
             jw.Remarks = dto.Remarks;
@@ -301,11 +357,18 @@ namespace net_backend.Controllers
             jw.UpdatedAt = DateTime.Now;
 
             // Update items and their states
-            var oldItemIds = jw.Items.Select(i => i.ItemId).ToList();
+            var oldItems = jw.Items.ToList();
+            var oldItemIds = oldItems.Select(i => i.ItemId).ToList();
             var newItemIds = dto.Items.Select(i => i.ItemId).ToList();
 
-            // Items to remove: go back to InStock
+            // 1. Validate: removed items must NOT be inwarded
             var removedItemIds = oldItemIds.Except(newItemIds).ToList();
+            if (removedItemIds.Any(rId => inwardedSet.Contains(rId)))
+            {
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items already have an associated Inward and cannot be removed." });
+            }
+
+            // 2. Handle Item removals: move back to InStock
             foreach (var rId in removedItemIds)
             {
                 var item = await _context.Items.FindAsync(rId);
@@ -313,18 +376,21 @@ namespace net_backend.Controllers
                 {
                     item.CurrentProcess = ItemProcessState.InStock;
                     item.CurrentPartyId = null;
-                    item.CurrentLocationId = jw.LocationId; // Back to the location of JobWork
+                    item.CurrentLocationId = jw.LocationId;
                     item.UpdatedAt = DateTime.Now;
                 }
             }
 
-            // Items to add: check if InStock, then move to InJobwork
+            // 3. Handle Item additions: check if InStock, then move to InJobwork
             var addedItemIds = newItemIds.Except(oldItemIds).ToList();
             foreach (var aId in addedItemIds)
             {
                 var item = await _context.Items.FindAsync(aId);
                 if (item != null)
                 {
+                    if (item.CurrentProcess != ItemProcessState.InStock)
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item '{item.MainPartName}' is not in stock (current state: {item.CurrentProcess})." });
+
                     item.CurrentProcess = ItemProcessState.InJobwork;
                     item.CurrentPartyId = dto.ToPartyId;
                     item.CurrentLocationId = null;
@@ -332,7 +398,7 @@ namespace net_backend.Controllers
                 }
             }
 
-            // Existing items: just update party in case it changed
+            // 4. Update staying items party
             var stayingItemIds = newItemIds.Intersect(oldItemIds).ToList();
             foreach (var sId in stayingItemIds)
             {
@@ -344,15 +410,20 @@ namespace net_backend.Controllers
                 }
             }
 
+            // 5. Rebuild JobWorkItems list
             _context.JobWorkItems.RemoveRange(jw.Items);
             foreach (var itemDto in dto.Items)
             {
+                // Protect inwarded item fields from change
+                var isItemInwarded = inwardedSet.Contains(itemDto.ItemId);
+                var existingItem = oldItems.FirstOrDefault(oi => oi.ItemId == itemDto.ItemId);
+
                 jw.Items.Add(new JobWorkItem
                 {
                     ItemId = itemDto.ItemId,
-                    Rate = itemDto.Rate,
-                    GstPercent = itemDto.GstPercent,
-                    Remarks = itemDto.Remarks
+                    Rate = (isItemInwarded && existingItem != null) ? existingItem.Rate : itemDto.Rate,
+                    GstPercent = (isItemInwarded && existingItem != null) ? existingItem.GstPercent : itemDto.GstPercent,
+                    Remarks = (isItemInwarded && existingItem != null) ? existingItem.Remarks : itemDto.Remarks
                 });
             }
 
@@ -364,8 +435,73 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
         {
             if (!await HasPermission("EditMovement")) return Forbidden();
-            var jw = await _context.JobWorks.FindAsync(id);
+            var jw = await _context.JobWorks.Include(j => j.Items).ThenInclude(i => i.Item).FirstOrDefaultAsync(j => j.Id == id);
             if (jw == null) return NotFound();
+
+            if (active == jw.IsActive) return Ok(new ApiResponse<bool> { Data = true });
+
+            if (!active)
+            {
+                // Rule 1: Cannot inactivate if any item is already inwarded
+                var inwardedItems = await _context.InwardLines
+                    .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == id && l.Inward!.IsActive)
+                    .AnyAsync();
+
+                if (inwardedItems)
+                {
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot inactivate Job Work because one or more items have already been inwarded." });
+                }
+
+                // Rule 2: Move items back to InStock (only if they are still tied to this process)
+                foreach (var jwi in jw.Items)
+                {
+                    var item = jwi.Item;
+                    if (item != null)
+                    {
+                        // Safety: Only revert if the item's current state confirms it belongs to this Job Work process
+                        if (item.CurrentProcess == ItemProcessState.InJobwork && item.CurrentPartyId == jw.ToPartyId)
+                        {
+                            item.CurrentProcess = ItemProcessState.InStock;
+                            item.CurrentPartyId = null;
+                            item.CurrentLocationId = jw.LocationId;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Rule 3: Reactivating - check if all items are safely "InStock"
+                foreach (var jwi in jw.Items)
+                {
+                    var item = jwi.Item;
+                    if (item != null)
+                    {
+                        if (item.CurrentProcess != ItemProcessState.InStock)
+                        {
+                            return BadRequest(new ApiResponse<bool> 
+                            { 
+                                Success = false, 
+                                Message = $"Item '{item.MainPartName}' is currently in another process ({item.CurrentProcess}) and cannot be pulled back into this Job Work. Please complete or cancel the other process first." 
+                            });
+                        }
+                    }
+                }
+
+                // Rule 4: Move items back to InJobwork
+                foreach (var jwi in jw.Items)
+                {
+                    var item = jwi.Item;
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.InJobwork;
+                        item.CurrentPartyId = jw.ToPartyId;
+                        item.CurrentLocationId = null;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
+
             jw.IsActive = active;
             jw.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
@@ -417,7 +553,7 @@ namespace net_backend.Controllers
         }
 
         [HttpDelete("attachment")]
-        public async Task<ActionResult<ApiResponse<bool>>> DeleteAttachment([FromQuery] string url)
+        public ActionResult<ApiResponse<bool>> DeleteAttachment([FromQuery] string url)
         {
             if (string.IsNullOrEmpty(url)) return BadRequest();
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", url.TrimStart('/'));
@@ -428,7 +564,7 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
-        private static JobWorkDto MapToDto(JobWork j)
+        private static JobWorkDto MapToDto(JobWork j, List<InwardLine>? inwardLines = null, List<QualityControlItem>? qcItems = null)
         {
             return new JobWorkDto
             {
@@ -443,19 +579,29 @@ namespace net_backend.Controllers
                 AttachmentUrls = QuotationUrlsHelper.FromJson(j.AttachmentUrlsJson),
                 CreatorName = j.Creator != null ? $"{j.Creator.FirstName} {j.Creator.LastName}" : null,
                 CreatedAt = j.CreatedAt,
-                Items = j.Items.Select(i => new JobWorkItemDto
-                {
-                    Id = i.Id,
-                    ItemId = i.ItemId,
-                    ItemName = i.Item?.CurrentName,
-                    MainPartName = i.Item?.MainPartName,
-                    ItemTypeName = i.Item?.ItemType?.Name,
-                    MaterialName = i.Item?.Material?.Name,
-                    DrawingNo = i.Item?.DrawingNo,
-                    RevisionNo = i.Item?.RevisionNo,
-                    Rate = i.Rate,
-                    GstPercent = i.GstPercent,
-                    Remarks = i.Remarks
+                Items = j.Items.Select(i => {
+                    var line = inwardLines?.OrderByDescending(l => l.Id).FirstOrDefault(l => l.SourceRefId == j.Id && l.ItemId == i.ItemId);
+                    var qc = line != null ? qcItems?.OrderByDescending(q => q.Id).FirstOrDefault(q => q.InwardLineId == line.Id) : null;
+
+                    return new JobWorkItemDto
+                    {
+                        Id = i.Id,
+                        ItemId = i.ItemId,
+                        ItemName = i.Item?.CurrentName,
+                        MainPartName = i.Item?.MainPartName,
+                        ItemTypeName = i.Item?.ItemType?.Name,
+                        MaterialName = i.Item?.Material?.Name,
+                        DrawingNo = i.Item?.DrawingNo,
+                        RevisionNo = i.Item?.RevisionNo,
+                        Rate = i.Rate,
+                        GstPercent = i.GstPercent,
+                        Remarks = i.Remarks,
+                        InwardNo = line?.Inward?.InwardNo,
+                        QCNo = qc?.QcEntry?.QcNo,
+                        IsQCPending = line?.IsQCPending ?? false,
+                        IsQCApproved = line?.IsQCApproved ?? false,
+                        IsInwarded = line != null
+                    };
                 }).ToList()
             };
         }

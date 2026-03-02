@@ -40,9 +40,12 @@ export function useLogin() {
             (c.locations || []).map((l: { id: number }) => ({ companyId: c.companyId, locationId: l.id }))
           );
           if (pairs.length >= 1) {
-            localStorage.setItem("selectedOrgContext", JSON.stringify({ companyId: pairs[0].companyId, locationId: pairs[0].locationId }));
+            const context = { companyId: pairs[0].companyId, locationId: pairs[0].locationId };
+            localStorage.setItem("selectedOrgContext", JSON.stringify(context));
+            window.dispatchEvent(new CustomEvent("orgContextChanged", { detail: context }));
           } else {
             localStorage.removeItem("selectedOrgContext");
+            window.dispatchEvent(new CustomEvent("orgContextChanged", { detail: null }));
           }
         }
         queryClient.setQueryData(['user'], data.user);

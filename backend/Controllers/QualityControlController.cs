@@ -149,7 +149,14 @@ namespace net_backend.Controllers
             }
 
             var list = await query.ToListAsync();
-            var data = list.Select(MapToDto).ToList();
+
+            // Fetch Source Numbers for Professional Display
+            var poIds = list.SelectMany(q => q.Items).Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = list.SelectMany(q => q.Items).Where(i => i.InwardLine?.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var poDict = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var jwDict = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
+
+            var data = list.Select(q => MapToDto(q, poDict, jwDict)).ToList();
             return Ok(new ApiResponse<IEnumerable<QCDto>> { Data = data });
         }
 
@@ -176,7 +183,14 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
 
             if (entry == null) return NotFound();
-            return Ok(new ApiResponse<QCDto> { Data = MapToDto(entry) });
+
+            // Fetch Source Numbers for Professional Display
+            var poIds = entry.Items.Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = entry.Items.Where(i => i.InwardLine?.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var poDict = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var jwDict = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
+
+            return Ok(new ApiResponse<QCDto> { Data = MapToDto(entry, poDict, jwDict) });
         }
 
         [HttpGet("pending")]
@@ -208,6 +222,14 @@ namespace net_backend.Controllers
             query = query.Where(l => !inActiveQc.Contains(l.Id));
 
             var list = await query.ToListAsync();
+
+            // Fetch Source Numbers for Professional Display
+            var poIds = list.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = list.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+
+            var poDict = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.PoNo);
+            var jwDict = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
+
             var data = list.Select(m => new PendingQCDto
             {
                 InwardLineId = m.Id,
@@ -221,8 +243,8 @@ namespace net_backend.Controllers
                 InwardId = m.InwardId,
                 InwardNo = m.Inward?.InwardNo,
                 SourceType = m.SourceType,
-                SourceRefDisplay = m.SourceType == InwardSourceType.PO ? $"PO-{m.SourceRefId}"
-                    : m.SourceType == InwardSourceType.JobWork ? $"JW-{m.SourceRefId}"
+                SourceRefDisplay = m.SourceType == InwardSourceType.PO && m.SourceRefId.HasValue && poDict.ContainsKey(m.SourceRefId.Value) ? poDict[m.SourceRefId.Value]
+                    : m.SourceType == InwardSourceType.JobWork && m.SourceRefId.HasValue && jwDict.ContainsKey(m.SourceRefId.Value) ? jwDict[m.SourceRefId.Value]
                     : m.SourceRefId?.ToString(),
                 VendorName = m.Inward?.Vendor?.Name,
                 IsQCPending = m.IsQCPending,
@@ -309,18 +331,36 @@ namespace net_backend.Controllers
             qi.IsApproved = dto.IsApproved;
             qi.Remarks = dto.Remarks;
 
-            // Item-level reject: inward shows Rejected, item back In Stock
-            if (dto.IsApproved == false && qi.InwardLine != null)
+            // Sync result to InwardLine flags and Item state
+            if (qi.InwardLine != null)
             {
-                qi.InwardLine.IsQCPending = false;
-                qi.InwardLine.IsQCApproved = false;
                 var item = qi.InwardLine.Item;
-                if (item != null)
+                if (dto.IsApproved == false)
                 {
-                    item.CurrentProcess = ItemProcessState.InStock;
-                    item.CurrentLocationId = locationId;
-                    item.CurrentPartyId = null;
-                    item.UpdatedAt = DateTime.Now;
+                    // Item-level reject: inward line resolved as not approved, item back In Stock
+                    qi.InwardLine.IsQCPending = false;
+                    qi.InwardLine.IsQCApproved = false;
+                    
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.InStock;
+                        item.CurrentLocationId = locationId;
+                        item.CurrentPartyId = null;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+                else
+                {
+                    // Item-level approve (within pending entry): inward line still pending, item back in QC process
+                    // This handles the case where a previous rejection is reversed before final approval
+                    qi.InwardLine.IsQCPending = true;
+                    qi.InwardLine.IsQCApproved = false;
+                    
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.InQC;
+                        item.UpdatedAt = DateTime.Now;
+                    }
                 }
             }
 
@@ -507,7 +547,16 @@ namespace net_backend.Controllers
                     .ThenInclude(i => i.InwardLine)
                         .ThenInclude(l => l!.Item)
                 .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
-            return Ok(new ApiResponse<QCDto> { Data = MapToDto(updated!) });
+
+            if (updated == null) return NotFound();
+
+            // Fetch Source Numbers for Professional Display
+            var poIds = updated.Items.Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var jwIds = updated.Items.Where(i => i.InwardLine?.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
+            var poDict = await _context.PurchaseOrders.Where(p => poIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id);
+            var jwDict = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
+
+            return Ok(new ApiResponse<QCDto> { Data = MapToDto(updated, poDict, jwDict) });
         }
 
         [HttpPatch("{id}/inactive")]
@@ -544,7 +593,7 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
-        private static QCDto MapToDto(QualityControlEntry q)
+        private static QCDto MapToDto(QualityControlEntry q, Dictionary<int, PurchaseOrder>? poDict = null, Dictionary<int, JobWork>? jwDict = null)
         {
             return new QCDto
             {
@@ -578,9 +627,13 @@ namespace net_backend.Controllers
                     MaterialName = i.InwardLine.MaterialName ?? i.InwardLine.Item?.Material?.Name,
                     InwardNo = i.InwardLine.Inward?.InwardNo,
                     InwardId = i.InwardLine.InwardId,
-                    SourceRefDisplay = i.InwardLine.SourceType == InwardSourceType.PO ? $"PO-{i.InwardLine.SourceRefId}"
-                        : i.InwardLine.SourceType == InwardSourceType.JobWork ? $"JW-{i.InwardLine.SourceRefId}"
-                        : i.InwardLine.SourceRefId?.ToString(),
+                    SourceRefDisplay = (i.InwardLine.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue && poDict != null && poDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? poDict[i.InwardLine.SourceRefId.Value].PoNo
+                                     : (i.InwardLine.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue && jwDict != null && jwDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? jwDict[i.InwardLine.SourceRefId.Value].JobWorkNo
+                                     : i.InwardLine.SourceRefId?.ToString(),
+                    InwardDate = i.InwardLine.Inward?.InwardDate,
+                    SourceDate = (i.InwardLine.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue && poDict != null && poDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? poDict[i.InwardLine.SourceRefId.Value].CreatedAt
+                               : (i.InwardLine.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue && jwDict != null && jwDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? jwDict[i.InwardLine.SourceRefId.Value].CreatedAt
+                               : null,
                     IsApproved = i.IsApproved,
                     Remarks = i.Remarks
                 }).ToList()

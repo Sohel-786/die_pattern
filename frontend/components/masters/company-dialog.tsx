@@ -80,6 +80,7 @@ const schema = z.object({
     contactNumber: z.string().optional(),
     isActive: z.boolean().default(true),
     useAsParty: z.boolean().default(false),
+    themeColor: z.string().default("#0d6efd"),
 }).superRefine((data, ctx) => {
     if (data.useAsParty) {
         if (!data.contactPerson || data.contactPerson.trim().length === 0) {
@@ -139,6 +140,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
             contactNumber: "",
             isActive: true,
             useAsParty: false,
+            themeColor: "#0d6efd",
         },
     });
 
@@ -166,6 +168,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 contactNumber: item.contactNumber ?? "",
                 isActive: item.isActive,
                 useAsParty: item.useAsParty ?? false,
+                themeColor: item.themeColor || "#0d6efd",
             });
         } else if (isOpen) {
             reset({
@@ -181,6 +184,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                 contactNumber: "",
                 isActive: true,
                 useAsParty: false,
+                themeColor: "#0d6efd",
             });
         }
     }, [item, reset, isOpen]);
@@ -377,6 +381,25 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                         <div className="space-y-1.5 min-w-0">
                             <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Pincode</Label>
                             <Input id="company-pincode" {...register("pincode")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 382405" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 min-w-0 flex-shrink-0">
+                        <Label htmlFor="theme-color" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Company Theme Color</Label>
+                        <div className="flex gap-3">
+                            <input
+                                type="color"
+                                id="theme-color-picker"
+                                value={watch("themeColor") || "#0d6efd"}
+                                onChange={(e) => setValue("themeColor", e.target.value)}
+                                className="w-10 h-10 rounded-lg border border-secondary-300 cursor-pointer p-1 bg-white shrink-0"
+                            />
+                            <Input
+                                id="theme-color"
+                                {...register("themeColor")}
+                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono uppercase"
+                                placeholder="#0d6efd"
+                            />
                         </div>
                     </div>
 

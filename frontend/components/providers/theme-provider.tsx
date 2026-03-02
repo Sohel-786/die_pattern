@@ -10,15 +10,32 @@ import { applyPrimaryColor } from "@/lib/theme";
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    api
-      .get("/settings/software")
-      .then((res) => {
-        const primary = res.data?.data?.primaryColor;
-        if (primary) applyPrimaryColor(primary);
-      })
-      .catch(() => {
-        applyPrimaryColor("#0d6efd");
-      });
+    // Initial fetch of software name (non-theme stuff)
+    api.get("/settings/software").catch(() => { });
+
+    // Context-based theme application
+    const updateTheme = () => {
+      const selRaw = localStorage.getItem("selectedOrgContext");
+      if (selRaw) {
+        try {
+          const sel = JSON.parse(selRaw);
+          if (sel?.companyId) {
+            api.get(`/companies/${sel.companyId}`).then(res => {
+              const color = res.data?.data?.themeColor;
+              applyPrimaryColor(color || "#0d6efd");
+            }).catch(() => {
+              applyPrimaryColor("#0d6efd");
+            });
+            return;
+          }
+        } catch { }
+      }
+      applyPrimaryColor("#0d6efd");
+    };
+
+    updateTheme();
+    window.addEventListener("orgContextChanged", updateTheme);
+    return () => window.removeEventListener("orgContextChanged", updateTheme);
   }, []);
 
   return <>{children}</>;

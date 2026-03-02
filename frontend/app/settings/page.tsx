@@ -195,7 +195,6 @@ export default function SettingsPage() {
   const { data: appSettings, isLoading: settingsLoading } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
   const [softwareName, setSoftwareName] = useState("");
-  const [primaryColor, setPrimaryColor] = useState("#0d6efd");
 
   // Access
   // Access
@@ -289,7 +288,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (appSettings) {
       setSoftwareName(appSettings.softwareName || "");
-      setPrimaryColor(appSettings.primaryColor || "#0d6efd");
       softwareSyncedFromServer.current = true;
     }
   }, [appSettings]);
@@ -300,12 +298,10 @@ export default function SettingsPage() {
     if (!setDraft) return;
     setDraft({
       softwareName,
-      primaryColor,
     });
   }, [
     setDraft,
     softwareName,
-    primaryColor,
   ]);
 
   // Clear draft when leaving Settings page
@@ -315,10 +311,7 @@ export default function SettingsPage() {
     };
   }, [setDraft]);
 
-  // Live primary color – reflect in UI without saving
-  useEffect(() => {
-    applyPrimaryColor(primaryColor || undefined);
-  }, [primaryColor]);
+
 
   useEffect(() => {
     if (userPermissionsData && userPermissionsData.permissions) {
@@ -328,13 +321,10 @@ export default function SettingsPage() {
     }
   }, [userPermissionsData]);
 
-  const savedCompanyName = appSettings?.companyName ?? "";
   const savedSoftwareName = appSettings?.softwareName ?? "";
-  const savedPrimaryColor = appSettings?.primaryColor ?? "#0d6efd";
   const hasUnsavedSoftware =
     softwareSyncedFromServer.current &&
-    (softwareName !== savedSoftwareName ||
-      primaryColor !== savedPrimaryColor);
+    (softwareName !== savedSoftwareName);
   const hasUnsavedPermissions =
     userPermissionsData != null &&
     localPermissions != null &&
@@ -342,10 +332,8 @@ export default function SettingsPage() {
 
   const revertSoftware = useCallback(() => {
     setSoftwareName(savedSoftwareName);
-    setPrimaryColor(savedPrimaryColor);
-    applyPrimaryColor(savedPrimaryColor || undefined);
     setDraft?.(null);
-  }, [savedSoftwareName, savedPrimaryColor, setDraft]);
+  }, [savedSoftwareName, setDraft]);
 
   const [localLocationAccess, setLocalLocationAccess] = useState<{ companyId: number; companyName: string; locationId: number; locationName: string }[]>([]);
   const [locationAccessAddCompanyId, setLocationAccessAddCompanyId] = useState<number | "">("");
@@ -431,11 +419,9 @@ export default function SettingsPage() {
     updateSettings.mutate(
       {
         softwareName: softwareName || undefined,
-        primaryColor: primaryColor || undefined,
       },
       {
         onSuccess: () => {
-          applyPrimaryColor(primaryColor || undefined);
           setDraft?.(null);
         },
       },
@@ -624,13 +610,12 @@ export default function SettingsPage() {
                       Software Profile
                     </CardTitle>
                     <p className="text-sm text-secondary-600 font-normal mt-1">
-                      Branding, software name, and primary color used across the
-                      application
+                      Basic branding and software naming
                     </p>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 gap-8">
                         <div className="space-y-2">
                           <Label htmlFor="softwareName" className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
                             Software Designation
@@ -643,30 +628,6 @@ export default function SettingsPage() {
                             className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
                           />
                           <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-tight ml-1">The name displayed in browser tabs and UI headers.</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="primaryColor" className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
-                            Corporate Theme Color
-                          </Label>
-                          <div className="flex gap-3">
-                            <div className="relative shrink-0">
-                              <input
-                                type="color"
-                                id="primaryColor"
-                                value={primaryColor}
-                                onChange={(e) => setPrimaryColor(e.target.value)}
-                                className="w-12 h-12 rounded-xl border-2 border-slate-200 cursor-pointer p-1 bg-white"
-                              />
-                            </div>
-                            <div className="flex-1 relative">
-                              <Input
-                                value={primaryColor}
-                                onChange={(e) => setPrimaryColor(e.target.value)}
-                                className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-mono text-sm uppercase"
-                              />
-                            </div>
-                          </div>
-                          <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-tight ml-1">Primary accent color used for buttons, links, and highlights.</p>
                         </div>
                       </div>
                     </div>

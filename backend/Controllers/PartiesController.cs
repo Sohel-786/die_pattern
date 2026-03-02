@@ -215,25 +215,46 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll([FromQuery] bool includeSelf = true)
         {
             if (!await HasPermission("ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
-            var parties = await _context.Parties
-                .Where(p => p.CompanyId == companyId)
-                .OrderBy(p => p.Name)
-                .ToListAsync();
+            var query = _context.Parties.Where(p => p.CompanyId == companyId);
+
+            if (!includeSelf)
+            {
+                // Filter out self-parties
+                query = query.Where(p => p.LinkedCompanyId == null);
+            }
+            else
+            {
+                // PROTECTIVE RULE: If it's a system-synced party, it MUST belong to the current company.
+                // This hides legacy cross-company links (e.g., Aira showing in Suzik's list).
+                query = query.Where(p => p.LinkedCompanyId == null || p.LinkedCompanyId == companyId);
+            }
+
+            var parties = await query.OrderBy(p => p.Name).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
         }
 
         [HttpGet("active")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive()
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive([FromQuery] bool includeSelf = false)
         {
             var companyId = await GetCurrentCompanyIdAsync();
-            var parties = await _context.Parties
-                .Where(p => p.CompanyId == companyId && p.IsActive)
-                .OrderBy(p => p.Name)
-                .ToListAsync();
+            var query = _context.Parties.Where(p => p.CompanyId == companyId && p.IsActive);
+            
+            if (!includeSelf)
+            {
+                // Filter out self-parties (system entries synced from company master)
+                query = query.Where(p => p.LinkedCompanyId == null);
+            }
+            else
+            {
+                // PROTECTIVE RULE: If it's a system-synced party, it MUST belong to the current company.
+                query = query.Where(p => p.LinkedCompanyId == null || p.LinkedCompanyId == companyId);
+            }
+
+            var parties = await query.OrderBy(p => p.Name).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
         }
 
@@ -318,8 +339,8 @@ namespace net_backend.Controllers
                 if (await _context.Parties.AnyAsync(p => p.CompanyId == companyId && p.Id != id && p.Name.ToLower() == nameTrimmed.ToLower()))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A party with the name '{nameTrimmed}' already exists in this company." });
                 
-                // Check in Companies
-                if (await _context.Companies.AnyAsync(c => c.Name.ToLower() == nameTrimmed.ToLower()))
+                // Check in Companies (exclude if this party is linked to that company)
+                if (await _context.Companies.AnyAsync(c => c.Id != existing.LinkedCompanyId && c.Name.ToLower() == nameTrimmed.ToLower()))
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"A Company with the name '{nameTrimmed}' already exists in Company Master." });
 
                 existing.Name = nameTrimmed;
@@ -341,8 +362,8 @@ namespace net_backend.Controllers
                 if (existingPartyGst != null)
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under party '{existingPartyGst.Name}' in Party Master." });
 
-                // Check in Companies
-                var existingCompanyGst = await _context.Companies.FirstOrDefaultAsync(c => c.GstNo != null && c.GstNo.ToUpper() == gstNorm);
+                // Check in Companies (Exclude the linked company if this party is a system-synced entity)
+                var existingCompanyGst = await _context.Companies.FirstOrDefaultAsync(c => c.Id != existing.LinkedCompanyId && c.GstNo != null && c.GstNo.ToUpper() == gstNorm);
                 if (existingCompanyGst != null)
                     return BadRequest(new ApiResponse<Party> { Success = false, Message = $"GST No. '{gstNorm}' is already registered under company '{existingCompanyGst.Name}' in Company Master." });
 

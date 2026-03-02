@@ -125,6 +125,7 @@ export interface Company {
   gstNo?: string | null;
   gstDate?: string | null;
   useAsParty: boolean;
+  themeColor: string;
   isActive: boolean;
 }
 
@@ -420,6 +421,7 @@ export interface InwardLine {
   movementId?: number | null;
   isQCPending: boolean;
   isQCApproved: boolean;
+  sourceDate?: string | null;
 }
 
 export enum QcStatus {
@@ -462,6 +464,8 @@ export interface QCItem {
   isApproved?: boolean | null;
   remarks?: string;
   sourceRefDisplay?: string;
+  inwardDate?: string | null;
+  sourceDate?: string | null;
 }
 
 export interface PendingQC {
@@ -513,6 +517,11 @@ export interface JobWorkItem {
   rate?: number | null;
   gstPercent?: number | null;
   remarks?: string;
+  inwardNo?: string | null;
+  qcNo?: string | null;
+  isQCPending?: boolean;
+  isQCApproved?: boolean;
+  isInwarded?: boolean;
 }
 
 export interface JobWork {
@@ -606,10 +615,7 @@ export interface UserPermission {
 
 export interface AppSettings {
   id: number;
-  companyName: string;
-  companyLogo?: string | null;
   softwareName?: string | null;
-  primaryColor?: string | null;
 }
 
 export interface ValidationEntry {

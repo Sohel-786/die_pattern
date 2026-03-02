@@ -111,7 +111,7 @@ export default function InwardsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden text-sans">
             {/* Header Area */}
             <div className="flex justify-between items-center shrink-0">
                 <div>
@@ -266,12 +266,27 @@ export default function InwardsPage() {
                                                                                             : i.inwardFrom?.includes("Outward") ? "OUTWARD NO."
                                                                                                 : "SOURCE NO."}
                                                                                 </TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                                                                    {i.inwardFrom?.includes("Purchase Order") ? "PO DATE"
+                                                                                        : i.inwardFrom?.includes("Job Work") ? "JW DATE"
+                                                                                            : "DATE"}
+                                                                                </TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">PO REF RATE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">INW RATE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">GST%</TableHead>
+                                                                                {i.inwardFrom?.includes("Purchase Order") ? (
+                                                                                    <>
+                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">PO REF RATE</TableHead>
+                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">INW RATE</TableHead>
+                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">GST%</TableHead>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">JW RATE</TableHead>
+                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">JW GST%</TableHead>
+                                                                                    </>
+                                                                                )}
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">TOTAL AMOUNT</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap semi-w-40">DRAWING NO. / REV</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">LINE REMARKS</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC NO.</TableHead>
@@ -283,20 +298,39 @@ export default function InwardsPage() {
                                                                                 <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
                                                                                     <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{line.sourceRefDisplay || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                        {line.sourceDate ? format(new Date(line.sourceDate), "dd MMM yyyy") : "—"}
+                                                                                    </TableCell>
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
                                                                                             <span className="font-semibold text-secondary-900 text-sm">{line.itemName ?? "—"}</span>
                                                                                             <span className="text-xs text-secondary-500">{line.mainPartName ?? "—"}</span>
                                                                                         </div>
                                                                                     </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-500 text-[10px] text-right">
-                                                                                        {line.sourceType === InwardSourceType.PO ? `₹${line.sourceRate?.toLocaleString() ?? "0"} @ ${line.sourceGstPercent ?? "0"}%` : "—"}
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
-                                                                                        {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
-                                                                                        {line.gstPercent ? `${line.gstPercent}%` : "—"}
+                                                                                    {i.inwardFrom?.includes("Purchase Order") ? (
+                                                                                        <>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-500 text-[10px] text-right">
+                                                                                                {line.sourceType === InwardSourceType.PO ? `₹${line.sourceRate?.toLocaleString() ?? "0"} @ ${line.sourceGstPercent ?? "0"}%` : "—"}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
+                                                                                                {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
+                                                                                                {line.gstPercent ? `${line.gstPercent}%` : "—"}
+                                                                                            </TableCell>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
+                                                                                                {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
+                                                                                                {line.gstPercent ? `${line.gstPercent}%` : "—"}
+                                                                                            </TableCell>
+                                                                                        </>
+                                                                                    )}
+                                                                                    <TableCell className="px-4 py-2 text-secondary-900 font-black text-sm text-right">
+                                                                                        ₹{((line.rate || 0) + ((line.rate || 0) * (line.gstPercent || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.itemTypeName ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2">

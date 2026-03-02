@@ -136,8 +136,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
         if (party && isOpen) {
             reset({
                 name: party.name,
-                partyCategory: party.partyCategory || "SUPPLIER / VENDOR",
-                customerType: party.customerType || "MANUFACTURER",
+                partyCategory: (party.partyCategory?.toUpperCase().trim().replace(/\s*\/\s*/g, " / ") || "SUPPLIER / VENDOR"),
+                customerType: (party.customerType?.toUpperCase().trim() || "MANUFACTURER"),
                 phoneNumber: party.phoneNumber || "",
                 contactPerson: party.contactPerson || "",
                 email: party.email || "",
@@ -177,29 +177,45 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             <Label htmlFor="partyCategory" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
                                 Party Category <span className="text-red-500">*</span>
                             </Label>
-                            <select
-                                id="partyCategory"
-                                {...register("partyCategory")}
-                                className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
-                            >
-                                <option value="SUPPLIER / VENDOR">SUPPLIER / VENDOR</option>
-                                <option value="CUSTOMER">CUSTOMER</option>
-                                <option value="BOTH">BOTH</option>
-                            </select>
+                            <Controller
+                                name="partyCategory"
+                                control={control}
+                                render={({ field }) => (
+                                    <select
+                                        {...field}
+                                        id="partyCategory"
+                                        className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
+                                    >
+                                        <option value="" disabled hidden>Select Category</option>
+                                        <option value="SUPPLIER / VENDOR">SUPPLIER / VENDOR</option>
+                                        <option value="CUSTOMER">CUSTOMER</option>
+                                        <option value="BOTH">BOTH</option>
+                                    </select>
+                                )}
+                            />
+                            {errors.partyCategory && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.partyCategory.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="customerType" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
                                 Customer Type <span className="text-red-500">*</span>
                             </Label>
-                            <select
-                                id="customerType"
-                                {...register("customerType")}
-                                className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
-                            >
-                                <option value="MANUFACTURER">MANUFACTURER</option>
-                                <option value="DEALER">DEALER</option>
-                                <option value="DISTRIBUTOR">DISTRIBUTOR</option>
-                            </select>
+                            <Controller
+                                name="customerType"
+                                control={control}
+                                render={({ field }) => (
+                                    <select
+                                        {...field}
+                                        id="customerType"
+                                        className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
+                                    >
+                                        <option value="" disabled hidden>Select Type</option>
+                                        <option value="MANUFACTURER">MANUFACTURER</option>
+                                        <option value="DEALER">DEALER</option>
+                                        <option value="DISTRIBUTOR">DISTRIBUTOR</option>
+                                    </select>
+                                )}
+                            />
+                            {errors.customerType && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.customerType.message}</p>}
                         </div>
                     </div>
 

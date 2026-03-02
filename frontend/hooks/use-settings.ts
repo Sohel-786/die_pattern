@@ -167,3 +167,16 @@ export function useCompany(id?: number) {
     enabled: !!id,
   });
 }
+
+/** Fetches details for the currently selected company in the header context. */
+export function useCurrentCompany() {
+  const selRaw = typeof window !== 'undefined' ? localStorage.getItem('selectedOrgContext') : null;
+  let companyId: number | undefined;
+  if (selRaw) {
+    try {
+      const sel = JSON.parse(selRaw);
+      companyId = sel?.companyId;
+    } catch { }
+  }
+  return useCompany(companyId);
+}

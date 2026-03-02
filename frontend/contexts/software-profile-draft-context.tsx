@@ -4,7 +4,6 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 
 export interface SoftwareProfileDraft {
   softwareName: string;
-  primaryColor: string;
 }
 
 type ContextValue = {

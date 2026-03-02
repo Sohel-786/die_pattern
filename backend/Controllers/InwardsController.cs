@@ -170,7 +170,7 @@ namespace net_backend.Controllers
                 .Where(poi => poIds.Contains(poi.PurchaseOrderId))
                 .ToDictionaryAsync(poi => $"{poi.PurchaseOrderId}_{poi.PurchaseIndentItem!.ItemId}", poi => poi.Rate);
             
-            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
+            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
             
             var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
             var qcs = await _context.QcItems
@@ -217,7 +217,7 @@ namespace net_backend.Controllers
                 .Where(poi => poIds.Contains(poi.PurchaseOrderId))
                 .ToDictionaryAsync(poi => $"{poi.PurchaseOrderId}_{poi.PurchaseIndentItem!.ItemId}", poi => poi.Rate);
 
-            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo);
+            var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
             
             var lineIds = inward.Lines.Select(l => l.Id).ToList();
             var qcs = await _context.QcItems
@@ -476,7 +476,7 @@ namespace net_backend.Controllers
         private static InwardDto MapToDto(
             Inward i, 
             Dictionary<int, PurchaseOrder>? pos = null, 
-            Dictionary<int, string>? jws = null,
+            Dictionary<int, JobWork>? jws = null,
             Dictionary<int, string>? outs = null,
             Dictionary<int, string>? qcs = null,
             Dictionary<string, decimal>? poRates = null)
@@ -519,7 +519,7 @@ namespace net_backend.Controllers
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
                     SourceRefDisplay = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value].PoNo
-                                     : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value]
+                                     : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value].JobWorkNo
                                      : l.SourceRefId?.ToString(),
                     IsQCPending = l.IsQCPending,
                     IsQCApproved = l.IsQCApproved,
@@ -531,7 +531,10 @@ namespace net_backend.Controllers
                                    : null,
                     SourceGstPercent = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value))
                                    ? pos[l.SourceRefId.Value].GstPercent
-                                   : null
+                                   : null,
+                    SourceDate = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value].CreatedAt
+                               : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value].CreatedAt
+                               : null
                 }).ToList()
             };
             return dto;

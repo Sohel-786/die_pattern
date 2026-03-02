@@ -21,6 +21,7 @@ namespace net_backend.DTOs
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
         public bool UseAsParty { get; set; }
+        public string ThemeColor { get; set; } = "#0d6efd";
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -39,6 +40,7 @@ namespace net_backend.DTOs
         public string? LogoUrl { get; set; }
         public DateTime GstDate { get; set; }
         public bool UseAsParty { get; set; } = false;
+        public string ThemeColor { get; set; } = "#0d6efd";
         public bool IsActive { get; set; } = true;
     }
 
@@ -73,6 +75,7 @@ namespace net_backend.DTOs
         public string? GstNo { get; set; }
         public DateTime? GstDate { get; set; }
         public bool? UseAsParty { get; set; }
+        public string? ThemeColor { get; set; }
         public bool IsActive { get; set; }
     }
 

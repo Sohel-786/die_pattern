@@ -75,9 +75,21 @@ export default function CompaniesPage() {
   const updateMutation = useMutation({
     mutationFn: (data: any) => api.put(`/companies/${selectedItem?.id || data.id}`, data),
     onSuccess: (_, variables) => {
+      const updatedId = selectedItem?.id || (variables as any)?.id;
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      if (variables.id || selectedItem?.id) {
-        queryClient.invalidateQueries({ queryKey: ["companies", variables.id || selectedItem?.id] });
+      if (updatedId) {
+        queryClient.invalidateQueries({ queryKey: ["companies", updatedId] });
+
+        // If the updated company is the currently selected one, trigger a theme refresh
+        const selRaw = localStorage.getItem("selectedOrgContext");
+        if (selRaw) {
+          try {
+            const sel = JSON.parse(selRaw);
+            if (sel?.companyId === updatedId) {
+              window.dispatchEvent(new CustomEvent("orgContextChanged", { detail: sel }));
+            }
+          } catch (e) { }
+        }
       }
       toast.success("Details updated successfully");
       setIsDialogOpen(false);

@@ -77,14 +77,25 @@ export function InwardDialog({
         return Array.from(map.values());
     }, [lines]);
 
+    const hasPoLines = lines.some(l => l.sourceType === InwardSourceType.PO);
+    const hasJobWorkLines = lines.some(l => l.sourceType === InwardSourceType.JobWork);
+
     const displayHeader = useMemo(() => {
-        const typesInLines = new Set(lines.map(l => l.sourceType));
-        if (typesInLines.size === 1) {
-            const first = typesInLines.values().next().value;
-            if (first === InwardSourceType.PO) return "PO No.";
-            if (first === InwardSourceType.JobWork) return "Jobwork No.";
-        }
+        if (hasPoLines && !hasJobWorkLines) return "PO No.";
+        if (hasJobWorkLines && !hasPoLines) return "Jobwork No.";
         return "Source No.";
+    }, [hasPoLines, hasJobWorkLines]);
+
+    const calculateLineTotal = (line: InwardLineDraft) => {
+        const rate = line.rate || 0;
+        const gst = line.gstPercent || 0;
+        return rate + (rate * gst / 100);
+    };
+
+    const overallTotal = useMemo(() => {
+        return lines
+            .filter(l => l.included !== false && l.sourceType === InwardSourceType.PO)
+            .reduce((sum, l) => sum + calculateLineTotal(l), 0);
     }, [lines]);
 
     const removeSourceGroup = (type: InwardSourceType, id: number) => {
@@ -354,7 +365,7 @@ export function InwardDialog({
                                         <select
                                             value={selectedSourceType}
                                             onChange={(e) => setSelectedSourceType(Number(e.target.value))}
-                                            disabled={!vendorId}
+                                            disabled={!vendorId || lines.length > 0}
                                             className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {sourceOptions.map(opt => (
@@ -371,6 +382,11 @@ export function InwardDialog({
                                             {getImportButtonText()}
                                         </Button>
                                     </div>
+                                    {lines.length > 0 && (
+                                        <p className="text-[9px] font-bold text-secondary-400 mt-1">
+                                            Clear all items to change source type
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="flex items-end gap-2 pr-4 border-l border-secondary-100 pl-4">
                                     <div className="w-48 min-w-0">
@@ -441,9 +457,14 @@ export function InwardDialog({
                                                     {displayHeader}
                                                 </th>
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Description</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PO Ref</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Inw Rate</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">Inw GST%</th>
+                                                {hasPoLines && (
+                                                    <>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PO Ref</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Inw Rate</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">Inw GST%</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-28">Total Amt</th>
+                                                    </>
+                                                )}
                                                 <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Line Remarks</th>
                                             </tr>
                                         </thead>
@@ -478,50 +499,59 @@ export function InwardDialog({
                                                                     <span className="text-xs text-secondary-500 truncate">{line.mainPartName}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="py-2.5 px-3">
-                                                                {line.sourceType === InwardSourceType.PO ? (
-                                                                    <div className="flex flex-col text-[10px] text-secondary-500 font-medium">
-                                                                        <span>Rate: ₹{line.sourceRate?.toLocaleString() || "0"}</span>
-                                                                        <span>GST: {line.sourceGstPercent ? `${line.sourceGstPercent}%` : "0%"}</span>
-                                                                    </div>
-                                                                ) : "—"}
-                                                            </td>
-                                                            <td className="py-2.5 px-3">
-                                                                {line.sourceType === InwardSourceType.PO ? (
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={line.rate || ""}
-                                                                        onChange={(e) => {
-                                                                            const val = e.target.value === "" ? null : Number(e.target.value);
-                                                                            setLines(prev => {
-                                                                                const next = [...prev];
-                                                                                next[idx] = { ...next[idx], rate: val };
-                                                                                return next;
-                                                                            });
-                                                                        }}
-                                                                        placeholder="0.00"
-                                                                        className="h-8 border-secondary-200 text-right text-xs font-semibold"
-                                                                    />
-                                                                ) : "—"}
-                                                            </td>
-                                                            <td className="py-2.5 px-3">
-                                                                {line.sourceType === InwardSourceType.PO ? (
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={line.gstPercent || ""}
-                                                                        onChange={(e) => {
-                                                                            const val = e.target.value === "" ? null : Number(e.target.value);
-                                                                            setLines(prev => {
-                                                                                const next = [...prev];
-                                                                                next[idx] = { ...next[idx], gstPercent: val };
-                                                                                return next;
-                                                                            });
-                                                                        }}
-                                                                        placeholder="0%"
-                                                                        className="h-8 border-secondary-200 text-right text-xs"
-                                                                    />
-                                                                ) : "—"}
-                                                            </td>
+                                                            {hasPoLines && (
+                                                                <>
+                                                                    <td className="py-2.5 px-3">
+                                                                        {line.sourceType === InwardSourceType.PO ? (
+                                                                            <div className="flex flex-col text-[10px] text-secondary-500 font-medium">
+                                                                                <span>Rate: ₹{line.sourceRate?.toLocaleString() || "0"}</span>
+                                                                                <span>GST: {line.sourceGstPercent ? `${line.sourceGstPercent}%` : "0%"}</span>
+                                                                            </div>
+                                                                        ) : "—"}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3">
+                                                                        {line.sourceType === InwardSourceType.PO ? (
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={line.rate || ""}
+                                                                                onChange={(e) => {
+                                                                                    const val = e.target.value === "" ? null : Number(e.target.value);
+                                                                                    setLines(prev => {
+                                                                                        const next = [...prev];
+                                                                                        next[idx] = { ...next[idx], rate: val };
+                                                                                        return next;
+                                                                                    });
+                                                                                }}
+                                                                                placeholder="0.00"
+                                                                                className="h-8 border-secondary-200 text-right text-xs font-semibold"
+                                                                            />
+                                                                        ) : "—"}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3">
+                                                                        {line.sourceType === InwardSourceType.PO ? (
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={line.gstPercent || ""}
+                                                                                onChange={(e) => {
+                                                                                    const val = e.target.value === "" ? null : Number(e.target.value);
+                                                                                    setLines(prev => {
+                                                                                        const next = [...prev];
+                                                                                        next[idx] = { ...next[idx], gstPercent: val };
+                                                                                        return next;
+                                                                                    });
+                                                                                }}
+                                                                                placeholder="0%"
+                                                                                className="h-8 border-secondary-200 text-right text-xs"
+                                                                            />
+                                                                        ) : "—"}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3">
+                                                                        <div className="h-8 flex items-center justify-end px-2 bg-secondary-50/50 rounded border border-secondary-100/50 text-xs font-bold text-secondary-700">
+                                                                            {line.sourceType === InwardSourceType.PO ? `₹${calculateLineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                                                                        </div>
+                                                                    </td>
+                                                                </>
+                                                            )}
                                                             <td className="py-2.5 px-3 min-w-[200px]">
                                                                 <Input
                                                                     placeholder="Line notes..."
@@ -553,21 +583,33 @@ export function InwardDialog({
                         </div>
 
                         {/* Footer: simplified as per request */}
-                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
-                            <Button
-                                variant="outline"
-                                onClick={() => onOpenChange(false)}
-                                className="h-9 px-5 font-semibold"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={mutation.isPending || uploading || lines.length === 0}
-                                className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
-                            >
-                                {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
-                            </Button>
+                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
+                            <div className="flex items-center gap-4">
+                                {hasPoLines && (
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none mb-1">Overall Inward Total</span>
+                                        <span className="text-lg font-black text-primary-600 leading-none">
+                                            ₹{overallTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onOpenChange(false)}
+                                    className="h-9 px-5 font-semibold"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={mutation.isPending || uploading || lines.length === 0}
+                                    className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                                >
+                                    {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
+                                </Button>
+                            </div>
                         </footer>
                     </>
                 )}

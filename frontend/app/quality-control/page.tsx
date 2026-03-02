@@ -102,12 +102,12 @@ export default function QualityControlPage() {
             typeof sourceType === "number"
                 ? sourceType
                 : typeof sourceType === "string"
-                    ? (sourceType === "PO" ? 0 : sourceType === "JobWork" ? 2 : -1)
+                    ? (sourceType === "PO" || sourceType === "0" ? InwardSourceType.PO : sourceType === "JobWork" || sourceType === "1" ? InwardSourceType.JobWork : -1)
                     : -1;
         switch (n) {
-            case 0:
+            case InwardSourceType.PO:
                 return "Purchase Order";
-            case 2:
+            case InwardSourceType.JobWork:
                 return "Job Work";
             default:
                 return "—";
@@ -283,11 +283,17 @@ export default function QualityControlPage() {
                                                                         <TableHeader>
                                                                             <TableRow className="bg-secondary-50 border-b border-secondary-100">
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider w-12 text-center">SR.NO</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">SOURCE REF</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                                                                    {q.sourceType === InwardSourceType.PO ? "PO NO." : "JW NO."}
+                                                                                </TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
+                                                                                    {q.sourceType === InwardSourceType.PO ? "PO DATE" : "JW DATE"}
+                                                                                </TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM TYPE</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">INWARD NO.</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">INWARD DATE</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center w-24">QC STATUS</TableHead>
                                                                             </TableRow>
                                                                         </TableHeader>
@@ -296,6 +302,9 @@ export default function QualityControlPage() {
                                                                                 <TableRow key={it.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
                                                                                     <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{it.sourceRefDisplay || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                        {it.sourceDate ? format(new Date(it.sourceDate), "dd MMM yyyy") : "—"}
+                                                                                    </TableCell>
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
                                                                                             <span className="font-semibold text-secondary-900 text-sm">{it.currentName ?? "—"}</span>
@@ -310,6 +319,9 @@ export default function QualityControlPage() {
                                                                                         </div>
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{it.inwardNo || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                        {it.inwardDate ? format(new Date(it.inwardDate), "dd MMM yyyy") : "—"}
+                                                                                    </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
                                                                                         {it.isApproved === true ? (
                                                                                             <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">Approved</span>

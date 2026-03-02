@@ -80,4 +80,11 @@ namespace net_backend.Models
         Approved = 1,
         Rejected = 2
     }
+
+    public enum MovementType
+    {
+        Outward,
+        Inward,
+        SystemReturn
+    }
 }

@@ -59,15 +59,16 @@ export function SourceSelectionDialog({
     };
 
     const filtered = sources.filter((s: any) => {
-        const sourcePartyId = s.vendorId;
+        const sourcePartyId = sourceType === InwardSourceType.JobWork ? s.toPartyId : s.vendorId;
         if (sourcePartyId !== vendorId) return false;
 
         const term = search.toLowerCase();
         if (sourceType === InwardSourceType.PO) {
             return s.poNo?.toLowerCase().includes(term) || s.vendorName?.toLowerCase().includes(term);
         } else if (sourceType === InwardSourceType.JobWork) {
-            return s.jwNo?.toLowerCase().includes(term) || s.vendorName?.toLowerCase().includes(term);
+            return s.jobWorkNo?.toLowerCase().includes(term) || s.toPartyName?.toLowerCase().includes(term);
         }
+        return false;
     }).filter((s: any) => !alreadySelectedIds.includes(s.id));
 
     const toggleSelection = (sourceId: number) => {
@@ -101,17 +102,23 @@ export function SourceSelectionDialog({
                 }));
                 allItems = [...allItems, ...items];
             } else if (sourceType === InwardSourceType.JobWork) {
-                allItems.push({
-                    itemId: source.itemId,
-                    itemName: source.itemName,
-                    mainPartName: source.mainPartName,
+                // JobWork pending returns flattened items
+                const items = (source.items || []).map((i: any) => ({
+                    itemId: i.itemId,
+                    itemName: i.itemName,
+                    mainPartName: i.mainPartName,
                     quantity: 1,
                     sourceType: InwardSourceType.JobWork,
                     sourceRefId: source.id,
                     sourceRefDisplay: source.jobWorkNo,
-                    vendorId: source.vendorId,
-                    vendorName: source.vendorName
-                });
+                    vendorId: source.toPartyId,
+                    vendorName: source.toPartyName,
+                    sourceRate: i.rate,
+                    sourceGstPercent: i.gstPercent,
+                    rate: i.rate,
+                    gstPercent: i.gstPercent
+                }));
+                allItems = [...allItems, ...items];
             }
         });
 
@@ -180,7 +187,7 @@ export function SourceSelectionDialog({
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
                                     } else {
                                         refNo = item.jobWorkNo;
-                                        party = item.vendorName;
+                                        party = item.toPartyName;
                                         dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
                                     }
 

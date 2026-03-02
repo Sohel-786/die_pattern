@@ -14,6 +14,7 @@ namespace net_backend.Data
                 context.Companies.Add(new Company
                 {
                     Name = "Aira Euro Automation Pvt Ltd",
+                    ThemeColor = "#0d6efd",
                     IsActive = true,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
@@ -176,7 +177,7 @@ namespace net_backend.Data
                 var posToFix = context.PurchaseOrders.Where(po => po.LocationId == null || po.LocationId == 0).ToList();
                 foreach (var po in posToFix) { po.LocationId = seedLocationId; }
 
-                var jwToFix = context.JobWorks.Where(j => j.LocationId == null || j.LocationId == 0).ToList();
+                var jwToFix = context.JobWorks.Where(j => j.LocationId == 0).ToList();
                 foreach (var j in jwToFix) { j.LocationId = seedLocationId; }
 
                 var inwardsToFix = context.Inwards.Where(i => i.LocationId == 0).ToList();

@@ -14,6 +14,8 @@ import { User, Lock, Eye, EyeOff, Building2 } from "lucide-react";
 import { LoginBackground1 } from "@/components/login/LoginBackground1";
 import { LoginBackground2 } from "@/components/login/LoginBackground2";
 import { LoginMainBackground } from "@/components/login/LoginMainBackground";
+import { applyPrimaryColor } from "@/lib/theme";
+import { useEffect } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -29,12 +31,15 @@ export default function LoginPage() {
   const { data: appSettings } = useAppSettings();
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    applyPrimaryColor("#0d6efd");
+  }, []);
+
   const softwareName =
     appSettings?.softwareName?.trim() ||
-    appSettings?.companyName?.trim() ||
-    "QC Item System";
-  const logoUrl = appSettings?.companyLogo
-    ? `${API_BASE}/storage/${appSettings.companyLogo}`
+    "Die & Pattern Management";
+  const logoUrl = appSettings?.logoUrl
+    ? `${API_BASE}${appSettings.logoUrl}`
     : null;
 
   const {

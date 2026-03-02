@@ -283,6 +283,7 @@ namespace net_backend.Controllers
                     GstNo = c.GstNo,
                     GstDate = c.GstDate,
                     UseAsParty = c.UseAsParty,
+                    ThemeColor = c.ThemeColor,
                     IsActive = c.IsActive,
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt
@@ -311,6 +312,7 @@ namespace net_backend.Controllers
                     GstNo = c.GstNo,
                     GstDate = c.GstDate,
                     UseAsParty = c.UseAsParty,
+                    ThemeColor = c.ThemeColor,
                     IsActive = c.IsActive,
                     CreatedAt = c.CreatedAt,
                     UpdatedAt = c.UpdatedAt
@@ -338,6 +340,7 @@ namespace net_backend.Controllers
                 GstNo = company.GstNo,
                 GstDate = company.GstDate,
                 UseAsParty = company.UseAsParty,
+                ThemeColor = company.ThemeColor,
                 IsActive = company.IsActive,
                 CreatedAt = company.CreatedAt,
                 UpdatedAt = company.UpdatedAt
@@ -404,12 +407,15 @@ namespace net_backend.Controllers
                 LogoUrl = request.LogoUrl?.Trim(),
                 GstDate = request.GstDate,
                 UseAsParty = request.UseAsParty,
+                ThemeColor = string.IsNullOrWhiteSpace(request.ThemeColor) ? "#0d6efd" : request.ThemeColor,
                 IsActive = request.IsActive,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
+
+            await SyncCompanyAsPartyAsync(company);
 
             var dto = new CompanyDto
             {
@@ -425,6 +431,7 @@ namespace net_backend.Controllers
                 GstNo = company.GstNo,
                 GstDate = company.GstDate,
                 UseAsParty = company.UseAsParty,
+                ThemeColor = company.ThemeColor,
                 IsActive = company.IsActive,
                 CreatedAt = company.CreatedAt,
                 UpdatedAt = company.UpdatedAt
@@ -446,7 +453,7 @@ namespace net_backend.Controllers
                 if (await _context.Companies.AnyAsync(c => c.Id != id && c.Name.ToLower() == nameTrimmed.ToLower()))
                     return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"Company name '{nameTrimmed}' already exists in Company Master." });
                 
-                if (await _context.Parties.AnyAsync(p => p.Name.ToLower() == nameTrimmed.ToLower()))
+                if (await _context.Parties.AnyAsync(p => p.LinkedCompanyId != id && p.Name.ToLower() == nameTrimmed.ToLower()))
                     return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"A Party with the name '{nameTrimmed}' already exists in Party Master." });
 
                 existing.Name = nameTrimmed;
@@ -465,8 +472,8 @@ namespace net_backend.Controllers
                 if (await _context.Companies.AnyAsync(c => c.Id != id && c.GstNo != null && c.GstNo.ToUpper() == gstNorm))
                     return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already registered with another company." });
                 
-                // Check in Parties
-                var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
+                // Check in Parties (Exclude parties that are systems-synced from this EXACT company)
+                var existingPartyGst = await _context.Parties.FirstOrDefaultAsync(p => p.LinkedCompanyId != id && p.GstNo != null && p.GstNo.ToUpper() == gstNorm);
                 if (existingPartyGst != null)
                     return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = $"GST No. '{gstNorm}' is already assigned to party '{existingPartyGst.Name}' in Party Master." });
 
@@ -479,6 +486,7 @@ namespace net_backend.Controllers
             if (request.ContactPerson != null) existing.ContactPerson = request.ContactPerson.Trim();
             if (request.GstDate.HasValue) existing.GstDate = request.GstDate;
             if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
+            if (request.ThemeColor != null) existing.ThemeColor = request.ThemeColor;
 
             // ── Phone number validation ───────────────────────────────────
             if (request.ContactNumber != null)
@@ -515,6 +523,9 @@ namespace net_backend.Controllers
             existing.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
+            
+            await SyncCompanyAsPartyAsync(existing);
+
             var dto = new CompanyDto
             {
                 Id = existing.Id,
@@ -529,6 +540,7 @@ namespace net_backend.Controllers
                 GstNo = existing.GstNo,
                 GstDate = existing.GstDate,
                 UseAsParty = existing.UseAsParty,
+                ThemeColor = existing.ThemeColor,
                 IsActive = existing.IsActive,
                 CreatedAt = existing.CreatedAt,
                 UpdatedAt = existing.UpdatedAt
@@ -544,9 +556,75 @@ namespace net_backend.Controllers
             var company = await _context.Companies.FindAsync(id);
             if (company == null) return NotFound(new ApiResponse<bool> { Success = false, Message = "Company not found" });
 
+            // Cleanup linked parties
+            var linkedParties = await _context.Parties.Where(p => p.LinkedCompanyId == id).ToListAsync();
+            _context.Parties.RemoveRange(linkedParties);
+
             _context.Companies.Remove(company);
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        private async Task SyncCompanyAsPartyAsync(Company partyCompany)
+        {
+            // 1. Enforce Self-Visibility / Invisibility
+            if (partyCompany.UseAsParty)
+            {
+                // Ensure SELF record exists
+                var selfParty = await _context.Parties
+                    .FirstOrDefaultAsync(p => p.CompanyId == partyCompany.Id && p.LinkedCompanyId == partyCompany.Id);
+
+                if (selfParty == null)
+                {
+                    _context.Parties.Add(new Party
+                    {
+                        Name = partyCompany.Name,
+                        Address = partyCompany.Address,
+                        GstNo = partyCompany.GstNo,
+                        GstDate = partyCompany.GstDate,
+                        ContactPerson = partyCompany.ContactPerson,
+                        PhoneNumber = partyCompany.ContactNumber,
+                        CompanyId = partyCompany.Id,
+                        LinkedCompanyId = partyCompany.Id,
+                        IsActive = partyCompany.IsActive,
+                        PartyCategory = "SYSTEM VENDOR",
+                        CustomerType = "SELF",
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    });
+                }
+                else
+                {
+                    selfParty.Name = partyCompany.Name;
+                    selfParty.Address = partyCompany.Address;
+                    selfParty.GstNo = partyCompany.GstNo;
+                    selfParty.GstDate = partyCompany.GstDate;
+                    selfParty.ContactPerson = partyCompany.ContactPerson;
+                    selfParty.PhoneNumber = partyCompany.ContactNumber;
+                    selfParty.IsActive = partyCompany.IsActive;
+                    selfParty.UpdatedAt = DateTime.Now;
+                }
+            }
+            else
+            {
+                // Remove self party if UseAsParty is disabled
+                var selfParty = await _context.Parties
+                    .FirstOrDefaultAsync(p => p.CompanyId == partyCompany.Id && p.LinkedCompanyId == partyCompany.Id);
+                if (selfParty != null) _context.Parties.Remove(selfParty);
+            }
+
+            // 2. Strict Isolation Cleanup (Critical Rule: System parties only visible in their own company)
+            // Delete any party entries where this company is the linked source but it's NOT in the company itself.
+            var legacyCrossLinks = await _context.Parties
+                .Where(p => p.LinkedCompanyId == partyCompany.Id && p.CompanyId != partyCompany.Id)
+                .ToListAsync();
+
+            if (legacyCrossLinks.Any())
+            {
+                _context.Parties.RemoveRange(legacyCrossLinks);
+            }
+            
+            await _context.SaveChangesAsync();
         }
     }
 }

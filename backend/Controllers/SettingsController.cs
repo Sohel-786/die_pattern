@@ -51,7 +51,6 @@ namespace net_backend.Controllers
             }
 
             if (request.SoftwareName != null) settings.SoftwareName = request.SoftwareName;
-            if (request.PrimaryColor != null) settings.PrimaryColor = request.PrimaryColor;
 
             settings.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();

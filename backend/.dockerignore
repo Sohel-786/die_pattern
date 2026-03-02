@@ -1,7 +1,0 @@
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-wwwroot/storage/*
-!wwwroot/storage/.gitkeep

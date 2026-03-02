@@ -23,6 +23,7 @@ namespace net_backend.DTOs
         public string? CurrentPartyName { get; set; }
         /// <summary>Latest process state for display: PI Issued, PO Issued, In Inward, In QC, In Job Work, In Outward, In Stock, Not In Stock.</summary>
         public string? CurrentProcess { get; set; }
+        public string? CurrentHolderType { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -35,6 +36,11 @@ namespace net_backend.DTOs
         public string? RevisionNo { get; set; }
         public int MaterialId { get; set; }
         public int OwnerTypeId { get; set; }
+        public int StatusId { get; set; }
+        public bool IsActive { get; set; } = true;
+        public string? CurrentHolderType { get; set; }
+        public int? CurrentLocationId { get; set; }
+        public int? CurrentPartyId { get; set; }
     }
 
     public class UpdateItemDto
@@ -48,6 +54,9 @@ namespace net_backend.DTOs
         public int OwnerTypeId { get; set; }
         public int StatusId { get; set; }
         public bool IsActive { get; set; }
+        public string? CurrentHolderType { get; set; }
+        public int? CurrentLocationId { get; set; }
+        public int? CurrentPartyId { get; set; }
     }
 
     public class ItemChangeRequestDto
