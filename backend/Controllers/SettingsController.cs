@@ -148,6 +148,11 @@ namespace net_backend.Controllers
             permissions.ViewDashboard = updatedPerms.ViewDashboard;
             
             permissions.ViewMaster = updatedPerms.ViewMaster;
+            permissions.AddMaster = updatedPerms.AddMaster;
+            permissions.EditMaster = updatedPerms.EditMaster;
+            permissions.ImportMaster = updatedPerms.ImportMaster;
+            permissions.ExportMaster = updatedPerms.ExportMaster;
+            
             permissions.ManageItem = updatedPerms.ManageItem;
             permissions.ManageItemType = updatedPerms.ManageItemType;
             permissions.ManageMaterial = updatedPerms.ManageMaterial;
@@ -178,6 +183,11 @@ namespace net_backend.Controllers
 
             permissions.ViewMovement = updatedPerms.ViewMovement;
             permissions.CreateMovement = updatedPerms.CreateMovement;
+            permissions.EditMovement = updatedPerms.EditMovement;
+
+            permissions.ViewTransfer = updatedPerms.ViewTransfer;
+            permissions.CreateTransfer = updatedPerms.CreateTransfer;
+            permissions.EditTransfer = updatedPerms.EditTransfer;
             
             permissions.ManageChanges = updatedPerms.ManageChanges;
             permissions.RevertChanges = updatedPerms.RevertChanges;
@@ -319,6 +329,10 @@ namespace net_backend.Controllers
             {
                 "ViewDashboard" => permissions.ViewDashboard,
                 "ViewMaster" => permissions.ViewMaster,
+                "AddMaster" => permissions.AddMaster,
+                "EditMaster" => permissions.EditMaster,
+                "ImportMaster" => permissions.ImportMaster,
+                "ExportMaster" => permissions.ExportMaster,
                 "ManageItem" => permissions.ManageItem,
                 "ManageItemType" => permissions.ManageItemType,
                 "ManageMaterial" => permissions.ManageMaterial,
@@ -344,6 +358,10 @@ namespace net_backend.Controllers
                 "ApproveQC" => permissions.ApproveQC,
                 "ViewMovement" => permissions.ViewMovement,
                 "CreateMovement" => permissions.CreateMovement,
+                "EditMovement" => permissions.EditMovement,
+                "ViewTransfer" => permissions.ViewTransfer,
+                "CreateTransfer" => permissions.CreateTransfer,
+                "EditTransfer" => permissions.EditTransfer,
                 "ManageChanges" => permissions.ManageChanges,
                 "RevertChanges" => permissions.RevertChanges,
                 "ViewReports" => permissions.ViewReports,
@@ -366,6 +384,11 @@ namespace net_backend.Controllers
             {
                 perm.ViewDashboard = true;
                 perm.ViewMaster = true;
+                perm.AddMaster = true;
+                perm.EditMaster = true;
+                perm.ImportMaster = true;
+                perm.ExportMaster = true;
+                
                 perm.ManageItem = true;
                 perm.ManageItemType = true;
                 perm.ManageMaterial = true;
@@ -396,6 +419,12 @@ namespace net_backend.Controllers
 
                 perm.ViewMovement = true;
                 perm.CreateMovement = true;
+                perm.EditMovement = true;
+
+                perm.ViewTransfer = true;
+                perm.CreateTransfer = true;
+                perm.EditTransfer = true;
+
                 perm.ManageChanges = true;
                 perm.RevertChanges = true;
                 perm.ViewReports = true;
@@ -406,6 +435,9 @@ namespace net_backend.Controllers
             {
                 perm.ViewDashboard = true;
                 perm.ViewMaster = true;
+                perm.AddMaster = true;
+                perm.EditMaster = true;
+                
                 perm.ManageItem = true;
                 perm.ManageItemType = true;
                 perm.ManageMaterial = true;
@@ -432,6 +464,8 @@ namespace net_backend.Controllers
 
                 perm.ViewMovement = true;
                 perm.CreateMovement = true;
+                perm.ViewTransfer = true;
+                perm.CreateTransfer = true;
                 perm.ViewReports = true;
             }
             else
@@ -443,6 +477,7 @@ namespace net_backend.Controllers
                 perm.ViewInward = true;
                 perm.ViewQC = true;
                 perm.ViewMovement = true;
+                perm.ViewTransfer = true;
             }
 
             return perm;

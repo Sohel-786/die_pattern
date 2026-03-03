@@ -362,8 +362,57 @@ namespace net_backend.DTOs
         public List<CreateJobWorkItemDto> Items { get; set; } = new();
     }
 
-    public class UpdateJobWorkStatusDto
+    public class TransferItemDto
     {
-        public JobWorkStatus Status { get; set; }
+        public int Id { get; set; }
+        public int ItemId { get; set; }
+        public string? MainPartName { get; set; }
+        public string? CurrentName { get; set; }
+        public string? ItemTypeName { get; set; }
+        public string? MaterialName { get; set; }
+        public string? DrawingNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class TransferDto
+    {
+        public int Id { get; set; }
+        public string TransferNo { get; set; } = string.Empty;
+        public int? FromPartyId { get; set; }
+        public string? FromPartyName { get; set; }
+        public int? ToPartyId { get; set; }
+        public string? ToPartyName { get; set; }
+        public DateTime TransferDate { get; set; }
+        public string? Remarks { get; set; }
+        public string? OutFor { get; set; }
+        public string? ReasonDetails { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? PersonName { get; set; }
+        public string? CreatorName { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<string> AttachmentUrls { get; set; } = new();
+        public List<TransferItemDto> Items { get; set; } = new();
+    }
+
+    public class CreateTransferItemDto
+    {
+        public int ItemId { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class CreateTransferDto
+    {
+        public int? FromPartyId { get; set; } // If null, means From Location
+        public int? ToPartyId { get; set; }   // If null, means To Location
+        public DateTime? TransferDate { get; set; }
+        public string? Remarks { get; set; }
+        public string? OutFor { get; set; }
+        public string? ReasonDetails { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? PersonName { get; set; }
+        public List<string>? AttachmentUrls { get; set; }
+        public List<CreateTransferItemDto> Items { get; set; } = new();
     }
 }

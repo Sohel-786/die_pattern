@@ -90,7 +90,7 @@ namespace net_backend.Controllers
                 CurrentProcess = _itemState.GetStateDisplay(p.CurrentProcess),
                 CurrentHolderType = p.CurrentProcess switch {
                     ItemProcessState.InStock or ItemProcessState.InQC or ItemProcessState.InwardDone => "Location",
-                    ItemProcessState.InJobwork or ItemProcessState.Outward or ItemProcessState.InPO => "Vendor",
+                    ItemProcessState.InJobwork or ItemProcessState.AtVendor or ItemProcessState.InPO => "Vendor",
                     _ => "NotInStock"
                 },
                 IsActive = p.IsActive
@@ -137,7 +137,7 @@ namespace net_backend.Controllers
                 CurrentProcess = _itemState.GetStateDisplay(p.CurrentProcess),
                 CurrentHolderType = p.CurrentProcess switch {
                     ItemProcessState.InStock or ItemProcessState.InQC or ItemProcessState.InwardDone => "Location",
-                    ItemProcessState.InJobwork or ItemProcessState.Outward or ItemProcessState.InPO => "Vendor",
+                    ItemProcessState.InJobwork or ItemProcessState.AtVendor or ItemProcessState.InPO => "Vendor",
                     _ => "NotInStock"
                 },
                 IsActive = p.IsActive
@@ -170,7 +170,7 @@ namespace net_backend.Controllers
                 StatusId = dto.StatusId > 0 ? dto.StatusId : 1, // Use provided status or default to 1
                 CurrentProcess = s switch {
                     var x when x == "location" || x == "at location" || x == "at_location" || x == "instock" || x == "inwarddone" || x == "inqc" => ItemProcessState.InStock,
-                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.Outward,
+                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.AtVendor,
                     _ => ItemProcessState.NotInStock
                 },
                 CurrentLocationId = (s == "location" || s == "at location" || s == "at_location" || s == "instock" || s == "inwarddone" || s == "inqc") ? (dto.CurrentLocationId ?? locationId) : null,
@@ -259,7 +259,7 @@ namespace net_backend.Controllers
                 var s = dto.CurrentHolderType.Trim().ToLower();
                 existing.CurrentProcess = s switch {
                     var x when x == "location" || x == "at location" || x == "at_location" || x == "instock" || x == "inwarddone" || x == "inqc" => ItemProcessState.InStock,
-                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.Outward,
+                    var x when x == "vendor" || x == "party" || x == "at vendor" || x == "outward" || x == "injobwork" || x == "inpo" => ItemProcessState.AtVendor,
                     _ => ItemProcessState.NotInStock
                 };
                 existing.CurrentLocationId = (s == "location" || s == "at location" || s == "at_location" || s == "instock") ? (dto.CurrentLocationId ?? locationId) : null;

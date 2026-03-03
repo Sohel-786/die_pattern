@@ -70,6 +70,8 @@ namespace net_backend.Models
         public int Id { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;
+        [Required]
+        public string Address { get; set; } = string.Empty;
         public int CompanyId { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -495,6 +497,11 @@ namespace net_backend.Models
         
         // Master Permissions
         public bool ViewMaster { get; set; } = false;
+        public bool AddMaster { get; set; } = false;
+        public bool EditMaster { get; set; } = false;
+        public bool ImportMaster { get; set; } = false;
+        public bool ExportMaster { get; set; } = false;
+        
         public bool ManageItem { get; set; } = false;
         public bool ManageItemType { get; set; } = false;
         public bool ManageMaterial { get; set; } = false;
@@ -529,11 +536,14 @@ namespace net_backend.Models
         public bool ApproveQC { get; set; } = false;
 
 
-        // Logistics (Movement & Job Work)
+        // Logistics (Movement, Job Work, Transfer)
         public bool ViewMovement { get; set; } = false;
         public bool CreateMovement { get; set; } = false;
         public bool EditMovement { get; set; } = false;
-        public bool ApproveMovement { get; set; } = false;
+        
+        public bool ViewTransfer { get; set; } = false;
+        public bool CreateTransfer { get; set; } = false;
+        public bool EditTransfer { get; set; } = false;
 
         // Audit & History
         public bool ManageChanges { get; set; } = false;
@@ -551,5 +561,62 @@ namespace net_backend.Models
 
         [ForeignKey("UserId")]
         public virtual User? User { get; set; }
+    }
+
+    [Table("transfers")]
+    public class Transfer
+    {
+        public int Id { get; set; }
+        [Required]
+        public string TransferNo { get; set; } = string.Empty;
+        public int LocationId { get; set; } // Current location context
+        
+        // From can be Location (represented by CompanyId of current location if internal) or Vendor/Party
+        public int? FromPartyId { get; set; } 
+        // To can be Location or Vendor/Party
+        public int? ToPartyId { get; set; }
+
+        public DateTime TransferDate { get; set; } = DateTime.Now;
+        public string? Remarks { get; set; }
+        /// <summary>Out For - the reason (e.g. Casting, Job Work).</summary>
+        [MaxLength(100)]
+        public string? OutFor { get; set; }
+        /// <summary>Reason details (e.g. FOR CASTING).</summary>
+        [MaxLength(500)]
+        public string? ReasonDetails { get; set; }
+        [MaxLength(50)]
+        public string? VehicleNo { get; set; }
+        [MaxLength(200)]
+        public string? PersonName { get; set; }
+        /// <summary>JSON array of attachment file URLs.</summary>
+        public string? AttachmentUrlsJson { get; set; }
+        public int CreatedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public bool IsActive { get; set; } = true;
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+        [ForeignKey("FromPartyId")]
+        public virtual Party? FromParty { get; set; }
+        [ForeignKey("ToPartyId")]
+        public virtual Party? ToParty { get; set; }
+        [ForeignKey("CreatedBy")]
+        public virtual User? Creator { get; set; }
+
+        public virtual ICollection<TransferItem> Items { get; set; } = new List<TransferItem>();
+    }
+
+    [Table("transfer_items")]
+    public class TransferItem
+    {
+        public int Id { get; set; }
+        public int TransferId { get; set; }
+        public int ItemId { get; set; }
+        public string? Remarks { get; set; }
+
+        [ForeignKey("TransferId")]
+        public virtual Transfer? Transfer { get; set; }
+        [ForeignKey("ItemId")]
+        public virtual Item? Item { get; set; }
     }
 }

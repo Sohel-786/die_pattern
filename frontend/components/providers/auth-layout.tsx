@@ -40,6 +40,7 @@ const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = {
   '/inwards': 'viewInward',
   '/quality-control': 'viewQC',
   '/job-works': 'viewMovement',
+  '/transfers': 'viewTransfer',
   '/reports': 'viewReports',
   '/settings': 'accessSettings',
 };
@@ -90,8 +91,8 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/issues') ||
     pathname.startsWith('/inwards') ||
     pathname.startsWith('/returns') ||
-    pathname.startsWith('/quality-control') ||
     pathname.startsWith('/job-works') ||
+    pathname.startsWith('/transfers') ||
 
     pathname.startsWith('/statuses') ||
     pathname.startsWith('/store-items');

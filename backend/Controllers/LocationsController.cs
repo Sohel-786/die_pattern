@@ -28,6 +28,7 @@ namespace net_backend.Controllers
                 .ToListAsync();
             var data = locations.Select(l => new {
                 Name = l.Name,
+                Address = l.Address,
                 Company = l.Company?.Name ?? "",
                 IsActive = l.IsActive ? "Yes" : "No",
                 CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm")
@@ -77,6 +78,7 @@ namespace net_backend.Controllers
                             newLocations.Add(new Location
                             {
                                 Name = validRow.Data.Name.Trim(),
+                                Address = validRow.Data.Address.Trim(),
                                 CompanyId = companyId,
                                 IsActive = true,
                                 CreatedAt = DateTime.Now,
@@ -136,6 +138,12 @@ namespace net_backend.Controllers
                     continue;
                 }
 
+                if (string.IsNullOrWhiteSpace(item.Address))
+                {
+                    validation.Invalid.Add(new ValidationEntry<LocationImportDto> { Row = row.RowNumber, Data = item, Message = "Address is mandatory" });
+                    continue;
+                }
+
                 var nameLower = item.Name.Trim().ToLower();
                 var companyLower = item.CompanyName.Trim().ToLower();
                 var compositeKey = nameLower + "|" + companyLower;
@@ -175,6 +183,7 @@ namespace net_backend.Controllers
                 .Select(l => new {
                     l.Id,
                     l.Name,
+                    l.Address,
                     l.CompanyId,
                     CompanyName = l.Company != null ? l.Company.Name : "",
                     l.IsActive,
@@ -186,25 +195,33 @@ namespace net_backend.Controllers
         }
 
         [HttpGet("active")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Location>>>> GetActive()
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetActive()
         {
             var locations = await _context.Locations
                 .Where(l => l.IsActive)
+                .Select(l => new { l.Id, l.Name, l.Address })
                 .OrderBy(l => l.Name)
                 .ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Location>> { Data = locations });
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = locations });
         }
 
         [HttpPost]
-        public async Task<ActionResult<ApiResponse<Location>>> Create([FromBody] Location location)
+        public async Task<ActionResult<ApiResponse<Location>>> Create([FromBody] CreateLocationRequest request)
         {
             if (!await HasPermission("ManageLocation")) return Forbidden();
 
-            if (await _context.Locations.AnyAsync(l => l.Name.ToLower() == location.Name.Trim().ToLower() && l.CompanyId == location.CompanyId))
+            if (await _context.Locations.AnyAsync(l => l.Name.ToLower() == request.Name.Trim().ToLower() && l.CompanyId == request.CompanyId))
                 return BadRequest(new ApiResponse<Location> { Success = false, Message = "Location already exists for this company" });
 
-            location.CreatedAt = DateTime.Now;
-            location.UpdatedAt = DateTime.Now;
+            var location = new Location
+            {
+                Name = request.Name.Trim(),
+                Address = request.Address?.Trim() ?? string.Empty,
+                CompanyId = request.CompanyId,
+                IsActive = request.IsActive ?? true,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
             _context.Locations.Add(location);
             await _context.SaveChangesAsync();
 
@@ -229,6 +246,7 @@ namespace net_backend.Controllers
             }
 
             if (request.Name != null) existing.Name = request.Name.Trim();
+            if (request.Address != null) existing.Address = request.Address.Trim();
             if (request.CompanyId != null && request.CompanyId > 0) existing.CompanyId = request.CompanyId.Value;
             existing.IsActive = request.IsActive;
             existing.UpdatedAt = DateTime.Now;

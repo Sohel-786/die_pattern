@@ -527,19 +527,6 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
-        [HttpPut("{id}/status")]
-        public async Task<ActionResult<ApiResponse<bool>>> UpdateStatus(int id, [FromBody] UpdateJobWorkStatusDto dto)
-        {
-            if (!await HasPermission("ApproveMovement")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
-            var jw = await _context.JobWorks.FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
-            if (jw == null) return NotFound();
-            jw.Status = dto.Status;
-            jw.UpdatedAt = DateTime.Now;
-            await _context.SaveChangesAsync();
-            return Ok(new ApiResponse<bool> { Data = true });
-        }
-
         [HttpPost("upload-attachment")]
         public async Task<ActionResult<ApiResponse<object>>> UploadAttachment(IFormFile file)
         {

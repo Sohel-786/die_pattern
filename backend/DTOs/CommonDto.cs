@@ -48,6 +48,7 @@ namespace net_backend.DTOs
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
         public int CompanyId { get; set; }
         public string? CompanyName { get; set; }
         public bool IsActive { get; set; }
@@ -58,6 +59,7 @@ namespace net_backend.DTOs
     public class CreateLocationRequest
     {
         public string Name { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
         public int CompanyId { get; set; }
         public bool? IsActive { get; set; }
     }
@@ -82,6 +84,7 @@ namespace net_backend.DTOs
     public class UpdateLocationRequest
     {
         public string? Name { get; set; }
+        public string? Address { get; set; }
         public int? CompanyId { get; set; }
         public bool IsActive { get; set; }
     }

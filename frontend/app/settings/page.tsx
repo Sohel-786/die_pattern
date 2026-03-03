@@ -22,7 +22,8 @@ import {
   Truck,
   BarChart3,
   FileText,
-  ShoppingCart
+  ShoppingCart,
+  ArrowLeftRight
 } from "lucide-react";
 import {
   Card,
@@ -124,6 +125,11 @@ const permissionLabels: Record<string, string> = {
   viewDashboard: "View Dashboard",
 
   viewMaster: "View Master Data",
+  addMaster: "Add Master Records",
+  editMaster: "Edit Master Records",
+  importMaster: "Import Master Data",
+  exportMaster: "Export Master Data",
+
   manageItem: "Manage Items",
   manageItemType: "Manage Item Types",
   manageMaterial: "Manage Materials",
@@ -133,35 +139,38 @@ const permissionLabels: Record<string, string> = {
   manageLocation: "Manage Locations",
   manageCompany: "Manage Companies",
 
-  viewPI: "View PI",
-  createPI: "Create PI",
-  editPI: "Edit PI",
-  approvePI: "Approve PI",
+  viewPI: "View Purchase Indent",
+  createPI: "Create Purchase Indent",
+  editPI: "Edit Purchase Indent",
+  approvePI: "Approve Purchase Indent",
 
-  viewPO: "View PO",
-  createPO: "Create PO",
-  editPO: "Edit PO",
-  approvePO: "Approve PO",
+  viewPO: "View Purchase Order",
+  createPO: "Create Purchase Order",
+  editPO: "Edit Purchase Order",
+  approvePO: "Approve Purchase Order",
 
-  viewInward: "View Inwards",
-  createInward: "Create Inwards",
-  editInward: "Edit Inwards",
+  viewInward: "View Inward",
+  createInward: "Create Inward",
+  editInward: "Edit Inward",
 
-  viewQC: "View QC",
-  createQC: "Add QC",
-  editQC: "Edit QC",
-  approveQC: "Approve QC",
+  viewQC: "View QC Inspection",
+  createQC: "Add QC Inspection",
+  editQC: "Edit QC Inspection",
+  approveQC: "Approve QC Inspection",
 
   viewMovement: "View Job Work",
   createMovement: "Create Job Work",
   editMovement: "Edit Job Work",
-  approveMovement: "Approve Job Work",
 
-  manageChanges: "Manage Changes",
+  viewTransfer: "View Transfer Entry",
+  createTransfer: "Create Transfer Entry",
+  editTransfer: "Edit Transfer Entry",
+
+  manageChanges: "Manage Audit Logs",
   revertChanges: "Revert Changes",
-  viewReports: "View Reports",
-  manageUsers: "Manage Users",
-  accessSettings: "Access Settings",
+  viewReports: "View Intelligence Reports",
+  manageUsers: "Manage User Accounts",
+  accessSettings: "Access System Settings",
 };
 
 const permissionKeys = Object.keys(
@@ -861,24 +870,37 @@ export default function SettingsPage() {
                                   <div className="p-2 bg-orange-100/50 rounded-lg text-orange-600">
                                     <Database className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">Master Data</CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Master Data Management</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer">
                                   <div>
-                                    <p className="text-sm font-medium text-primary-900">View Master Data</p>
-                                    <p className="text-xs text-secondary-500">Global browse access.</p>
+                                    <p className="text-sm font-medium text-primary-900">Global Master View</p>
+                                    <p className="text-xs text-secondary-500">Enable overall master data browsing.</p>
                                   </div>
-                                  <input type="checkbox" checked={(localPermissions as any).viewMaster} onChange={(e) => handlePermissionChange("viewMaster" as any, e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
+                                  <input type="checkbox" checked={localPermissions.viewMaster} onChange={(e) => handlePermissionChange("viewMaster", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
                                 </label>
-                                <div className="p-4 bg-orange-50/20">
-                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-3">Management Permissions</p>
+
+                                <div className="p-4 bg-orange-50/10">
+                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-3">Core Master Actions</p>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {[{ key: "addMaster", label: "Add (Create)" }, { key: "editMaster", label: "Edit (Update)" }, { key: "importMaster", label: "Import (Bulk)" }, { key: "exportMaster", label: "Export (Reports)" }].map(item => (
+                                      <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-orange-100 bg-white hover:border-orange-200 transition-colors">
+                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
+                                        <span className="text-xs font-semibold text-secondary-700 group-hover:text-primary-900 transition-colors">{item.label}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="p-4 bg-orange-50/5">
+                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-3">Module Permissions</p>
                                   <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                                    {[{ key: "manageItem", label: "Items" }, { key: "manageItemType", label: "Item Types" }, { key: "manageMaterial", label: "Materials" }, { key: "manageItemStatus", label: "Item Statuses" }, { key: "manageOwnerType", label: "Owner Types" }, { key: "manageParty", label: "Parties" }, { key: "manageLocation", label: "Locations" }, { key: "manageCompany", label: "Companies" }].map(item => (
+                                    {[{ key: "manageItem", label: "Items (Die/Pattern)" }, { key: "manageItemType", label: "Item Types" }, { key: "manageMaterial", label: "Materials" }, { key: "manageItemStatus", label: "Item Statuses" }, { key: "manageOwnerType", label: "Owner Types" }, { key: "manageParty", label: "Parties (Vendors)" }, { key: "manageLocation", label: "Locations" }, { key: "manageCompany", label: "Companies" }].map(item => (
                                       <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
-                                        <span className="text-xs font-medium text-secondary-700 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
+                                        <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -891,31 +913,34 @@ export default function SettingsPage() {
                                   <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
                                     <Truck className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">Operations</CardTitle>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Core Operations</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <div className="p-4 space-y-3">
-                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Movements & Inward</p>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    {["viewMovement", "createMovement"].map(k => (
-                                      <label key={k} className="flex items-center gap-2 cursor-pointer group">
-                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
-                                        <span className="text-xs font-medium text-secondary-700 uppercase tracking-tight">{k.replace("view", "View ").replace("create", "Create ")}</span>
+                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Job Work Management</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {[{ key: "viewMovement", label: "View JW" }, { key: "createMovement", label: "Add JW" }, { key: "editMovement", label: "Edit JW" }].map(item => (
+                                      <label key={item.key} className="flex items-center gap-2 cursor-pointer group p-1.5 rounded border border-blue-50 hover:bg-white hover:border-blue-200 transition-all">
+                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="text-[11px] font-semibold text-secondary-700 group-hover:text-primary-900 transition-colors">{item.label}</span>
                                       </label>
                                     ))}
                                   </div>
-                                  <div className="grid grid-cols-3 gap-2 mt-2">
-                                    {["viewInward", "createInward", "editInward"].map(k => (
-                                      <label key={k} className="flex flex-col items-center gap-1 p-2 rounded border border-secondary-100 bg-secondary-50/30 cursor-pointer">
-                                        <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("Inward", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit")}</span>
+                                </div>
+                                <div className="p-4 space-y-3 bg-blue-50/10">
+                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Inward Entry</p>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {[{ key: "viewInward", label: "VIEW" }, { key: "createInward", label: "ADD" }, { key: "editInward", label: "EDIT" }].map(item => (
+                                      <label key={item.key} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-blue-100 bg-white cursor-pointer hover:border-blue-300 transition-colors shadow-sm">
+                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
+                                        <span className="text-[10px] font-black text-secondary-500">{item.label}</span>
                                       </label>
                                     ))}
                                   </div>
                                 </div>
                                 <div className="p-4 space-y-3 bg-emerald-50/10">
-                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Quality Control</p>
+                                  <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-2">Quality Control (QC)</p>
                                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                                     {[{ key: "viewQC", label: "View QC" }, { key: "createQC", label: "Add Result" }, { key: "editQC", label: "Edit QC" }, { key: "approveQC", label: "Approve QC" }].map(item => (
                                       <label key={item.key} className="flex items-center gap-2 cursor-pointer group">
@@ -923,6 +948,35 @@ export default function SettingsPage() {
                                         <span className="text-xs font-medium text-secondary-700 uppercase tracking-tight">{item.label}</span>
                                       </label>
                                     ))}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-cyan-500">
+                              <CardHeader className="bg-gradient-to-r from-cyan-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-2 bg-cyan-100/50 rounded-lg text-cyan-600">
+                                    <ArrowLeftRight className="w-5 h-5" />
+                                  </div>
+                                  <CardTitle className="text-base font-semibold text-primary-900">Transfer & Logistics</CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-0 divide-y divide-secondary-100">
+                                <div className="p-4 space-y-4">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-3">Item Transfer Operations</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {[{ key: "viewTransfer", label: "View Transfers" }, { key: "createTransfer", label: "Create Transfer" }, { key: "editTransfer", label: "Edit Transfer" }].map(item => (
+                                        <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-cyan-100 bg-cyan-50/20 hover:bg-white hover:border-cyan-300 transition-all">
+                                          <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-cyan-600 focus:ring-cyan-500" />
+                                          <span className="text-xs font-semibold text-secondary-700 group-hover:text-cyan-700">{item.label}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                    <p className="text-[10px] text-secondary-500 mt-3 italic leading-relaxed">
+                                      * Handle transfer of Items (Die/Pattern) from one party/location to another.
+                                    </p>
                                   </div>
                                 </div>
                               </CardContent>

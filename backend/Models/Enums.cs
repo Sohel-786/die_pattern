@@ -70,7 +70,7 @@ namespace net_backend.Models
         InwardDone = 3,  // Inward received, no QC entry created yet
         InQC = 4,        // QC entry created (awaiting approval)
         InJobwork = 5,
-
+        AtVendor = 6,
         InStock = 7
     }
 

@@ -35,6 +35,7 @@ export type ItemProcessState =
   | 'InwardDone'
   | 'InQC'
   | 'InJobwork'
+  | 'AtVendor'
   | 'InStock';
 
 export interface ItemWithStatus {
@@ -130,6 +131,7 @@ export interface Company {
 export interface Location {
   id: number;
   name: string;
+  address: string;
   companyId: number;
   company?: Company;
   isActive: boolean;
@@ -575,6 +577,11 @@ export interface UserPermission {
 
   // Master Permissions
   viewMaster: boolean;
+  addMaster: boolean;
+  editMaster: boolean;
+  importMaster: boolean;
+  exportMaster: boolean;
+
   manageItem: boolean;
   manageItemType: boolean;
   manageMaterial: boolean;
@@ -607,7 +614,10 @@ export interface UserPermission {
   viewMovement: boolean;
   createMovement: boolean;
   editMovement: boolean;
-  approveMovement: boolean;
+
+  viewTransfer: boolean;
+  createTransfer: boolean;
+  editTransfer: boolean;
 
   manageChanges: boolean;
   revertChanges: boolean;
@@ -635,4 +645,54 @@ export interface ValidationResult {
   duplicates: ValidationEntry[];
   alreadyExists: ValidationEntry[];
   totalRows: number;
+}
+
+export interface TransferItem {
+  id: number;
+  itemId: number;
+  mainPartName?: string;
+  currentName?: string;
+  itemTypeName?: string;
+  materialName?: string;
+  drawingNo?: string;
+  revisionNo?: string;
+  remarks?: string;
+}
+
+export interface Transfer {
+  id: number;
+  transferNo: string;
+  fromPartyId?: number;
+  fromPartyName?: string;
+  toPartyId?: number;
+  toPartyName?: string;
+  transferDate: string;
+  remarks?: string;
+  outFor?: string;
+  reasonDetails?: string;
+  vehicleNo?: string;
+  personName?: string;
+  creatorName?: string;
+  isActive: boolean;
+  createdAt: string;
+  attachmentUrls?: string[];
+  items: TransferItem[];
+}
+
+export interface CreateTransferItem {
+  itemId: number;
+  remarks?: string;
+}
+
+export interface CreateTransfer {
+  fromPartyId?: number;
+  toPartyId?: number;
+  transferDate?: string;
+  remarks?: string;
+  outFor?: string;
+  reasonDetails?: string;
+  vehicleNo?: string;
+  personName?: string;
+  attachmentUrls?: string[];
+  items: CreateTransferItem[];
 }

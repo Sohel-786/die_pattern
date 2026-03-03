@@ -44,6 +44,7 @@ namespace net_backend.Controllers
                 Holder = p.CurrentProcess switch {
                     ItemProcessState.NotInStock => "Not in stock",
                     ItemProcessState.InJobwork => p.CurrentParty?.Name ?? "Jobworker",
+                    ItemProcessState.AtVendor => p.CurrentParty?.Name ?? "Vendor/Party",
                     ItemProcessState.InPI => p.CurrentParty?.Name ?? "Under PI",
                     ItemProcessState.InPO => p.CurrentParty?.Name ?? "Under PO/Vendor",
                     _ => p.CurrentLocation?.Name ?? "Location"

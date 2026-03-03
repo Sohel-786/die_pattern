@@ -115,7 +115,8 @@ export default function LocationsPage() {
 
   const filteredLocations = locations.filter(l => {
     const matchesSearch = l.name.toLowerCase().includes(search.toLowerCase()) ||
-      (l.company?.name || "").toLowerCase().includes(search.toLowerCase());
+      (l.company?.name || (l as any).companyName || "").toLowerCase().includes(search.toLowerCase()) ||
+      (l.address || "").toLowerCase().includes(search.toLowerCase());
     const matchesFilter = activeFilter === "all"
       ? true
       : activeFilter === "active"
@@ -190,7 +191,8 @@ export default function LocationsPage() {
             <thead>
               <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
                 <th className="px-4 py-3 font-semibold w-16 text-center">Sr.No</th>
-                <th className="px-4 py-3 font-semibold">Name</th>
+                <th className="px-4 py-3 font-semibold">Location Name</th>
+                <th className="px-4 py-3 font-semibold">Address</th>
                 <th className="px-4 py-3 font-semibold">Company</th>
                 <th className="px-4 py-3 font-semibold text-center">Status</th>
                 <th className="px-4 py-3 font-semibold text-right">Actions</th>
@@ -214,6 +216,9 @@ export default function LocationsPage() {
                     <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
                     <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight">
                       {location.name}
+                    </td>
+                    <td className="px-4 py-3 text-secondary-600 text-sm max-w-[200px]">
+                      <span className="truncate block" title={location.address}>{location.address || <span className="text-secondary-400 italic">No address</span>}</span>
                     </td>
                     <td className="px-4 py-3 font-medium text-secondary-700">
                       {location.company?.name || (location as any).companyName || "N/A"}
@@ -258,7 +263,7 @@ export default function LocationsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-secondary-500 italic">
+                  <td colSpan={6} className="py-12 text-center text-secondary-500 italic">
                     No locations found.
                   </td>
                 </tr>

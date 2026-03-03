@@ -9,7 +9,7 @@ import {
     CheckCircle2, AlertTriangle, Users, ArrowUpRight,
     Building2, MapPin, Layers, History, RotateCcw,
     Search, CheckSquare, Edit, Activity, Plus,
-    ArrowDownLeft, Briefcase
+    ArrowDownLeft, Briefcase, Truck
 } from "lucide-react";
 import api from "@/lib/api";
 import { UserPermission } from "@/types";
@@ -145,6 +145,11 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                 <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Registry & Asset Repository</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <PermissionToggle label="View Registry" checked={permissions?.viewMaster || false} onChange={(v) => updatePermission('viewMaster', v)} icon={Package} description="Read-only access to masters" />
+                                    <PermissionToggle label="Add Master" checked={permissions?.addMaster || false} onChange={(v) => updatePermission('addMaster', v)} icon={Plus} description="Create new master records" />
+                                    <PermissionToggle label="Edit Master" checked={permissions?.editMaster || false} onChange={(v) => updatePermission('editMaster', v)} icon={Edit} description="Modify existing master records" />
+                                    <PermissionToggle label="Import Bulk" checked={permissions?.importMaster || false} onChange={(v) => updatePermission('importMaster', v)} icon={ArrowDownLeft} description="Process bulk data intake" />
+                                    <PermissionToggle label="Export Data" checked={permissions?.exportMaster || false} onChange={(v) => updatePermission('exportMaster', v)} icon={ArrowUpRight} description="Generate and download datasets" />
+                                    <div className="col-span-full h-px bg-gray-50 my-4" />
                                     <PermissionToggle label="Manage Items" checked={permissions?.manageItem || false} onChange={(v) => updatePermission('manageItem', v)} icon={Layers} description="Configure Die/Pattern masters" />
                                     <PermissionToggle label="Manage Types" checked={permissions?.manageItemType || false} onChange={(v) => updatePermission('manageItemType', v)} icon={Search} description="Control asset classification" />
                                     <PermissionToggle label="Manage Materials" checked={permissions?.manageMaterial || false} onChange={(v) => updatePermission('manageMaterial', v)} icon={Layers} description="Material composition registry" />
@@ -186,11 +191,19 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
 
                             <div className="col-span-full mt-8">
                                 <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Job Work</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <PermissionToggle label="Job Work View" checked={permissions?.viewMovement || false} onChange={(v) => updatePermission('viewMovement', v)} icon={Briefcase} description="Monitor Job Works" />
                                     <PermissionToggle label="Create Job Work" checked={permissions?.createMovement || false} onChange={(v) => updatePermission('createMovement', v)} icon={Plus} description="Execute Job Work" />
                                     <PermissionToggle label="Edit Job Work" checked={permissions?.editMovement || false} onChange={(v) => updatePermission('editMovement', v)} icon={Edit} description="Modify Order" />
-                                    <PermissionToggle label="Approve Job Work" checked={permissions?.approveMovement || false} onChange={(v) => updatePermission('approveMovement', v)} icon={ShieldCheck} description="Final authorization" />
+                                </div>
+                            </div>
+
+                            <div className="col-span-full mt-8">
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Item Transfer</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <PermissionToggle label="View Transfers" checked={permissions?.viewTransfer || false} onChange={(v) => updatePermission('viewTransfer', v)} icon={Truck} description="Monitor transfers" />
+                                    <PermissionToggle label="Create Transfer" checked={permissions?.createTransfer || false} onChange={(v) => updatePermission('createTransfer', v)} icon={Plus} description="Execute transfer" />
+                                    <PermissionToggle label="Edit Transfer" checked={permissions?.editTransfer || false} onChange={(v) => updatePermission('editTransfer', v)} icon={Edit} description="Modify entry" />
                                 </div>
                             </div>
 

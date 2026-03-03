@@ -17,6 +17,8 @@ import {
   LayoutDashboard,
   Settings,
   Briefcase,
+  Truck,
+  ArrowLeftRight,
   ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
@@ -108,6 +110,15 @@ const navigationSections = {
     },
 
   ],
+  transferEntries: [
+    {
+      href: "/transfers",
+      label: "Transfer Entry",
+      icon: Truck,
+      getColor: (active: boolean) => active ? "text-indigo-600" : "text-indigo-500",
+      permission: "viewTransfer",
+    },
+  ],
   qcEntries: [],
   other: [
     {
@@ -154,6 +165,7 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
   const visibleDashboard = filterItems(navigationSections.dashboard);
   const visibleMasterEntries = filterItems(navigationSections.masterEntries);
   const visibleTransactions = filterItems(navigationSections.transactionEntries);
+  const visibleTransfers = filterItems(navigationSections.transferEntries);
   const visibleQC = filterItems(navigationSections.qcEntries);
   const visibleOther = filterItems(navigationSections.other);
 
@@ -238,6 +250,17 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
                 {renderSectionLabel("Transactions")}
                 <div className="flex items-center gap-3">
                   <div className="flex gap-3">{visibleTransactions.map(renderNavItem)}</div>
+                  {(visibleQC.length > 0 || visibleOther.length > 0) && renderDivider()}
+                </div>
+              </div>
+            )}
+
+            {/* Transfers */}
+            {visibleTransfers.length > 0 && (
+              <div className="flex flex-col items-center gap-1">
+                {renderSectionLabel("Logistics")}
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-3">{visibleTransfers.map(renderNavItem)}</div>
                   {(visibleQC.length > 0 || visibleOther.length > 0) && renderDivider()}
                 </div>
               </div>

@@ -53,7 +53,7 @@ namespace net_backend.Services
                 ItemProcessState.InwardDone => "Inward Done",
                 ItemProcessState.InQC => "In QC",
                 ItemProcessState.InJobwork => "In Job Work",
-
+                ItemProcessState.AtVendor => "At Vendor",
                 ItemProcessState.InStock => "In Stock",
                 _ => "Not In Stock"
             };

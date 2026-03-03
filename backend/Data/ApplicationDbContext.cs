@@ -27,6 +27,8 @@ namespace net_backend.Data
         public DbSet<JobWorkItem> JobWorkItems { get; set; } = default!;
         public DbSet<Inward> Inwards { get; set; } = default!;
         public DbSet<InwardLine> InwardLines { get; set; } = default!;
+        public DbSet<Transfer> Transfers { get; set; } = default!;
+        public DbSet<TransferItem> TransferItems { get; set; } = default!;
 
         public DbSet<QualityControlEntry> QcEntries { get; set; } = default!;
         public DbSet<QualityControlItem> QcItems { get; set; } = default!;
@@ -276,6 +278,47 @@ namespace net_backend.Data
                 .HasOne(j => j.Location)
                 .WithMany()
                 .HasForeignKey(j => j.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Transfer Entry
+            modelBuilder.Entity<Transfer>()
+                .HasIndex(t => t.TransferNo)
+                .IsUnique();
+
+            modelBuilder.Entity<Transfer>()
+                .HasOne(t => t.Location)
+                .WithMany()
+                .HasForeignKey(t => t.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Transfer>()
+                .HasOne(t => t.FromParty)
+                .WithMany()
+                .HasForeignKey(t => t.FromPartyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Transfer>()
+                .HasOne(t => t.ToParty)
+                .WithMany()
+                .HasForeignKey(t => t.ToPartyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Transfer>()
+                .HasOne(t => t.Creator)
+                .WithMany()
+                .HasForeignKey(t => t.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TransferItem>()
+                .HasOne(ti => ti.Transfer)
+                .WithMany(t => t.Items)
+                .HasForeignKey(ti => ti.TransferId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TransferItem>()
+                .HasOne(ti => ti.Item)
+                .WithMany()
+                .HasForeignKey(ti => ti.ItemId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

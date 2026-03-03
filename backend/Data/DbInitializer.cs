@@ -28,6 +28,7 @@ namespace net_backend.Data
                 context.Locations.Add(new Location
                 {
                     Name = "Aira Ho",
+                    Address = "8, Ajmeri Estate, Industrial Area, Ahmedabad, Gujarat, India",
                     CompanyId = firstCompany.Id,
                     IsActive = true,
                     CreatedAt = DateTime.Now,
@@ -82,6 +83,11 @@ namespace net_backend.Data
             // Re-assert admin permissions (idempotent)
             adminPerm.ViewDashboard = true;
             adminPerm.ViewMaster = true;
+            adminPerm.AddMaster = true;
+            adminPerm.EditMaster = true;
+            adminPerm.ImportMaster = true;
+            adminPerm.ExportMaster = true;
+            
             adminPerm.ManageItem = true;
             adminPerm.ManageItemType = true;
             adminPerm.ManageMaterial = true;
@@ -107,6 +113,10 @@ namespace net_backend.Data
             adminPerm.ApproveQC = true;
             adminPerm.ViewMovement = true;
             adminPerm.CreateMovement = true;
+            adminPerm.EditMovement = true;
+            adminPerm.ViewTransfer = true;
+            adminPerm.CreateTransfer = true;
+            adminPerm.EditTransfer = true;
             adminPerm.ManageChanges = true;
             adminPerm.RevertChanges = true;
             adminPerm.ViewReports = true;

@@ -14,6 +14,7 @@ import {
   FileText,
   ShoppingCart,
   ArrowLeftRight,
+  Truck,
   ClipboardCheck,
   BarChart3,
   Settings,
@@ -243,6 +244,13 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Transfer Entry */}
+          {permissions?.viewTransfer && (
+            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""}`}>
+              {renderMenuItem("/transfers", "Transfer Entry", Truck)}
             </div>
           )}
 
