@@ -12,7 +12,7 @@ namespace net_backend.Services
         /// <summary>Returns true if the item can be added to a PI (state is NotInStock; when editing, items only in the excluded PI are treated as NotInStock).</summary>
         Task<bool> CanAddToPIAsync(int itemId, int? excludePurchaseIndentId = null);
 
-        /// <summary>Returns true if the item can be used in In-Stock-only transactions (Jobwork, Outward, etc.).</summary>
+        /// <summary>Returns true if the item can be used in In-Stock-only transactions (Jobwork etc.).</summary>
         Task<bool> IsInStockAsync(int itemId);
 
         /// <summary>Returns a user-friendly string representation of the process state.</summary>

@@ -19,7 +19,7 @@ import { OrgContextDialog } from "@/components/auth/org-context-dialog";
 /** Query key prefixes that depend on current company/location; refetch when user switches location. */
 const LOCATION_SCOPED_QUERY_KEYS: readonly string[] = [
   'parties', 'items', 'purchase-indents', 'purchase-orders', 'inwards', 'job-works',
-  'movements', 'quality-control', 'issues', 'returns', 'dashboard-metrics', 'reports',
+  'quality-control', 'issues', 'returns', 'dashboard-metrics', 'reports',
   'companies', 'locations', 'statuses', 'active-issues',
   'purchase-indent', 'purchase-order',
 ];
@@ -40,8 +40,6 @@ const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = {
   '/inwards': 'viewInward',
   '/quality-control': 'viewQC',
   '/job-works': 'viewMovement',
-  '/movements': 'viewMovement',
-  '/movements/outward': 'viewMovement',
   '/reports': 'viewReports',
   '/settings': 'accessSettings',
 };
@@ -94,7 +92,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/returns') ||
     pathname.startsWith('/quality-control') ||
     pathname.startsWith('/job-works') ||
-    pathname.startsWith('/movements') ||
+
     pathname.startsWith('/statuses') ||
     pathname.startsWith('/store-items');
 

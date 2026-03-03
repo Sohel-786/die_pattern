@@ -214,8 +214,6 @@ namespace net_backend.Controllers
                 _context.QcEntries.RemoveRange(_context.QcEntries);
                 _context.InwardLines.RemoveRange(_context.InwardLines);
                 _context.Inwards.RemoveRange(_context.Inwards);
-                _context.OutwardLines.RemoveRange(_context.OutwardLines);
-                _context.Outwards.RemoveRange(_context.Outwards);
                 _context.JobWorks.RemoveRange(_context.JobWorks);
                 _context.PurchaseOrderItems.RemoveRange(_context.PurchaseOrderItems);
                 _context.PurchaseOrders.RemoveRange(_context.PurchaseOrders);

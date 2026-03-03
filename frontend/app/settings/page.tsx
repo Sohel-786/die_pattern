@@ -152,8 +152,10 @@ const permissionLabels: Record<string, string> = {
   editQC: "Edit QC",
   approveQC: "Approve QC",
 
-  viewMovement: "View Movements",
-  createMovement: "Create Movements",
+  viewMovement: "View Job Work",
+  createMovement: "Create Job Work",
+  editMovement: "Edit Job Work",
+  approveMovement: "Approve Job Work",
 
   manageChanges: "Manage Changes",
   revertChanges: "Revert Changes",

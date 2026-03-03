@@ -70,7 +70,7 @@ namespace net_backend.Models
         InwardDone = 3,  // Inward received, no QC entry created yet
         InQC = 4,        // QC entry created (awaiting approval)
         InJobwork = 5,
-        Outward = 6,
+
         InStock = 7
     }
 
@@ -81,10 +81,5 @@ namespace net_backend.Models
         Rejected = 2
     }
 
-    public enum MovementType
-    {
-        Outward,
-        Inward,
-        SystemReturn
-    }
+
 }

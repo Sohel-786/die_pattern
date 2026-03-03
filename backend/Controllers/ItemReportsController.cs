@@ -43,7 +43,6 @@ namespace net_backend.Controllers
                 Status = p.Status!.Name,
                 Holder = p.CurrentProcess switch {
                     ItemProcessState.NotInStock => "Not in stock",
-                    ItemProcessState.Outward => p.CurrentParty?.Name ?? "Vendor",
                     ItemProcessState.InJobwork => p.CurrentParty?.Name ?? "Jobworker",
                     ItemProcessState.InPI => p.CurrentParty?.Name ?? "Under PI",
                     ItemProcessState.InPO => p.CurrentParty?.Name ?? "Under PO/Vendor",

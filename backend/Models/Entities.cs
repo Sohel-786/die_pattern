@@ -366,44 +366,7 @@ namespace net_backend.Models
         public virtual Item? Item { get; set; }
     }
 
-    [Table("outwards")]
-    public class Outward
-    {
-        public int Id { get; set; }
-        public string OutwardNo { get; set; } = string.Empty;
-        public DateTime OutwardDate { get; set; } = DateTime.Now;
-        public int LocationId { get; set; }
-        public int PartyId { get; set; }
-        public string? Remarks { get; set; }
-        public bool IsActive { get; set; } = true;
-        
-        public int CreatedBy { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
-        [ForeignKey("LocationId")]
-        public virtual Location? Location { get; set; }
-        [ForeignKey("PartyId")]
-        public virtual Party? Party { get; set; }
-        [ForeignKey("CreatedBy")]
-        public virtual User? Creator { get; set; }
-        public virtual ICollection<OutwardLine> Lines { get; set; } = new List<OutwardLine>();
-    }
-
-    [Table("outward_lines")]
-    public class OutwardLine
-    {
-        public int Id { get; set; }
-        public int OutwardId { get; set; }
-        public int ItemId { get; set; }
-        public int Quantity { get; set; } = 1;
-        public string? Remarks { get; set; }
-
-        [ForeignKey("OutwardId")]
-        public virtual Outward? Outward { get; set; }
-        [ForeignKey("ItemId")]
-        public virtual Item? Item { get; set; }
-    }
 
     [Table("qc_entries")]
     public class QualityControlEntry
@@ -565,10 +528,13 @@ namespace net_backend.Models
         public bool EditQC { get; set; } = false;
         public bool ApproveQC { get; set; } = false;
 
-        // General Movement (Stock Transfer etc)
+
+        // Logistics (Movement & Job Work)
         public bool ViewMovement { get; set; } = false;
         public bool CreateMovement { get; set; } = false;
-        
+        public bool EditMovement { get; set; } = false;
+        public bool ApproveMovement { get; set; } = false;
+
         // Audit & History
         public bool ManageChanges { get; set; } = false;
         public bool RevertChanges { get; set; } = false;

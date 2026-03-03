@@ -21,7 +21,7 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
 
             var totalItems = await _context.Items.CountAsync(p => p.LocationId == locationId && p.IsActive);
-            var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.Outward && p.IsActive);
+            var itemsAtVendor = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.InJobwork && p.IsActive);
             var itemsAtLocation = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.InStock && p.IsActive);
             var itemsNotInStock = await _context.Items.CountAsync(p => p.LocationId == locationId && p.CurrentProcess == ItemProcessState.NotInStock && p.IsActive);
 

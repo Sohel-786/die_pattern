@@ -35,7 +35,6 @@ export type ItemProcessState =
   | 'InwardDone'
   | 'InQC'
   | 'InJobwork'
-  | 'Outward'
   | 'InStock';
 
 export interface ItemWithStatus {
@@ -53,7 +52,6 @@ export enum GstType {
 }
 
 export enum MovementType {
-  Outward = 'Outward',
   Inward = 'Inward',
   SystemReturn = 'SystemReturn',
 }
@@ -608,6 +606,8 @@ export interface UserPermission {
 
   viewMovement: boolean;
   createMovement: boolean;
+  editMovement: boolean;
+  approveMovement: boolean;
 
   manageChanges: boolean;
   revertChanges: boolean;

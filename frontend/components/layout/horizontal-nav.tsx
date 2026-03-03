@@ -106,13 +106,7 @@ const navigationSections = {
       getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
       permission: "viewMovement",
     },
-    {
-      href: "/movements/outward",
-      label: "Outward",
-      icon: ArrowUpRight,
-      getColor: (active: boolean) => active ? "text-cyan-600" : "text-cyan-500",
-      permission: "viewMovement",
-    },
+
   ],
   qcEntries: [],
   other: [

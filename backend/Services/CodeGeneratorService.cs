@@ -46,19 +46,7 @@ namespace net_backend.Services
                     
                 return $"PO-{maxNo + 1:D4}";
             }
-            else if (type == "OUT")
-            {
-                var query = _context.Outwards.Where(o => o.OutwardNo.StartsWith("OUT-"));
-                if (locationId.HasValue) query = query.Where(o => o.LocationId == locationId);
-                
-                var lastCode = await query.OrderByDescending(o => o.Id).Select(o => o.OutwardNo).FirstOrDefaultAsync();
-                
-                int maxNo = 0;
-                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 4)
-                    int.TryParse(lastCode.Substring(4), out maxNo);
-                    
-                return $"OUT-{maxNo + 1:D4}";
-            }
+
             else if (type == "INWARD")
             {
                 var query = _context.Inwards.Where(i => i.InwardNo.StartsWith("INW-"));

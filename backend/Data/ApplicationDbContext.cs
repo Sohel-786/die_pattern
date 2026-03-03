@@ -27,8 +27,7 @@ namespace net_backend.Data
         public DbSet<JobWorkItem> JobWorkItems { get; set; } = default!;
         public DbSet<Inward> Inwards { get; set; } = default!;
         public DbSet<InwardLine> InwardLines { get; set; } = default!;
-        public DbSet<Outward> Outwards { get; set; } = default!;
-        public DbSet<OutwardLine> OutwardLines { get; set; } = default!;
+
         public DbSet<QualityControlEntry> QcEntries { get; set; } = default!;
         public DbSet<QualityControlItem> QcItems { get; set; } = default!;
         public DbSet<ItemChangeLog> ItemChangeLogs { get; set; } = default!;
@@ -61,9 +60,7 @@ namespace net_backend.Data
             .HasIndex(i => i.InwardNo)
             .IsUnique();
 
-        modelBuilder.Entity<Outward>()
-            .HasIndex(o => o.OutwardNo)
-            .IsUnique();
+
 
         modelBuilder.Entity<QualityControlEntry>()
             .HasIndex(q => q.QcNo)
@@ -170,35 +167,7 @@ namespace net_backend.Data
                 .Property(l => l.GstPercent)
                 .HasColumnType("decimal(18,2)");
 
-            modelBuilder.Entity<Outward>()
-                .HasOne(o => o.Location)
-                .WithMany()
-                .HasForeignKey(o => o.LocationId)
-                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Outward>()
-                .HasOne(o => o.Party)
-                .WithMany()
-                .HasForeignKey(o => o.PartyId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Outward>()
-                .HasOne(o => o.Creator)
-                .WithMany()
-                .HasForeignKey(o => o.CreatedBy)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<OutwardLine>()
-                .HasOne(l => l.Outward)
-                .WithMany(o => o.Lines)
-                .HasForeignKey(l => l.OutwardId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<OutwardLine>()
-                .HasOne(l => l.Item)
-                .WithMany()
-                .HasForeignKey(l => l.ItemId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<QualityControlEntry>()
                 .HasOne(q => q.Location)

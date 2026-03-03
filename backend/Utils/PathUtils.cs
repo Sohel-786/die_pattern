@@ -31,10 +31,7 @@ namespace net_backend.Utils
             return Path.Combine(GetItemFolderPath(divisionName, serialNumber), "inward");
         }
 
-        public static string GetOutwardFolderPath(string divisionName, string serialNumber)
-        {
-            return Path.Combine(GetItemFolderPath(divisionName, serialNumber), "outward");
-        }
+
 
         public static string GetMasterRelativePath(string divisionName, string serialNumber, string fileName)
         {
@@ -50,11 +47,6 @@ namespace net_backend.Utils
             return $"{div}/items/{serial}/inward/{fileName}";
         }
 
-        public static string GetOutwardRelativePath(string divisionName, string serialNumber, string fileName)
-        {
-            var div = SanitizeFolderName(divisionName);
-            var serial = SanitizeSerialForPath(serialNumber);
-            return $"{div}/items/{serial}/outward/{fileName}";
-        }
+
     }
 }

@@ -229,7 +229,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                       {permissions?.viewInward && renderSubMenuItem("/inwards", "Inward", ArrowLeftRight)}
                       {permissions?.viewQC && renderSubMenuItem("/quality-control", "QC", ClipboardCheck)}
                       {permissions?.viewMovement && renderSubMenuItem("/job-works", "Job Work", Briefcase)}
-                      {permissions?.viewMovement && renderSubMenuItem("/movements/outward", "Outward", ArrowUpRight)}
+
                     </div>
                   )}
                 </>
@@ -240,7 +240,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                   {permissions?.viewInward && renderMenuItem("/inwards", "Inward", ArrowLeftRight)}
                   {permissions?.viewQC && renderMenuItem("/quality-control", "QC", ClipboardCheck)}
                   {permissions?.viewMovement && renderMenuItem("/job-works", "Job Work", Briefcase)}
-                  {permissions?.viewMovement && renderMenuItem("/movements/outward", "Outward", ArrowUpRight)}
+
                 </div>
               )}
             </div>

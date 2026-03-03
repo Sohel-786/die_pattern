@@ -53,7 +53,7 @@ namespace net_backend.DTOs
         public string? CurrentName { get; set; }
         public string? MainPartName { get; set; }
         public string? ItemTypeName { get; set; }
-        public string Status { get; set; } = string.Empty; // NotInStock, InPI, InPO, InQC, InJobwork, Outward, InStock
+        public string Status { get; set; } = string.Empty; // NotInStock, InPI, InPO, InQC, InJobwork, InStock
     }
 
     public class PODto
@@ -147,50 +147,7 @@ namespace net_backend.DTOs
         }
     }
 
-    public class OutwardDto
-    {
-        public int Id { get; set; }
-        public string OutwardNo { get; set; } = string.Empty;
-        public DateTime OutwardDate { get; set; }
-        public int PartyId { get; set; }
-        public string? PartyName { get; set; }
-        public string? Remarks { get; set; }
-        public int CreatedBy { get; set; }
-        public string? CreatorName { get; set; }
-        public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; }
-        public List<OutwardLineDto> Lines { get; set; } = new();
-    }
 
-    public class OutwardLineDto
-    {
-        public int Id { get; set; }
-        public int OutwardId { get; set; }
-        public int ItemId { get; set; }
-        public string? ItemName { get; set; }
-        public string? MainPartName { get; set; }
-        public string? ItemTypeName { get; set; }
-        public string? MaterialName { get; set; }
-        public string? DrawingNo { get; set; }
-        public string? RevisionNo { get; set; }
-        public int Quantity { get; set; }
-        public string? Remarks { get; set; }
-    }
-
-    public class CreateOutwardDto
-    {
-        public DateTime? OutwardDate { get; set; }
-        public int PartyId { get; set; }
-        public string? Remarks { get; set; }
-        public List<CreateOutwardLineDto> Lines { get; set; } = new();
-    }
-
-    public class CreateOutwardLineDto
-    {
-        public int ItemId { get; set; }
-        public int Quantity { get; set; } = 1;
-        public string? Remarks { get; set; }
-    }
 
     public class PendingQCDto
     {

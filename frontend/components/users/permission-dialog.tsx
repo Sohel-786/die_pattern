@@ -9,7 +9,7 @@ import {
     CheckCircle2, AlertTriangle, Users, ArrowUpRight,
     Building2, MapPin, Layers, History, RotateCcw,
     Search, CheckSquare, Edit, Activity, Plus,
-    ArrowDownLeft
+    ArrowDownLeft, Briefcase
 } from "lucide-react";
 import api from "@/lib/api";
 import { UserPermission } from "@/types";
@@ -181,8 +181,16 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                     <PermissionToggle label="View Inwards" checked={permissions?.viewInward || false} onChange={(v) => updatePermission('viewInward', v)} icon={ArrowDownLeft} description="Monitor arrivals" />
                                     <PermissionToggle label="Record Inward" checked={permissions?.createInward || false} onChange={(v) => updatePermission('createInward', v)} icon={Plus} description="Process receipts" />
                                     <PermissionToggle label="Edit Inward" checked={permissions?.editInward || false} onChange={(v) => updatePermission('editInward', v)} icon={Edit} description="Correction logic" />
-                                    <PermissionToggle label="Transit View" checked={permissions?.viewMovement || false} onChange={(v) => updatePermission('viewMovement', v)} icon={ArrowLeftRight} description="Logistics history" />
-                                    <PermissionToggle label="Record Transit" checked={permissions?.createMovement || false} onChange={(v) => updatePermission('createMovement', v)} icon={ArrowUpRight} description="Execute movements" />
+                                </div>
+                            </div>
+
+                            <div className="col-span-full mt-8">
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Job Work</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <PermissionToggle label="Job Work View" checked={permissions?.viewMovement || false} onChange={(v) => updatePermission('viewMovement', v)} icon={Briefcase} description="Monitor Job Works" />
+                                    <PermissionToggle label="Create Job Work" checked={permissions?.createMovement || false} onChange={(v) => updatePermission('createMovement', v)} icon={Plus} description="Execute Job Work" />
+                                    <PermissionToggle label="Edit Job Work" checked={permissions?.editMovement || false} onChange={(v) => updatePermission('editMovement', v)} icon={Edit} description="Modify Order" />
+                                    <PermissionToggle label="Approve Job Work" checked={permissions?.approveMovement || false} onChange={(v) => updatePermission('approveMovement', v)} icon={ShieldCheck} description="Final authorization" />
                                 </div>
                             </div>
 
