@@ -478,7 +478,7 @@ export default function PurchaseOrdersPage() {
                           key={`expand-${po.id}`}
                           className="bg-secondary-50/50 border-b border-secondary-100"
                         >
-                          <td colSpan={10} className="p-0 bg-secondary-50/30">
+                          <td colSpan={10} className="p-0 bg-secondary-50/30 max-w-0">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}

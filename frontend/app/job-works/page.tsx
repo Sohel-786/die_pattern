@@ -316,7 +316,7 @@ export default function JobWorksPage() {
                                         <AnimatePresence>
                                             {expandedJWId === jw.id && (
                                                 <TableRow key={`expand-${jw.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
-                                                    <td colSpan={11} className="p-0 border-0">
+                                                    <td colSpan={11} className="p-0 border-0 max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
@@ -390,16 +390,36 @@ export default function JobWorksPage() {
                                                                                             ) : "—"}
                                                                                         </TableCell>
                                                                                         <TableCell className="px-4 py-2 text-center whitespace-nowrap">
-                                                                                            {item.qcNo ? (
-                                                                                                <span className={cn(
-                                                                                                    "inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border",
-                                                                                                    item.isQCApproved ? "bg-green-50 text-green-700 border-green-200" :
-                                                                                                        item.isQCPending ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                                                                                            "bg-rose-50 text-rose-700 border-rose-200"
-                                                                                                )}>
-                                                                                                    {item.isQCApproved ? "Approved" : item.isQCPending ? "Pending" : "Rejected"}
-                                                                                                </span>
-                                                                                            ) : "—"}
+                                                                                            {item.qcNo ? (() => {
+                                                                                                // Use authoritative QC decision from QC item record (qi.IsApproved)
+                                                                                                const decision = item.qcDecision;
+
+                                                                                                if (decision === true) {
+                                                                                                    // Item was approved (item-level or entry-level)
+                                                                                                    return (
+                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                                                                                            Approved
+                                                                                                        </span>
+                                                                                                    );
+                                                                                                } else if (decision === false) {
+                                                                                                    // Item was rejected
+                                                                                                    return (
+                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">
+                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                                                                                                            Rejected
+                                                                                                        </span>
+                                                                                                    );
+                                                                                                } else {
+                                                                                                    // QC entry exists but no item-level decision yet
+                                                                                                    return (
+                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
+                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
+                                                                                                            Pending
+                                                                                                        </span>
+                                                                                                    );
+                                                                                                }
+                                                                                            })() : "—"}
                                                                                         </TableCell>
                                                                                     </TableRow>
                                                                                 );

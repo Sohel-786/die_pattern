@@ -19,52 +19,88 @@ namespace net_backend.Services
 
         public async Task<string> GenerateCode(string type, int? locationId = null)
         {
-            int count = 0;
-            string prefix = type;
-
             if (type == "PI")
             {
-                // PurchaseIndent has no LocationId; count all
-                count = await _context.PurchaseIndents.CountAsync();
-                return $"PI-{count + 1:D2}";
+                var lastCode = await _context.PurchaseIndents
+                    .Where(p => p.PiNo.StartsWith("PI-"))
+                    .OrderByDescending(p => p.Id)
+                    .Select(p => p.PiNo)
+                    .FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 3)
+                    int.TryParse(lastCode.Substring(3), out maxNo);
+                    
+                return $"PI-{maxNo + 1:D2}";
             }
             if (type == "PO")
             {
-                count = locationId.HasValue
-                    ? await _context.PurchaseOrders.CountAsync(p => p.LocationId == locationId)
-                    : await _context.PurchaseOrders.CountAsync();
-                prefix = "PO";
+                var query = _context.PurchaseOrders.Where(p => p.PoNo.StartsWith("PO-"));
+                if (locationId.HasValue) query = query.Where(p => p.LocationId == locationId);
+                
+                var lastCode = await query.OrderByDescending(p => p.Id).Select(p => p.PoNo).FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 3)
+                    int.TryParse(lastCode.Substring(3), out maxNo);
+                    
+                return $"PO-{maxNo + 1:D4}";
             }
             else if (type == "OUT")
             {
-                count = locationId.HasValue
-                    ? await _context.Outwards.CountAsync(o => o.LocationId == locationId)
-                    : await _context.Outwards.CountAsync();
-                return $"OUT-{count + 1:D4}";
+                var query = _context.Outwards.Where(o => o.OutwardNo.StartsWith("OUT-"));
+                if (locationId.HasValue) query = query.Where(o => o.LocationId == locationId);
+                
+                var lastCode = await query.OrderByDescending(o => o.Id).Select(o => o.OutwardNo).FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 4)
+                    int.TryParse(lastCode.Substring(4), out maxNo);
+                    
+                return $"OUT-{maxNo + 1:D4}";
             }
             else if (type == "INWARD")
             {
-                count = locationId.HasValue
-                    ? await _context.Inwards.CountAsync(i => i.LocationId == locationId)
-                    : await _context.Inwards.CountAsync();
-                return $"INW-{count + 1:D4}";
+                var query = _context.Inwards.Where(i => i.InwardNo.StartsWith("INW-"));
+                if (locationId.HasValue) query = query.Where(i => i.LocationId == locationId);
+                
+                var lastCode = await query.OrderByDescending(i => i.Id).Select(i => i.InwardNo).FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 4)
+                    int.TryParse(lastCode.Substring(4), out maxNo);
+                    
+                return $"INW-{maxNo + 1:D4}";
             }
             else if (type == "JW")
             {
-                count = locationId.HasValue
-                    ? await _context.JobWorks.CountAsync(j => j.LocationId == locationId)
-                    : await _context.JobWorks.CountAsync();
-                return $"JW-{count + 1:D4}";
+                var query = _context.JobWorks.Where(j => j.JobWorkNo.StartsWith("JW-"));
+                if (locationId.HasValue) query = query.Where(j => j.LocationId == locationId);
+                
+                var lastCode = await query.OrderByDescending(j => j.Id).Select(j => j.JobWorkNo).FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 3)
+                    int.TryParse(lastCode.Substring(3), out maxNo);
+                    
+                return $"JW-{maxNo + 1:D4}";
             }
             else if (type == "QC")
             {
-                count = locationId.HasValue
-                    ? await _context.QcEntries.CountAsync(q => q.LocationId == locationId)
-                    : await _context.QcEntries.CountAsync();
-                return $"QC-{count + 1:D4}";
+                var query = _context.QcEntries.Where(q => q.QcNo.StartsWith("QC-"));
+                if (locationId.HasValue) query = query.Where(q => q.LocationId == locationId);
+                
+                var lastCode = await query.OrderByDescending(q => q.Id).Select(q => q.QcNo).FirstOrDefaultAsync();
+                
+                int maxNo = 0;
+                if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 3)
+                    int.TryParse(lastCode.Substring(3), out maxNo);
+                    
+                return $"QC-{maxNo + 1:D4}";
             }
 
-            return $"{prefix}-{DateTime.Now:yyyyMM}-{count + 1:D4}";
+            // Fallback for unknown type
+            return $"{type}-{DateTime.Now:yyyyMM}-{Guid.NewGuid().ToString().Substring(0, 4)}";
         }
     }
 }

@@ -337,10 +337,10 @@ namespace net_backend.Controllers
                 var item = qi.InwardLine.Item;
                 if (dto.IsApproved == false)
                 {
-                    // Item-level reject: inward line resolved as not approved, item back In Stock
+                    // Item-level reject: mark inward line as resolved-rejected, item back In Stock
                     qi.InwardLine.IsQCPending = false;
                     qi.InwardLine.IsQCApproved = false;
-                    
+
                     if (item != null)
                     {
                         item.CurrentProcess = ItemProcessState.InStock;
@@ -351,14 +351,17 @@ namespace net_backend.Controllers
                 }
                 else
                 {
-                    // Item-level approve (within pending entry): inward line still pending, item back in QC process
-                    // This handles the case where a previous rejection is reversed before final approval
+                    // Item-level approve: mark inward line as QC-approved (still within pending entry).
+                    // IsQCApproved = true reflects this item's decision; entry finalisation later
+                    // will confirm the overall outcome. Item remains in QC process.
                     qi.InwardLine.IsQCPending = true;
-                    qi.InwardLine.IsQCApproved = false;
-                    
+                    qi.InwardLine.IsQCApproved = true;  // ← reflect approved decision immediately
+
                     if (item != null)
                     {
-                        item.CurrentProcess = ItemProcessState.InQC;
+                        item.CurrentProcess = ItemProcessState.InStock;
+                        item.CurrentLocationId = locationId;
+                        item.CurrentPartyId = null;
                         item.UpdatedAt = DateTime.Now;
                     }
                 }

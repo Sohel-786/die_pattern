@@ -237,6 +237,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
         }
     };
 
+    const hasAnyInward = useMemo(() => items.some(i => i.isInwarded), [items]);
+
     const totalTaxable = items.reduce((sum, i) => sum + (i.rate ?? 0), 0);
     const totalGst = items.reduce((sum, i) => sum + ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100, 0);
     const finalAmount = totalTaxable + totalGst;
@@ -275,8 +277,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                         options={parties.map(p => ({ value: p.id, label: p.name }))}
                                         value={toPartyId || ""}
                                         onChange={(val) => setToPartyId(Number(val))}
-                                        disabled={isReadOnly}
-                                        placeholder="Search Party..."
+                                        disabled={isReadOnly || hasAnyInward}
+                                        placeholder={hasAnyInward ? "Locked - Active Inward Exists" : "Search Party..."}
                                     />
                                 </div>
                             </div>
@@ -285,9 +287,9 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                 <Input
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    disabled={isReadOnly}
-                                    placeholder="e.g. For Repairing, New Job..."
-                                    className="h-9 mt-1 text-sm font-medium border-secondary-200 focus:border-primary-400"
+                                    disabled={isReadOnly || hasAnyInward}
+                                    placeholder={hasAnyInward ? "Locked - Active Inward Exists" : "e.g. For Repairing, New Job..."}
+                                    className={cn("h-9 mt-1 text-sm font-medium border-secondary-200 focus:border-primary-400", hasAnyInward && "opacity-60 cursor-not-allowed")}
                                 />
                             </div>
 

@@ -521,6 +521,10 @@ export interface JobWorkItem {
   qcNo?: string | null;
   isQCPending?: boolean;
   isQCApproved?: boolean;
+  /** Authoritative QC item decision: null=not yet decided/no QC, true=approved, false=rejected */
+  qcDecision?: boolean | null;
+  /** True when the QC entry for this item has been finalised (status is Approved or Rejected) */
+  isQCEntryFinalised?: boolean;
   isInwarded?: boolean;
 }
 
@@ -616,6 +620,7 @@ export interface UserPermission {
 export interface AppSettings {
   id: number;
   softwareName?: string | null;
+  logoUrl?: string | null;
 }
 
 export interface ValidationEntry {

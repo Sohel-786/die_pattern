@@ -244,7 +244,7 @@ export default function InwardsPage() {
                                         <AnimatePresence>
                                             {expandedInwardId === i.id && (
                                                 <TableRow key={`expand-${i.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
-                                                    <td colSpan={9} className="p-0 border-0">
+                                                    <td colSpan={9} className="p-0 border-0 max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
@@ -343,12 +343,16 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2 text-sm text-secondary-600 max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{line.qcNo || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
-                                                                                        {line.isQCApproved ? (
-                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-green-50 text-green-700 border-green-200">Approved</span>
-                                                                                        ) : line.isQCPending ? (
-                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Pending QC</span>
+                                                                                        {line.qcNo ? (
+                                                                                            line.isQCApproved ? (
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-200">Approved</span>
+                                                                                            ) : line.isQCPending ? (
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Pending QC</span>
+                                                                                            ) : (
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
+                                                                                            )
                                                                                         ) : (
-                                                                                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
+                                                                                            <span className="text-secondary-400">—</span>
                                                                                         )}
                                                                                     </TableCell>
                                                                                 </TableRow>

@@ -314,6 +314,12 @@ namespace net_backend.Controllers
             if (dto.Lines == null || dto.Lines.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
 
+            var existingLineIds = inward.Lines.Select(l => l.Id).ToList();
+            var hasActiveQC = await _context.QcItems.AnyAsync(qi => existingLineIds.Contains(qi.InwardLineId) && qi.QcEntry != null && qi.QcEntry.IsActive);
+            
+            if (hasActiveQC)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot update Inward entry because one or more items are currently under Quality Control or have already been inspected." });
+
             inward.InwardDate = dto.InwardDate ?? inward.InwardDate;
             inward.VendorId = dto.VendorId;
             inward.Remarks = dto.Remarks;

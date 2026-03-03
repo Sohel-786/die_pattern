@@ -269,7 +269,7 @@ export default function QualityControlPage() {
                                         <AnimatePresence>
                                             {expandedQcId === q.id && (
                                                 <TableRow key={`expand-${q.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
-                                                    <td colSpan={9} className="p-0 border-0">
+                                                    <td colSpan={9} className="p-0 border-0 max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}

@@ -349,6 +349,14 @@ namespace net_backend.Controllers
                 .Select(l => l.ItemId)
                 .ToListAsync();
             var inwardedSet = new HashSet<int>(inwardedItems);
+            
+            if (inwardedItems.Any())
+            {
+                if (jw.ToPartyId != dto.ToPartyId)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot change Party because one or more items have already been inwarded." });
+                if (jw.Description != dto.Description)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot change Purpose because one or more items have already been inwarded." });
+            }
 
             jw.ToPartyId = dto.ToPartyId;
             jw.Description = dto.Description;
@@ -365,7 +373,18 @@ namespace net_backend.Controllers
             var removedItemIds = oldItemIds.Except(newItemIds).ToList();
             if (removedItemIds.Any(rId => inwardedSet.Contains(rId)))
             {
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items already have an associated Inward and cannot be removed." });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items already have an active Inward and cannot be removed." });
+            }
+            
+            // 1b. Validate: modified inwarded items cannot have Rate, GST, or Remarks changed
+            foreach (var newItem in dto.Items)
+            {
+                var existingItem = oldItems.FirstOrDefault(oi => oi.ItemId == newItem.ItemId);
+                if (existingItem != null && inwardedSet.Contains(newItem.ItemId))
+                {
+                    if (existingItem.Rate != newItem.Rate || existingItem.GstPercent != newItem.GstPercent || existingItem.Remarks != newItem.Remarks)
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Cannot update Rate, GST, or Remarks of item '{newItem.ItemId}' because its inward is already done." });
+                }
             }
 
             // 2. Handle Item removals: move back to InStock
@@ -581,7 +600,18 @@ namespace net_backend.Controllers
                 CreatedAt = j.CreatedAt,
                 Items = j.Items.Select(i => {
                     var line = inwardLines?.OrderByDescending(l => l.Id).FirstOrDefault(l => l.SourceRefId == j.Id && l.ItemId == i.ItemId);
-                    var qc = line != null ? qcItems?.OrderByDescending(q => q.Id).FirstOrDefault(q => q.InwardLineId == line.Id) : null;
+                    // Get the most recent QC item for this inward line - prefer finalised entries (Approved/Rejected) over pending
+                    var qc = line != null
+                        ? qcItems?.Where(q => q.InwardLineId == line.Id)
+                                  .OrderByDescending(q => q.QcEntry?.Status == QcStatus.Approved || q.QcEntry?.Status == QcStatus.Rejected ? 1 : 0)
+                                  .ThenByDescending(q => q.Id)
+                                  .FirstOrDefault()
+                        : null;
+
+                    // Authoritative QC decision: use qi.IsApproved from the QC item record.
+                    // InwardLine flags (IsQCPending/IsQCApproved) can get out of sync; qi.IsApproved is the source of truth.
+                    bool? qcDecision = qc?.IsApproved; // null=unresolved, true=approved, false=rejected
+                    bool isQCEntryFinalised = qc?.QcEntry?.Status == QcStatus.Approved || qc?.QcEntry?.Status == QcStatus.Rejected;
 
                     return new JobWorkItemDto
                     {
@@ -600,6 +630,8 @@ namespace net_backend.Controllers
                         QCNo = qc?.QcEntry?.QcNo,
                         IsQCPending = line?.IsQCPending ?? false,
                         IsQCApproved = line?.IsQCApproved ?? false,
+                        QCDecision = qcDecision,
+                        IsQCEntryFinalised = isQCEntryFinalised,
                         IsInwarded = line != null
                     };
                 }).ToList()

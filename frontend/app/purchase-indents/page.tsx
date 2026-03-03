@@ -428,7 +428,7 @@ export default function PurchaseIndentsPage() {
                                         <AnimatePresence>
                                             {expandedPIId === pi.id && (
                                                 <TableRow key={`expand-${pi.id}`} className="bg-secondary-50/50 border-b border-secondary-100">
-                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0 bg-secondary-50/30">
+                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0 bg-secondary-50/30 max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}

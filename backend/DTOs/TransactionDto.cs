@@ -361,6 +361,14 @@ namespace net_backend.DTOs
         public string? QCNo { get; set; }
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
+        /// <summary>
+        /// Authoritative QC decision from QualityControlItem.IsApproved.
+        /// null = no QC item exists or still pending decision,
+        /// true = item approved, false = item rejected.
+        /// </summary>
+        public bool? QCDecision { get; set; }
+        /// <summary>Whether the overall QC entry has been finalised (Approved/Rejected status).</summary>
+        public bool IsQCEntryFinalised { get; set; }
         public bool IsInwarded { get; set; }
     }
 
