@@ -558,6 +558,7 @@ export default function PurchaseIndentsPage() {
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
                 indent={selectedIndent}
+                onOpenPreview={(id) => setPreviewPIId(id)}
             />
 
             {/* Inactivate Confirmation */}

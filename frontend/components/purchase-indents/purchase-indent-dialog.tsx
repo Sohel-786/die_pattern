@@ -3,19 +3,21 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Trash2, Save, Package, Loader2, Calendar, Plus
+    Trash2, Save, Package, Loader2, Calendar, Plus, Printer, Eye
 } from "lucide-react";
 import api from "@/lib/api";
 import {
     Item,
     PurchaseIndent,
     PurchaseIndentType,
+    PurchaseIndentStatus,
 } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PiItemSelectionDialog } from "./pi-item-selection-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
@@ -25,14 +27,18 @@ interface PurchaseIndentDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     indent?: PurchaseIndent;
+    /** Callback to open the print/preview view for this PI (e.g. set preview id so modal opens). */
+    onOpenPreview?: (id: number) => void;
 }
 
-export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseIndentDialogProps) {
+export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview }: PurchaseIndentDialogProps) {
     const isEditing = !!indent;
     const queryClient = useQueryClient();
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
     const [remarks, setRemarks] = useState("");
     const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
+    const [reqDateOfDelivery, setReqDateOfDelivery] = useState<string>("");
+    const [mtcReq, setMtcReq] = useState<boolean>(false);
     const [nextPiCode, setNextPiCode] = useState("");
     const [itemSelectionOpen, setItemSelectionOpen] = useState(false);
 
@@ -41,11 +47,15 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
             setSelectedItemIds(indent.items.map(i => i.itemId));
             setRemarks(indent.remarks || "");
             setType(indent.type);
+            setReqDateOfDelivery(indent.reqDateOfDelivery ? format(new Date(indent.reqDateOfDelivery), "yyyy-MM-dd") : "");
+            setMtcReq(indent.mtcReq ?? false);
             setNextPiCode(indent.piNo);
         } else if (open) {
             setSelectedItemIds([]);
             setRemarks("");
             setType(PurchaseIndentType.New);
+            setReqDateOfDelivery("");
+            setMtcReq(false);
             api.get("/purchase-indents/next-code").then(res => {
                 setNextPiCode(res.data.data);
             }).catch(() => {
@@ -69,7 +79,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
     });
 
     const mutation = useMutation({
-        mutationFn: (data: { type: PurchaseIndentType; remarks?: string; itemIds: number[] }) =>
+        mutationFn: (data: { type: PurchaseIndentType; remarks?: string; reqDateOfDelivery?: string; mtcReq: boolean; itemIds: number[] }) =>
             isEditing
                 ? api.put(`/purchase-indents/${indent!.id}`, data)
                 : api.post("/purchase-indents", data),
@@ -110,6 +120,8 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
         mutation.mutate({
             type,
             remarks: remarks || undefined,
+            reqDateOfDelivery: reqDateOfDelivery || undefined,
+            mtcReq,
             itemIds: selectedItemIds
         });
     };
@@ -153,6 +165,29 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                                 <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
                                 <option value={PurchaseIndentType.Correction}>Engineering Correction</option>
                                 <option value={PurchaseIndentType.Modification}>Design Modification</option>
+                            </select>
+                        </div>
+                        <div className="col-span-2">
+                            <Label className="text-xs font-semibold text-secondary-600">Req. Date of Delivery</Label>
+                            <div className="mt-0.5">
+                                <DatePicker
+                                    value={reqDateOfDelivery || null}
+                                    onChange={(date) => setReqDateOfDelivery(date ? format(date, "yyyy-MM-dd") : "")}
+                                    placeholder="Select date"
+                                    clearable
+                                    className="h-9 text-sm border-secondary-200 bg-white"
+                                />
+                            </div>
+                        </div>
+                        <div className="col-span-2">
+                            <Label className="text-xs font-semibold text-secondary-600">MTC Req.</Label>
+                            <select
+                                value={mtcReq ? "yes" : "no"}
+                                onChange={(e) => setMtcReq(e.target.value === "yes")}
+                                className="w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                            >
+                                <option value="no">No</option>
+                                <option value="yes">Yes</option>
                             </select>
                         </div>
                     </div>
@@ -248,22 +283,50 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent }: PurchaseInd
                     </div>
                 </div>
 
-                <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-end gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                        className="h-9 px-5 font-semibold"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={mutation.isPending || selectedItemIds.length === 0}
-                        className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
-                    >
-                        {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {isEditing ? "Update" : "Save"}
-                    </Button>
+                <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        {isEditing && onOpenPreview && (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenPreview(indent!.id)}
+                                    className="h-9 px-4 font-semibold border-secondary-300 gap-2"
+                                >
+                                    <Eye className="w-4 h-4" />
+                                    View Preview
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenPreview(indent!.id)}
+                                    disabled={indent?.status !== PurchaseIndentStatus.Approved}
+                                    title={indent?.status !== PurchaseIndentStatus.Approved ? "Print is available only after approval" : "Print"}
+                                    className="h-9 px-4 font-semibold border-secondary-300 gap-2 disabled:opacity-60"
+                                >
+                                    <Printer className="w-4 h-4" />
+                                    Print
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="h-9 px-5 font-semibold"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={mutation.isPending || selectedItemIds.length === 0}
+                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
+                        >
+                            {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {isEditing ? "Update" : "Save"}
+                        </Button>
+                    </div>
                 </footer>
             </div>
         </Dialog>

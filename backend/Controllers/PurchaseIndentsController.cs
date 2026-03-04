@@ -101,6 +101,11 @@ namespace net_backend.Controllers
                     Type = p.Type,
                     Status = p.Status,
                     Remarks = p.Remarks,
+                    ReqDateOfDelivery = p.ReqDateOfDelivery,
+                    MtcReq = p.MtcReq,
+                    DocumentNo = p.DocumentNo,
+                    RevisionNo = p.RevisionNo,
+                    RevisionDate = p.RevisionDate,
                     CreatedBy = p.CreatedBy,
                     CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
                     ApprovedBy = p.ApprovedBy,
@@ -179,6 +184,8 @@ namespace net_backend.Controllers
                 PiNo = await _codeGenerator.GenerateCode("PI", locationId),
                 Type = dto.Type,
                 Remarks = dto.Remarks,
+                ReqDateOfDelivery = dto.ReqDateOfDelivery,
+                MtcReq = dto.MtcReq,
                 CreatedBy = CurrentUserId,
                 Status = PurchaseIndentStatus.Pending,
                 CreatedAt = DateTime.Now,
@@ -242,6 +249,8 @@ namespace net_backend.Controllers
 
             pi.Type = dto.Type;
             pi.Remarks = dto.Remarks;
+            pi.ReqDateOfDelivery = dto.ReqDateOfDelivery;
+            pi.MtcReq = dto.MtcReq;
             pi.UpdatedAt = DateTime.Now;
 
             _context.PurchaseIndentItems.RemoveRange(pi.Items);
@@ -285,6 +294,16 @@ namespace net_backend.Controllers
             pi.ApprovedBy = CurrentUserId;
             pi.ApprovedAt = DateTime.Now;
             pi.UpdatedAt = DateTime.Now;
+
+            var appliedDoc = await _context.DocumentControls
+                .Where(d => d.DocumentType == DocumentType.PurchaseIndent && d.IsActive && d.IsApplied)
+                .FirstOrDefaultAsync();
+            if (appliedDoc != null)
+            {
+                pi.DocumentNo = appliedDoc.DocumentNo;
+                pi.RevisionNo = appliedDoc.RevisionNo;
+                pi.RevisionDate = appliedDoc.RevisionDate;
+            }
 
             // Update item states to InPI
             foreach (var piItem in pi.Items)
@@ -408,6 +427,11 @@ namespace net_backend.Controllers
                 Type = pi.Type,
                 Status = pi.Status,
                 Remarks = pi.Remarks,
+                ReqDateOfDelivery = pi.ReqDateOfDelivery,
+                MtcReq = pi.MtcReq,
+                DocumentNo = pi.DocumentNo,
+                RevisionNo = pi.RevisionNo,
+                RevisionDate = pi.RevisionDate,
                 CreatedBy = pi.CreatedBy,
                 CreatorName = pi.Creator != null ? pi.Creator.FirstName + " " + pi.Creator.LastName : "Unknown",
                 ApprovedBy = pi.ApprovedBy,
@@ -454,6 +478,81 @@ namespace net_backend.Controllers
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });
+        }
+
+        /// <summary>Returns full data for Purchase Indent print view (header, table, footer). Uses PI's stored document revision snapshot.</summary>
+        [HttpGet("{id}/print")]
+        public async Task<ActionResult<ApiResponse<PurchaseIndentPrintDto>>> GetPrint(int id)
+        {
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var pi = await _context.PurchaseIndents
+                .Include(p => p.Creator)
+                .Include(p => p.Approver)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.ItemType)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.Material)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
+
+            if (pi == null) return NotFound();
+            var isAdmin = await IsAdmin();
+            if (!isAdmin && !pi.IsActive) return NotFound();
+
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+            var companyName = company?.Name ?? "";
+            var locationName = location?.Name ?? "";
+
+            var srNo = 0;
+            var rows = pi.Items
+                .OrderBy(i => i.Id)
+                .Select(i => new PurchaseIndentPrintRowDto
+                {
+                    SrNo = ++srNo,
+                    ItemDescription = i.Item?.CurrentName ?? i.Item?.MainPartName ?? "-",
+                    ItemType = i.Item?.ItemType?.Name ?? "N/A",
+                    ItemMaterial = i.Item?.Material?.Name ?? "N/A",
+                    DrgNo = i.Item?.DrawingNo ?? "-"
+                })
+                .ToList();
+
+            // Use PI's stored revision snapshot if set (from approval); otherwise fall back to currently applied revision
+            string documentNo = pi.DocumentNo ?? "-";
+            string revisionNo = pi.RevisionNo ?? "-";
+            DateTime? revisionDate = pi.RevisionDate;
+            if (string.IsNullOrWhiteSpace(pi.DocumentNo) || string.IsNullOrWhiteSpace(pi.RevisionNo))
+            {
+                var appliedDoc = await _context.DocumentControls
+                    .Where(d => d.DocumentType == DocumentType.PurchaseIndent && d.IsActive && d.IsApplied)
+                    .FirstOrDefaultAsync();
+                if (appliedDoc != null)
+                {
+                    documentNo = appliedDoc.DocumentNo;
+                    revisionNo = appliedDoc.RevisionNo;
+                    revisionDate = appliedDoc.RevisionDate;
+                }
+            }
+
+            var printDto = new PurchaseIndentPrintDto
+            {
+                CompanyName = companyName,
+                LocationName = locationName,
+                DocumentNo = documentNo,
+                RevisionNo = revisionNo,
+                RevisionDate = revisionDate,
+                IndentNo = pi.PiNo,
+                IndentDate = pi.CreatedAt,
+                ReqDateOfDelivery = pi.ReqDateOfDelivery,
+                MtcReq = pi.MtcReq,
+                IndentedBy = pi.Creator != null ? pi.Creator.FirstName + " " + pi.Creator.LastName : "",
+                AuthorisedBy = pi.Approver != null ? pi.Approver.FirstName + " " + pi.Approver.LastName : "",
+                ReceivedBy = "",
+                Rows = rows
+            };
+
+            return Ok(new ApiResponse<PurchaseIndentPrintDto> { Data = printDto });
         }
 
         /// <summary>Returns all active items with their current process state for PI item selection. Only items with status NotInStock can be added to a PI.</summary>

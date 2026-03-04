@@ -16,6 +16,24 @@ namespace net_backend.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
+    /// <summary>Document metadata for print formats (revisions). One revision can be Applied per DocumentType; new PIs use applied rev.</summary>
+    [Table("document_controls")]
+    public class DocumentControl
+    {
+        public int Id { get; set; }
+        public DocumentType DocumentType { get; set; }
+        [Required]
+        [MaxLength(50)]
+        public string DocumentNo { get; set; } = string.Empty;
+        [Required]
+        [MaxLength(20)]
+        public string RevisionNo { get; set; } = string.Empty;
+        public DateTime RevisionDate { get; set; }
+        /// <summary>When true, this revision is used for new documents. Only one per DocumentType can be true.</summary>
+        public bool IsApplied { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
     [Table("audit_logs")]
     public class AuditLog
     {
@@ -198,13 +216,23 @@ namespace net_backend.Models
         public PurchaseIndentType Type { get; set; }
         public PurchaseIndentStatus Status { get; set; } = PurchaseIndentStatus.Pending;
         public string? Remarks { get; set; }
+        /// <summary>Required date of delivery. Shown in print footer.</summary>
+        public DateTime? ReqDateOfDelivery { get; set; }
+        /// <summary>MTC required (Yes/No). Shown in print footer.</summary>
+        public bool MtcReq { get; set; }
+        /// <summary>Document number snapshot from DocumentControl when PI was approved (print header).</summary>
+        public string? DocumentNo { get; set; }
+        /// <summary>Revision number snapshot when PI was approved. Old PIs keep their rev; new PIs get applied rev.</summary>
+        public string? RevisionNo { get; set; }
+        /// <summary>Revision date snapshot when PI was approved.</summary>
+        public DateTime? RevisionDate { get; set; }
         public int CreatedBy { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
-        
+
         [ForeignKey("CreatedBy")]
         public virtual User? Creator { get; set; }
         [ForeignKey("ApprovedBy")]

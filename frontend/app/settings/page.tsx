@@ -23,7 +23,8 @@ import {
   BarChart3,
   FileText,
   ShoppingCart,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FileCheck
 } from "lucide-react";
 import {
   Card,
@@ -65,6 +66,7 @@ import {
   AVATAR_PRESETS_PATH,
 } from "@/lib/avatar-options";
 import { cn } from "@/lib/utils";
+import { DocumentControlSettings } from "@/components/settings/document-control-settings";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -75,6 +77,7 @@ const tabs = [
   { id: "software", label: "Software", icon: Building2 },
   { id: "users", label: "User Management", icon: Users },
   { id: "access", label: "Access", icon: Shield },
+  { id: "document-control", label: "Document Control", icon: FileCheck },
 ] as const;
 
 const userSchema = z.object({
@@ -1164,6 +1167,28 @@ export default function SettingsPage() {
                         Select a user above to view and manage their permissions.
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "document-control" && (
+              <motion.div
+                key="document-control"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="space-y-6"
+              >
+                <Card>
+                  <CardHeader className="border-b border-secondary-100">
+                    <CardTitle className="text-xl">Document Control</CardTitle>
+                    <p className="text-sm text-secondary-600 font-normal mt-1">
+                      Manage document numbers and revisions for print formats. Only one revision can be applied at a time per document type. New documents use the applied revision; existing documents keep their revision.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <DocumentControlSettings />
                   </CardContent>
                 </Card>
               </motion.div>

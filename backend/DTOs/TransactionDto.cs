@@ -10,6 +10,11 @@ namespace net_backend.DTOs
         public PurchaseIndentType Type { get; set; }
         public PurchaseIndentStatus Status { get; set; }
         public string? Remarks { get; set; }
+        public DateTime? ReqDateOfDelivery { get; set; }
+        public bool MtcReq { get; set; }
+        public string? DocumentNo { get; set; }
+        public string? RevisionNo { get; set; }
+        public DateTime? RevisionDate { get; set; }
         public int CreatedBy { get; set; }
         public string? CreatorName { get; set; }
         public int? ApprovedBy { get; set; }
@@ -43,7 +48,36 @@ namespace net_backend.DTOs
     {
         public PurchaseIndentType Type { get; set; }
         public string? Remarks { get; set; }
+        public DateTime? ReqDateOfDelivery { get; set; }
+        public bool MtcReq { get; set; }
         public List<int> ItemIds { get; set; } = new();
+    }
+
+    /// <summary>Full data for Purchase Indent print view (header, table, footer).</summary>
+    public class PurchaseIndentPrintDto
+    {
+        public string CompanyName { get; set; } = string.Empty;
+        public string LocationName { get; set; } = string.Empty;
+        public string DocumentNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public DateTime? RevisionDate { get; set; }
+        public string IndentNo { get; set; } = string.Empty;
+        public DateTime IndentDate { get; set; }
+        public DateTime? ReqDateOfDelivery { get; set; }
+        public bool MtcReq { get; set; }
+        public string IndentedBy { get; set; } = string.Empty;
+        public string AuthorisedBy { get; set; } = string.Empty;
+        public string ReceivedBy { get; set; } = string.Empty; // placeholder for signature
+        public List<PurchaseIndentPrintRowDto> Rows { get; set; } = new();
+    }
+
+    public class PurchaseIndentPrintRowDto
+    {
+        public int SrNo { get; set; }
+        public string ItemDescription { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
+        public string ItemMaterial { get; set; } = string.Empty;
+        public string DrgNo { get; set; } = string.Empty;
     }
 
     /// <summary>Item with its current process state for PI item selection (only NotInStock can be added).</summary>

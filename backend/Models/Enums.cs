@@ -81,5 +81,12 @@ namespace net_backend.Models
         Rejected = 2
     }
 
-
+    /// <summary>Document types for Document Control (print format revisions).</summary>
+    public enum DocumentType
+    {
+        PurchaseIndent = 0,
+        PurchaseOrder = 1,
+        JobWork = 2,
+        TransferEntry = 3
+    }
 }

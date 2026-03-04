@@ -10,6 +10,7 @@ namespace net_backend.Data
         }
 
         public DbSet<AppSettings> AppSettings { get; set; } = default!;
+        public DbSet<DocumentControl> DocumentControls { get; set; } = default!;
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
         public DbSet<Company> Companies { get; set; } = default!;
         public DbSet<Location> Locations { get; set; } = default!;

@@ -263,6 +263,11 @@ export interface PurchaseIndent {
   type: PurchaseIndentType;
   status: PurchaseIndentStatus;
   remarks?: string;
+  reqDateOfDelivery?: string | null;
+  mtcReq: boolean;
+  documentNo?: string | null;
+  revisionNo?: string | null;
+  revisionDate?: string | null;
   createdBy: number;
   creatorName: string;
   approvedBy?: number | null;
@@ -271,6 +276,47 @@ export interface PurchaseIndent {
   createdAt: string;
   isActive: boolean;
   items: PurchaseIndentItem[];
+}
+
+export interface PurchaseIndentPrintData {
+  companyName: string;
+  locationName: string;
+  documentNo: string;
+  revisionNo: string;
+  revisionDate: string | null;
+  indentNo: string;
+  indentDate: string;
+  reqDateOfDelivery: string | null;
+  mtcReq: boolean;
+  indentedBy: string;
+  authorisedBy: string;
+  receivedBy: string;
+  rows: PurchaseIndentPrintRow[];
+}
+
+export interface PurchaseIndentPrintRow {
+  srNo: number;
+  itemDescription: string;
+  itemType: string;
+  itemMaterial: string;
+  drgNo: string;
+}
+
+export enum DocumentType {
+  PurchaseIndent = 0,
+  PurchaseOrder = 1,
+  JobWork = 2,
+  TransferEntry = 3,
+}
+
+export interface DocumentControlDto {
+  id: number;
+  documentType: DocumentType;
+  documentNo: string;
+  revisionNo: string;
+  revisionDate: string;
+  isApplied: boolean;
+  isActive: boolean;
 }
 
 export interface PurchaseIndentItem {
