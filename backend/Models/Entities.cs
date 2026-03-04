@@ -10,6 +10,8 @@ namespace net_backend.Models
         public int Id { get; set; }
         [MaxLength(255)]
         public string? SoftwareName { get; set; }
+        [MaxLength(20)]
+        public string? PrimaryColor { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
