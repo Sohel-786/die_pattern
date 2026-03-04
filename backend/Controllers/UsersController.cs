@@ -221,6 +221,9 @@ namespace net_backend.Controllers
             permission.ManageChanges = request.ManageChanges;
             permission.RevertChanges = request.RevertChanges;
             permission.ViewReports = request.ViewReports;
+            permission.ViewPIPReport = request.ViewPIPReport;
+            permission.ViewInwardReport = request.ViewInwardReport;
+            permission.ViewItemLedgerReport = request.ViewItemLedgerReport;
             permission.ManageUsers = request.ManageUsers;
             permission.AccessSettings = request.AccessSettings;
             

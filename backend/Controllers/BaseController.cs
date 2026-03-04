@@ -146,6 +146,9 @@ namespace net_backend.Controllers
                 "ManageChanges" => p.ManageChanges,
                 "RevertChanges" => p.RevertChanges,
                 "ViewReports" => p.ViewReports,
+                "ViewPIPReport" => p.ViewPIPReport,
+                "ViewInwardReport" => p.ViewInwardReport,
+                "ViewItemLedgerReport" => p.ViewItemLedgerReport,
                 "ManageUsers" => p.ManageUsers,
                 "AccessSettings" => p.AccessSettings,
                 _ => false

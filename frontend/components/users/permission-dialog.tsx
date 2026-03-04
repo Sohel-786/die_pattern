@@ -137,7 +137,15 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                 <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Intelligence & Reporting</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <PermissionToggle label="Strategic Dashboard" checked={permissions?.viewDashboard || false} onChange={(v) => updatePermission('viewDashboard', v)} icon={LayoutDashboard} description="Global visualization of metrics" />
-                                    <PermissionToggle label="Operational Reports" checked={permissions?.viewReports || false} onChange={(v) => updatePermission('viewReports', v)} icon={BarChart3} description="Exportable analytical datasets" />
+                                    <PermissionToggle label="Operational Reports" checked={permissions?.viewReports || false} onChange={(v) => updatePermission('viewReports', v)} icon={BarChart3} description="Enable reports module" />
+                                </div>
+                                <div className="mt-4 pl-2 border-l-2 border-primary-200">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Reports (require Operational Reports)</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <PermissionToggle label="PI Report" checked={permissions?.viewPIPReport || false} onChange={(v) => updatePermission('viewPIPReport', v)} icon={FileText} description="Purchase Indent report" />
+                                        <PermissionToggle label="Inward Report" checked={permissions?.viewInwardReport || false} onChange={(v) => updatePermission('viewInwardReport', v)} icon={ArrowLeftRight} description="Inward register" />
+                                        <PermissionToggle label="Item Ledger" checked={permissions?.viewItemLedgerReport || false} onChange={(v) => updatePermission('viewItemLedgerReport', v)} icon={History} description="Item history ledger" />
+                                    </div>
                                 </div>
                             </div>
 

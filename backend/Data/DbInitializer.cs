@@ -120,6 +120,9 @@ namespace net_backend.Data
             adminPerm.ManageChanges = true;
             adminPerm.RevertChanges = true;
             adminPerm.ViewReports = true;
+            adminPerm.ViewPIPReport = true;
+            adminPerm.ViewInwardReport = true;
+            adminPerm.ViewItemLedgerReport = true;
             adminPerm.ManageUsers = true;
             adminPerm.AccessSettings = true;
             

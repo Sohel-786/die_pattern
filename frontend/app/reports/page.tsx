@@ -1,18 +1,16 @@
 "use client";
 
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3, FileSpreadsheet, History, Package,
-  ShieldCheck, ArrowUpRight, ArrowDownLeft,
-  TrendingUp, Download, Filter, Search
+  BarChart3, FileText, FileSpreadsheet, History, ArrowLeftRight,
+  Download, Search, Loader2, ChevronLeft, ChevronRight
 } from "lucide-react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -21,239 +19,518 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { format } from "date-fns";
+import { toast } from "react-hot-toast";
+import type { PIReportRow, InwardReportRow, ItemLedgerRow } from "@/types";
+import { PurchaseIndentStatus } from "@/types";
+import { cn } from "@/lib/utils";
 
-type ReportTab = "inventory" | "movements" | "qc";
+const ROW_COUNT_OPTIONS = [25, 50, 75, 100] as const;
+type ReportTab = "pi" | "inward" | "ledger";
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<ReportTab>("inventory");
-  const [search, setSearch] = useState("");
+  const { data: permissions } = useCurrentUserPermissions();
+  const canViewReports = permissions?.viewReports ?? false;
+  const canViewPI = permissions?.viewPIPReport ?? false;
+  const canViewInward = permissions?.viewInwardReport ?? false;
+  const canViewLedger = permissions?.viewItemLedgerReport ?? false;
 
-  const { data: inventory = [], isLoading: loadingInv } = useQuery<any[]>({
-    queryKey: ["reports", "inventory"],
+  const tabs = useMemo(() => {
+    const t: { id: ReportTab; label: string; icon: typeof FileText }[] = [];
+    if (canViewPI) t.push({ id: "pi", label: "PI Report", icon: FileText });
+    if (canViewInward) t.push({ id: "inward", label: "Inward Report", icon: ArrowLeftRight });
+    if (canViewLedger) t.push({ id: "ledger", label: "Item Ledger", icon: History });
+    return t;
+  }, [canViewPI, canViewInward, canViewLedger]);
+
+  const defaultTab: ReportTab = tabs[0]?.id ?? "pi";
+  const [activeTab, setActiveTab] = useState<ReportTab>(defaultTab);
+  useEffect(() => {
+    if (tabs.length && !tabs.some((t) => t.id === activeTab)) setActiveTab(tabs[0].id);
+  }, [tabs, activeTab]);
+
+  const [piSearch, setPiSearch] = useState("");
+  const [piDateFrom, setPiDateFrom] = useState("");
+  const [piDateTo, setPiDateTo] = useState("");
+  const [piStatus, setPiStatus] = useState("");
+  const [piPage, setPiPage] = useState(1);
+  const [piLimit, setPiLimit] = useState(25);
+  const [piSelected, setPiSelected] = useState<Set<number>>(new Set());
+
+  const [inwardSearch, setInwardSearch] = useState("");
+  const [inwardDateFrom, setInwardDateFrom] = useState("");
+  const [inwardDateTo, setInwardDateTo] = useState("");
+  const [inwardPage, setInwardPage] = useState(1);
+  const [inwardLimit, setInwardLimit] = useState(25);
+  const [inwardSelected, setInwardSelected] = useState<Set<number>>(new Set());
+
+  const [ledgerItemId, setLedgerItemId] = useState<number | null>(null);
+  const [ledgerDateFrom, setLedgerDateFrom] = useState("");
+  const [ledgerDateTo, setLedgerDateTo] = useState("");
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerLimit, setLedgerLimit] = useState(50);
+  const [ledgerSelected, setLedgerSelected] = useState<Set<number>>(new Set());
+
+  const debouncedPiSearch = useDebouncedValue(piSearch, 400);
+  const debouncedInwardSearch = useDebouncedValue(inwardSearch, 400);
+
+  const piParams = useMemo(() => ({
+    search: debouncedPiSearch || undefined,
+    dateFrom: piDateFrom || undefined,
+    dateTo: piDateTo || undefined,
+    status: piStatus || undefined,
+    page: piPage,
+    limit: piLimit,
+  }), [debouncedPiSearch, piDateFrom, piDateTo, piStatus, piPage, piLimit]);
+
+  const inwardParams = useMemo(() => ({
+    search: debouncedInwardSearch || undefined,
+    dateFrom: inwardDateFrom || undefined,
+    dateTo: inwardDateTo || undefined,
+    page: inwardPage,
+    limit: inwardLimit,
+  }), [debouncedInwardSearch, inwardDateFrom, inwardDateTo, inwardPage, inwardLimit]);
+
+  const ledgerParams = useMemo(() => ({
+    itemId: ledgerItemId!,
+    dateFrom: ledgerDateFrom || undefined,
+    dateTo: ledgerDateTo || undefined,
+    page: ledgerPage,
+    limit: ledgerLimit,
+  }), [ledgerItemId, ledgerDateFrom, ledgerDateTo, ledgerPage, ledgerLimit]);
+
+  const { data: piReport, isLoading: loadingPI } = useQuery<{ data: PaginatedResponse<PIReportRow> }>({
+    queryKey: ["reports", "purchase-indents", piParams],
     queryFn: async () => {
-      const res = await api.get("/item-reports/inventory-status");
-      return res.data.data;
+      const res = await api.get("/reports/purchase-indents", { params: piParams });
+      return res.data;
     },
-    enabled: activeTab === "inventory"
+    enabled: canViewReports && activeTab === "pi",
   });
 
-  const { data: movements = [], isLoading: loadingMov } = useQuery<any[]>({
-    queryKey: ["reports", "movements"],
+  const { data: inwardReport, isLoading: loadingInward } = useQuery<{ data: { data: InwardReportRow[]; total: number; page: number; limit: number } }>({
+    queryKey: ["reports", "inwards", inwardParams],
     queryFn: async () => {
-      const res = await api.get("/item-reports/movement-ledger");
-      return res.data.data;
+      const res = await api.get("/reports/inwards", { params: inwardParams });
+      return res.data;
     },
-    enabled: activeTab === "movements"
+    enabled: canViewReports && activeTab === "inward",
   });
 
-  const { data: qcInfo, isLoading: loadingQC } = useQuery<any>({
-    queryKey: ["reports", "qc"],
+  const { data: ledgerReport, isLoading: loadingLedger } = useQuery<{ data: { item: { id: number; currentName: string; mainPartName: string; itemTypeName?: string }; data: ItemLedgerRow[]; total: number; page: number; limit: number } }>({
+    queryKey: ["reports", "item-ledger", ledgerParams],
     queryFn: async () => {
-      const res = await api.get("/item-reports/qc-summary");
-      return res.data.data;
+      const res = await api.get("/reports/item-ledger", { params: ledgerParams });
+      return res.data;
     },
-    enabled: activeTab === "qc"
+    enabled: canViewReports && activeTab === "ledger" && !!ledgerItemId,
   });
+
+  const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
+    queryKey: ["items", "active"],
+    queryFn: async () => {
+      const res = await api.get("/items/active");
+      return res.data.data ?? [];
+    },
+    enabled: canViewLedger && activeTab === "ledger",
+  });
+
+  const handleExportExcel = useCallback(async () => {
+    try {
+      if (activeTab === "pi") {
+        const params = new URLSearchParams();
+        if (debouncedPiSearch) params.set("search", debouncedPiSearch);
+        if (piDateFrom) params.set("dateFrom", piDateFrom);
+        if (piDateTo) params.set("dateTo", piDateTo);
+        if (piStatus) params.set("status", piStatus);
+        const res = await api.get("/reports/export/purchase-indents", { params, responseType: "blob" });
+        const url = URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `PI_Report_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Excel downloaded");
+      } else if (activeTab === "inward") {
+        const params = new URLSearchParams();
+        if (debouncedInwardSearch) params.set("search", debouncedInwardSearch);
+        if (inwardDateFrom) params.set("dateFrom", inwardDateFrom);
+        if (inwardDateTo) params.set("dateTo", inwardDateTo);
+        const res = await api.get("/reports/export/inwards", { params, responseType: "blob" });
+        const url = URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Inward_Report_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Excel downloaded");
+      } else if (activeTab === "ledger" && ledgerItemId) {
+        const params = new URLSearchParams({ itemId: String(ledgerItemId) });
+        if (ledgerDateFrom) params.set("dateFrom", ledgerDateFrom);
+        if (ledgerDateTo) params.set("dateTo", ledgerDateTo);
+        const res = await api.get("/reports/export/item-ledger", { params, responseType: "blob" });
+        const url = URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Item_Ledger_${ledgerItemId}_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Excel downloaded");
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Export failed");
+    }
+  }, [activeTab, debouncedPiSearch, piDateFrom, piDateTo, piStatus, debouncedInwardSearch, inwardDateFrom, inwardDateTo, ledgerItemId, ledgerDateFrom, ledgerDateTo]);
+
+  if (!canViewReports) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[50vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">You do not have permission to view reports.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const piPayload = piReport?.data as PaginatedResponse<PIReportRow> | undefined;
+  const inwardPayload = inwardReport?.data as PaginatedResponse<InwardReportRow> | undefined;
+  const ledgerPayload = ledgerReport?.data as { item: { id: number; currentName: string; mainPartName: string; itemTypeName?: string }; data: ItemLedgerRow[]; total: number; page: number; limit: number } | undefined;
 
   return (
-    <div className="p-8 space-y-10">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: "easeOut" }}>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-4">
-            <BarChart3 className="w-10 h-10 text-primary-600" />
-            Strategic Reports
-          </h1>
-          <p className="text-gray-500 mt-2 font-semibold text-lg">Detailed analytical insights for asset lifecycle & logic</p>
-        </motion.div>
-
-        <div className="flex bg-white p-2 rounded-[2rem] shadow-xl border border-gray-100">
-          {(["inventory", "movements", "qc"] as ReportTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab
-                ? "bg-primary-600 text-white shadow-lg shadow-primary/30"
-                : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        <Card className="border-none shadow-xl shadow-black/5 bg-white rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="p-8 bg-secondary-50/50">
-            <CardTitle className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Package className="w-4 h-4" /> Global Registry
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-gray-400 uppercase">Tracked Units</p>
-              <p className="text-5xl font-black text-gray-900 tracking-tighter">542</p>
-            </div>
-            <div className="mt-8 flex items-center gap-2 text-emerald-500 font-bold text-sm">
-              <TrendingUp className="w-4 h-4" />
-              <span>+12 New this month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-xl shadow-black/5 bg-white rounded-[2.5rem] overflow-hidden">
-          <CardHeader className="p-8 bg-secondary-50/50">
-            <CardTitle className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4" /> QC Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-gray-400 uppercase">First Pass Yield</p>
-              <p className="text-5xl font-black text-emerald-600 tracking-tighter">98%</p>
-            </div>
-            <div className="mt-8 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 w-[98%]" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="xl:col-span-2 bg-gray-900 rounded-[2.5rem] p-10 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8">
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-white/10 hover:bg-white/20 text-white border-none">
-              <Download className="w-6 h-6" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-2xl font-black text-white tracking-tight">Export Full Ledger</h3>
-            <p className="text-gray-400 font-medium max-w-xs">Download the complete movement and lifecycle history for all items across all companies.</p>
-          </div>
-          <Button className="w-fit mt-10 h-14 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-black px-10 shadow-xl shadow-primary/40">
-            Generate .XLSX
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <BarChart3 className="w-8 h-8 text-primary-600" />
+          Reports
+        </h1>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleExportExcel}
+            disabled={
+              (activeTab === "pi" && !piPayload?.data?.length) ||
+              (activeTab === "inward" && !inwardPayload?.data?.length) ||
+              (activeTab === "ledger" && (!ledgerItemId || !ledgerPayload?.data?.length))
+            }
+            variant="outline"
+            className="gap-2"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Export Excel
           </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-[3rem] shadow-2xl shadow-black/5 border border-gray-100 overflow-hidden">
-        <div className="p-10 border-b border-gray-50 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-secondary-50/20">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-primary-600">
-              <FileSpreadsheet className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight capitalize">{activeTab} Ledger</h3>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">{activeTab === 'inventory' ? 'Real-time stock positions' : activeTab === 'movements' ? 'Historical transfer logs' : 'Certification audit results'}</p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                placeholder="Quick search data..."
-                className="pl-12 h-14 rounded-2xl border-none bg-white shadow-sm font-bold text-sm min-w-[300px]"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button variant="ghost" className="h-14 w-14 rounded-2xl bg-white shadow-sm border border-gray-100">
-              <Filter className="w-5 h-5 text-gray-500" />
-            </Button>
-          </div>
+      {tabs.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors",
+                activeTab === id
+                  ? "bg-primary-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
         </div>
+      )}
 
-        <div className="overflow-x-auto">
-          <AnimatePresence mode="wait">
-            {activeTab === "inventory" && (
-              <motion.div key="inv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Table>
-                  <TableHeader className="bg-secondary-50/50">
-                    <TableRow className="border-none">
-                      <TableHead className="font-black text-gray-900 py-8 pl-10 uppercase tracking-widest text-xs">Identity</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs">Technical</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs text-center">Custodian</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventory.map((row) => (
-                      <TableRow key={row.id} className="group hover:bg-primary-50/30 transition-all border-none">
-                        <TableCell className="py-7 pl-10 border-b border-gray-50">
-                          <p className="font-black text-gray-800 text-lg leading-none">{row.currentName}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mt-2 tracking-widest">{row.mainPartName}</p>
-                        </TableCell>
-                        <TableCell className="border-b border-gray-50">
-                          <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-secondary-50 text-[10px] font-black rounded-lg border border-gray-100">{row.itemType}</span>
-                            <span className="text-[10px] font-black text-gray-400 italic">REV: {row.revisionNo}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center border-b border-gray-50">
-                          <p className="text-sm font-black text-gray-700">{row.holder}</p>
-                          <p className={`text-[9px] font-black uppercase tracking-[0.1em] mt-1 ${row.currentHolderType === "Location" ? "text-primary-500" : row.currentHolderType === "NotInStock" ? "text-secondary-500" : "text-amber-500"}`}>
-                            {row.currentHolderType === "NotInStock" ? "Not in stock" : row.currentHolderType}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-center border-b border-gray-50">
-                          <span className="px-4 py-1.5 rounded-xl bg-secondary-50 text-[10px] font-black border border-gray-100 uppercase italic">
-                            {row.status}
-                          </span>
-                        </TableCell>
+      {activeTab === "pi" && (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Purchase Indent Report</CardTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+              <div>
+                <Label className="text-xs">Search</Label>
+                <div className="relative mt-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="PI No, Creator..."
+                    className="pl-9"
+                    value={piSearch}
+                    onChange={(e) => setPiSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Date From</Label>
+                <Input type="date" className="mt-1" value={piDateFrom} onChange={(e) => setPiDateFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Date To</Label>
+                <Input type="date" className="mt-1" value={piDateTo} onChange={(e) => setPiDateTo(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Status</Label>
+                <select
+                  className="w-full mt-1 h-10 rounded-md border border-gray-300 px-3 text-sm"
+                  value={piStatus}
+                  onChange={(e) => setPiStatus(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {Object.values(PurchaseIndentStatus).map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Page size</Label>
+                <select
+                  className="w-full mt-1 h-10 rounded-md border border-gray-300 px-3 text-sm"
+                  value={piLimit}
+                  onChange={(e) => { setPiLimit(Number(e.target.value)); setPiPage(1); }}
+                >
+                  {ROW_COUNT_OPTIONS.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {loadingPI ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="w-12"><input type="checkbox" checked={piPayload?.data?.length ? piSelected.size === piPayload.data.length : false} onChange={(e) => { if (e.target.checked) setPiSelected(new Set(piPayload?.data?.map((r: PIReportRow) => r.id) ?? [])); else setPiSelected(new Set()); }} /></TableHead>
+                        <TableHead>PI No</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Approved</TableHead>
+                        <TableHead>Creator</TableHead>
+                        <TableHead>Approver</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Req. Delivery</TableHead>
+                        <TableHead>MTC Req</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </motion.div>
-            )}
+                    </TableHeader>
+                    <TableBody>
+                      {(piPayload?.data ?? []).map((row: PIReportRow) => (
+                        <TableRow key={row.id} className="hover:bg-gray-50">
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={piSelected.has(row.id)}
+                              onChange={() => {
+                                const next = new Set(piSelected);
+                                if (next.has(row.id)) next.delete(row.id); else next.add(row.id);
+                                setPiSelected(next);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{row.piNo}</TableCell>
+                          <TableCell>{row.type}</TableCell>
+                          <TableCell>{row.status}</TableCell>
+                          <TableCell>{row.createdAt ? format(new Date(row.createdAt), "dd-MMM-yyyy") : ""}</TableCell>
+                          <TableCell>{row.approvedAt ? format(new Date(row.approvedAt), "dd-MMM-yyyy") : "-"}</TableCell>
+                          <TableCell>{row.creatorName ?? "-"}</TableCell>
+                          <TableCell>{row.approverName ?? "-"}</TableCell>
+                          <TableCell>{row.itemCount}</TableCell>
+                          <TableCell>{row.reqDateOfDelivery ?? "-"}</TableCell>
+                          <TableCell>{row.mtcReq ? "Yes" : "No"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                    <span>Showing {(piPage - 1) * piLimit + 1}-{Math.min(piPage * piLimit, piPayload?.total ?? 0)} of {piPayload?.total ?? 0}</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled={piPage <= 1} onClick={() => setPiPage((p) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+                      <span>Page {piPage} of {Math.max(1, Math.ceil((piPayload?.total ?? 0) / piLimit))}</span>
+                      <Button variant="outline" size="sm" disabled={piPage >= Math.ceil((piPayload?.total ?? 0) / piLimit)} onClick={() => setPiPage((p) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-            {activeTab === "movements" && (
-              <motion.div key="mov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <Table>
-                  <TableHeader className="bg-secondary-50/50">
-                    <TableRow className="border-none">
-                      <TableHead className="font-black text-gray-900 py-8 pl-10 uppercase tracking-widest text-xs">Date & Protocol</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs">Asset</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs">Route</TableHead>
-                      <TableHead className="font-black text-gray-900 uppercase tracking-widest text-xs">Execution</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movements.map((row) => (
-                      <TableRow key={row.id} className="group hover:bg-blue-50/30 transition-all border-none">
-                        <TableCell className="py-7 pl-10 border-b border-gray-50">
-                          <div className="flex items-center gap-4">
-                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${row.type === 'Outward' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                              {row.type === 'Outward' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
-                            </div>
-                            <div>
-                              <p className="font-black text-gray-800 text-sm">{format(new Date(row.date), 'dd MMM yyyy')}</p>
-                              <p className="text-[10px] font-black text-gray-400 uppercase">{row.type}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="border-b border-gray-50">
-                          <p className="font-black text-gray-800 text-base">{row.item}</p>
-                        </TableCell>
-                        <TableCell className="border-b border-gray-50">
-                          <div className="flex items-center gap-4">
-                            <span className="text-xs font-bold text-gray-500">{row.from}</span>
-                            <div className="h-0.5 w-4 bg-gray-100" />
-                            <span className="text-xs font-black text-gray-900">{row.to}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="border-b border-gray-50">
-                          <p className="text-xs font-black text-gray-600">{row.user}</p>
-                          <p className="text-[10px] font-bold text-gray-400 mt-1 truncate max-w-[150px]">{row.remarks || 'No remarks recorded'}</p>
-                        </TableCell>
+      {activeTab === "inward" && (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Inward Report</CardTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+              <div>
+                <Label className="text-xs">Search</Label>
+                <div className="relative mt-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input placeholder="Inward No, Vendor..." className="pl-9" value={inwardSearch} onChange={(e) => setInwardSearch(e.target.value)} />
+                </div>
+              </div>
+              <div><Label className="text-xs">Date From</Label><Input type="date" className="mt-1" value={inwardDateFrom} onChange={(e) => setInwardDateFrom(e.target.value)} /></div>
+              <div><Label className="text-xs">Date To</Label><Input type="date" className="mt-1" value={inwardDateTo} onChange={(e) => setInwardDateTo(e.target.value)} /></div>
+              <div>
+                <Label className="text-xs">Page size</Label>
+                <select className="w-full mt-1 h-10 rounded-md border border-gray-300 px-3 text-sm" value={inwardLimit} onChange={(e) => { setInwardLimit(Number(e.target.value)); setInwardPage(1); }}>
+                  {ROW_COUNT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {loadingInward ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="w-12"><input type="checkbox" checked={inwardPayload?.data?.length ? inwardSelected.size === inwardPayload.data.length : false} onChange={(e) => { if (e.target.checked) setInwardSelected(new Set(inwardPayload?.data?.map((r: InwardReportRow) => r.id) ?? [])); else setInwardSelected(new Set()); }} /></TableHead>
+                        <TableHead>Inward No</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Lines</TableHead>
+                        <TableHead>Created By</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </motion.div>
+                    </TableHeader>
+                    <TableBody>
+                      {(inwardPayload?.data ?? []).map((row: InwardReportRow) => (
+                        <TableRow key={row.id}>
+                          <TableCell><input type="checkbox" checked={inwardSelected.has(row.id)} onChange={() => { const next = new Set(inwardSelected); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); setInwardSelected(next); }} /></TableCell>
+                          <TableCell className="font-medium">{row.inwardNo}</TableCell>
+                          <TableCell>{row.inwardDate ? format(new Date(row.inwardDate), "dd-MMM-yyyy") : ""}</TableCell>
+                          <TableCell>{row.status}</TableCell>
+                          <TableCell>{row.locationName ?? "-"}</TableCell>
+                          <TableCell>{row.vendorName ?? "-"}</TableCell>
+                          <TableCell>{row.lineCount}</TableCell>
+                          <TableCell>{row.creatorName ?? "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                    <span>Showing {(inwardPage - 1) * inwardLimit + 1}-{Math.min(inwardPage * inwardLimit, inwardPayload?.total ?? 0)} of {inwardPayload?.total ?? 0}</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled={inwardPage <= 1} onClick={() => setInwardPage((p) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+                      <span>Page {inwardPage} of {Math.max(1, Math.ceil((inwardPayload?.total ?? 0) / inwardLimit))}</span>
+                      <Button variant="outline" size="sm" disabled={inwardPage >= Math.ceil((inwardPayload?.total ?? 0) / inwardLimit)} onClick={() => setInwardPage((p) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "ledger" && (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Item Ledger</CardTitle>
+            <p className="text-sm text-gray-500 mt-1">Full history for a selected item (die/pattern), active entries only, ordered by date.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+              <div className="lg:col-span-2">
+                <Label className="text-xs">Select Item *</Label>
+                <select
+                  className="w-full mt-1 h-10 rounded-md border border-gray-300 px-3 text-sm"
+                  value={ledgerItemId ?? ""}
+                  onChange={(e) => { setLedgerItemId(e.target.value ? Number(e.target.value) : null); setLedgerPage(1); }}
+                >
+                  <option value="">-- Select item --</option>
+                  {itemsList.map((i) => (
+                    <option key={i.id} value={i.id}>{[i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`}</option>
+                  ))}
+                </select>
+              </div>
+              <div><Label className="text-xs">Date From</Label><Input type="date" className="mt-1" value={ledgerDateFrom} onChange={(e) => setLedgerDateFrom(e.target.value)} /></div>
+              <div><Label className="text-xs">Date To</Label><Input type="date" className="mt-1" value={ledgerDateTo} onChange={(e) => setLedgerDateTo(e.target.value)} /></div>
+              <div>
+                <Label className="text-xs">Page size</Label>
+                <select className="w-full mt-1 h-10 rounded-md border border-gray-300 px-3 text-sm" value={ledgerLimit} onChange={(e) => { setLedgerLimit(Number(e.target.value)); setLedgerPage(1); }}>
+                  {[25, 50, 75, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            {ledgerPayload?.item && (
+              <p className="mt-2 text-sm font-medium text-gray-700">
+                Item: {ledgerPayload.item.currentName} ({ledgerPayload.item.mainPartName}) {ledgerPayload.item.itemTypeName && ` · ${ledgerPayload.item.itemTypeName}`}
+              </p>
             )}
-          </AnimatePresence>
-        </div>
-      </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              {!ledgerItemId ? (
+                <p className="py-12 text-center text-gray-500">Select an item to view its ledger.</p>
+              ) : loadingLedger ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Event Date</TableHead>
+                        <TableHead>Event Type</TableHead>
+                        <TableHead>Reference No</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>By</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(ledgerPayload?.data ?? []).map((row: ItemLedgerRow, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell>{(ledgerPage - 1) * ledgerLimit + idx + 1}</TableCell>
+                          <TableCell>{row.eventDate ? format(new Date(row.eventDate), "dd-MMM-yyyy HH:mm") : ""}</TableCell>
+                          <TableCell>{row.eventType}</TableCell>
+                          <TableCell className="font-medium">{row.referenceNo}</TableCell>
+                          <TableCell>{row.locationName ?? "-"}</TableCell>
+                          <TableCell>{row.partyName ?? "-"}</TableCell>
+                          <TableCell>{row.description ?? "-"}</TableCell>
+                          <TableCell>{row.byUser ?? "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                    <span>Showing {(ledgerPage - 1) * ledgerLimit + 1}-{Math.min(ledgerPage * ledgerLimit, ledgerPayload?.total ?? 0)} of {ledgerPayload?.total ?? 0}</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled={ledgerPage <= 1} onClick={() => setLedgerPage((p) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+                      <span>Page {ledgerPage} of {Math.max(1, Math.ceil((ledgerPayload?.total ?? 0) / ledgerLimit))}</span>
+                      <Button variant="outline" size="sm" disabled={ledgerPage >= Math.ceil((ledgerPayload?.total ?? 0) / ledgerLimit)} onClick={() => setLedgerPage((p) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

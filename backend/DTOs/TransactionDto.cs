@@ -449,4 +449,46 @@ namespace net_backend.DTOs
         public List<string>? AttachmentUrls { get; set; }
         public List<CreateTransferItemDto> Items { get; set; } = new();
     }
+
+    /// <summary>One row in Purchase Indent report list.</summary>
+    public class PIReportRowDto
+    {
+        public int Id { get; set; }
+        public string PiNo { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public string? CreatorName { get; set; }
+        public string? ApproverName { get; set; }
+        public int ItemCount { get; set; }
+        public string? ReqDateOfDelivery { get; set; }
+        public bool MtcReq { get; set; }
+    }
+
+    /// <summary>One row in Inward report list.</summary>
+    public class InwardReportRowDto
+    {
+        public int Id { get; set; }
+        public string InwardNo { get; set; } = string.Empty;
+        public DateTime InwardDate { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string? LocationName { get; set; }
+        public string? VendorName { get; set; }
+        public int LineCount { get; set; }
+        public string? CreatorName { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    /// <summary>One row in Item Ledger (history) report.</summary>
+    public class ItemLedgerRowDto
+    {
+        public DateTime EventDate { get; set; }
+        public string EventType { get; set; } = string.Empty;
+        public string ReferenceNo { get; set; } = string.Empty;
+        public string? LocationName { get; set; }
+        public string? PartyName { get; set; }
+        public string? Description { get; set; }
+        public string? ByUser { get; set; }
+    }
 }

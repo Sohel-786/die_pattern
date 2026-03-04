@@ -580,6 +580,12 @@ namespace net_backend.Models
         public bool RevertChanges { get; set; } = false;
 
         public bool ViewReports { get; set; } = false;
+        /// <summary>View Purchase Indent report tab.</summary>
+        public bool ViewPIPReport { get; set; } = false;
+        /// <summary>View Inward report tab.</summary>
+        public bool ViewInwardReport { get; set; } = false;
+        /// <summary>View Item Ledger report tab.</summary>
+        public bool ViewItemLedgerReport { get; set; } = false;
         public bool ManageUsers { get; set; } = false;
         public bool AccessSettings { get; set; } = false;
 

@@ -193,7 +193,9 @@ namespace net_backend.Controllers
             permissions.RevertChanges = updatedPerms.RevertChanges;
             
             permissions.ViewReports = updatedPerms.ViewReports;
-            
+            permissions.ViewPIPReport = updatedPerms.ViewPIPReport;
+            permissions.ViewInwardReport = updatedPerms.ViewInwardReport;
+            permissions.ViewItemLedgerReport = updatedPerms.ViewItemLedgerReport;
             permissions.ManageUsers = updatedPerms.ManageUsers;
             permissions.AccessSettings = updatedPerms.AccessSettings;
             
@@ -365,6 +367,9 @@ namespace net_backend.Controllers
                 "ManageChanges" => permissions.ManageChanges,
                 "RevertChanges" => permissions.RevertChanges,
                 "ViewReports" => permissions.ViewReports,
+                "ViewPIPReport" => permissions.ViewPIPReport,
+                "ViewInwardReport" => permissions.ViewInwardReport,
+                "ViewItemLedgerReport" => permissions.ViewItemLedgerReport,
                 "ManageUsers" => permissions.ManageUsers,
                 "AccessSettings" => permissions.AccessSettings,
                 _ => false
@@ -467,6 +472,9 @@ namespace net_backend.Controllers
                 perm.ViewTransfer = true;
                 perm.CreateTransfer = true;
                 perm.ViewReports = true;
+                perm.ViewPIPReport = true;
+                perm.ViewInwardReport = true;
+                perm.ViewItemLedgerReport = true;
             }
             else
             {

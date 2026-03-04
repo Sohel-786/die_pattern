@@ -612,7 +612,8 @@ export interface DashboardMetrics {
     pendingPO: number;
   };
   locationWiseCount: { locationName: string; count: number }[];
-  recentChanges: any[];
+  recentChanges: { mainPartName?: string; oldName?: string; newName?: string; changeType?: string; createdAt?: string }[];
+  recentChangesCount?: number;
   recentSystemAdjustments: any[];
 }
 
@@ -668,9 +669,51 @@ export interface UserPermission {
   manageChanges: boolean;
   revertChanges: boolean;
   viewReports: boolean;
+  viewPIPReport: boolean;
+  viewInwardReport: boolean;
+  viewItemLedgerReport: boolean;
   manageUsers: boolean;
   accessSettings: boolean;
   navigationLayout: 'SIDEBAR' | 'HORIZONTAL';
+}
+
+/** One row in Purchase Indent report. */
+export interface PIReportRow {
+  id: number;
+  piNo: string;
+  type: string;
+  status: string;
+  createdAt: string;
+  approvedAt?: string | null;
+  creatorName?: string | null;
+  approverName?: string | null;
+  itemCount: number;
+  reqDateOfDelivery?: string | null;
+  mtcReq: boolean;
+}
+
+/** One row in Inward report. */
+export interface InwardReportRow {
+  id: number;
+  inwardNo: string;
+  inwardDate: string;
+  status: string;
+  locationName?: string | null;
+  vendorName?: string | null;
+  lineCount: number;
+  creatorName?: string | null;
+  createdAt: string;
+}
+
+/** One row in Item Ledger report. */
+export interface ItemLedgerRow {
+  eventDate: string;
+  eventType: string;
+  referenceNo: string;
+  locationName?: string | null;
+  partyName?: string | null;
+  description?: string | null;
+  byUser?: string | null;
 }
 
 export interface AppSettings {
