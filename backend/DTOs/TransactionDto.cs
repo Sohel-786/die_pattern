@@ -480,15 +480,19 @@ namespace net_backend.DTOs
         public DateTime CreatedAt { get; set; }
     }
 
-    /// <summary>One row in Item Ledger (history) report.</summary>
+    /// <summary>One row in Item Ledger (history) report. Location-scoped; no company/location/party filters.</summary>
     public class ItemLedgerRowDto
     {
         public DateTime EventDate { get; set; }
         public string EventType { get; set; } = string.Empty;
         public string ReferenceNo { get; set; } = string.Empty;
         public string? LocationName { get; set; }
+        /// <summary>Party name for Inward/QC/Job Work; null for PI/PO; for Transfer use FromToDisplay.</summary>
         public string? PartyName { get; set; }
+        /// <summary>Only for Transfer: "From X → To Y".</summary>
+        public string? FromToDisplay { get; set; }
         public string? Description { get; set; }
-        public string? ByUser { get; set; }
+        public string? PreparedBy { get; set; }
+        public string? AuthorizedBy { get; set; }
     }
 }

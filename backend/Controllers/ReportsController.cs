@@ -139,12 +139,13 @@ namespace net_backend.Controllers
             });
         }
 
-        /// <summary>Item Ledger: full history for one item (active entries only), ordered by date. Requires ViewReports.</summary>
+        /// <summary>Item Ledger: full history for one item (location-scoped, no company/location/party filters). Requires ViewReports.</summary>
         [HttpGet("item-ledger")]
         public async Task<ActionResult<ApiResponse<object>>> GetItemLedger(
             [FromQuery] int itemId,
             [FromQuery] string? dateFrom = null,
             [FromQuery] string? dateTo = null,
+            [FromQuery] string? search = null,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 50)
         {
@@ -156,123 +157,28 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(i => i.Id == itemId && i.LocationId == locationId);
             if (item == null) return NotFound();
 
+            var rows = await BuildItemLedgerRowsAsync(itemId);
+
             var fromDate = !string.IsNullOrWhiteSpace(dateFrom) && DateTime.TryParse(dateFrom, out var fd) ? fd : (DateTime?)null;
             var toDate = !string.IsNullOrWhiteSpace(dateTo) && DateTime.TryParse(dateTo, out var td) ? td : (DateTime?)null;
 
-            var rows = new List<ItemLedgerRowDto>();
-
-            // PI: PurchaseIndentItem where ItemId = itemId, PI IsActive
-            var piEvents = await _context.PurchaseIndentItems
-                .Where(pii => pii.ItemId == itemId && pii.PurchaseIndent != null && pii.PurchaseIndent.IsActive)
-                .Include(pii => pii.PurchaseIndent).ThenInclude(pi => pi!.Creator)
-                .Select(pii => new ItemLedgerRowDto
-                {
-                    EventDate = pii.PurchaseIndent!.CreatedAt,
-                    EventType = "PI Indented",
-                    ReferenceNo = pii.PurchaseIndent.PiNo,
-                    LocationName = null,
-                    PartyName = null,
-                    Description = pii.PurchaseIndent.Status.ToString(),
-                    ByUser = pii.PurchaseIndent.Creator != null ? pii.PurchaseIndent.Creator.FirstName + " " + pii.PurchaseIndent.Creator.LastName : null
-                })
-                .ToListAsync();
-            rows.AddRange(piEvents);
-
-            // PO: PurchaseOrderItem -> PurchaseIndentItem.ItemId = itemId, PO IsActive
-            var poEvents = await _context.PurchaseOrderItems
-                .Where(poi => poi.PurchaseIndentItem != null && poi.PurchaseIndentItem.ItemId == itemId
-                    && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
-                .Select(poi => new ItemLedgerRowDto
-                {
-                    EventDate = poi.PurchaseOrder!.CreatedAt,
-                    EventType = "PO Created",
-                    ReferenceNo = poi.PurchaseOrder.PoNo,
-                    LocationName = null,
-                    PartyName = null,
-                    Description = poi.PurchaseOrder.Status.ToString(),
-                    ByUser = null
-                })
-                .ToListAsync();
-            rows.AddRange(poEvents);
-
-            // Inward: InwardLine where ItemId = itemId, Inward IsActive
-            var invEvents = await _context.InwardLines
-                .Where(il => il.ItemId == itemId && il.Inward != null && il.Inward.IsActive)
-                .Include(il => il.Inward).ThenInclude(inv => inv!.Creator)
-                .Include(il => il.Inward).ThenInclude(inv => inv!.Location)
-                .Include(il => il.Inward).ThenInclude(inv => inv!.Vendor)
-                .Select(il => new ItemLedgerRowDto
-                {
-                    EventDate = il.Inward!.InwardDate,
-                    EventType = "Inward",
-                    ReferenceNo = il.Inward.InwardNo,
-                    LocationName = il.Inward.Location != null ? il.Inward.Location.Name : null,
-                    PartyName = il.Inward.Vendor != null ? il.Inward.Vendor.Name : null,
-                    Description = null,
-                    ByUser = il.Inward.Creator != null ? il.Inward.Creator.FirstName + " " + il.Inward.Creator.LastName : null
-                })
-                .ToListAsync();
-            rows.AddRange(invEvents);
-
-            // QC: QcItem -> InwardLine.ItemId = itemId, QcEntry IsActive
-            var qcEvents = await _context.QcItems
-                .Where(qi => qi.InwardLine != null && qi.InwardLine.ItemId == itemId && qi.QcEntry != null && qi.QcEntry.IsActive)
-                .Select(qi => new ItemLedgerRowDto
-                {
-                    EventDate = qi.QcEntry!.ApprovedAt ?? qi.QcEntry.CreatedAt,
-                    EventType = "QC",
-                    ReferenceNo = qi.QcEntry.QcNo,
-                    LocationName = null,
-                    PartyName = null,
-                    Description = qi.IsApproved == true ? "Approved" : qi.IsApproved == false ? "Rejected" : "Pending",
-                    ByUser = null
-                })
-                .ToListAsync();
-            rows.AddRange(qcEvents);
-
-            // JobWork: JobWorkItem where ItemId = itemId, JobWork IsActive
-            var jwEvents = await _context.JobWorkItems
-                .Where(jwi => jwi.ItemId == itemId && jwi.JobWork != null && jwi.JobWork.IsActive)
-                .Include(jwi => jwi.JobWork).ThenInclude(jw => jw!.Creator)
-                .Include(jwi => jwi.JobWork).ThenInclude(jw => jw!.ToParty)
-                .Include(jwi => jwi.JobWork).ThenInclude(jw => jw!.Location)
-                .Select(jwi => new ItemLedgerRowDto
-                {
-                    EventDate = jwi.JobWork!.CreatedAt,
-                    EventType = "Job Work",
-                    ReferenceNo = jwi.JobWork.JobWorkNo,
-                    LocationName = jwi.JobWork.Location != null ? jwi.JobWork.Location.Name : null,
-                    PartyName = jwi.JobWork.ToParty != null ? jwi.JobWork.ToParty.Name : null,
-                    Description = jwi.JobWork.Status.ToString(),
-                    ByUser = jwi.JobWork.Creator != null ? jwi.JobWork.Creator.FirstName + " " + jwi.JobWork.Creator.LastName : null
-                })
-                .ToListAsync();
-            rows.AddRange(jwEvents);
-
-            // Transfer: TransferItem where ItemId = itemId, Transfer IsActive
-            var trEvents = await _context.TransferItems
-                .Where(ti => ti.ItemId == itemId && ti.Transfer != null && ti.Transfer.IsActive)
-                .Include(ti => ti.Transfer).ThenInclude(t => t!.Location)
-                .Include(ti => ti.Transfer).ThenInclude(t => t!.FromParty)
-                .Include(ti => ti.Transfer).ThenInclude(t => t!.ToParty)
-                .Include(ti => ti.Transfer).ThenInclude(t => t!.Creator)
-                .Select(ti => new ItemLedgerRowDto
-                {
-                    EventDate = ti.Transfer!.TransferDate,
-                    EventType = "Transfer",
-                    ReferenceNo = ti.Transfer.TransferNo,
-                    LocationName = ti.Transfer.Location != null ? ti.Transfer.Location.Name : null,
-                    PartyName = ti.Transfer.ToParty != null ? ti.Transfer.ToParty.Name : (ti.Transfer.FromParty != null ? ti.Transfer.FromParty.Name : null),
-                    Description = ti.Transfer.Remarks,
-                    ByUser = ti.Transfer.Creator != null ? ti.Transfer.Creator.FirstName + " " + ti.Transfer.Creator.LastName : null
-                })
-                .ToListAsync();
-            rows.AddRange(trEvents);
-
             if (fromDate.HasValue) rows = rows.Where(r => r.EventDate >= fromDate.Value).ToList();
             if (toDate.HasValue) rows = rows.Where(r => r.EventDate <= toDate.Value.AddDays(1)).ToList();
-            rows = rows.OrderByDescending(r => r.EventDate).ToList();
 
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLowerInvariant();
+                rows = rows.Where(r =>
+                    (r.ReferenceNo != null && r.ReferenceNo.ToLowerInvariant().Contains(term)) ||
+                    (r.LocationName != null && r.LocationName.ToLowerInvariant().Contains(term)) ||
+                    (r.PartyName != null && r.PartyName.ToLowerInvariant().Contains(term)) ||
+                    (r.FromToDisplay != null && r.FromToDisplay.ToLowerInvariant().Contains(term)) ||
+                    (r.Description != null && r.Description.ToLowerInvariant().Contains(term)) ||
+                    (r.PreparedBy != null && r.PreparedBy.ToLowerInvariant().Contains(term)) ||
+                    (r.AuthorizedBy != null && r.AuthorizedBy.ToLowerInvariant().Contains(term))).ToList();
+            }
+
+            rows = rows.OrderByDescending(r => r.EventDate).ToList();
             var total = rows.Count;
             var paged = rows.Skip((page - 1) * limit).Take(limit).ToList();
 
@@ -397,7 +303,8 @@ namespace net_backend.Controllers
         public async Task<IActionResult> ExportItemLedger(
             [FromQuery] int itemId,
             [FromQuery] string? dateFrom = null,
-            [FromQuery] string? dateTo = null)
+            [FromQuery] string? dateTo = null,
+            [FromQuery] string? search = null)
         {
             if (!await HasPermission("ViewReports")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -407,22 +314,40 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(i => i.Id == itemId && i.LocationId == locationId);
             if (item == null) return NotFound();
 
-            // Reuse same ledger building logic (simplified: get all rows without paging)
-            var rows = await BuildItemLedgerRows(itemId, dateFrom, dateTo);
-            var bytes = _excelService.GenerateExcel(rows, "Item Ledger", "Item Ledger - " + item.CurrentName);
+            var rows = await BuildItemLedgerRowsAsync(itemId);
+
+            var fromDate = !string.IsNullOrWhiteSpace(dateFrom) && DateTime.TryParse(dateFrom, out var fd) ? fd : (DateTime?)null;
+            var toDate = !string.IsNullOrWhiteSpace(dateTo) && DateTime.TryParse(dateTo, out var td) ? td : (DateTime?)null;
+            if (fromDate.HasValue) rows = rows.Where(r => r.EventDate >= fromDate.Value).ToList();
+            if (toDate.HasValue) rows = rows.Where(r => r.EventDate <= toDate.Value.AddDays(1)).ToList();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLowerInvariant();
+                rows = rows.Where(r =>
+                    (r.ReferenceNo != null && r.ReferenceNo.ToLowerInvariant().Contains(term)) ||
+                    (r.LocationName != null && r.LocationName.ToLowerInvariant().Contains(term)) ||
+                    (r.PartyName != null && r.PartyName.ToLowerInvariant().Contains(term)) ||
+                    (r.FromToDisplay != null && r.FromToDisplay.ToLowerInvariant().Contains(term)) ||
+                    (r.Description != null && r.Description.ToLowerInvariant().Contains(term)) ||
+                    (r.PreparedBy != null && r.PreparedBy.ToLowerInvariant().Contains(term)) ||
+                    (r.AuthorizedBy != null && r.AuthorizedBy.ToLowerInvariant().Contains(term))).ToList();
+            }
+            rows = rows.OrderByDescending(r => r.EventDate).ToList();
+
+            var bytes = _excelService.GenerateItemLedgerExcel(rows, "Item Ledger - " + item.CurrentName + " (" + item.MainPartName + ")");
             return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Item_Ledger_" + item.Id + "_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".xlsx");
         }
 
-        private async Task<List<ItemLedgerRowDto>> BuildItemLedgerRows(int itemId, string? dateFrom, string? dateTo)
+        /// <summary>Builds ledger rows for one item (location-scoped via item). No date or search applied.</summary>
+        private async Task<List<ItemLedgerRowDto>> BuildItemLedgerRowsAsync(int itemId)
         {
-            var fromDate = !string.IsNullOrWhiteSpace(dateFrom) && DateTime.TryParse(dateFrom, out var fd) ? fd : (DateTime?)null;
-            var toDate = !string.IsNullOrWhiteSpace(dateTo) && DateTime.TryParse(dateTo, out var td) ? td : (DateTime?)null;
-
             var rows = new List<ItemLedgerRowDto>();
 
+            // PI: Prepared By (Creator), Authorized By (Approver)
             var piEvents = await _context.PurchaseIndentItems
                 .Where(pii => pii.ItemId == itemId && pii.PurchaseIndent != null && pii.PurchaseIndent.IsActive)
                 .Include(pii => pii.PurchaseIndent).ThenInclude(pi => pi!.Creator)
+                .Include(pii => pii.PurchaseIndent).ThenInclude(pi => pi!.Approver)
                 .Select(pii => new ItemLedgerRowDto
                 {
                     EventDate = pii.PurchaseIndent!.CreatedAt,
@@ -430,15 +355,20 @@ namespace net_backend.Controllers
                     ReferenceNo = pii.PurchaseIndent.PiNo,
                     LocationName = null,
                     PartyName = null,
+                    FromToDisplay = null,
                     Description = pii.PurchaseIndent.Status.ToString(),
-                    ByUser = pii.PurchaseIndent.Creator != null ? pii.PurchaseIndent.Creator.FirstName + " " + pii.PurchaseIndent.Creator.LastName : null
+                    PreparedBy = pii.PurchaseIndent.Creator != null ? pii.PurchaseIndent.Creator.FirstName + " " + pii.PurchaseIndent.Creator.LastName : null,
+                    AuthorizedBy = pii.PurchaseIndent.Approver != null ? pii.PurchaseIndent.Approver.FirstName + " " + pii.PurchaseIndent.Approver.LastName : null
                 })
                 .ToListAsync();
             rows.AddRange(piEvents);
 
+            // PO: Prepared By, Authorized By
             var poEvents = await _context.PurchaseOrderItems
                 .Where(poi => poi.PurchaseIndentItem != null && poi.PurchaseIndentItem.ItemId == itemId
                     && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                .Include(poi => poi.PurchaseOrder).ThenInclude(po => po!.Creator)
+                .Include(poi => poi.PurchaseOrder).ThenInclude(po => po!.Approver)
                 .Select(poi => new ItemLedgerRowDto
                 {
                     EventDate = poi.PurchaseOrder!.CreatedAt,
@@ -446,12 +376,15 @@ namespace net_backend.Controllers
                     ReferenceNo = poi.PurchaseOrder.PoNo,
                     LocationName = null,
                     PartyName = null,
+                    FromToDisplay = null,
                     Description = poi.PurchaseOrder.Status.ToString(),
-                    ByUser = null
+                    PreparedBy = poi.PurchaseOrder.Creator != null ? poi.PurchaseOrder.Creator.FirstName + " " + poi.PurchaseOrder.Creator.LastName : null,
+                    AuthorizedBy = poi.PurchaseOrder.Approver != null ? poi.PurchaseOrder.Approver.FirstName + " " + poi.PurchaseOrder.Approver.LastName : null
                 })
                 .ToListAsync();
             rows.AddRange(poEvents);
 
+            // Inward: Location, Party (Vendor), Prepared By
             var invEvents = await _context.InwardLines
                 .Where(il => il.ItemId == itemId && il.Inward != null && il.Inward.IsActive)
                 .Include(il => il.Inward).ThenInclude(inv => inv!.Creator)
@@ -464,27 +397,37 @@ namespace net_backend.Controllers
                     ReferenceNo = il.Inward.InwardNo,
                     LocationName = il.Inward.Location != null ? il.Inward.Location.Name : null,
                     PartyName = il.Inward.Vendor != null ? il.Inward.Vendor.Name : null,
+                    FromToDisplay = null,
                     Description = null,
-                    ByUser = il.Inward.Creator != null ? il.Inward.Creator.FirstName + " " + il.Inward.Creator.LastName : null
+                    PreparedBy = il.Inward.Creator != null ? il.Inward.Creator.FirstName + " " + il.Inward.Creator.LastName : null,
+                    AuthorizedBy = null
                 })
                 .ToListAsync();
             rows.AddRange(invEvents);
 
+            // QC: Location, Party, Prepared By, Authorized By
             var qcEvents = await _context.QcItems
                 .Where(qi => qi.InwardLine != null && qi.InwardLine.ItemId == itemId && qi.QcEntry != null && qi.QcEntry.IsActive)
+                .Include(qi => qi.QcEntry).ThenInclude(qe => qe!.Location)
+                .Include(qi => qi.QcEntry).ThenInclude(qe => qe!.Party)
+                .Include(qi => qi.QcEntry).ThenInclude(qe => qe!.Creator)
+                .Include(qi => qi.QcEntry).ThenInclude(qe => qe!.Approver)
                 .Select(qi => new ItemLedgerRowDto
                 {
                     EventDate = qi.QcEntry!.ApprovedAt ?? qi.QcEntry.CreatedAt,
                     EventType = "QC",
                     ReferenceNo = qi.QcEntry.QcNo,
-                    LocationName = null,
-                    PartyName = null,
+                    LocationName = qi.QcEntry.Location != null ? qi.QcEntry.Location.Name : null,
+                    PartyName = qi.QcEntry.Party != null ? qi.QcEntry.Party.Name : null,
+                    FromToDisplay = null,
                     Description = qi.IsApproved == true ? "Approved" : qi.IsApproved == false ? "Rejected" : "Pending",
-                    ByUser = null
+                    PreparedBy = qi.QcEntry.Creator != null ? qi.QcEntry.Creator.FirstName + " " + qi.QcEntry.Creator.LastName : null,
+                    AuthorizedBy = qi.QcEntry.Approver != null ? qi.QcEntry.Approver.FirstName + " " + qi.QcEntry.Approver.LastName : null
                 })
                 .ToListAsync();
             rows.AddRange(qcEvents);
 
+            // Job Work: Location, Party (ToParty), Prepared By
             var jwEvents = await _context.JobWorkItems
                 .Where(jwi => jwi.ItemId == itemId && jwi.JobWork != null && jwi.JobWork.IsActive)
                 .Include(jwi => jwi.JobWork).ThenInclude(jw => jw!.Creator)
@@ -497,34 +440,43 @@ namespace net_backend.Controllers
                     ReferenceNo = jwi.JobWork.JobWorkNo,
                     LocationName = jwi.JobWork.Location != null ? jwi.JobWork.Location.Name : null,
                     PartyName = jwi.JobWork.ToParty != null ? jwi.JobWork.ToParty.Name : null,
+                    FromToDisplay = null,
                     Description = jwi.JobWork.Status.ToString(),
-                    ByUser = jwi.JobWork.Creator != null ? jwi.JobWork.Creator.FirstName + " " + jwi.JobWork.Creator.LastName : null
+                    PreparedBy = jwi.JobWork.Creator != null ? jwi.JobWork.Creator.FirstName + " " + jwi.JobWork.Creator.LastName : null,
+                    AuthorizedBy = null
                 })
                 .ToListAsync();
             rows.AddRange(jwEvents);
 
+            // Transfer: From–To display, Location, Prepared By (PartyName null, use FromToDisplay)
             var trEvents = await _context.TransferItems
                 .Where(ti => ti.ItemId == itemId && ti.Transfer != null && ti.Transfer.IsActive)
                 .Include(ti => ti.Transfer).ThenInclude(t => t!.Location)
                 .Include(ti => ti.Transfer).ThenInclude(t => t!.FromParty)
                 .Include(ti => ti.Transfer).ThenInclude(t => t!.ToParty)
                 .Include(ti => ti.Transfer).ThenInclude(t => t!.Creator)
-                .Select(ti => new ItemLedgerRowDto
-                {
-                    EventDate = ti.Transfer!.TransferDate,
-                    EventType = "Transfer",
-                    ReferenceNo = ti.Transfer.TransferNo,
-                    LocationName = ti.Transfer.Location != null ? ti.Transfer.Location.Name : null,
-                    PartyName = ti.Transfer.ToParty != null ? ti.Transfer.ToParty.Name : (ti.Transfer.FromParty != null ? ti.Transfer.FromParty.Name : null),
-                    Description = ti.Transfer.Remarks,
-                    ByUser = ti.Transfer.Creator != null ? ti.Transfer.Creator.FirstName + " " + ti.Transfer.Creator.LastName : null
-                })
                 .ToListAsync();
-            rows.AddRange(trEvents);
 
-            if (fromDate.HasValue) rows = rows.Where(r => r.EventDate >= fromDate.Value).ToList();
-            if (toDate.HasValue) rows = rows.Where(r => r.EventDate <= toDate.Value.AddDays(1)).ToList();
-            return rows.OrderByDescending(r => r.EventDate).ToList();
+            foreach (var ti in trEvents)
+            {
+                var t = ti.Transfer!;
+                var fromName = t.FromPartyId.HasValue && t.FromParty != null ? t.FromParty.Name : (t.Location != null ? t.Location.Name : "—");
+                var toName = t.ToPartyId.HasValue && t.ToParty != null ? t.ToParty.Name : (t.Location != null ? t.Location.Name : "—");
+                rows.Add(new ItemLedgerRowDto
+                {
+                    EventDate = t.TransferDate,
+                    EventType = "Transfer",
+                    ReferenceNo = t.TransferNo,
+                    LocationName = t.Location != null ? t.Location.Name : null,
+                    PartyName = null,
+                    FromToDisplay = fromName + " → " + toName,
+                    Description = t.Remarks,
+                    PreparedBy = t.Creator != null ? t.Creator.FirstName + " " + t.Creator.LastName : null,
+                    AuthorizedBy = null
+                });
+            }
+
+            return rows;
         }
     }
 }

@@ -90,6 +90,74 @@ namespace net_backend.Services
             }
         }
 
+        /// <summary>Item Ledger export with explicit column headers and professional column widths.</summary>
+        public byte[] GenerateItemLedgerExcel(IEnumerable<ItemLedgerRowDto> rows, string titleRow)
+        {
+            var rowList = rows?.ToList() ?? new List<ItemLedgerRowDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Item Ledger");
+                var rowIdx = 1;
+
+                if (!string.IsNullOrEmpty(titleRow))
+                {
+                    worksheet.Cell(rowIdx, 1).Value = titleRow;
+                    worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 14;
+                    worksheet.Range(rowIdx, 1, rowIdx, 9).Merge();
+                    rowIdx++;
+                }
+
+                var headers = new[] { "Event Date", "Event Type", "Reference No", "Location", "Party", "From – To", "Description", "Prepared By", "Authorized By" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(rowIdx, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Alignment.WrapText = true;
+                }
+                var headerRow = rowIdx;
+                rowIdx++;
+
+                foreach (var r in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = r.EventDate;
+                    worksheet.Cell(rowIdx, 1).Style.DateFormat.Format = "dd-MMM-yyyy HH:mm";
+                    worksheet.Cell(rowIdx, 2).Value = r.EventType ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.ReferenceNo ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.LocationName ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.PartyName ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = r.FromToDisplay ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = r.Description ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = r.PreparedBy ?? "";
+                    worksheet.Cell(rowIdx, 9).Value = r.AuthorizedBy ?? "";
+                    rowIdx++;
+                }
+
+                // Professional column widths (min width to fit header + typical content)
+                worksheet.Column(1).Width = 18;  // Event Date
+                worksheet.Column(2).Width = 14;  // Event Type
+                worksheet.Column(3).Width = 16;  // Reference No
+                worksheet.Column(4).Width = 22;  // Location
+                worksheet.Column(5).Width = 22;  // Party
+                worksheet.Column(6).Width = 28;  // From – To
+                worksheet.Column(7).Width = 30;  // Description
+                worksheet.Column(8).Width = 22;  // Prepared By
+                worksheet.Column(9).Width = 22;  // Authorized By
+
+                if (rowList.Any())
+                    worksheet.Range(headerRow, 1, rowIdx - 1, 9).SetAutoFilter();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
         public ImportResultDto<T> ImportExcel<T>(Stream fileStream) where T : new()
         {
             var result = new ImportResultDto<T>();

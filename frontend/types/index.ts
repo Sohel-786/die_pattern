@@ -705,15 +705,18 @@ export interface InwardReportRow {
   createdAt: string;
 }
 
-/** One row in Item Ledger report. */
+/** One row in Item Ledger report (location-scoped). */
 export interface ItemLedgerRow {
   eventDate: string;
   eventType: string;
   referenceNo: string;
   locationName?: string | null;
   partyName?: string | null;
+  /** Only for Transfer: "From X → To Y". */
+  fromToDisplay?: string | null;
   description?: string | null;
-  byUser?: string | null;
+  preparedBy?: string | null;
+  authorizedBy?: string | null;
 }
 
 export interface AppSettings {
