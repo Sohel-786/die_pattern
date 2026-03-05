@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useCurrentUserPermissions, useCurrentCompany } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,6 +71,8 @@ function getJwFlowStage(jw: JobWork): { label: string; color: string } {
 }
 
 export default function JobWorksPage() {
+    const { user } = useAuth();
+    const isAdmin = user?.role === Role.ADMIN;
     const { data: permissions } = useCurrentUserPermissions();
     const { data: currentCompany } = useCurrentCompany();
     const queryClient = useQueryClient();
@@ -294,21 +298,23 @@ export default function JobWorksPage() {
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            if (jw.isActive) setInactiveTarget(jw);
-                                                            else toggleActiveMutation.mutate({ id: jw.id, active: true });
-                                                        }}
-                                                        className={cn(
-                                                            "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
-                                                            jw.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
-                                                        )}
-                                                        title={jw.isActive ? "Deactivate" : "Activate"}
-                                                    >
-                                                        {jw.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                    </Button>
+                                                    {isAdmin && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (jw.isActive) setInactiveTarget(jw);
+                                                                else toggleActiveMutation.mutate({ id: jw.id, active: true });
+                                                            }}
+                                                            className={cn(
+                                                                "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
+                                                                jw.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                            )}
+                                                            title={jw.isActive ? "Deactivate" : "Activate"}
+                                                        >
+                                                            {jw.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </TableRow>

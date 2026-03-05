@@ -199,7 +199,7 @@ namespace net_backend.Controllers
         {
             var locations = await _context.Locations
                 .Where(l => l.IsActive)
-                .Select(l => new { l.Id, l.Name, l.Address })
+                .Select(l => new { l.Id, l.Name, l.Address, l.CompanyId })
                 .OrderBy(l => l.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<object>> { Data = locations });

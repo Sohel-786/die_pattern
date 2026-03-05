@@ -445,7 +445,7 @@ export default function PurchaseOrdersPage() {
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           )}
-                          {(permissions?.editPO || user?.role === Role.ADMIN) && (
+                          {user?.role === Role.ADMIN && (
                             po.isActive !== false ? (
                               <Button
                                 variant="ghost"

@@ -27,9 +27,13 @@ import { ItemChangeDialog } from "@/components/masters/item-change-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 
 export default function ItemsPage() {
     const { data: permissions } = useCurrentUserPermissions();
+    const { user } = useAuth();
+    const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageItem;
 
     const [search, setSearch] = useState("");
@@ -587,7 +591,7 @@ export default function ItemsPage() {
                                                     </Button>
                                                 )}
 
-                                                {canManage && (
+                                                {isAdmin && canManage && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

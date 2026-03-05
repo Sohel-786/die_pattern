@@ -137,6 +137,8 @@ namespace net_backend.Controllers
 
             if (isActive.HasValue)
                 query = query.Where(i => i.IsActive == isActive.Value);
+            else if (!await IsAdmin())
+                query = query.Where(i => i.IsActive);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -157,6 +159,9 @@ namespace net_backend.Controllers
             
             if (endDate.HasValue)
                 query = query.Where(i => i.InwardDate <= endDate.Value.Date);
+
+            if (!isActive.HasValue && !await IsAdmin())
+                query = query.Where(i => i.IsActive);
 
             var list = await query.ToListAsync();
             
@@ -185,6 +190,7 @@ namespace net_backend.Controllers
         [HttpPatch("{id}/active")]
         public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditInward")) return Forbidden();
             var inward = await _context.Inwards.FindAsync(id);
             if (inward == null) return NotFound();
@@ -206,6 +212,7 @@ namespace net_backend.Controllers
                     .ThenInclude(l => l.Item)
                 .FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
+            if (!inward.IsActive && !await IsAdmin()) return NotFound();
 
             // Fetch source details for single result too
             var poIds = inward.Lines.Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();

@@ -186,10 +186,11 @@ namespace net_backend.Controllers
             }
         }
 
-        /// <summary>Set PO to inactive. Fails if any inward has been done from this PO.</summary>
+        /// <summary>Set PO to inactive. Fails if any inward has been done from this PO. Admin only.</summary>
         [HttpPatch("{id}/inactive")]
         public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditPO")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
@@ -209,6 +210,7 @@ namespace net_backend.Controllers
         [HttpPatch("{id}/active")]
         public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditPO")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var po = await _context.PurchaseOrders.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);

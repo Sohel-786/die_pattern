@@ -174,6 +174,7 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
             
             if (jw == null) return NotFound();
+            if (!jw.IsActive && !await IsAdmin()) return NotFound();
 
             var inwardLines = await _context.InwardLines
                 .Include(l => l.Inward)
@@ -456,6 +457,7 @@ namespace net_backend.Controllers
         [HttpPatch("{id}/active")]
         public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditMovement")) return Forbidden();
             var jw = await _context.JobWorks.Include(j => j.Items).ThenInclude(i => i.Item).FirstOrDefaultAsync(j => j.Id == id);
             if (jw == null) return NotFound();

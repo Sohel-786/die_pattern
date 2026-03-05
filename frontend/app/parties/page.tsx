@@ -15,9 +15,13 @@ import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 
 export default function PartiesPage() {
     const { data: permissions } = useCurrentUserPermissions();
+    const { user } = useAuth();
+    const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageParty ?? false;
 
     if (permissions && !permissions.viewMaster) {
@@ -245,7 +249,7 @@ export default function PartiesPage() {
                                                         <Edit2 className="w-4 h-4" />
                                                     </Button>
                                                 )}
-                                                {canManage && (
+                                                {isAdmin && canManage && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

@@ -132,6 +132,8 @@ namespace net_backend.Controllers
                 query = query.Where(q => q.Status == status.Value);
             if (isActive.HasValue)
                 query = query.Where(q => q.IsActive == isActive.Value);
+            else if (!await IsAdmin())
+                query = query.Where(q => q.IsActive);
             if (startDate.HasValue)
                 query = query.Where(q => q.CreatedAt >= startDate.Value);
             if (endDate.HasValue)
@@ -183,6 +185,7 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
 
             if (entry == null) return NotFound();
+            if (!entry.IsActive && !await IsAdmin()) return NotFound();
 
             // Fetch Source Numbers for Professional Display
             var poIds = entry.Items.Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
@@ -565,6 +568,7 @@ namespace net_backend.Controllers
         [HttpPatch("{id}/inactive")]
         public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
@@ -582,6 +586,7 @@ namespace net_backend.Controllers
         [HttpPatch("{id}/active")]
         public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
         {
+            if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);

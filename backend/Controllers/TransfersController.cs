@@ -71,6 +71,7 @@ namespace net_backend.Controllers
             if (startDate.HasValue) query = query.Where(t => t.TransferDate >= startDate);
             if (endDate.HasValue) query = query.Where(t => t.TransferDate <= endDate);
             if (isActive.HasValue) query = query.Where(t => t.IsActive == isActive);
+            else if (!await IsAdmin()) query = query.Where(t => t.IsActive);
 
             var list = await query.OrderByDescending(t => t.TransferDate).ToListAsync();
             var location = await _context.Locations.FindAsync(locationId);
@@ -130,6 +131,7 @@ namespace net_backend.Controllers
                 .FirstOrDefaultAsync(t => t.Id == id && t.LocationId == locationId);
 
             if (t == null) return NotFound();
+            if (!t.IsActive && !await IsAdmin()) return NotFound();
             var location = await _context.Locations.FindAsync(locationId);
             var locationName = location?.Name ?? "Our Location";
 

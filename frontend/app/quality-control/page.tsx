@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { QualityControlDialog } from "@/components/quality-control/quality-control-dialog";
@@ -29,6 +31,8 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 export default function QualityControlPage() {
     const { data: permissions } = useCurrentUserPermissions();
+    const { user } = useAuth();
+    const isAdmin = user?.role === Role.ADMIN;
     const queryClient = useQueryClient();
 
     const [filters, setFilters] = useState<QCFiltersState>(initialQCFilters);
@@ -245,23 +249,25 @@ export default function QualityControlPage() {
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            if (q.isActive) setInactiveTarget(q);
-                                                            else setActiveTarget(q);
-                                                        }}
-                                                        disabled={q.status === QcStatus.Approved}
-                                                        className={cn(
-                                                            "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
-                                                            q.status === QcStatus.Approved && "opacity-30 cursor-not-allowed",
-                                                            q.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
-                                                        )}
-                                                        title={q.status === QcStatus.Approved ? "Cannot deactivate approved entry" : q.isActive ? "Deactivate" : "Activate"}
-                                                    >
-                                                        {q.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                    </Button>
+                                                    {isAdmin && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (q.isActive) setInactiveTarget(q);
+                                                                else setActiveTarget(q);
+                                                            }}
+                                                            disabled={q.status === QcStatus.Approved}
+                                                            className={cn(
+                                                                "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
+                                                                q.status === QcStatus.Approved && "opacity-30 cursor-not-allowed",
+                                                                q.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                            )}
+                                                            title={q.status === QcStatus.Approved ? "Cannot deactivate approved entry" : q.isActive ? "Deactivate" : "Activate"}
+                                                        >
+                                                            {q.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </TableRow>

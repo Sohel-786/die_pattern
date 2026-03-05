@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Edit2, Ban, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Role } from "@/types";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,8 @@ import { Dialog } from "@/components/ui/dialog";
 type MasterType = 'item-types' | 'materials' | 'item-statuses' | 'owner-types';
 
 export default function OtherMastersPage() {
+    const { user } = useAuth();
+    const isAdmin = user?.role === Role.ADMIN;
     const [activeTab, setActiveTab] = useState<MasterType>('item-types');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
@@ -240,18 +244,20 @@ export default function OtherMastersPage() {
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => toggleStatus(item)}
-                                                    className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
-                                                        ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
-                                                        : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                                                        }`}
-                                                    title={item.isActive ? "Deactivate" : "Activate"}
-                                                >
-                                                    {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                                                </Button>
+                                                {isAdmin && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => toggleStatus(item)}
+                                                        className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
+                                                            ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100'
+                                                            : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                                                            }`}
+                                                        title={item.isActive ? "Deactivate" : "Activate"}
+                                                    >
+                                                        {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
