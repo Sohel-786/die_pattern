@@ -71,13 +71,15 @@ namespace net_backend.Controllers
             if (user == null)
                 return NotFound(new ApiResponse<UserPermission> { Success = false, Message = "User not found" });
 
-            // ADMIN always receives full permissions; prefer saved NavigationLayout (and any future preferences) from DB
+            // ADMIN: if a permission row exists, use it (so admin can restrict their own access); otherwise full default
             if (user.Role == Role.ADMIN)
             {
-                var adminPerms = CreateDefaultPermissions(userId, Role.ADMIN);
                 var dbRow = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == userId);
-                if (dbRow != null && !string.IsNullOrEmpty(dbRow.NavigationLayout))
-                    adminPerms.NavigationLayout = dbRow.NavigationLayout;
+                var adminPerms = dbRow != null
+                    ? dbRow
+                    : CreateDefaultPermissions(userId, Role.ADMIN);
+                if (dbRow != null && string.IsNullOrEmpty(dbRow.NavigationLayout))
+                    adminPerms.NavigationLayout = "SIDEBAR";
                 return Ok(new ApiResponse<UserPermission> { Success = true, Data = adminPerms });
             }
 
@@ -95,7 +97,11 @@ namespace net_backend.Controllers
         [HttpGet("permissions/user/{userId}")]
         public async Task<ActionResult<ApiResponse<object>>> GetUserPermissions(int userId)
         {
-            if (!await CheckPermission("ManageUsers")) // or AccessSettings
+            var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = 0;
+            int.TryParse(currentUserIdStr, out currentUserId);
+            bool canManage = await CheckPermission("ManageUsers");
+            if (!canManage && userId != currentUserId)
                 return Forbidden();
 
             var targetUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -121,7 +127,11 @@ namespace net_backend.Controllers
         [HttpPut("permissions/user/{userId}")]
         public async Task<ActionResult<ApiResponse<object>>> UpdatePermissions(int userId, [FromBody] UpdateUserPermissionsRequest request)
         {
-            if (!await CheckPermission("ManageUsers"))
+            var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int currentUserId = 0;
+            int.TryParse(currentUserIdStr, out currentUserId);
+            bool canManage = await CheckPermission("ManageUsers");
+            if (!canManage && userId != currentUserId)
                 return Forbidden();
 
             if (request.Permissions == null)

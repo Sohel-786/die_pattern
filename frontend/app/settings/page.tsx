@@ -214,7 +214,7 @@ export default function SettingsPage() {
   // Access
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userPermissionsData, isLoading: permissionsLoading } = useUserPermissions(selectedUserId || undefined);
-  const updateUserPermissionsMutation = useUpdateUserPermissions();
+  const updateUserPermissionsMutation = useUpdateUserPermissions(currentUser?.id);
   const [localPermissions, setLocalPermissions] = useState<UserPermission | null>(null);
 
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -455,7 +455,14 @@ export default function SettingsPage() {
     const saveLocationAccess = () => {
       updateLocationAccess.mutate(
         localLocationAccess.map((a) => ({ companyId: a.companyId, locationId: a.locationId })),
-        { onError: () => { } }
+        {
+          onError: () => {},
+          onSuccess: () => {
+            if (selectedUserId === currentUser?.id) {
+              window.dispatchEvent(new CustomEvent("refreshLocationAccess"));
+            }
+          },
+        }
       );
     };
     if (localPermissions) {

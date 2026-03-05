@@ -27,22 +27,51 @@ const LOCATION_SCOPED_QUERY_KEYS: readonly string[] = [
 const SIDEBAR_WIDTH_EXPANDED = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 64;
 
-// Map route prefixes to required permission keys in UserPermission
-const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = {
-  '/dashboard': 'viewDashboard',
-  '/companies': 'manageCompany',
-  '/locations': 'manageLocation',
-  '/parties': 'manageParty',
-  '/masters': 'viewMaster',
-  '/items': 'manageItem',
-  '/purchase-indents': 'viewPI',
-  '/purchase-orders': 'viewPO',
-  '/inwards': 'viewInward',
-  '/quality-control': 'viewQC',
-  '/job-works': 'viewMovement',
-  '/transfers': 'viewTransfer',
-  '/reports': 'viewReports',
-  '/settings': 'accessSettings',
+// Map route prefixes to required permission keys in UserPermission (order = priority for first allowed)
+const ROUTE_PERMISSIONS_ORDERED: { route: string; permission: keyof UserPermission }[] = [
+  { route: '/dashboard', permission: 'viewDashboard' },
+  { route: '/companies', permission: 'manageCompany' },
+  { route: '/locations', permission: 'manageLocation' },
+  { route: '/parties', permission: 'manageParty' },
+  { route: '/masters', permission: 'viewMaster' },
+  { route: '/items', permission: 'manageItem' },
+  { route: '/purchase-indents', permission: 'viewPI' },
+  { route: '/purchase-orders', permission: 'viewPO' },
+  { route: '/inwards', permission: 'viewInward' },
+  { route: '/quality-control', permission: 'viewQC' },
+  { route: '/job-works', permission: 'viewMovement' },
+  { route: '/transfers', permission: 'viewTransfer' },
+  { route: '/reports', permission: 'viewReports' },
+  { route: '/settings', permission: 'accessSettings' },
+];
+
+const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = Object.fromEntries(
+  ROUTE_PERMISSIONS_ORDERED.map(({ route, permission }) => [route, permission])
+);
+
+function getFirstAllowedRoute(permissions: UserPermission | null | undefined): string {
+  if (!permissions) return '/dashboard';
+  for (const { route, permission } of ROUTE_PERMISSIONS_ORDERED) {
+    if (permissions[permission]) return route;
+  }
+  return '/dashboard';
+}
+
+const ROUTE_LABELS: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/companies': 'Companies',
+  '/locations': 'Locations',
+  '/parties': 'Parties',
+  '/masters': 'Masters',
+  '/items': 'Items',
+  '/purchase-indents': 'Purchase Indents',
+  '/purchase-orders': 'Purchase Orders',
+  '/inwards': 'Inwards',
+  '/quality-control': 'QC',
+  '/job-works': 'Job Works',
+  '/transfers': 'Transfers',
+  '/reports': 'Reports',
+  '/settings': 'Settings',
 };
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -268,7 +297,21 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Redirect to first allowed route when current route is forbidden (no full reload)
+  if (!hasPermission && permissions) {
+    const firstAllowed = getFirstAllowedRoute(permissions);
+    if (pathname !== firstAllowed && !pathname.startsWith(`${firstAllowed}/`)) {
+      router.replace(firstAllowed);
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+        </div>
+      );
+    }
+  }
+
   if (!hasPermission) {
+    const firstAllowed = getFirstAllowedRoute(permissions);
     return (
       <SoftwareProfileDraftProvider>
         <div className="min-h-screen bg-secondary-50">
@@ -300,7 +343,9 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
                 <p className="text-gray-600 mb-6">You do not have permission to view this page.</p>
-                <Button onClick={() => router.push('/dashboard')} variant="outline" className="w-full">Dashboard</Button>
+                <Button onClick={() => router.push(firstAllowed)} variant="outline" className="w-full">
+                  Go to {ROUTE_LABELS[firstAllowed] ?? 'Dashboard'}
+                </Button>
               </div>
             </main>
           </div>

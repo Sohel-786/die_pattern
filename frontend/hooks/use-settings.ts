@@ -83,7 +83,7 @@ export function useCurrentUserPermissions(enabled = true) {
   });
 }
 
-export function useUpdateUserPermissions() {
+export function useUpdateUserPermissions(currentUserId?: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -93,7 +93,9 @@ export function useUpdateUserPermissions() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'permissions', variables.userId] });
-      queryClient.invalidateQueries({ queryKey: ['settings', 'permissions', 'me'] });
+      if (currentUserId !== undefined && variables.userId === currentUserId) {
+        queryClient.invalidateQueries({ queryKey: ['settings', 'permissions', 'me'] });
+      }
       toast.success('User permissions saved');
     },
     onError: (error: any) => {
