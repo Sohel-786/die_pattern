@@ -198,6 +198,13 @@ namespace net_backend.Controllers
             }
 
             _context.PurchaseIndents.Add(pi);
+            // Set item state to InPI (PI Issued) as soon as they are in a PI — traceability and prevent duplicate PI
+            var itemsToUpdate = await _context.Items.Where(i => itemIds.Contains(i.Id)).ToListAsync();
+            foreach (var item in itemsToUpdate)
+            {
+                item.CurrentProcess = ItemProcessState.InPI;
+                item.UpdatedAt = DateTime.Now;
+            }
             await _context.SaveChangesAsync();
 
             return StatusCode(201, new ApiResponse<PurchaseIndent> { Data = pi });
@@ -253,10 +260,40 @@ namespace net_backend.Controllers
             pi.MtcReq = dto.MtcReq;
             pi.UpdatedAt = DateTime.Now;
 
+            var removedItemIds = existingItemIds.Except(newItemIdsSet).ToList();
+            var addedItemIds = newItemIdsSet.Except(existingItemIds).ToList();
+
             _context.PurchaseIndentItems.RemoveRange(pi.Items);
             foreach (var itemId in itemIds)
             {
                 pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
+            }
+
+            // Revert removed items to NotInStock if not in any other active PI
+            foreach (var itemId in removedItemIds)
+            {
+                var inOtherActivePi = await _context.PurchaseIndentItems
+                    .AnyAsync(pii => pii.ItemId == itemId && pii.PurchaseIndentId != id
+                        && _context.PurchaseIndents.Any(pi2 => pi2.Id == pii.PurchaseIndentId && pi2.IsActive));
+                if (!inOtherActivePi)
+                {
+                    var item = await _context.Items.FindAsync(itemId);
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.NotInStock;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
+            // Set newly added items to InPI
+            foreach (var itemId in addedItemIds)
+            {
+                var item = await _context.Items.FindAsync(itemId);
+                if (item != null)
+                {
+                    item.CurrentProcess = ItemProcessState.InPI;
+                    item.UpdatedAt = DateTime.Now;
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -281,7 +318,9 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
+            var pi = await _context.PurchaseIndents
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             if (!pi.IsActive)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Indents can be approved." });
@@ -305,7 +344,7 @@ namespace net_backend.Controllers
                 pi.RevisionDate = appliedDoc.RevisionDate;
             }
 
-            // Update item states to InPI
+            // Ensure item states remain InPI (already set at Create/Update; idempotent)
             foreach (var piItem in pi.Items)
             {
                 var item = await _context.Items.FindAsync(piItem.ItemId);
@@ -325,7 +364,9 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ApprovePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
+            var pi = await _context.PurchaseIndents
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
             if (!pi.IsActive)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Indents can be rejected." });
@@ -338,6 +379,17 @@ namespace net_backend.Controllers
             pi.ApprovedBy = null;
             pi.ApprovedAt = null;
             pi.UpdatedAt = DateTime.Now;
+
+            // Revert items to NotInStock so they can be added to another PI
+            foreach (var piItem in pi.Items)
+            {
+                var item = await _context.Items.FindAsync(piItem.ItemId);
+                if (item != null)
+                {
+                    item.CurrentProcess = ItemProcessState.NotInStock;
+                    item.UpdatedAt = DateTime.Now;
+                }
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });
@@ -395,6 +447,20 @@ namespace net_backend.Controllers
 
             pi.IsActive = !pi.IsActive;
             pi.UpdatedAt = DateTime.Now;
+
+            // When deactivating, release items back to NotInStock so they can be used in a new PI
+            if (!pi.IsActive)
+            {
+                foreach (var piItem in pi.Items)
+                {
+                    var item = await _context.Items.FindAsync(piItem.ItemId);
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.NotInStock;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = pi.IsActive });
