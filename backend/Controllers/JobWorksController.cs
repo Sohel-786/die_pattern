@@ -215,9 +215,12 @@ namespace net_backend.Controllers
 
             foreach (var itemDto in dto.Items)
             {
-                var inStock = await _itemState.IsInStockAsync(itemDto.ItemId);
-                if (!inStock)
-                    return BadRequest(new ApiResponse<JobWork> { Success = false, Message = $"Item {itemDto.ItemId} must be In stock to send for Job work." });
+                var state = await _itemState.GetStateAsync(itemDto.ItemId);
+                if (state != ItemProcessState.InStock)
+                {
+                    var stateDisplay = _itemState.GetStateDisplay(state);
+                    return BadRequest(new ApiResponse<JobWork> { Success = false, Message = $"Item must be In Stock to send for Job Work. Current state: {stateDisplay}. One item can only be in one process at a time." });
+                }
             }
 
             var nextCode = await _codeGenerator.GenerateCode("JW", locationId);
@@ -504,6 +507,29 @@ namespace net_backend.Controllers
                                 Message = $"Item '{item.MainPartName}' is currently in another process ({item.CurrentProcess}) and cannot be pulled back into this Job Work. Please complete or cancel the other process first." 
                             });
                         }
+                    }
+                }
+
+                // Rule 3b: Traceability - block reactivation if any item has already been inwarded from a *different* Job Work (completed flow)
+                foreach (var jwi in jw.Items)
+                {
+                    var item = jwi.Item;
+                    if (item == null) continue;
+
+                    var inwardedFromOtherJw = await _context.InwardLines
+                        .Where(l => l.ItemId == item.Id && l.SourceType == InwardSourceType.JobWork && l.SourceRefId != null && l.SourceRefId != id && l.Inward != null && l.Inward.IsActive)
+                        .Select(l => l.SourceRefId)
+                        .FirstOrDefaultAsync();
+
+                    if (inwardedFromOtherJw.HasValue && inwardedFromOtherJw.Value != id)
+                    {
+                        var otherJw = await _context.JobWorks.AsNoTracking().FirstOrDefaultAsync(j => j.Id == inwardedFromOtherJw.Value);
+                        var otherNo = otherJw?.JobWorkNo ?? inwardedFromOtherJw.Value.ToString();
+                        return BadRequest(new ApiResponse<bool>
+                        {
+                            Success = false,
+                            Message = $"Item '{item.MainPartName}' has already been inwarded from Job Work {otherNo}. Cannot reactivate this Job Work — one item can only complete one Job Work flow at a time. Inactivate the other Job Work (without inward) first if you need to use this entry again."
+                        });
                     }
                 }
 

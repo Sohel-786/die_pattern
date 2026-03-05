@@ -1,11 +1,10 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace net_backend.Migrations
 {
-    [Migration("20260305000000_AddReportPermissionColumns")]
-    public partial class AddReportPermissionColumns : Migration
+    public partial class FixReportPermissionColumns : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

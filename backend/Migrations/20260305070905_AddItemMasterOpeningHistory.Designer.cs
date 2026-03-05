@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305070905_AddItemMasterOpeningHistory")]
+    partial class AddItemMasterOpeningHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -449,12 +451,6 @@ namespace net_backend.Migrations
                     b.Property<int?>("ImportedByUserId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ImportedItemsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ImportedOnlyFilePath")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("ItemsImportedCount")
                         .HasColumnType("int");
 
@@ -464,9 +460,6 @@ namespace net_backend.Migrations
                     b.Property<string>("OriginalFileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("TotalRowsInFile")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

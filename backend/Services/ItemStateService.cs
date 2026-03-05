@@ -43,6 +43,24 @@ namespace net_backend.Services
             return state == ItemProcessState.InStock;
         }
 
+        public async Task<bool> HasAnyTransactionHistoryAsync(int itemId)
+        {
+            if (await _context.PurchaseIndentItems.AnyAsync(pii => pii.ItemId == itemId))
+                return true;
+
+            var piItemIdsForItem = await _context.PurchaseIndentItems.Where(pii => pii.ItemId == itemId).Select(pii => pii.Id).ToListAsync();
+            if (piItemIdsForItem.Count > 0 && await _context.PurchaseOrderItems.AnyAsync(poi => piItemIdsForItem.Contains(poi.PurchaseIndentItemId)))
+                return true;
+
+            if (await _context.InwardLines.AnyAsync(l => l.ItemId == itemId))
+                return true;
+            if (await _context.JobWorkItems.AnyAsync(j => j.ItemId == itemId))
+                return true;
+            if (await _context.TransferItems.AnyAsync(t => t.ItemId == itemId))
+                return true;
+            return false;
+        }
+
         public string GetStateDisplay(ItemProcessState state)
         {
             return state switch

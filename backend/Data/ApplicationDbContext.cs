@@ -20,6 +20,7 @@ namespace net_backend.Data
         public DbSet<Material> Materials { get; set; } = default!;
         public DbSet<OwnerType> OwnerTypes { get; set; } = default!;
         public DbSet<Item> Items { get; set; } = default!;
+        public DbSet<ItemMasterOpeningHistory> ItemMasterOpeningHistory { get; set; } = default!;
         public DbSet<PurchaseIndent> PurchaseIndents { get; set; } = default!;
         public DbSet<PurchaseIndentItem> PurchaseIndentItems { get; set; } = default!;
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; } = default!;
@@ -44,7 +45,7 @@ namespace net_backend.Data
 
         // Unique constraints
         modelBuilder.Entity<Item>()
-            .HasIndex(p => p.MainPartName)
+            .HasIndex(p => new { p.LocationId, p.MainPartName })
             .IsUnique();
 
         modelBuilder.Entity<PurchaseIndent>()

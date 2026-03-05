@@ -2,14 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Plus, Search, Hammer, MapPin,
-    Edit2, Database, Ban, CheckCircle,
-    Filter, X
+    Plus, Search, Edit2, Ban, CheckCircle,
+    Download, History
 } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
 import { Label } from "@/components/ui/label";
-import { Item } from "@/types";
+import { Item, OpeningHistoryEntry, ImportedItemSummary } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -20,13 +19,13 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { ItemDialog } from "@/components/masters/item-dialog";
 import { ItemChangeDialog } from "@/components/masters/item-change-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
-import { Dialog } from "@/components/ui/dialog";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 export default function ItemsPage() {
@@ -38,12 +37,13 @@ export default function ItemsPage() {
     const [isChangeOpen, setIsChangeOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
-    const [tabState, setTabState] = useState<"all" | "Die" | "Pattern">("all");
+    const [tabState, setTabState] = useState<"all" | "Die" | "Pattern" | "openingHistory">("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [materialFilter, setMaterialFilter] = useState<string>("all");
     const [ownerFilter, setOwnerFilter] = useState<string>("all");
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<Item | null>(null);
+    const [viewImportedForEntry, setViewImportedForEntry] = useState<OpeningHistoryEntry | null>(null);
 
     const queryClient = useQueryClient();
     const debouncedSearch = useDebouncedValue(search, 400);
@@ -64,19 +64,18 @@ export default function ItemsPage() {
     const { data: statuses = [] } = useQuery({ queryKey: ["item-statuses", "active"], queryFn: async () => (await api.get("/masters/item-statuses/active")).data.data });
     const { data: owners = [] } = useQuery({ queryKey: ["owner-types", "active"], queryFn: async () => (await api.get("/masters/owner-types/active")).data.data });
 
-    if (permissions && !permissions.viewMaster) {
-        return (
-            <div className="flex h-[80vh] items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-xl font-bold text-secondary-900">Access Denied</h2>
-                    <p className="text-secondary-500">You don't have permission to view Die & Pattern Masters.</p>
-                </div>
-            </div>
-        );
-    }
+    const { data: openingHistory = [] } = useQuery<OpeningHistoryEntry[]>({
+        queryKey: ["items", "opening-history"],
+        queryFn: async () => {
+            const res = await api.get("/items/opening-history");
+            return res.data.data ?? [];
+        },
+        enabled: tabState === "openingHistory",
+    });
 
     const { data: items = [], isLoading } = useQuery<Item[]>({
         queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter],
+        enabled: tabState !== "openingHistory",
         queryFn: async () => {
             const params: any = {};
             if (debouncedSearch) params.search = debouncedSearch;
@@ -197,11 +196,22 @@ export default function ItemsPage() {
         setOwnerFilter("all");
     };
 
+    if (permissions && !permissions.viewMaster) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-secondary-900">Access Denied</h2>
+                    <p className="text-secondary-500">You don&apos;t have permission to view Die &amp; Pattern Masters.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 space-y-6 text-sans">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-secondary-900 tracking-tight mb-2">Die & Pattern Masters</h1>
+                    <h1 className="text-3xl font-bold text-secondary-900 tracking-tight mb-2">Die &amp; Pattern Masters</h1>
                     <p className="text-secondary-500 font-medium">Systematic repository for engineering dies and pattern assets</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -246,9 +256,191 @@ export default function ItemsPage() {
                 >
                     Patterns
                 </button>
+                <button
+                    onClick={() => setTabState("openingHistory")}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${tabState === "openingHistory" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                >
+                    <History className="w-3.5 h-3.5" />
+                    Opening History
+                </button>
             </div>
 
-            {/* Standard Master Filter Card */}
+            {/* Opening Stock History view */}
+            {tabState === "openingHistory" && (
+                <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
+                    <div className="px-6 py-4 border-b border-secondary-100">
+                        <h3 className="text-lg font-bold text-secondary-900 mb-1">
+                            Opening Stock History ({openingHistory.length})
+                        </h3>
+                        <p className="text-sm text-secondary-500 font-medium">Every item master import is recorded here. Download the full file or the &quot;Imported only&quot; Excel to see exactly which rows were imported. Use &quot;View imported&quot; to list them.</p>
+                    </div>
+                    <div className="table-container overflow-x-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
+                            <thead>
+                                <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                                    <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
+                                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Import Date &amp; Time</th>
+                                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">File Name</th>
+                                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Items Imported</th>
+                                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Imported By</th>
+                                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {openingHistory.length > 0 ? (
+                                    openingHistory.map((entry, idx) => (
+                                        <tr
+                                            key={entry.id}
+                                            className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
+                                        >
+                                            <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
+                                            <td className="px-4 py-3 font-bold text-secondary-900 text-[11px]">
+                                                {new Date(entry.importedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                                            </td>
+                                            <td className="px-4 py-3 text-secondary-700 font-bold text-[11px]">{entry.originalFileName}</td>
+                                            <td className="px-4 py-3 text-center font-bold text-secondary-700 text-[11px]">
+                                                {entry.totalRowsInFile != null && entry.totalRowsInFile > 0
+                                                    ? `${entry.itemsImportedCount} / ${entry.totalRowsInFile}`
+                                                    : entry.itemsImportedCount}
+                                            </td>
+                                            <td className="px-4 py-3 text-secondary-700 font-bold text-[11px]">{entry.importedBy ?? "—"}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-1 flex-wrap">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const res = await api.get(`/items/opening-history/${entry.id}/download`, { responseType: "blob" });
+                                                                const disposition = res.headers?.["content-disposition"];
+                                                                const match = disposition?.match(/filename="?([^";\n]+)"?/);
+                                                                const filename = match?.[1] ?? entry.originalFileName ?? "opening-stock.xlsx";
+                                                                const url = window.URL.createObjectURL(new Blob([res.data]));
+                                                                const link = document.createElement("a");
+                                                                link.href = url;
+                                                                link.setAttribute("download", filename);
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                link.remove();
+                                                                window.URL.revokeObjectURL(url);
+                                                                toast.success("File downloaded");
+                                                            } catch (e: any) {
+                                                                toast.error(e.response?.data?.message ?? "Download failed");
+                                                            }
+                                                        }}
+                                                        className="h-8 px-3 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all flex items-center gap-1.5"
+                                                        title="Download full Excel file"
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                        Full file
+                                                    </Button>
+                                                    {entry.importedOnlyFilePath && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const res = await api.get(`/items/opening-history/${entry.id}/download?variant=imported`, { responseType: "blob" });
+                                                                    const baseName = (entry.originalFileName ?? "opening-stock").replace(/\.xlsx$/i, "");
+                                                                    const filename = `${baseName}_imported.xlsx`;
+                                                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                                                    const link = document.createElement("a");
+                                                                    link.href = url;
+                                                                    link.setAttribute("download", filename);
+                                                                    document.body.appendChild(link);
+                                                                    link.click();
+                                                                    link.remove();
+                                                                    window.URL.revokeObjectURL(url);
+                                                                    toast.success("Imported items file downloaded");
+                                                                } catch (e: any) {
+                                                                    toast.error(e.response?.data?.message ?? "Download failed");
+                                                                }
+                                                            }}
+                                                            className="h-8 px-3 text-primary-600 hover:bg-primary-50 border border-primary-200 rounded-lg transition-all flex items-center gap-1.5"
+                                                            title="Download Excel with only the successfully imported rows"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                            Imported only
+                                                        </Button>
+                                                    )}
+                                                    {entry.importedItemsJson && (() => {
+                                                        try {
+                                                            const arr = JSON.parse(entry.importedItemsJson) as ImportedItemSummary[];
+                                                            if (!Array.isArray(arr) || arr.length === 0) return null;
+                                                            return (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => setViewImportedForEntry(entry)}
+                                                                    className="h-8 px-3 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all flex items-center gap-1.5"
+                                                                    title="View which items were imported"
+                                                                >
+                                                                    <History className="w-4 h-4" />
+                                                                    View imported
+                                                                </Button>
+                                                            );
+                                                        } catch { return null; }
+                                                    })()}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={6} className="py-16 text-center text-secondary-400 italic font-medium">
+                                            No opening stock import history yet. Import item masters to see records here.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    {/* Dialog: View which items were imported */}
+                    <Dialog
+                        isOpen={!!viewImportedForEntry}
+                        onClose={() => setViewImportedForEntry(null)}
+                        title={viewImportedForEntry ? `Imported items — ${viewImportedForEntry.originalFileName}` : "Imported items"}
+                        size="md"
+                    >
+                        <div className="px-1 pb-2">
+                            {viewImportedForEntry?.importedItemsJson && (() => {
+                                try {
+                                    const list = JSON.parse(viewImportedForEntry.importedItemsJson) as ImportedItemSummary[];
+                                    if (!Array.isArray(list) || list.length === 0) return <p className="text-secondary-500 text-sm">No items.</p>;
+                                    return (
+                                        <div className="max-h-[60vh] overflow-auto rounded border border-secondary-200">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-secondary-50 sticky top-0">
+                                                    <tr>
+                                                        <th className="px-3 py-2 font-semibold text-secondary-700 w-14">Row</th>
+                                                        <th className="px-3 py-2 font-semibold text-secondary-700">Part Name</th>
+                                                        <th className="px-3 py-2 font-semibold text-secondary-700">Display Name</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {list.map((item, i) => (
+                                                        <tr key={i} className="border-t border-secondary-100">
+                                                            <td className="px-3 py-2 text-secondary-600 font-medium">{item.row}</td>
+                                                            <td className="px-3 py-2 font-medium text-secondary-900">{item.mainPartName}</td>
+                                                            <td className="px-3 py-2 text-secondary-700">{item.displayName}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                } catch {
+                                    return <p className="text-secondary-500 text-sm">Could not load list.</p>;
+                                }
+                            })()}
+                        </div>
+                    </Dialog>
+                </Card>
+            )}
+
+            {/* Standard Master Filter Card - only when not Opening History */}
+            {tabState !== "openingHistory" && (
+            <>
             <Card className="shadow-sm border-secondary-200 bg-white mb-6">
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -423,7 +615,9 @@ export default function ItemsPage() {
                         </tbody>
                     </table>
                 </div>
-            </Card >
+            </Card>
+            </>
+            )}
 
             <ItemDialog
                 key={dialogKey}

@@ -207,6 +207,30 @@ namespace net_backend.Models
         public virtual Party? CurrentParty { get; set; }
     }
 
+    [Table("item_master_opening_history")]
+    public class ItemMasterOpeningHistory
+    {
+        public int Id { get; set; }
+        public int LocationId { get; set; }
+        /// <summary>Relative path under wwwroot, e.g. storage/CompanyName/LocationName/Item Master Opening/file.xlsx</summary>
+        public string FilePath { get; set; } = string.Empty;
+        public string OriginalFileName { get; set; } = string.Empty;
+        public DateTime ImportedAt { get; set; }
+        public int? ImportedByUserId { get; set; }
+        public int ItemsImportedCount { get; set; }
+        /// <summary>Total data rows in the uploaded file (for display as "X of Y imported").</summary>
+        public int? TotalRowsInFile { get; set; }
+        /// <summary>JSON array of successfully imported items: [{ "row", "mainPartName", "displayName" }] for traceability.</summary>
+        public string? ImportedItemsJson { get; set; }
+        /// <summary>Relative path to Excel containing only the successfully imported rows (same columns as template).</summary>
+        public string? ImportedOnlyFilePath { get; set; }
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+        [ForeignKey("ImportedByUserId")]
+        public virtual User? ImportedByUser { get; set; }
+    }
+
     [Table("purchase_indents")]
     public class PurchaseIndent
     {

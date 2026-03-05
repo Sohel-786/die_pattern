@@ -36,6 +36,7 @@ export type ItemProcessState =
   | 'InQC'
   | 'InJobwork'
   | 'AtVendor'
+  | 'Outward'
   | 'InStock';
 
 export interface ItemWithStatus {
@@ -255,6 +256,27 @@ export interface Item {
   /** Latest process for display: PI Issued, PO Issued, In QC, In Job Work, In Outward, In Stock, Not In Stock */
   currentProcess?: string | null;
   isActive: boolean;
+}
+
+/** One successfully imported item in opening history (for traceability). */
+export interface ImportedItemSummary {
+  row: number;
+  mainPartName: string;
+  displayName: string;
+}
+
+export interface OpeningHistoryEntry {
+  id: number;
+  originalFileName: string;
+  importedAt: string;
+  itemsImportedCount: number;
+  /** Total data rows in the uploaded file (e.g. "2 of 20 imported"). */
+  totalRowsInFile?: number | null;
+  /** JSON string of ImportedItemSummary[] — parse to show which items were imported. */
+  importedItemsJson?: string | null;
+  /** If set, user can download an Excel with only the successfully imported rows. */
+  importedOnlyFilePath?: string | null;
+  importedBy?: string | null;
 }
 
 export interface PurchaseIndent {

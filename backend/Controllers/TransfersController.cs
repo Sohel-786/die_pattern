@@ -217,21 +217,19 @@ namespace net_backend.Controllers
                     var item = await _context.Items.FindAsync(itemDto.ItemId);
                     if (item == null) throw new Exception($"Item with ID {itemDto.ItemId} not found.");
 
-                    // Enforce rules:
-                    // 1. Item must not be NotInStock
+                    // Enforce traceability: transfer only when item is In Stock (or at source party)
                     if (item.CurrentProcess == ItemProcessState.NotInStock)
-                        throw new Exception($"Item {item.MainPartName} is 'Not In Stock' and cannot be transferred.");
+                        throw new Exception($"Item '{item.MainPartName}' is Not In Stock and cannot be transferred. Only items In Stock can be transferred.");
 
-                    // 2. Validate current holder matches "From"
                     if (dto.FromPartyId.HasValue)
                     {
                         if (item.CurrentPartyId != dto.FromPartyId.Value)
-                            throw new Exception($"Item {item.MainPartName} is not currently with the selected source party.");
+                            throw new Exception($"Item '{item.MainPartName}' is not currently with the selected source party. Current state: {item.CurrentProcess}. One item can only be in one process at a time.");
                     }
                     else
                     {
                         if (item.CurrentLocationId != locationId || item.CurrentProcess != ItemProcessState.InStock)
-                            throw new Exception($"Item {item.MainPartName} is not currently in stock at this location.");
+                            throw new Exception($"Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}. One item can only be in one process at a time.");
                     }
 
                     // Record Transfer Item

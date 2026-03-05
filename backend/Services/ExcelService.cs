@@ -243,6 +243,48 @@ namespace net_backend.Services
             return result;
         }
 
+        /// <inheritdoc />
+        public byte[] GenerateItemMasterImportedOnlyExcel(IEnumerable<ItemImportDto> rows)
+        {
+            var rowList = rows?.ToList() ?? new List<ItemImportDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Imported Items");
+                var headers = new[] { "Part Name", "Display Name", "Type", "Drawing No", "Revision", "Material", "Ownership", "Status", "Custodian Type", "Custodian Name" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(1, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                int rowIdx = 2;
+                foreach (var dto in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = dto.PartName ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = dto.DisplayName ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = dto.AssetType ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = dto.DrawingNo ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = dto.Revision ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = dto.Material ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = dto.Ownership ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = dto.Status ?? "";
+                    worksheet.Cell(rowIdx, 9).Value = dto.CustodianType ?? "";
+                    worksheet.Cell(rowIdx, 10).Value = dto.CustodianName ?? "";
+                    rowIdx++;
+                }
+                worksheet.Columns().AdjustToContents();
+                if (rowList.Count > 0)
+                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
         private string SplitCamelCase(string input)
         {
             if (string.IsNullOrEmpty(input)) return input;

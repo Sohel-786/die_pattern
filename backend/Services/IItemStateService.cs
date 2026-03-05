@@ -15,6 +15,9 @@ namespace net_backend.Services
         /// <summary>Returns true if the item can be used in In-Stock-only transactions (Jobwork etc.).</summary>
         Task<bool> IsInStockAsync(int itemId);
 
+        /// <summary>Returns true if the item has ever been part of any transaction (PI, PO, Inward, Job Work, Transfer). Used to block manual process-state correction after first use.</summary>
+        Task<bool> HasAnyTransactionHistoryAsync(int itemId);
+
         /// <summary>Returns a user-friendly string representation of the process state.</summary>
         string GetStateDisplay(ItemProcessState state);
     }

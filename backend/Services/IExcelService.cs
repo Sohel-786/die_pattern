@@ -7,5 +7,7 @@ namespace net_backend.Services
         byte[] GenerateExcel(IEnumerable<object> data, string sheetName = "Sheet1", string? titleRow = null);
         byte[] GenerateItemLedgerExcel(IEnumerable<ItemLedgerRowDto> rows, string titleRow);
         ImportResultDto<T> ImportExcel<T>(Stream fileStream) where T : new();
+        /// <summary>Generates an Excel with the same columns as the Item Master template (PartName, DisplayName, AssetType, etc.) for "imported items only" download.</summary>
+        byte[] GenerateItemMasterImportedOnlyExcel(IEnumerable<ItemImportDto> rows);
     }
 }

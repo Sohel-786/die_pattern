@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305043637_FixReportPermissionColumns")]
+    partial class FixReportPermissionColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -369,15 +371,16 @@ namespace net_backend.Migrations
 
                     b.HasIndex("ItemTypeId");
 
+                    b.HasIndex("LocationId");
+
+                    b.HasIndex("MainPartName")
+                        .IsUnique();
+
                     b.HasIndex("MaterialId");
 
                     b.HasIndex("OwnerTypeId");
 
                     b.HasIndex("StatusId");
-
-                    b.HasIndex("LocationId", "MainPartName")
-                        .IsUnique()
-                        .HasFilter("[LocationId] IS NOT NULL");
 
                     b.ToTable("items");
                 });
@@ -429,52 +432,6 @@ namespace net_backend.Migrations
                     b.HasIndex("ItemId");
 
                     b.ToTable("item_change_logs");
-                });
-
-            modelBuilder.Entity("net_backend.Models.ItemMasterOpeningHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ImportedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ImportedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImportedItemsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ImportedOnlyFilePath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ItemsImportedCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("LocationId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("TotalRowsInFile")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImportedByUserId");
-
-                    b.HasIndex("LocationId");
-
-                    b.ToTable("item_master_opening_history");
                 });
 
             modelBuilder.Entity("net_backend.Models.ItemStatus", b =>
@@ -1503,23 +1460,6 @@ namespace net_backend.Migrations
                     b.Navigation("Creator");
 
                     b.Navigation("Item");
-                });
-
-            modelBuilder.Entity("net_backend.Models.ItemMasterOpeningHistory", b =>
-                {
-                    b.HasOne("net_backend.Models.User", "ImportedByUser")
-                        .WithMany()
-                        .HasForeignKey("ImportedByUserId");
-
-                    b.HasOne("net_backend.Models.Location", "Location")
-                        .WithMany()
-                        .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ImportedByUser");
-
-                    b.Navigation("Location");
                 });
 
             modelBuilder.Entity("net_backend.Models.JobWork", b =>
