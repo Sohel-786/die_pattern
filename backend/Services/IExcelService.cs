@@ -9,5 +9,9 @@ namespace net_backend.Services
         ImportResultDto<T> ImportExcel<T>(Stream fileStream) where T : new();
         /// <summary>Generates an Excel with the same columns as the Item Master template (PartName, DisplayName, AssetType, etc.) for "imported items only" download.</summary>
         byte[] GenerateItemMasterImportedOnlyExcel(IEnumerable<ItemImportDto> rows);
+        byte[] GenerateLocationWiseItemsExcel(IEnumerable<LocationWiseItemRowDto> rows);
+        byte[] GenerateItemsAtVendorExcel(IEnumerable<ItemAtVendorRowDto> rows);
+        byte[] GeneratePendingPIExcel(IEnumerable<PendingPIRowDto> rows);
+        byte[] GeneratePendingPOExcel(IEnumerable<PendingPORowDto> rows);
     }
 }

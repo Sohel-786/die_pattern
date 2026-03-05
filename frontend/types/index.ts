@@ -628,15 +628,10 @@ export interface DashboardMetrics {
   summary: {
     total: number;
     atVendor: number;
-    atLocation: number;
-    notInStock?: number;
     pendingPI: number;
     pendingPO: number;
   };
-  locationWiseCount: { locationName: string; count: number }[];
-  recentChanges: { mainPartName?: string; oldName?: string; newName?: string; changeType?: string; createdAt?: string }[];
-  recentChangesCount?: number;
-  recentSystemAdjustments: any[];
+  locationWiseCount: { locationId: number; locationName: string; count: number }[];
 }
 
 export interface UserPermission {

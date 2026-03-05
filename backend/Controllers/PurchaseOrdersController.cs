@@ -21,7 +21,7 @@ namespace net_backend.Controllers
             _env = env;
         }
 
-        private static void MapToDto(PurchaseOrder po, PODto dto)
+        public static void MapToDto(PurchaseOrder po, PODto dto)
         {
             dto.Id = po.Id;
             dto.PoNo = po.PoNo;

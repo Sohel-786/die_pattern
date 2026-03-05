@@ -1,47 +1,125 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import api from "@/lib/api";
-import { DashboardMetrics } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PODto, PoStatus } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   MapPin,
   Package,
   FileText,
   ShoppingCart,
-  History,
-  ArrowRight,
   Search,
+  Download,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { toast } from "react-hot-toast";
+import { format } from "date-fns";
+import { Dialog } from "@/components/ui/dialog";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { MultiSelectSearch } from "@/components/ui/multi-select-search";
+import type { MultiSelectSearchOption } from "@/components/ui/multi-select-search";
+import { DatePicker } from "@/components/ui/date-picker";
+import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
+import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
+import { cn } from "@/lib/utils";
 
-type TableView = "at-vendor" | "pending-pi-po" | null;
+const filterLabelClass =
+  "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
+const inputClass =
+  "h-9 rounded-lg border border-secondary-200 bg-white px-3 text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
+const selectClass =
+  "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
-interface ItemAtVendor {
+type ExpandedSection = "location" | "at-vendor" | "pending-pi" | "pending-po" | null;
+
+interface LocationWiseItemRow {
   id: number;
+  locationName: string;
   mainPartName: string;
   currentName?: string | null;
   drawingNo?: string | null;
-  currentProcess: string;
-  locationName?: string | null;
+  itemTypeName?: string | null;
+  statusName?: string | null;
 }
 
-interface PendingPiPo {
-  pendingIndents: { id: number; piNo: string; type: string; status: string; createdAt: string }[];
-  pendingOrders: { id: number; poNo: string; status: string; createdAt: string }[];
+interface ItemAtVendorRow {
+  id: number;
+  vendorName?: string | null;
+  mainPartName: string;
+  currentName?: string | null;
+  drawingNo?: string | null;
+  itemTypeName?: string | null;
+  currentProcess: string;
 }
 
 export default function DashboardPage() {
-  const [tableView, setTableView] = useState<TableView>(null);
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 400);
+  const queryClient = useQueryClient();
+  const { data: permissions } = useCurrentUserPermissions();
+  const [expandedSection, setExpandedSection] = useState<ExpandedSection>(null);
 
-  const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
+  // Location-wise filters
+  const [locationId, setLocationId] = useState<number | "">("");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationItemTypeId, setLocationItemTypeId] = useState<number | "">("");
+  const [locationStatusId, setLocationStatusId] = useState<number | "">("");
+  const [locationItemIds, setLocationItemIds] = useState<number[]>([]);
+
+  // At-vendor filters
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [vendorIds, setVendorIds] = useState<number[]>([]);
+  const [atVendorItemIds, setAtVendorItemIds] = useState<number[]>([]);
+  const [atVendorItemTypeId, setAtVendorItemTypeId] = useState<number | "">("");
+
+  // Pending PI filters
+  const [pendingPISearch, setPendingPISearch] = useState("");
+  const [pendingPIDateFrom, setPendingPIDateFrom] = useState("");
+  const [pendingPIDateTo, setPendingPIDateTo] = useState("");
+  const [pendingPIItemIds, setPendingPIItemIds] = useState<number[]>([]);
+
+  // Pending PO filters
+  const [pendingPOSearch, setPendingPOSearch] = useState("");
+  const [pendingPODateFrom, setPendingPODateFrom] = useState("");
+  const [pendingPODateTo, setPendingPODateTo] = useState("");
+  const [pendingPOVendorIds, setPendingPOVendorIds] = useState<number[]>([]);
+
+  const [approvalTarget, setApprovalTarget] = useState<
+    { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" } | { type: "po"; po: PODto; action: "approve" | "reject" }
+  | null>(null);
+  const [previewPIId, setPreviewPIId] = useState<number | null>(null);
+  const [previewPOId, setPreviewPOId] = useState<number | null>(null);
+
+  const debouncedLocationSearch = useDebouncedValue(locationSearch, 400);
+  const debouncedVendorSearch = useDebouncedValue(vendorSearch, 400);
+  const debouncedPendingPISearch = useDebouncedValue(pendingPISearch, 400);
+  const debouncedPendingPOSearch = useDebouncedValue(pendingPOSearch, 400);
+
+  const { data: metrics, isLoading: loadingMetrics } = useQuery<DashboardMetrics>({
     queryKey: ["dashboard-metrics"],
     queryFn: async () => {
       const response = await api.get("/dashboard/metrics");
@@ -49,42 +127,246 @@ export default function DashboardPage() {
     },
   });
 
-  const tableParams = useMemo(
-    () => ({ ...(debouncedSearch && { search: debouncedSearch }) }),
-    [debouncedSearch]
+  const locationWiseParams = useMemo(
+    () => ({
+      locationId: locationId === "" ? undefined : locationId,
+      search: debouncedLocationSearch || undefined,
+      itemTypeId: locationItemTypeId === "" ? undefined : locationItemTypeId,
+      statusId: locationStatusId === "" ? undefined : locationStatusId,
+      itemIds: locationItemIds.length ? locationItemIds.join(",") : undefined,
+    }),
+    [locationId, debouncedLocationSearch, locationItemTypeId, locationStatusId, locationItemIds]
   );
 
-  const { data: itemsAtVendor = [], isLoading: loadingAtVendor } = useQuery<ItemAtVendor[]>({
-    queryKey: ["dashboard", "items-at-vendor", tableParams],
+  const { data: locationWiseItems = [], isLoading: loadingLocationWise } = useQuery<
+    LocationWiseItemRow[]
+  >({
+    queryKey: ["dashboard", "location-wise-items", locationWiseParams],
     queryFn: async () => {
-      const response = await api.get("/dashboard/items-at-vendor", { params: tableParams });
-      return response.data?.data ?? [];
+      if (typeof locationWiseParams.locationId !== "number") return [];
+      const res = await api.get("/dashboard/location-wise-items", {
+        params: locationWiseParams,
+      });
+      return res.data?.data ?? [];
     },
-    enabled: tableView === "at-vendor",
+    enabled: expandedSection === "location" && typeof locationWiseParams.locationId === "number",
   });
 
-  const { data: pendingPiPo, isLoading: loadingPending } = useQuery<PendingPiPo>({
-    queryKey: ["dashboard", "pending-pi-po"],
+  const atVendorParams = useMemo(
+    () => ({
+      search: debouncedVendorSearch || undefined,
+      vendorIds: vendorIds.length ? vendorIds.join(",") : undefined,
+      itemIds: atVendorItemIds.length ? atVendorItemIds.join(",") : undefined,
+      itemTypeId: atVendorItemTypeId === "" ? undefined : atVendorItemTypeId,
+    }),
+    [debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId]
+  );
+
+  const { data: itemsAtVendor = [], isLoading: loadingAtVendor } = useQuery<ItemAtVendorRow[]>({
+    queryKey: ["dashboard", "items-at-vendor", atVendorParams],
     queryFn: async () => {
-      const response = await api.get("/dashboard/pending-pi-po");
-      return response.data?.data ?? { pendingIndents: [], pendingOrders: [] };
+      const res = await api.get("/dashboard/items-at-vendor", { params: atVendorParams });
+      return res.data?.data ?? [];
     },
-    enabled: tableView === "pending-pi-po",
+    enabled: expandedSection === "at-vendor",
   });
 
-  const recentCount = metrics?.recentChangesCount ?? metrics?.recentChanges?.length ?? 0;
-  const pendingPiPoTotal = (metrics?.summary?.pendingPI ?? 0) + (metrics?.summary?.pendingPO ?? 0);
+  const pendingPIParams = useMemo(
+    () => ({
+      search: debouncedPendingPISearch || undefined,
+      createdDateFrom: pendingPIDateFrom || undefined,
+      createdDateTo: pendingPIDateTo || undefined,
+      itemIds: pendingPIItemIds.length ? pendingPIItemIds.join(",") : undefined,
+    }),
+    [debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds]
+  );
+
+  const { data: pendingPIList = [], isLoading: loadingPendingPI } = useQuery<PurchaseIndent[]>({
+    queryKey: ["dashboard", "pending-pi", pendingPIParams],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/pending-pi", { params: pendingPIParams });
+      return res.data?.data ?? [];
+    },
+    enabled: expandedSection === "pending-pi",
+  });
+
+  const pendingPOParams = useMemo(
+    () => ({
+      search: debouncedPendingPOSearch || undefined,
+      poDateFrom: pendingPODateFrom || undefined,
+      poDateTo: pendingPODateTo || undefined,
+      vendorIds: pendingPOVendorIds.length ? pendingPOVendorIds.join(",") : undefined,
+    }),
+    [debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds]
+  );
+
+  const { data: pendingPOList = [], isLoading: loadingPendingPO } = useQuery<PODto[]>({
+    queryKey: ["dashboard", "pending-po", pendingPOParams],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/pending-po", { params: pendingPOParams });
+      return res.data?.data ?? [];
+    },
+    enabled: expandedSection === "pending-po",
+  });
+
+  const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
+    queryKey: ["items", "active"],
+    queryFn: async () => {
+      const res = await api.get("/items/active");
+      return res.data.data ?? [];
+    },
+  });
+
+  const { data: itemTypes = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["item-types", "active"],
+    queryFn: async () => {
+      const res = await api.get("/masters/item-types/active");
+      return res.data?.data ?? [];
+    },
+  });
+
+  const { data: itemStatuses = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["item-statuses", "active"],
+    queryFn: async () => {
+      const res = await api.get("/masters/item-statuses/active");
+      return res.data?.data ?? [];
+    },
+  });
+
+  const { data: parties = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["parties", "active"],
+    queryFn: async () => {
+      const res = await api.get("/parties/active");
+      return res.data?.data ?? [];
+    },
+  });
+
+  const itemOptions: MultiSelectSearchOption[] = useMemo(
+    () =>
+      itemsList.map((i) => ({
+        value: i.id,
+        label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`,
+      })),
+    [itemsList]
+  );
+  const vendorOptions: MultiSelectSearchOption[] = useMemo(
+    () => parties.map((p) => ({ value: p.id, label: p.name })),
+    [parties]
+  );
+
+  const approvePIMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-indents/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-pi"] });
+      toast.success("Indent approved successfully");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Approval failed"),
+  });
+
+  const rejectPIMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-indents/${id}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-pi"] });
+      toast.success("Indent rejected successfully");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed"),
+  });
+
+  const approvePOMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-po"] });
+      toast.success("Order approved successfully");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Approval failed"),
+  });
+
+  const rejectPOMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-po"] });
+      toast.success("Order rejected successfully");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed"),
+  });
+
+  const handleExport = useCallback(
+    async (section: "location" | "at-vendor" | "pending-pi" | "pending-po") => {
+      try {
+        let url = "";
+        const params =
+          section === "location"
+            ? locationWiseParams
+            : section === "at-vendor"
+            ? atVendorParams
+            : section === "pending-pi"
+            ? pendingPIParams
+            : pendingPOParams;
+        if (section === "location" && typeof params.locationId !== "number") {
+          toast.error("Select a location first.");
+          return;
+        }
+        const endpoint =
+          section === "location"
+            ? "/dashboard/export/location-wise-items"
+            : section === "at-vendor"
+            ? "/dashboard/export/items-at-vendor"
+            : section === "pending-pi"
+            ? "/dashboard/export/pending-pi"
+            : "/dashboard/export/pending-po";
+        const response = await api.get(endpoint, { responseType: "blob", params });
+        const blob = new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.setAttribute(
+          "download",
+          `dashboard-${section}-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        toast.success("Export downloaded.");
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || "Export failed.");
+      }
+    },
+    [
+      locationWiseParams,
+      atVendorParams,
+      pendingPIParams,
+      pendingPOParams,
+    ]
+  );
+
+  const toggleSection = (section: ExpandedSection) => {
+    setExpandedSection((prev) => (prev === section ? null : section));
+    if (section === "location" && metrics?.locationWiseCount?.length && locationId === "") {
+      setLocationId(metrics.locationWiseCount[0].locationId);
+    }
+  };
 
   const statCards = [
     {
-      title: "Location Wise Pattern Count",
+      title: "Location Wise Die/Pattern Count",
       value: metrics?.summary?.total ?? 0,
       icon: MapPin,
       gradient: "from-blue-500 to-blue-600",
       baseBg: "bg-blue-50/40",
       shadowColor: "shadow-blue-500/20",
       iconColor: "text-blue-600",
-      onClick: () => setTableView(null),
+      section: "location" as const,
     },
     {
       title: "Patterns at Vendor",
@@ -94,31 +376,31 @@ export default function DashboardPage() {
       baseBg: "bg-amber-50/40",
       shadowColor: "shadow-amber-500/20",
       iconColor: "text-amber-600",
-      onClick: () => setTableView("at-vendor"),
+      section: "at-vendor" as const,
     },
     {
-      title: "Pending PI & PO",
-      value: pendingPiPoTotal,
+      title: "Pending PI",
+      value: metrics?.summary?.pendingPI ?? 0,
       icon: FileText,
       gradient: "from-rose-500 to-rose-600",
       baseBg: "bg-rose-50/40",
       shadowColor: "shadow-rose-500/20",
       iconColor: "text-rose-600",
-      onClick: () => setTableView("pending-pi-po"),
+      section: "pending-pi" as const,
     },
     {
-      title: "Recent Changes",
-      value: recentCount,
-      icon: History,
+      title: "Pending PO",
+      value: metrics?.summary?.pendingPO ?? 0,
+      icon: ShoppingCart,
       gradient: "from-emerald-500 to-emerald-600",
       baseBg: "bg-emerald-50/40",
       shadowColor: "shadow-emerald-500/20",
       iconColor: "text-emerald-600",
-      onClick: () => setTableView(null),
+      section: "pending-po" as const,
     },
   ];
 
-  if (isLoading) {
+  if (loadingMetrics) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-secondary-50/50">
         <div className="text-center">
@@ -136,79 +418,71 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-8"
       >
-        {/* Header - QC_Tool style */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-text mb-2">Dashboard</h1>
-            <p className="text-secondary-600">
-              Plan, prioritize, and manage your die & pattern items with ease.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/items">
-              <Button variant="outline" className="shadow-sm">
-                View All Items
-              </Button>
-            </Link>
-            <Link href="/reports">
-              <Button className="shadow-md">
-                View Reports
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-text mb-2">Dashboard</h1>
+          <p className="text-secondary-600">
+            Location-wise counts, items at vendor, and pending PI/PO at a glance.
+          </p>
         </div>
 
-        {/* KPI Cards - 4 cards, QC_Tool styling */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
+            const isExpanded = expandedSection === stat.section;
             return (
               <motion.div
                 key={stat.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -4 }}
                 className="h-full"
               >
                 <div
-                  onClick={stat.onClick}
-                  className={`
-                    relative overflow-hidden rounded-2xl cursor-pointer group h-full
-                    ${stat.baseBg} hover:bg-gradient-to-br ${stat.gradient}
-                    transition-all duration-500 ease-out
-                    shadow-xl ${stat.shadowColor} border border-secondary-100/50
-                  `}
+                  onClick={() => toggleSection(stat.section)}
+                  className={cn(
+                    "relative overflow-hidden rounded-2xl cursor-pointer group h-full transition-all duration-300 border border-secondary-100/50",
+                    stat.baseBg,
+                    `shadow-xl ${stat.shadowColor}`,
+                    isExpanded && `ring-2 ring-primary-400 bg-gradient-to-br ${stat.gradient}`
+                  )}
                 >
                   <CardContent className="p-6 relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-secondary-500 group-hover:text-white/90 transition-colors duration-300">
-                            {stat.title}
-                          </p>
-                          <h3 className="text-4xl font-bold text-text group-hover:text-white transition-colors duration-300 tracking-tight">
-                            {stat.value}
-                          </h3>
-                        </div>
+                      <div className="space-y-1">
+                        <p className={cn(
+                          "text-sm font-medium transition-colors",
+                          isExpanded ? "text-white" : "text-secondary-500"
+                        )}>
+                          {stat.title}
+                        </p>
+                        <h3 className={cn(
+                          "text-4xl font-bold transition-colors tracking-tight",
+                          isExpanded ? "text-white" : "text-text"
+                        )}>
+                          {stat.value}
+                        </h3>
+                        <p className={cn(
+                          "text-xs mt-1 flex items-center gap-1 transition-colors",
+                          isExpanded ? "text-white/90" : "text-secondary-400"
+                        )}>
+                          {isExpanded ? (
+                            <>Collapse <ChevronUp className="w-3 h-3" /></>
+                          ) : (
+                            <>View table <ChevronDown className="w-3 h-3" /></>
+                          )}
+                        </p>
                       </div>
-                      <div
-                        className={`
-                          p-3 rounded-xl shadow-sm transition-all duration-300
-                          bg-secondary-50 group-hover:bg-white/20 group-hover:backdrop-blur-sm
-                          group-hover:scale-110 group-hover:rotate-3
-                        `}
-                      >
-                        <Icon
-                          className={`
-                            w-6 h-6 transition-colors duration-300
-                            ${stat.iconColor} group-hover:text-white
-                          `}
-                        />
+                      <div className={cn(
+                        "p-3 rounded-xl transition-all",
+                        isExpanded ? "bg-white/20" : "bg-secondary-50"
+                      )}>
+                        <Icon className={cn(
+                          "w-6 h-6",
+                          isExpanded ? "text-white" : stat.iconColor
+                        )} />
                       </div>
                     </div>
-                    <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-current opacity-[0.03] group-hover:opacity-10 pointer-events-none transition-opacity duration-500" />
                   </CardContent>
                 </div>
               </motion.div>
@@ -216,174 +490,608 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* Drill-down: Patterns at Vendor */}
-        {tableView === "at-vendor" && (
-          <Card className="shadow-lg border-0">
-            <CardHeader className="border-b border-secondary-200">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-xl font-bold text-text">
-                  Patterns at Vendor
-                </CardTitle>
-                <div className="relative flex-1 min-w-[180px] max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400 pointer-events-none" />
-                  <Input
-                    type="search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, drawing…"
-                    className="pl-9 h-10 rounded-lg border-secondary-300 bg-white"
-                  />
+        {/* Location Wise Table */}
+        <AnimatePresence>
+          {expandedSection === "location" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="shadow-lg border border-secondary-200">
+                <div className="border-b border-secondary-200 px-4 py-3">
+                  <h2 className="text-xl font-bold text-text">Location Wise Die/Pattern Count</h2>
+                  <p className="text-sm text-secondary-500 mt-0.5">
+                    Items currently at each location (opened company only). Select a location and apply filters.
+                  </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loadingAtVendor ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                  <p className="mt-4 text-secondary-600">Loading...</p>
-                </div>
-              ) : itemsAtVendor.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-primary-200 bg-primary-100">
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-primary-900 w-12">#</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-secondary-700">Main Part</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-secondary-700">Current Name</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-secondary-700">Drawing No</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-secondary-700">Process</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itemsAtVendor.map((item, idx) => (
-                        <tr key={item.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                          <td className="py-3 px-4 text-secondary-600">{idx + 1}</td>
-                          <td className="py-3 px-4 font-medium text-text">{item.mainPartName}</td>
-                          <td className="py-3 px-4 text-secondary-600">{item.currentName ?? "—"}</td>
-                          <td className="py-3 px-4 text-secondary-600 font-mono text-sm">{item.drawingNo ?? "—"}</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                              {item.currentProcess}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-secondary-500">No patterns at vendor match your filters.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Drill-down: Pending PI & PO */}
-        {tableView === "pending-pi-po" && (
-          <Card className="shadow-lg border-0">
-            <CardHeader className="border-b border-secondary-200">
-              <CardTitle className="text-xl font-bold text-text">Pending PI & PO</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loadingPending ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                  <p className="mt-4 text-secondary-600">Loading...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-                  <div>
-                    <h3 className="text-sm font-semibold text-secondary-600 uppercase tracking-wider mb-3">Pending Purchase Indents</h3>
-                    {(pendingPiPo?.pendingIndents?.length ?? 0) > 0 ? (
-                      <ul className="space-y-2">
-                        {pendingPiPo!.pendingIndents.map((pi) => (
-                          <li key={pi.id} className="flex items-center justify-between p-3 bg-secondary-50/50 rounded-lg">
-                            <span className="font-medium text-text">{pi.piNo}</span>
-                            <Link href="/purchase-indents">
-                              <Button variant="ghost" size="sm" className="text-primary-600">View</Button>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-secondary-500 text-sm py-4">No pending PIs.</p>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-secondary-600 uppercase tracking-wider mb-3">Pending Purchase Orders</h3>
-                    {(pendingPiPo?.pendingOrders?.length ?? 0) > 0 ? (
-                      <ul className="space-y-2">
-                        {pendingPiPo!.pendingOrders.map((po) => (
-                          <li key={po.id} className="flex items-center justify-between p-3 bg-secondary-50/50 rounded-lg">
-                            <span className="font-medium text-text">{po.poNo}</span>
-                            <Link href="/purchase-orders">
-                              <Button variant="ghost" size="sm" className="text-primary-600">View</Button>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-secondary-500 text-sm py-4">No pending POs.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Location Wise & Recent Changes */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary-600" />
-                Location-wise Pattern Count
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {metrics?.locationWiseCount?.length ? metrics.locationWiseCount.map((loc, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-secondary-50/50 rounded-lg">
-                    <span className="font-medium text-text">{loc.locationName}</span>
-                    <span className="px-3 py-1 bg-white text-primary-600 rounded-full font-bold shadow-sm">{loc.count}</span>
-                  </div>
-                )) : (
-                  <p className="text-secondary-500 text-center py-4 italic">No location data.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="w-5 h-5 text-emerald-600" />
-                Recent Changes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {metrics?.recentChanges?.length ? metrics.recentChanges.map((log: { mainPartName?: string; oldName?: string; newName?: string; changeType?: string; createdAt?: string }, i: number) => (
-                  <div key={i} className="flex items-center justify-between text-sm p-3 border-b border-secondary-100 last:border-0">
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                     <div>
-                      <p className="font-semibold text-text">{log.mainPartName ?? "—"}</p>
-                      <p className="text-secondary-500">{log.oldName ?? "—"} → {log.newName ?? "—"}</p>
-                      {log.createdAt && (
-                        <p className="text-xs text-secondary-400 mt-1">{new Date(log.createdAt).toLocaleString()}</p>
-                      )}
+                      <label className={filterLabelClass}>Location</label>
+                      <select
+                        value={locationId === "" ? "" : locationId}
+                        onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
+                        className={selectClass}
+                      >
+                        <option value="">Select location</option>
+                        {metrics?.locationWiseCount?.map((loc) => (
+                          <option key={loc.locationId} value={loc.locationId}>
+                            {loc.locationName} ({loc.count})
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md font-medium shrink-0">{log.changeType ?? "—"}</span>
+                    <div className="relative">
+                      <label className={filterLabelClass}>Search</label>
+                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                        placeholder="Name, drawing…"
+                        className={cn(inputClass, "pl-9")}
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>Item Type</label>
+                      <select
+                        value={locationItemTypeId === "" ? "" : locationItemTypeId}
+                        onChange={(e) => setLocationItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
+                        className={selectClass}
+                      >
+                        <option value="">All</option>
+                        {itemTypes.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>Item Condition</label>
+                      <select
+                        value={locationStatusId === "" ? "" : locationStatusId}
+                        onChange={(e) => setLocationStatusId(e.target.value === "" ? "" : Number(e.target.value))}
+                        className={selectClass}
+                      >
+                        <option value="">All</option>
+                        {itemStatuses.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Item</label>
+                      <MultiSelectSearch
+                        options={itemOptions}
+                        value={locationItemIds as (number | string)[]}
+                        onChange={(v) => setLocationItemIds(v as number[])}
+                        placeholder="Select item"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
                   </div>
-                )) : (
-                  <p className="text-secondary-500 text-center py-4 italic">No recent changes</p>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => handleExport("location")}
+                      disabled={loadingLocationWise || (typeof locationId !== "number")}
+                      className="shadow-sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </Button>
+                  </div>
+                </div>
+                <div className="border-t border-secondary-100 overflow-x-auto">
+                  {typeof locationId !== "number" ? (
+                    <div className="py-12 text-center text-secondary-500">
+                      Select a location to view items at that location.
+                    </div>
+                  ) : loadingLocationWise ? (
+                    <div className="py-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                      <p className="mt-4 text-secondary-600">Loading...</p>
+                    </div>
+                  ) : locationWiseItems.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Condition</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {locationWiseItems.map((row, idx) => (
+                          <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                            <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                            <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{row.statusName ?? "—"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-12 text-center text-secondary-500">
+                      No items at this location match your filters.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Patterns at Vendor Table */}
+        <AnimatePresence>
+          {expandedSection === "at-vendor" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="shadow-lg border border-secondary-200">
+                <div className="border-b border-secondary-200 px-4 py-3">
+                  <h2 className="text-xl font-bold text-text">Patterns at Vendor</h2>
+                  <p className="text-sm text-secondary-500 mt-0.5">
+                    Die and pattern currently at vendor (In Jobwork / At Vendor). Filter by vendor, item, and type.
+                  </p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="relative">
+                      <label className={filterLabelClass}>Search</label>
+                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={vendorSearch}
+                        onChange={(e) => setVendorSearch(e.target.value)}
+                        placeholder="Name, drawing…"
+                        className={cn(inputClass, "pl-9")}
+                      />
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Vendor</label>
+                      <MultiSelectSearch
+                        options={vendorOptions}
+                        value={vendorIds as (number | string)[]}
+                        onChange={(v) => setVendorIds(v as number[])}
+                        placeholder="Select vendor"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Item</label>
+                      <MultiSelectSearch
+                        options={itemOptions}
+                        value={atVendorItemIds as (number | string)[]}
+                        onChange={(v) => setAtVendorItemIds(v as number[])}
+                        placeholder="Select item"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>Item Type</label>
+                      <select
+                        value={atVendorItemTypeId === "" ? "" : atVendorItemTypeId}
+                        onChange={(e) => setAtVendorItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
+                        className={selectClass}
+                      >
+                        <option value="">All</option>
+                        {itemTypes.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={() => handleExport("at-vendor")} disabled={loadingAtVendor} className="shadow-sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-secondary-100 overflow-x-auto">
+                  {loadingAtVendor ? (
+                    <div className="py-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                      <p className="mt-4 text-secondary-600">Loading...</p>
+                    </div>
+                  ) : itemsAtVendor.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itemsAtVendor.map((row, idx) => (
+                          <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                            <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                            <TableCell className="px-4 py-3 font-medium text-text">{row.vendorName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                                {row.currentProcess}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-12 text-center text-secondary-500">
+                      No patterns at vendor match your filters.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Pending PI Table */}
+        <AnimatePresence>
+          {expandedSection === "pending-pi" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="shadow-lg border border-secondary-200">
+                <div className="border-b border-secondary-200 px-4 py-3">
+                  <h2 className="text-xl font-bold text-text">Pending PI</h2>
+                  <p className="text-sm text-secondary-500 mt-0.5">
+                    Purchase indents awaiting approval. Approve or reject from here.
+                  </p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="relative">
+                      <label className={filterLabelClass}>Search</label>
+                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={pendingPISearch}
+                        onChange={(e) => setPendingPISearch(e.target.value)}
+                        placeholder="PI No., creator, remarks…"
+                        className={cn(inputClass, "pl-9")}
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>Created From</label>
+                      <DatePicker
+                        value={pendingPIDateFrom}
+                        onChange={(d) => setPendingPIDateFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="From"
+                        clearable
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>Created To</label>
+                      <DatePicker
+                        value={pendingPIDateTo}
+                        onChange={(d) => setPendingPIDateTo(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="To"
+                        clearable
+                      />
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Item</label>
+                      <MultiSelectSearch
+                        options={itemOptions}
+                        value={pendingPIItemIds as (number | string)[]}
+                        onChange={(v) => setPendingPIItemIds(v as number[])}
+                        placeholder="Select item"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={() => handleExport("pending-pi")} disabled={loadingPendingPI} className="shadow-sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-secondary-100 overflow-x-auto">
+                  {loadingPendingPI ? (
+                    <div className="py-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                      <p className="mt-4 text-secondary-600">Loading...</p>
+                    </div>
+                  ) : pendingPIList.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PI No</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Type</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingPIList.map((pi) => (
+                          <TableRow key={pi.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                            <TableCell className="px-4 py-3 font-medium text-text">{pi.piNo}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{pi.type}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                                {pi.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600 text-sm">
+                              {format(new Date(pi.createdAt), "dd MMM yyyy, HH:mm")}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{pi.creatorName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-right pr-6">
+                              <div className="flex items-center justify-end gap-1">
+                                {permissions?.approvePI && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "approve" })} className="flex items-center gap-2 py-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        Approve
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "reject" })} className="flex items-center gap-2 py-2">
+                                        <XCircle className="w-4 h-4 text-rose-600" />
+                                        Reject
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPIId(pi.id)} title="Preview">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Link href="/purchase-indents">
+                                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                                    Open PI
+                                  </Button>
+                                </Link>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-12 text-center text-secondary-500">
+                      No pending PIs match your filters.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Pending PO Table */}
+        <AnimatePresence>
+          {expandedSection === "pending-po" && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="shadow-lg border border-secondary-200">
+                <div className="border-b border-secondary-200 px-4 py-3">
+                  <h2 className="text-xl font-bold text-text">Pending PO</h2>
+                  <p className="text-sm text-secondary-500 mt-0.5">
+                    Purchase orders awaiting approval. Approve or reject from here.
+                  </p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="relative">
+                      <label className={filterLabelClass}>Search</label>
+                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={pendingPOSearch}
+                        onChange={(e) => setPendingPOSearch(e.target.value)}
+                        placeholder="PO No., vendor, remarks…"
+                        className={cn(inputClass, "pl-9")}
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>PO Date From</label>
+                      <DatePicker
+                        value={pendingPODateFrom}
+                        onChange={(d) => setPendingPODateFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="From"
+                        clearable
+                      />
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>PO Date To</label>
+                      <DatePicker
+                        value={pendingPODateTo}
+                        onChange={(d) => setPendingPODateTo(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="To"
+                        clearable
+                      />
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Vendor</label>
+                      <MultiSelectSearch
+                        options={vendorOptions}
+                        value={pendingPOVendorIds as (number | string)[]}
+                        onChange={(v) => setPendingPOVendorIds(v as number[])}
+                        placeholder="Select vendor"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-secondary-100 overflow-x-auto">
+                  {loadingPendingPO ? (
+                    <div className="py-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                      <p className="mt-4 text-secondary-600">Loading...</p>
+                    </div>
+                  ) : pendingPOList.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingPOList.map((po) => (
+                          <TableRow key={po.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                            <TableCell className="px-4 py-3 font-medium text-text">{po.poNo}</TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{po.vendorName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                                {po.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600 text-sm">
+                              {format(new Date(po.createdAt), "dd MMM yyyy, HH:mm")}
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-secondary-600">{po.creatorName ?? "—"}</TableCell>
+                            <TableCell className="px-4 py-3 text-right pr-6">
+                              <div className="flex items-center justify-end gap-1">
+                                {permissions?.approvePO && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "approve" })} className="flex items-center gap-2 py-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        Approve
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "reject" })} className="flex items-center gap-2 py-2">
+                                        <XCircle className="w-4 h-4 text-rose-600" />
+                                        Reject
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPOId(po.id)} title="Preview">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Link href="/purchase-orders">
+                                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                                    Open PO
+                                  </Button>
+                                </Link>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-12 text-center text-secondary-500">
+                      No pending POs match your filters.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Approve / Reject Dialog */}
+        <Dialog
+          isOpen={!!approvalTarget}
+          onClose={() => setApprovalTarget(null)}
+          title={approvalTarget?.action === "approve" ? (approvalTarget.type === "pi" ? "Approve Purchase Indent" : "Approve Purchase Order") : (approvalTarget?.type === "pi" ? "Reject Purchase Indent" : "Reject Purchase Order")}
+          size="sm"
+        >
+          <div className="space-y-4 font-sans">
+            <p className="text-secondary-600">
+              Are you sure you want to{" "}
+              <span className={approvalTarget?.action === "approve" ? "text-green-600 font-bold uppercase" : "text-rose-600 font-bold uppercase"}>
+                {approvalTarget?.action}
+              </span>{" "}
+              {approvalTarget?.type === "pi" ? `indent ${approvalTarget.pi.piNo}` : `order ${approvalTarget?.po.poNo}`}?
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setApprovalTarget(null)} className="flex-1 font-bold">
+                Cancel
+              </Button>
+              <Button
+                className={cn(
+                  "flex-1 text-white font-bold",
+                  approvalTarget?.action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-rose-600 hover:bg-rose-700"
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                onClick={() => {
+                  if (!approvalTarget) return;
+                  if (approvalTarget.type === "pi") {
+                    if (approvalTarget.action === "approve") approvePIMutation.mutate(approvalTarget.pi.id);
+                    else rejectPIMutation.mutate(approvalTarget.pi.id);
+                  } else {
+                    if (approvalTarget.action === "approve") approvePOMutation.mutate(approvalTarget.po.id);
+                    else rejectPOMutation.mutate(approvalTarget.po.id);
+                  }
+                }}
+                disabled={
+                  approvePIMutation.isPending ||
+                  rejectPIMutation.isPending ||
+                  approvePOMutation.isPending ||
+                  rejectPOMutation.isPending
+                }
+              >
+                {approvePIMutation.isPending || rejectPIMutation.isPending || approvePOMutation.isPending || rejectPOMutation.isPending
+                  ? "Processing..."
+                  : `Confirm ${approvalTarget?.action === "approve" ? "Approve" : "Reject"}`}
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+
+        {previewPIId != null && (
+          <PurchaseIndentPreviewModal piId={previewPIId} onClose={() => setPreviewPIId(null)} />
+        )}
+        {previewPOId != null && (
+          <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
+        )}
       </motion.div>
     </div>
   );

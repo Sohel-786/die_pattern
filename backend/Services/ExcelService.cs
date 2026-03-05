@@ -285,6 +285,178 @@ namespace net_backend.Services
             }
         }
 
+        public byte[] GenerateLocationWiseItemsExcel(IEnumerable<LocationWiseItemRowDto> rows)
+        {
+            var rowList = rows?.ToList() ?? new List<LocationWiseItemRowDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Location Wise Items");
+                var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(1, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                int rowIdx = 2;
+                foreach (var r in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = r.LocationName ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = r.MainPartName ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.CurrentName ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.DrawingNo ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.ItemTypeName ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = r.StatusName ?? "";
+                    rowIdx++;
+                }
+                worksheet.Column(1).Width = 22;
+                worksheet.Column(2).Width = 28;
+                worksheet.Column(3).Width = 24;
+                worksheet.Column(4).Width = 16;
+                worksheet.Column(5).Width = 14;
+                worksheet.Column(6).Width = 14;
+                if (rowList.Count > 0)
+                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
+        public byte[] GenerateItemsAtVendorExcel(IEnumerable<ItemAtVendorRowDto> rows)
+        {
+            var rowList = rows?.ToList() ?? new List<ItemAtVendorRowDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Patterns at Vendor");
+                var headers = new[] { "Vendor", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Process" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(1, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                int rowIdx = 2;
+                foreach (var r in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = r.VendorName ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = r.MainPartName ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.CurrentName ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.DrawingNo ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.ItemTypeName ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = r.CurrentProcess ?? "";
+                    rowIdx++;
+                }
+                worksheet.Column(1).Width = 24;
+                worksheet.Column(2).Width = 28;
+                worksheet.Column(3).Width = 24;
+                worksheet.Column(4).Width = 16;
+                worksheet.Column(5).Width = 14;
+                worksheet.Column(6).Width = 14;
+                if (rowList.Count > 0)
+                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
+        public byte[] GeneratePendingPIExcel(IEnumerable<PendingPIRowDto> rows)
+        {
+            var rowList = rows?.ToList() ?? new List<PendingPIRowDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Pending PI");
+                var headers = new[] { "PI No", "Type", "Status", "Remarks", "Created At", "Created By", "Item Count" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(1, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                int rowIdx = 2;
+                foreach (var r in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = r.PiNo ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = r.Type ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.Status ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.Remarks ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.CreatedAt;
+                    worksheet.Cell(rowIdx, 5).Style.DateFormat.Format = "dd-mmm-yyyy hh:mm";
+                    worksheet.Cell(rowIdx, 6).Value = r.CreatorName ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = r.ItemCount;
+                    rowIdx++;
+                }
+                worksheet.Column(1).Width = 18;
+                worksheet.Column(2).Width = 14;
+                worksheet.Column(3).Width = 12;
+                worksheet.Column(4).Width = 28;
+                worksheet.Column(5).Width = 18;
+                worksheet.Column(6).Width = 22;
+                worksheet.Column(7).Width = 12;
+                if (rowList.Count > 0)
+                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
+        public byte[] GeneratePendingPOExcel(IEnumerable<PendingPORowDto> rows)
+        {
+            var rowList = rows?.ToList() ?? new List<PendingPORowDto>();
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Pending PO");
+                var headers = new[] { "PO No", "Vendor", "Status", "Remarks", "Created At", "Created By" };
+                for (int c = 0; c < headers.Length; c++)
+                {
+                    var cell = worksheet.Cell(1, c + 1);
+                    cell.Value = headers[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                int rowIdx = 2;
+                foreach (var r in rowList)
+                {
+                    worksheet.Cell(rowIdx, 1).Value = r.PoNo ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = r.VendorName ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.Status ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.Remarks ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.CreatedAt;
+                    worksheet.Cell(rowIdx, 5).Style.DateFormat.Format = "dd-mmm-yyyy hh:mm";
+                    worksheet.Cell(rowIdx, 6).Value = r.CreatorName ?? "";
+                    rowIdx++;
+                }
+                worksheet.Column(1).Width = 18;
+                worksheet.Column(2).Width = 24;
+                worksheet.Column(3).Width = 12;
+                worksheet.Column(4).Width = 28;
+                worksheet.Column(5).Width = 18;
+                worksheet.Column(6).Width = 22;
+                if (rowList.Count > 0)
+                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
+        }
+
         private string SplitCamelCase(string input)
         {
             if (string.IsNullOrEmpty(input)) return input;
