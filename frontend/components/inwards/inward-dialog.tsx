@@ -160,6 +160,9 @@ export function InwardDialog({
                 hasActiveQC: l.hasActiveQC,
                 included: true
             })));
+            if (inward.lines && inward.lines.length > 0) {
+                setSelectedSourceType(inward.lines[0].sourceType);
+            }
             setAttachmentUrls((inward.attachmentUrls as string[]) || []);
             setPendingAttachmentFiles([]);
             setAttachmentUrlsToDelete([]);
@@ -652,6 +655,7 @@ export function InwardDialog({
                 onSelect={handleAddItems}
                 alreadySelectedIds={lines.filter(l => l.sourceType === selectedSourceType).map(l => l.sourceRefId)}
                 vendorId={vendorId}
+                excludeInwardId={inwardId}
             />
         </Dialog>
     );

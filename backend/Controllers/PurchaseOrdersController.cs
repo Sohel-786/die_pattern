@@ -248,13 +248,18 @@ namespace net_backend.Controllers
         }
 
         [HttpGet("approved")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetApproved([FromQuery] int? vendorId)
+        public async Task<ActionResult<ApiResponse<IEnumerable<PODto>>>> GetApproved([FromQuery] int? vendorId, [FromQuery] int? excludeInwardId)
         {
             var locationId = await GetCurrentLocationIdAsync();
             
             // Group by SourceRefId and ItemId to count how many of each item have been inwarded
-            var inwardedCounts = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.IsActive && l.SourceRefId.HasValue)
+            var inwardLinesQuery = _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.PO && l.Inward!.IsActive && l.SourceRefId.HasValue);
+
+            if (excludeInwardId.HasValue && excludeInwardId.Value > 0)
+                inwardLinesQuery = inwardLinesQuery.Where(l => l.InwardId != excludeInwardId.Value);
+
+            var inwardedCounts = await inwardLinesQuery
                 .GroupBy(l => new { l.SourceRefId, l.ItemId })
                 .Select(g => new { g.Key.SourceRefId, g.Key.ItemId, Count = g.Count() })
                 .ToListAsync();

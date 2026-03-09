@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo, Fragment } from "react";
+import { useState, useCallback, useMemo, Fragment, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, ChevronRight, Minus, Edit2,
@@ -30,6 +31,7 @@ import { JobWorkDialog } from "@/components/job-works/job-work-dialog";
 import { JobWorkFilters } from "@/components/filters/job-work-filters";
 import { initialJobWorkFilters, JobWorkFiltersState } from "@/lib/job-work-filters";
 import { toast } from "react-hot-toast";
+import { registerDialog } from "@/lib/dialog-stack";
 
 /**
  * Intelligent status mapping based on the user's defined flow:
@@ -299,21 +301,33 @@ export default function JobWorksPage() {
                                                         </Button>
                                                     )}
                                                     {isAdmin && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                if (jw.isActive) setInactiveTarget(jw);
-                                                                else toggleActiveMutation.mutate({ id: jw.id, active: true });
-                                                            }}
-                                                            className={cn(
-                                                                "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
-                                                                jw.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
-                                                            )}
-                                                            title={jw.isActive ? "Deactivate" : "Activate"}
-                                                        >
-                                                            {jw.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                        </Button>
+                                                        jw.isActive ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                disabled={jw.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-"))}
+                                                                onClick={() => setInactiveTarget(jw)}
+                                                                className={cn(
+                                                                    "h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100",
+                                                                    jw.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-")) && "opacity-30 cursor-not-allowed"
+                                                                )}
+                                                                title={jw.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-"))
+                                                                    ? "Cannot deactivate because some items have been inwarded in active entries"
+                                                                    : "Deactivate Job Work"}
+                                                            >
+                                                                <Ban className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => toggleActiveMutation.mutate({ id: jw.id, active: true })}
+                                                                className="h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-100"
+                                                                title="Activate Job Work"
+                                                            >
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        )
                                                     )}
                                                 </div>
                                             </td>
@@ -515,6 +529,14 @@ export default function JobWorksPage() {
 // Separate component for preview matching PO standard
 function JobWorkPreviewModal({ jwId, onClose }: { jwId: number; onClose: () => void }) {
     const { data: currentCompany } = useCurrentCompany();
+
+    // Use global dialog stack for Esc handling
+    useEffect(() => {
+        if (jwId) {
+            return registerDialog(onClose);
+        }
+    }, [jwId, onClose]);
+
     const { data: jw, isLoading } = useQuery<JobWork>({
         queryKey: ["job-work", jwId],
         queryFn: async () => {
@@ -528,8 +550,8 @@ function JobWorkPreviewModal({ jwId, onClose }: { jwId: number; onClose: () => v
 
     const handlePrint = () => window.print();
 
-    return (
-        <div className="fixed inset-0 z-[1100] flex flex-col bg-white font-sans">
+    const content = (
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-white font-sans">
             <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-secondary-200 bg-secondary-50 print:hidden">
                 <h2 className="text-lg font-bold text-secondary-900">Job Work Challan – Preview</h2>
                 <div className="flex items-center gap-2">
@@ -667,4 +689,10 @@ function JobWorkPreviewModal({ jwId, onClose }: { jwId: number; onClose: () => v
               `}} />
         </div>
     );
+
+    if (typeof document !== "undefined") {
+        return createPortal(content, document.body);
+    }
+
+    return content;
 }

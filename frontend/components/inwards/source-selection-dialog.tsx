@@ -18,6 +18,7 @@ interface SourceSelectionDialogProps {
     onSelect: (items: any[]) => void;
     alreadySelectedIds: number[];
     vendorId: number;
+    excludeInwardId?: number | null;
 }
 
 export function SourceSelectionDialog({
@@ -26,7 +27,8 @@ export function SourceSelectionDialog({
     sourceType,
     onSelect,
     alreadySelectedIds,
-    vendorId
+    vendorId,
+    excludeInwardId
 }: SourceSelectionDialogProps) {
     const [search, setSearch] = useState("");
     const [tempSelectedIds, setTempSelectedIds] = useState<number[]>([]);
@@ -39,13 +41,15 @@ export function SourceSelectionDialog({
     }, [isOpen]);
 
     const { data: sources = [], isLoading } = useQuery({
-        queryKey: ["inward-sources", sourceType, vendorId],
+        queryKey: ["inward-sources", sourceType, vendorId, excludeInwardId],
         queryFn: async () => {
             let url = "";
             if (sourceType === InwardSourceType.PO) url = "/purchase-orders/approved";
             else if (sourceType === InwardSourceType.JobWork) url = "/job-works/pending";
 
-            const params = vendorId ? { vendorId } : {};
+            const params: any = vendorId ? { vendorId } : {};
+            if (excludeInwardId) params.excludeInwardId = excludeInwardId;
+
             const res = await api.get(url, { params });
             return res.data.data ?? [];
         },

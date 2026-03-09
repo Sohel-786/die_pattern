@@ -29,7 +29,7 @@ namespace net_backend.Controllers
         }
 
         [HttpGet("pending")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetPending([FromQuery] int? vendorId)
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetPending([FromQuery] int? vendorId, [FromQuery] int? excludeInwardId)
         {
             var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             
@@ -40,7 +40,7 @@ namespace net_backend.Controllers
                 .Include(i => i.JobWork)
                     .ThenInclude(jw => jw!.Location)
                 .Include(i => i.Item)
-                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.Location!.CompanyId == companyId && i.JobWork.IsActive && i.JobWork.Status != JobWorkStatus.Completed)
+                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.Location!.CompanyId == companyId && i.JobWork.IsActive)
                 .AsQueryable();
 
             if (vendorId.HasValue && vendorId > 0)
@@ -48,9 +48,14 @@ namespace net_backend.Controllers
 
             var list = await query.ToListAsync();
 
-            // Filter out items already fully inwarded
-            var inwardedItems = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.JobWork && l.Inward!.IsActive && l.SourceRefId.HasValue)
+            // Filter out items already fully inwarded (excluding those in the current inward being edited)
+            var inwardLinesQuery = _context.InwardLines
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.Inward!.IsActive && l.SourceRefId.HasValue);
+
+            if (excludeInwardId.HasValue && excludeInwardId.Value > 0)
+                inwardLinesQuery = inwardLinesQuery.Where(l => l.InwardId != excludeInwardId.Value);
+
+            var inwardedItems = await inwardLinesQuery
                 .Select(l => new { jwId = l.SourceRefId!.Value, itemId = l.ItemId })
                 .ToListAsync();
 
