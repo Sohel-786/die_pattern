@@ -14,11 +14,13 @@ namespace net_backend.Controllers
     {
         private readonly ICodeGeneratorService _codeGenerator;
         private readonly IWebHostEnvironment _env;
+        private readonly IItemStateService _itemState;
 
-        public InwardsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env) : base(context)
+        public InwardsController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env, IItemStateService itemState) : base(context)
         {
             _codeGenerator = codeGenerator;
             _env = env;
+            _itemState = itemState;
         }
 
         // ── Helper: resolve a storage folder for an inward ───────────────────────────
@@ -133,10 +135,11 @@ namespace net_backend.Controllers
             if (sourceType.HasValue)
                 query = query.Where(i => i.Lines.Any(l => l.SourceType == sourceType.Value));
 
-            if (isActive.HasValue)
-                query = query.Where(i => i.IsActive == isActive.Value);
-            else if (!await IsAdmin())
+            // SECURITY: Only Admin can see inactive entries. For others, force only active records.
+            if (!await IsAdmin())
                 query = query.Where(i => i.IsActive);
+            else if (isActive.HasValue)
+                query = query.Where(i => i.IsActive == isActive.Value);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -252,6 +255,22 @@ namespace net_backend.Controllers
                         Success = false, 
                         Message = "Cannot deactivate Inward entry because one or more items are currently under Quality Control or have already been inspected in an active entry." 
                     });
+                }
+
+                // Rule 3b: PRODUCTION-LEVEL TRACEABILITY: 
+                // Cannot deactivate if a LATER active transaction exists for any item.
+                foreach (var line in inward.Lines)
+                {
+                    var (hasDescendant, txInfo) = await _itemState.CheckForDescendantTransactionsAsync(line.ItemId, inward.CreatedAt, inward.Id, "Inward");
+                    if (hasDescendant)
+                    {
+                        var item = await _context.Items.FindAsync(line.ItemId);
+                        return BadRequest(new ApiResponse<bool>
+                        {
+                            Success = false,
+                            Message = $"Cannot deactivate Inward {inward.InwardNo}: Item '{item?.MainPartName}' has a subsequent active operation: {txInfo}. You must deactivate the latest operation first."
+                        });
+                    }
                 }
                 
                 // Rule 4: Revert item states

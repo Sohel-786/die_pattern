@@ -14,11 +14,13 @@ namespace net_backend.Controllers
     {
         private readonly ICodeGeneratorService _codeGenerator;
         private readonly IWebHostEnvironment _env;
+        private readonly IItemStateService _itemState;
 
-        public QualityControlController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env) : base(context)
+        public QualityControlController(ApplicationDbContext context, ICodeGeneratorService codeGenerator, IWebHostEnvironment env, IItemStateService itemState) : base(context)
         {
             _codeGenerator = codeGenerator;
             _env = env;
+            _itemState = itemState;
         }
 
         // ── Temp Upload (stored in temp dir, URL returned to client) ──────────────────
@@ -128,10 +130,12 @@ namespace net_backend.Controllers
                 query = query.Where(q => partyIds.Contains(q.PartyId));
             if (status.HasValue)
                 query = query.Where(q => q.Status == status.Value);
-            if (isActive.HasValue)
-                query = query.Where(q => q.IsActive == isActive.Value);
-            else if (!await IsAdmin())
+            // SECURITY: Only Admin can see inactive entries. For others, force only active records.
+            if (!await IsAdmin())
                 query = query.Where(q => q.IsActive);
+            else if (isActive.HasValue)
+                query = query.Where(q => q.IsActive == isActive.Value);
+                
             if (startDate.HasValue)
                 query = query.Where(q => q.CreatedAt >= startDate.Value);
             if (endDate.HasValue)
@@ -577,6 +581,23 @@ namespace net_backend.Controllers
 
             if (entry.Status == QcStatus.Approved)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Approved QC entries cannot be deactivated." });
+
+            // Rule 3: PRODUCTION-LEVEL TRACEABILITY: 
+            // Cannot deactivate if a LATER active transaction exists for any item.
+            foreach (var qi in entry.Items)
+            {
+                if (qi.InwardLine == null) continue;
+                var (hasDescendant, txInfo) = await _itemState.CheckForDescendantTransactionsAsync(qi.InwardLine.ItemId, entry.CreatedAt, entry.Id, "QC");
+                if (hasDescendant)
+                {
+                    var item = await _context.Items.FindAsync(qi.InwardLine.ItemId);
+                    return BadRequest(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = $"Cannot deactivate QC Entry {entry.QcNo}: Item '{item?.MainPartName}' has a subsequent active operation: {txInfo}. You must deactivate that operation first."
+                    });
+                }
+            }
 
             entry.IsActive = false;
             entry.UpdatedAt = DateTime.Now;

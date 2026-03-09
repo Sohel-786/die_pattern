@@ -76,5 +76,61 @@ namespace net_backend.Services
                 _ => "Not In Stock"
             };
         }
+
+        public async Task<(bool, string)> CheckForDescendantTransactionsAsync(int itemId, DateTime transactionCreatedAt, int transactionId, string transactionType)
+        {
+            // Transaction Types used here as generic identifiers for descendants:
+            // Transfer, Inward, JobWork, QC, PI, PO (PO depends on PI)
+
+            // 1. Check newer Transfers (excluding the currently processing one if it's a Transfer)
+            var laterTransfer = await _context.TransferItems
+                .AsNoTracking()
+                .Include(ti => ti.Transfer)
+                .Where(ti => ti.ItemId == itemId && ti.Transfer!.IsActive && 
+                       ti.TransferId != (transactionType == "Transfer" ? transactionId : -1) &&
+                       (ti.Transfer!.CreatedAt > transactionCreatedAt || (ti.Transfer!.CreatedAt == transactionCreatedAt && ti.TransferId > transactionId)))
+                .OrderBy(ti => ti.Transfer!.CreatedAt)
+                .Select(ti => new { ti.Transfer!.TransferNo, ti.Transfer!.CreatedAt, ti.TransferId })
+                .FirstOrDefaultAsync();
+            if (laterTransfer != null) return (true, $"Transfer {laterTransfer.TransferNo} (created {laterTransfer.CreatedAt:dd-MMM-yyyy HH:mm:ss})");
+
+            // 2. Check newer Inwards
+            var laterInward = await _context.InwardLines
+                .AsNoTracking()
+                .Include(l => l.Inward)
+                .Where(l => l.ItemId == itemId && l.Inward!.IsActive && 
+                       l.InwardId != (transactionType == "Inward" ? transactionId : -1) &&
+                       (l.Inward!.CreatedAt > transactionCreatedAt || (l.Inward!.CreatedAt == transactionCreatedAt && l.InwardId > transactionId)))
+                .OrderBy(l => l.Inward!.CreatedAt)
+                .Select(l => new { l.Inward!.InwardNo, l.Inward!.CreatedAt })
+                .FirstOrDefaultAsync();
+            if (laterInward != null) return (true, $"Inward {laterInward.InwardNo} (created {laterInward.CreatedAt:dd-MMM-yyyy HH:mm:ss})");
+
+            // 3. Check newer Job Works
+            var laterJobwork = await _context.JobWorkItems
+                .AsNoTracking()
+                .Include(jwi => jwi.JobWork)
+                .Where(jwi => jwi.ItemId == itemId && jwi.JobWork!.IsActive && 
+                       jwi.JobWorkId != (transactionType == "JobWork" ? transactionId : -1) &&
+                       (jwi.JobWork!.CreatedAt > transactionCreatedAt || (jwi.JobWork!.CreatedAt == transactionCreatedAt && jwi.JobWorkId > transactionId)))
+                .OrderBy(jwi => jwi.JobWork!.CreatedAt)
+                .Select(jwi => new { jwi.JobWork!.JobWorkNo, jwi.JobWork!.CreatedAt })
+                .FirstOrDefaultAsync();
+            if (laterJobwork != null) return (true, $"Job Work {laterJobwork.JobWorkNo} (created {laterJobwork.CreatedAt:dd-MMM-yyyy HH:mm:ss})");
+
+            // 4. Check newer QC Entries
+            var laterQC = await _context.QcItems
+                .AsNoTracking()
+                .Include(qi => qi.QcEntry)
+                .Where(qi => qi.InwardLine!.ItemId == itemId && qi.QcEntry!.IsActive && 
+                       qi.QcEntryId != (transactionType == "QC" ? transactionId : -1) &&
+                       (qi.QcEntry!.CreatedAt > transactionCreatedAt || (qi.QcEntry!.CreatedAt == transactionCreatedAt && qi.QcEntryId > transactionId)))
+                .OrderBy(qi => qi.QcEntry!.CreatedAt)
+                .Select(qi => new { qi.QcEntry!.QcNo, qi.QcEntry!.CreatedAt })
+                .FirstOrDefaultAsync();
+            if (laterQC != null) return (true, $"QC Entry {laterQC.QcNo} (created {laterQC.CreatedAt:dd-MMM-yyyy HH:mm:ss})");
+
+            return (false, string.Empty);
+        }
     }
 }

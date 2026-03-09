@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { TransferItemSelectionDialog } from "./transfer-item-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { useLocationContext } from "@/contexts/location-context";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 
 interface TransferGridItem {
     itemId: number;
@@ -37,7 +38,10 @@ interface TransferDialogProps {
 
 export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogProps) {
     const isEditing = !!transfer?.id;
-    const isReadOnly = isEditing;
+    const { data: permissions } = useCurrentUserPermissions(open);
+    const canEdit = !!permissions?.editTransfer;
+    const lockStructure = isEditing && !!transfer?.isActive; // active transfer: don't allow changing parties/items
+    const isReadOnly = isEditing ? !canEdit : false;
     const queryClient = useQueryClient();
     const { selected } = useLocationContext();
 
@@ -45,7 +49,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const [toPartyId, setToPartyId] = useState<number | null>(null);
     const [transferDate, setTransferDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
     const [remarks, setRemarks] = useState("");
-    const [outFor, setOutFor] = useState("");
+    const [outFor, setOutFor] = useState("Casting");
     const [reasonDetails, setReasonDetails] = useState("");
     const [vehicleNo, setVehicleNo] = useState("");
     const [personName, setPersonName] = useState("");
@@ -75,7 +79,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             setToPartyId(transfer.toPartyId ?? 0);
             setTransferDate(format(new Date(transfer.transferDate), "yyyy-MM-dd"));
             setRemarks(transfer.remarks || "");
-            setOutFor(transfer.outFor || "");
+            setOutFor(transfer.outFor || "Casting");
             setReasonDetails(transfer.reasonDetails || "");
             setVehicleNo(transfer.vehicleNo || "");
             setPersonName(transfer.personName || "");
@@ -98,7 +102,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             setToPartyId(null);
             setTransferDate(format(new Date(), "yyyy-MM-dd"));
             setRemarks("");
-            setOutFor("");
+            setOutFor("Casting");
             setReasonDetails("");
             setVehicleNo("");
             setPersonName("");
@@ -148,7 +152,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
 
     // No auto-switching logic - USER request: allow any selection for both fields.
 
-    const mutation = useMutation({
+    const createMutation = useMutation({
         mutationFn: async (payload: CreateTransfer) => api.post("/transfers", payload),
         onSuccess: () => {
             toast.success("Transfer created successfully");
@@ -157,6 +161,20 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             onOpenChange(false);
         },
         onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to create Transfer")
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: async (payload: CreateTransfer) => {
+            if (!transfer?.id) throw new Error("Missing transfer id");
+            return api.put(`/transfers/${transfer.id}`, payload);
+        },
+        onSuccess: () => {
+            toast.success("Transfer updated successfully");
+            queryClient.invalidateQueries({ queryKey: ["transfers"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
+            onOpenChange(false);
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to update Transfer")
     });
 
     const addItems = (selectedItems: Item[]) => {
@@ -217,6 +235,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
         if (items.length === 0) return toast.error("Please add at least one item");
         if (!vehicleNo.trim()) return toast.error("Vehicle No. is required");
         if (!personName.trim()) return toast.error("Person Name is required");
+        if (!reasonDetails.trim()) return toast.error("Reason Details is required");
 
         setUploading(true);
         try {
@@ -250,7 +269,11 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                 }))
             };
 
-            await mutation.mutateAsync(payload);
+            if (isEditing) {
+                await updateMutation.mutateAsync(payload);
+            } else {
+                await createMutation.mutateAsync(payload);
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.message || err.message || "Upload failed.");
         } finally {
@@ -258,7 +281,13 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
         }
     };
 
-    const isValid = toPartyId !== null && fromPartyId !== toPartyId && items.length > 0 && vehicleNo.trim() !== "" && personName.trim() !== "";
+    const isValid = toPartyId !== null &&
+        fromPartyId !== toPartyId &&
+        items.length > 0 &&
+        vehicleNo.trim() !== "" &&
+        personName.trim() !== "" &&
+        outFor !== "" &&
+        reasonDetails.trim() !== "";
 
     const fromAddress = useMemo(() => {
         if (fromPartyId === 0) return currentLocation?.address;
@@ -295,7 +324,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <Input readOnly value={format(new Date(transferDate + "T00:00:00"), "dd-MMM-yyyy")} className="h-8 mt-0.5 text-xs border-secondary-200 bg-secondary-50 font-semibold cursor-default" />
                             </div>
                             <div className="col-span-2">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Out For</Label>
+                                <Label className="text-[11px] font-semibold text-secondary-600">Out For <span className="text-rose-500">*</span></Label>
                                 <select value={outFor} onChange={(e) => setOutFor(e.target.value)} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 bg-white text-xs font-medium", isReadOnly && "bg-secondary-50 cursor-not-allowed")}>
                                     <option value="">Select...</option>
                                     <option value="Casting">Casting</option>
@@ -308,7 +337,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <div className="flex flex-col gap-1 items-end">
                                     <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Item Configuration</span>
                                     <div className="flex items-center gap-2">
-                                        {!isReadOnly && (
+                                        {!isReadOnly && !lockStructure && (
                                             <Button type="button" onClick={() => setItemSelectionOpen(true)} disabled={fromPartyId === null} className="h-8 px-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-[10px] uppercase tracking-widest gap-1.5 rounded-lg shadow-sm">
                                                 <Plus className="w-3.5 h-3.5" />
                                                 Add Items
@@ -332,12 +361,12 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         {/* Party Selection & Logistics Block */}
                         <div className="grid grid-cols-12 gap-3 bg-white p-3 rounded-lg border border-secondary-200/60 shadow-sm shrink-0">
                             <div className="col-span-4 flex flex-col gap-1.5">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Source (From) *</Label>
+                                <Label className="text-[11px] font-semibold text-secondary-600">From <span className="text-rose-500">*</span></Label>
                                 <SearchableSelect
                                     options={fromOptions}
                                     value={fromPartyId ?? ""}
                                     onChange={(val) => { setFromPartyId(val === "" ? null : Number(val)); setItems([]); }}
-                                    disabled={isReadOnly || items.length > 0}
+                                    disabled={isReadOnly || lockStructure || items.length > 0}
                                     placeholder="Choose source..."
                                 />
                                 <Label className="text-[11px] font-semibold text-secondary-500 mt-0.5">Address</Label>
@@ -346,12 +375,12 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 </div>
                             </div>
                             <div className="col-span-4 flex flex-col gap-1.5">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Destination (To) *</Label>
+                                <Label className="text-[11px] font-semibold text-secondary-600">To <span className="text-rose-500">*</span></Label>
                                 <SearchableSelect
                                     options={destinationOptions}
                                     value={toPartyId ?? ""}
                                     onChange={(val) => setToPartyId(val === "" ? null : Number(val))}
-                                    disabled={isReadOnly}
+                                    disabled={isReadOnly || lockStructure}
                                     placeholder="Choose destination..."
                                 />
                                 <Label className="text-[11px] font-semibold text-secondary-500 mt-0.5">Address</Label>
@@ -363,16 +392,16 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Logistics & Dispatch Details</span>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <Label className="text-[11px] font-semibold text-secondary-600">Vehicle No. *</Label>
+                                        <Label className="text-[11px] font-semibold text-secondary-600">Vehicle No. <span className="text-rose-500">*</span></Label>
                                         <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. GJ01..." readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <Label className="text-[11px] font-semibold text-secondary-600">Person Name *</Label>
+                                        <Label className="text-[11px] font-semibold text-secondary-600">Person Name <span className="text-rose-500">*</span></Label>
                                         <Input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Name..." readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-1.5 mt-0.5">
-                                    <Label className="text-[11px] font-semibold text-secondary-600">Reason Details</Label>
+                                    <Label className="text-[11px] font-semibold text-secondary-600">Reason Details <span className="text-rose-500">*</span></Label>
                                     <Input value={reasonDetails} onChange={(e) => setReasonDetails(e.target.value)} placeholder="e.g. FOR CASTING REPAIR" readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
                                 </div>
                             </div>
@@ -389,7 +418,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                             <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap w-40">Material / Type</th>
                                             <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap w-48">Technical Docs</th>
                                             <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Item Remarks</th>
-                                            {!isReadOnly && <th className="text-center py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider w-16">Action</th>}
+                                            {!isReadOnly && !lockStructure && <th className="text-center py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider w-16">Action</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary-100 bg-white">
@@ -424,7 +453,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                                     <td className="py-2 px-2 min-w-[160px]">
                                                         <Input value={item.remarks || ""} onChange={(e) => updateItem(item.itemId, "remarks", e.target.value)} disabled={isReadOnly} placeholder="Line notes..." className={cn("h-7 text-[11px] border-secondary-200 focus:border-primary-400 bg-secondary-50/30 rounded", isReadOnly && "opacity-50 cursor-not-allowed")} />
                                                     </td>
-                                                    {!isReadOnly && (
+                                                    {!isReadOnly && !lockStructure && (
                                                         <td className="py-2 px-2 text-center">
                                                             <Button variant="ghost" size="sm" onClick={() => removeItem(item.itemId)} className="h-7 w-7 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-full">
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -458,10 +487,10 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         {!isReadOnly && (
                             <Button
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending || uploading || items.length === 0 || !isValid}
+                                disabled={createMutation.isPending || updateMutation.isPending || uploading || items.length === 0 || !isValid || (isEditing && !canEdit)}
                                 className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                             >
-                                {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                                {createMutation.isPending || updateMutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                                 {isEditing ? "Update" : "Save"}
                             </Button>
                         )}

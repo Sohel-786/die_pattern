@@ -115,17 +115,14 @@ namespace net_backend.Controllers
             if (status.HasValue)
                 query = query.Where(j => j.Status == status.Value);
             
-            if (isActive.HasValue)
+            // SECURITY: Only Admin can see inactive entries. For others, force only active records.
+            if (!await IsAdmin())
+            {
+                query = query.Where(j => j.IsActive);
+            }
+            else if (isActive.HasValue)
             {
                 query = query.Where(j => j.IsActive == isActive.Value);
-            }
-            else
-            {
-                // If no state filter, default to showing only active records for non-admins
-                if (!await IsAdmin())
-                {
-                    query = query.Where(j => j.IsActive);
-                }
             }
 
             if (partyIds != null && partyIds.Length > 0)
@@ -475,7 +472,7 @@ namespace net_backend.Controllers
 
             if (!active)
             {
-                // Rule 1: Cannot inactivate if any item is already inwarded
+                // Rule 1: Cannot inactivate if any item is already inwarded (Standard check)
                 var inwardedItems = await _context.InwardLines
                     .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == id && l.Inward!.IsActive)
                     .AnyAsync();
@@ -483,6 +480,22 @@ namespace net_backend.Controllers
                 if (inwardedItems)
                 {
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot inactivate Job Work because one or more items have already been inwarded." });
+                }
+
+                // Rule 1b: PRODUCTION-LEVEL TRACEABILITY: 
+                // Cannot deactivate if a LATER active transaction exists for any item.
+                foreach (var jwi in jw.Items)
+                {
+                    var (hasDescendant, txInfo) = await _itemState.CheckForDescendantTransactionsAsync(jwi.ItemId, jw.CreatedAt, jw.Id, "JobWork");
+                    if (hasDescendant)
+                    {
+                        var item = await _context.Items.FindAsync(jwi.ItemId);
+                        return BadRequest(new ApiResponse<bool>
+                        {
+                            Success = false,
+                            Message = $"Cannot deactivate Job Work {jw.JobWorkNo}: Item '{item?.MainPartName}' has a subsequent active operation: {txInfo}. You must deactivate the latest operation first."
+                        });
+                    }
                 }
 
                 // Rule 2: Move items back to InStock (only if they are still tied to this process)

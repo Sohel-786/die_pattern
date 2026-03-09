@@ -28,15 +28,18 @@ import { TransferFilters } from "@/components/filters/transfer-filters";
 import { initialTransferFilters, TransferFiltersState } from "@/lib/transfer-filters";
 import { toast } from "react-hot-toast";
 import { TransferDialog } from "@/components/transfers/transfer-dialog";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function TransfersPage() {
     const { data: permissions } = useCurrentUserPermissions();
+    const { user: currentUser } = useCurrentUser();
     const queryClient = useQueryClient();
 
     const [filters, setFilters] = useState<TransferFiltersState>(initialTransferFilters);
     const [expandedTransferId, setExpandedTransferId] = useState<number | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+    const [inactiveTarget, setInactiveTarget] = useState<Transfer | null>(null);
 
     const debouncedSearch = useDebounce(filters.search, 500);
 
@@ -55,6 +58,17 @@ export default function TransfersPage() {
             return res.data.data ?? [];
         },
         enabled: !!permissions?.viewTransfer
+    });
+
+    const toggleActiveMutation = useMutation({
+        mutationFn: async ({ id, active }: { id: number; active: boolean }) =>
+            api.patch(`/transfers/${id}/active`, null, { params: { active } }),
+        onSuccess: () => {
+            toast.success("Transfer status updated");
+            queryClient.invalidateQueries({ queryKey: ["transfers"] });
+            queryClient.invalidateQueries({ queryKey: ["items"] });
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message ?? "Failed to update Transfer status")
     });
 
     const { data: parties = [] } = useQuery<Party[]>({
@@ -130,14 +144,16 @@ export default function TransfersPage() {
                                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">DATE</TableHead>
                                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">FROM SOURCE</TableHead>
                                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">TO DESTINATION</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">CREATED BY</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">ACTIVE</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={7} className="h-16 px-6 text-center">
+                                        <TableCell colSpan={9} className="h-16 px-6 text-center">
                                             <div className="h-4 bg-secondary-100 rounded-full w-full max-w-sm mx-auto" />
                                         </TableCell>
                                     </TableRow>
@@ -184,15 +200,59 @@ export default function TransfersPage() {
                                                     {tr.toPartyName || "Our Location"}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right pr-6 text-secondary-600 text-sm">
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={cn(
+                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
+                                                    tr.isActive !== false ? "bg-green-50 text-green-700 border-green-200" : "bg-secondary-100 text-secondary-600 border-secondary-200"
+                                                )}>
+                                                    {tr.isActive !== false ? "Active" : "Inactive"}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm">
                                                 {tr.creatorName ?? "System"}
+                                            </td>
+                                            <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    {permissions?.editTransfer && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedTransfer(tr);
+                                                                setDialogOpen(true);
+                                                            }}
+                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                            title="Edit Transfer"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    )}
+                                                    {permissions?.editTransfer && currentUser?.role === "ADMIN" && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (tr.isActive) setInactiveTarget(tr);
+                                                                else toggleActiveMutation.mutate({ id: tr.id, active: true });
+                                                            }}
+                                                            disabled={toggleActiveMutation.isPending}
+                                                            className={cn(
+                                                                "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
+                                                                tr.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                            )}
+                                                            title={tr.isActive ? "Deactivate" : "Activate"}
+                                                        >
+                                                            {tr.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </TableRow>
 
                                         <AnimatePresence>
                                             {expandedTransferId === tr.id && (
                                                 <TableRow key={`expand-${tr.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
-                                                    <td colSpan={7} className="p-0 border-0 max-w-0">
+                                                    <td colSpan={9} className="p-0 border-0 max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
@@ -249,7 +309,7 @@ export default function TransfersPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <td colSpan={7} className="py-24 text-center">
+                                    <td colSpan={9} className="py-24 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-12 h-12 bg-secondary-50 rounded-2xl flex items-center justify-center text-secondary-200">
                                                 <LayoutGrid className="w-6 h-6" />
@@ -272,6 +332,41 @@ export default function TransfersPage() {
                 }}
                 transfer={selectedTransfer}
             />
+
+            <Dialog
+                isOpen={!!inactiveTarget}
+                onClose={() => setInactiveTarget(null)}
+                title="Confirm Inactivation"
+                size="sm"
+            >
+                <div className="space-y-4 font-sans">
+                    <p className="text-secondary-600 font-medium">
+                        Are you sure you want to deactivate transfer entry <span className="font-bold text-secondary-900">{inactiveTarget?.transferNo}</span>?
+                        This will mark the entry as inactive and return items to their source state.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setInactiveTarget(null)}
+                            className="flex-1 font-bold"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                            onClick={() => {
+                                if (inactiveTarget?.id) {
+                                    toggleActiveMutation.mutate({ id: inactiveTarget.id, active: false });
+                                    setInactiveTarget(null);
+                                }
+                            }}
+                            disabled={toggleActiveMutation.isPending}
+                        >
+                            {toggleActiveMutation.isPending ? "Deactivating..." : "Deactivate Entry"}
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 }

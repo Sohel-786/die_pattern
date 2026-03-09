@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
+using net_backend.Services;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
@@ -14,10 +15,12 @@ namespace net_backend.Controllers
     public class TransfersController : BaseController
     {
         private readonly IWebHostEnvironment _env;
+        private readonly IItemStateService _itemState;
 
-        public TransfersController(ApplicationDbContext context, IWebHostEnvironment env) : base(context) 
+        public TransfersController(ApplicationDbContext context, IWebHostEnvironment env, IItemStateService itemState) : base(context) 
         {
             _env = env;
+            _itemState = itemState;
         }
 
         private string GetSafeName(string name)
@@ -47,6 +50,7 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
             
             var query = _context.Transfers
+                .AsNoTracking()
                 .Include(t => t.Creator)
                 .Include(t => t.FromParty)
                 .Include(t => t.ToParty)
@@ -70,10 +74,14 @@ namespace net_backend.Controllers
             }
             if (startDate.HasValue) query = query.Where(t => t.TransferDate >= startDate);
             if (endDate.HasValue) query = query.Where(t => t.TransferDate <= endDate);
-            if (isActive.HasValue) query = query.Where(t => t.IsActive == isActive);
-            else if (!await IsAdmin()) query = query.Where(t => t.IsActive);
+            
+            // SECURITY: Only Admin can see inactive entries. For others, force only active records.
+            if (!await IsAdmin())
+                query = query.Where(t => t.IsActive);
+            else if (isActive.HasValue)
+                query = query.Where(t => t.IsActive == isActive.Value);
 
-            var list = await query.OrderByDescending(t => t.TransferDate).ToListAsync();
+            var list = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
             var location = await _context.Locations.FindAsync(locationId);
             var locationName = location?.Name ?? "Our Location";
 
@@ -177,18 +185,25 @@ namespace net_backend.Controllers
             var locationId = await GetCurrentLocationIdAsync();
 
             if (dto.Items == null || !dto.Items.Any())
-                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "At least one item is required." });
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "At least one item is required for transfer." });
+
+            if (string.IsNullOrWhiteSpace(dto.OutFor))
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Out For is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.ReasonDetails))
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Reason Details is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.VehicleNo))
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Vehicle No. is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.PersonName))
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Person Name is mandatory." });
 
             if (dto.FromPartyId == 0) dto.FromPartyId = null;
             if (dto.ToPartyId == 0) dto.ToPartyId = null;
 
             if (dto.FromPartyId == dto.ToPartyId)
                 return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Source and destination cannot be the same." });
-
-            if (string.IsNullOrWhiteSpace(dto.VehicleNo))
-                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Vehicle No. is required." });
-            if (string.IsNullOrWhiteSpace(dto.PersonName))
-                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Person Name is required." });
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -305,6 +320,301 @@ namespace net_backend.Controllers
             {
                 await transaction.RollbackAsync();
                 return BadRequest(new ApiResponse<Transfer> { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreateTransferDto dto)
+        {
+            if (!await HasPermission("EditTransfer")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+
+            var transfer = await _context.Transfers
+                .Include(t => t.Items)
+                .ThenInclude(i => i.Item)
+                .FirstOrDefaultAsync(t => t.Id == id && t.LocationId == locationId);
+
+            if (transfer == null) return NotFound();
+
+            if (dto.Items == null || !dto.Items.Any())
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required for transfer." });
+
+            if (string.IsNullOrWhiteSpace(dto.OutFor))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Out For is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.ReasonDetails))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Reason Details is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.VehicleNo))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Vehicle No. is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.PersonName))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Person Name is mandatory." });
+
+            if (dto.FromPartyId == 0) dto.FromPartyId = null;
+            if (dto.ToPartyId == 0) dto.ToPartyId = null;
+            if (dto.FromPartyId == dto.ToPartyId)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Source and destination cannot be the same." });
+
+            var incomingItemIds = dto.Items.Select(i => i.ItemId).Distinct().OrderBy(x => x).ToList();
+            var existingItemIds = transfer.Items.Select(i => i.ItemId).Distinct().OrderBy(x => x).ToList();
+
+            var structureChanged =
+                transfer.FromPartyId != dto.FromPartyId ||
+                transfer.ToPartyId != dto.ToPartyId ||
+                incomingItemIds.Count != existingItemIds.Count ||
+                !incomingItemIds.SequenceEqual(existingItemIds);
+
+            if (transfer.IsActive && structureChanged)
+            {
+                return BadRequest(new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = "Cannot change Source/Destination or Items while Transfer is Active. Deactivate it first, then edit, then activate again."
+                });
+            }
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Update metadata (always allowed)
+                transfer.Remarks = dto.Remarks;
+                transfer.OutFor = dto.OutFor?.Trim();
+                transfer.ReasonDetails = dto.ReasonDetails?.Trim();
+                transfer.VehicleNo = dto.VehicleNo?.Trim();
+                transfer.PersonName = dto.PersonName?.Trim();
+                if (dto.TransferDate.HasValue) transfer.TransferDate = dto.TransferDate.Value;
+
+                // Update item remarks (always allowed for existing items)
+                var remarkByItemId = dto.Items.ToDictionary(x => x.ItemId, x => x.Remarks);
+                foreach (var ti in transfer.Items)
+                {
+                    if (remarkByItemId.TryGetValue(ti.ItemId, out var r))
+                        ti.Remarks = r;
+                }
+
+                // If inactive, allow structural edits (from/to/items)
+                if (!transfer.IsActive && structureChanged)
+                {
+                        // Validate item availability at the NEW source
+                        foreach (var itemId in incomingItemIds)
+                        {
+                            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == itemId && i.LocationId == locationId);
+                            if (item == null)
+                                return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item with ID {itemId} not found." });
+
+                        if (dto.FromPartyId.HasValue)
+                        {
+                            if (item.CurrentProcess != ItemProcessState.AtVendor || item.CurrentPartyId != dto.FromPartyId.Value)
+                                return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item '{item.MainPartName}' is not currently with the selected source party. Current state: {item.CurrentProcess}. One item can only be in one process at a time." });
+                        }
+                        else
+                        {
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                                return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}. One item can only be in one process at a time." });
+                        }
+                    }
+
+                    // Apply structural changes on transfer + items list
+                    transfer.FromPartyId = dto.FromPartyId;
+                    transfer.ToPartyId = dto.ToPartyId;
+
+                    _context.TransferItems.RemoveRange(transfer.Items);
+                    await _context.SaveChangesAsync();
+
+                    foreach (var itemDto in dto.Items)
+                    {
+                        _context.TransferItems.Add(new TransferItem
+                        {
+                            TransferId = transfer.Id,
+                            ItemId = itemDto.ItemId,
+                            Remarks = itemDto.Remarks
+                        });
+                    }
+                }
+
+                // Move any temp attachments into final folder (TransferNo folder)
+                var finalUrls = new List<string>();
+                if (dto.AttachmentUrls != null && dto.AttachmentUrls.Any())
+                {
+                    var (compDir, locDir) = await GetStorageContextNames();
+                    var finalBaseRel = Path.Combine("storage", compDir, locDir, "transfer", transfer.TransferNo);
+                    var finalBaseAbs = Path.Combine(_env.WebRootPath, finalBaseRel);
+                    if (!Directory.Exists(finalBaseAbs)) Directory.CreateDirectory(finalBaseAbs);
+
+                    foreach (var url in dto.AttachmentUrls)
+                    {
+                        if (url.Contains("/transfer/temp/"))
+                        {
+                            var oldRel = url.TrimStart('/');
+                            var oldAbs = Path.Combine(_env.WebRootPath, oldRel);
+                            if (System.IO.File.Exists(oldAbs))
+                            {
+                                var fileName = Path.GetFileName(oldAbs);
+                                var newAbs = Path.Combine(finalBaseAbs, fileName);
+                                System.IO.File.Move(oldAbs, newAbs);
+
+                                var tempFolder = Path.GetDirectoryName(oldAbs);
+                                if (tempFolder != null && Directory.Exists(tempFolder) && !Directory.EnumerateFileSystemEntries(tempFolder).Any())
+                                    Directory.Delete(tempFolder);
+
+                                finalUrls.Add("/" + Path.Combine(finalBaseRel, fileName).Replace("\\", "/"));
+                            }
+                        }
+                        else
+                        {
+                            finalUrls.Add(url);
+                        }
+                    }
+                }
+                transfer.AttachmentUrlsJson = JsonSerializer.Serialize(finalUrls);
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message });
+            }
+        }
+
+        [HttpPatch("{id}/active")]
+        public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
+        {
+            if (!await IsAdmin()) return Forbidden();
+            if (!await HasPermission("EditTransfer")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+
+            var transfer = await _context.Transfers
+                .Include(t => t.Items)
+                .ThenInclude(ti => ti.Item)
+                .FirstOrDefaultAsync(t => t.Id == id && t.LocationId == locationId);
+
+            if (transfer == null) return NotFound();
+            if (transfer.IsActive == active) return Ok(new ApiResponse<bool> { Data = true });
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var itemIds = transfer.Items.Select(x => x.ItemId).Distinct().ToList();
+
+                foreach (var itemId in itemIds)
+                {
+                    var item = transfer.Items.FirstOrDefault(x => x.ItemId == itemId)?.Item;
+                    if (item == null)
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item with ID {itemId} not found." });
+
+                    // PRODUCTION-LEVEL TRACEABILITY: 
+                    // Verify if this is the LATEST active operation for this item across the whole system.
+                    if (!active)
+                    {
+                        // PRODUCTION-LEVEL TRACEABILITY: 
+                        // Cannot deactivate if a LATER active transaction exists for this item.
+                        var (hasDescendant, txInfo) = await _itemState.CheckForDescendantTransactionsAsync(itemId, transfer.CreatedAt, transfer.Id, "Transfer");
+                        if (hasDescendant)
+                        {
+                            return BadRequest(new ApiResponse<bool>
+                            {
+                                Success = false,
+                                Message = $"Cannot deactivate Transfer {transfer.TransferNo}: Item '{item.MainPartName}' has a subsequent active operation: {txInfo}. You must deactivate the latest operation first to maintain traceability."
+                            });
+                        }
+
+                        // Physical State Check: item must still be in destination state of this transfer, then rollback to source
+                        if (transfer.ToPartyId.HasValue)
+                        {
+                            if (item.CurrentProcess != ItemProcessState.AtVendor || item.CurrentPartyId != transfer.ToPartyId.Value)
+                            {
+                                return BadRequest(new ApiResponse<bool>
+                                {
+                                    Success = false,
+                                    Message = $"Cannot deactivate Transfer {transfer.TransferNo}: Item '{item.MainPartName}' is no longer at the destination party ({transfer.ToParty?.Name}). Current state: {item.CurrentProcess}."
+                                });
+                            }
+                        }
+                        else
+                        {
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                            {
+                                return BadRequest(new ApiResponse<bool>
+                                {
+                                    Success = false,
+                                    Message = $"Cannot deactivate Transfer {transfer.TransferNo}: Item '{item.MainPartName}' is no longer in stock at this location. Current state: {item.CurrentProcess}."
+                                });
+                            }
+                        }
+
+                        // Rollback to source
+                        if (transfer.FromPartyId.HasValue)
+                        {
+                            item.CurrentLocationId = null;
+                            item.CurrentPartyId = transfer.FromPartyId.Value;
+                            item.CurrentProcess = ItemProcessState.AtVendor;
+                        }
+                        else
+                        {
+                            item.CurrentLocationId = locationId;
+                            item.CurrentPartyId = null;
+                            item.CurrentProcess = ItemProcessState.InStock;
+                        }
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Activate: item must currently be at source state of this transfer, then apply destination
+                        if (transfer.FromPartyId.HasValue)
+                        {
+                            if (item.CurrentProcess != ItemProcessState.AtVendor || item.CurrentPartyId != transfer.FromPartyId.Value)
+                            {
+                                return BadRequest(new ApiResponse<bool>
+                                {
+                                    Success = false,
+                                    Message = $"Cannot activate Transfer {transfer.TransferNo}: Item '{item.MainPartName}' is not currently with the selected source party ({transfer.FromParty?.Name}). Current state: {item.CurrentProcess}."
+                                });
+                            }
+                        }
+                        else
+                        {
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                            {
+                                return BadRequest(new ApiResponse<bool>
+                                {
+                                    Success = false,
+                                    Message = $"Cannot activate Transfer {transfer.TransferNo}: Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}."
+                                });
+                            }
+                        }
+
+                        if (transfer.ToPartyId.HasValue)
+                        {
+                            item.CurrentLocationId = null;
+                            item.CurrentPartyId = transfer.ToPartyId.Value;
+                            item.CurrentProcess = ItemProcessState.AtVendor;
+                        }
+                        else
+                        {
+                            item.CurrentLocationId = locationId;
+                            item.CurrentPartyId = null;
+                            item.CurrentProcess = ItemProcessState.InStock;
+                        }
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+
+                transfer.IsActive = active;
+                transfer.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+            return Ok(new ApiResponse<bool> { Data = true });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message });
             }
         }
 

@@ -20,5 +20,12 @@ namespace net_backend.Services
 
         /// <summary>Returns a user-friendly string representation of the process state.</summary>
         string GetStateDisplay(ItemProcessState state);
+
+        /// <summary>
+        /// Checks if there's any active transaction for an item that was created AFTER the specified transaction.
+        /// This is the core logic for production-level traceability: we cannot deactivate an entry if it's already been succeeded by another active operation.
+        /// </summary>
+        /// <returns>(True, Message) if a descendant exists, (False, "")- otherwise.</returns>
+        Task<(bool, string)> CheckForDescendantTransactionsAsync(int itemId, DateTime transactionCreatedAt, int transactionId, string transactionType);
     }
 }

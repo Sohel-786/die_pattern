@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 using net_backend.Models;
 
 namespace net_backend.DTOs
@@ -448,11 +449,23 @@ namespace net_backend.DTOs
         public int? ToPartyId { get; set; }   // If null, means To Location
         public DateTime? TransferDate { get; set; }
         public string? Remarks { get; set; }
+        
+        [Required(ErrorMessage = "Out For is required.")]
         public string? OutFor { get; set; }
+        
+        [Required(ErrorMessage = "Reason Details is required.")]
         public string? ReasonDetails { get; set; }
+        
+        [Required(ErrorMessage = "Vehicle No. is required.")]
         public string? VehicleNo { get; set; }
+        
+        [Required(ErrorMessage = "Person Name is required.")]
         public string? PersonName { get; set; }
+        
         public List<string>? AttachmentUrls { get; set; }
+        
+        [Required(ErrorMessage = "At least one item is required.")]
+        [MinLength(1, ErrorMessage = "At least one item is required.")]
         public List<CreateTransferItemDto> Items { get; set; } = new();
     }
 
