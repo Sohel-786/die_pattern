@@ -20,7 +20,7 @@ namespace net_backend.Controllers
 
         /// <summary>Metrics for opened company only: locations of current company, location-wise counts (items at that location), at-vendor count, pending PI/PO counts.</summary>
         [HttpGet("metrics")]
-        public async Task<ActionResult<ApiResponse<object>>> GetMetrics()
+        public async Task<ActionResult<ApiResponse<object>>> GetMetrics([FromQuery] int? locationId)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
@@ -35,26 +35,52 @@ namespace net_backend.Controllers
 
             var locationWiseCount = new List<object>();
             int totalAtLocation = 0;
+            var inHouseStates = new[] { ItemProcessState.InStock, ItemProcessState.InQC, ItemProcessState.InwardDone };
             foreach (var loc in locations)
             {
                 var count = await _context.Items.CountAsync(p =>
-                    p.CurrentLocationId == loc.Id && p.CurrentProcess == ItemProcessState.InStock && p.IsActive);
-                totalAtLocation += count;
+                    p.CurrentLocationId == loc.Id && inHouseStates.Contains(p.CurrentProcess) && p.IsActive);
+                
+                // If filtering by locationId, only sum up if it matches
+                if (!locationId.HasValue || locationId.Value == 0 || locationId.Value == loc.Id)
+                {
+                    totalAtLocation += count;
+                }
                 locationWiseCount.Add(new { locationId = loc.Id, locationName = loc.Name, count });
             }
 
-            var itemsAtVendor = await _context.Items.CountAsync(p =>
+            var itemsAtVendorQuery = _context.Items.Where(p =>
                 companyLocationIds.Contains(p.LocationId ?? 0) &&
                 (p.CurrentProcess == ItemProcessState.InJobwork || p.CurrentProcess == ItemProcessState.AtVendor) &&
                 p.IsActive);
+            
+            if (locationId.HasValue && locationId.Value > 0)
+                itemsAtVendorQuery = itemsAtVendorQuery.Where(p => p.LocationId == locationId.Value);
 
-            var pendingPI = await _context.PurchaseIndents.CountAsync(pi =>
-                pi.Status == PurchaseIndentStatus.Pending && pi.IsActive &&
-                pi.Items.Any(i => i.Item != null && companyLocationIds.Contains(i.Item.LocationId ?? 0)));
+            var itemsAtVendor = await itemsAtVendorQuery.CountAsync();
 
-            var pendingPO = await _context.PurchaseOrders.CountAsync(po =>
+            var pendingPIQuery = _context.PurchaseIndents.Where(pi =>
+                pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+            
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                pendingPIQuery = pendingPIQuery.Where(pi => pi.Items.Any(i => i.Item != null && i.Item.LocationId == locationId.Value));
+            }
+            else
+            {
+                pendingPIQuery = pendingPIQuery.Where(pi => pi.Items.Any(i => i.Item != null && companyLocationIds.Contains(i.Item.LocationId ?? 0)));
+            }
+            
+            var pendingPI = await pendingPIQuery.CountAsync();
+
+            var pendingPOQuery = _context.PurchaseOrders.Where(po =>
                 po.LocationId != null && companyLocationIds.Contains(po.LocationId.Value) &&
                 po.Status == PoStatus.Pending && po.IsActive);
+            
+            if (locationId.HasValue && locationId.Value > 0)
+                pendingPOQuery = pendingPOQuery.Where(po => po.LocationId == locationId.Value);
+
+            var pendingPO = await pendingPOQuery.CountAsync();
 
             var result = new
             {
@@ -92,7 +118,7 @@ namespace net_backend.Controllers
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
-                .Where(p => p.CurrentLocationId == locationId && p.CurrentProcess == ItemProcessState.InStock && p.IsActive);
+                .Where(p => p.CurrentLocationId == locationId && (p.CurrentProcess == ItemProcessState.InStock || p.CurrentProcess == ItemProcessState.InQC || p.CurrentProcess == ItemProcessState.InwardDone) && p.IsActive);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -132,6 +158,7 @@ namespace net_backend.Controllers
         /// <summary>Items at vendor (InJobwork or AtVendor) with optional filters.</summary>
         [HttpGet("items-at-vendor")]
         public async Task<ActionResult<ApiResponse<object>>> GetItemsAtVendor(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? vendorIds,
             [FromQuery] string? itemIds,
@@ -148,6 +175,9 @@ namespace net_backend.Controllers
                 .Where(p => p.LocationId != null && allowedLocationIds.Contains(p.LocationId.Value)
                     && (p.CurrentProcess == ItemProcessState.InJobwork || p.CurrentProcess == ItemProcessState.AtVendor)
                     && p.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(p => p.LocationId == locationId.Value);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -192,6 +222,7 @@ namespace net_backend.Controllers
         /// <summary>Pending PIs (not approved) for current company locations. Full DTO for table and actions.</summary>
         [HttpGet("pending-pi")]
         public async Task<ActionResult<ApiResponse<object>>> GetPendingPI(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? createdDateFrom,
             [FromQuery] string? createdDateTo,
@@ -202,9 +233,18 @@ namespace net_backend.Controllers
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
             var query = _context.PurchaseIndents
-                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive
-                    && pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)))
-                .OrderByDescending(pi => pi.CreatedAt)
+                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && i.Item.LocationId == locationId.Value));
+            }
+            else
+            {
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)));
+            }
+
+            query = query.OrderByDescending(pi => pi.CreatedAt)
                 .Include(pi => pi.Creator)
                 .Include(pi => pi.Approver)
                 .Include(pi => pi.Items)
@@ -301,6 +341,7 @@ namespace net_backend.Controllers
         /// <summary>Pending POs for current company locations. Full DTO for table and actions.</summary>
         [HttpGet("pending-po")]
         public async Task<ActionResult<ApiResponse<object>>> GetPendingPO(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? poDateFrom,
             [FromQuery] string? poDateTo,
@@ -312,8 +353,12 @@ namespace net_backend.Controllers
 
             var query = _context.PurchaseOrders
                 .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value)
-                    && po.Status == PoStatus.Pending && po.IsActive)
-                .OrderByDescending(po => po.CreatedAt)
+                    && po.Status == PoStatus.Pending && po.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(po => po.LocationId == locationId.Value);
+
+            query = query.OrderByDescending(po => po.CreatedAt)
                 .Include(po => po.Vendor)
                 .Include(po => po.Creator)
                 .Include(po => po.Approver)
@@ -418,6 +463,7 @@ namespace net_backend.Controllers
 
         [HttpGet("export/items-at-vendor")]
         public async Task<IActionResult> ExportItemsAtVendor(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? vendorIds,
             [FromQuery] string? itemIds,
@@ -434,6 +480,9 @@ namespace net_backend.Controllers
                 .Where(p => p.LocationId != null && allowedLocationIds.Contains(p.LocationId.Value)
                     && (p.CurrentProcess == ItemProcessState.InJobwork || p.CurrentProcess == ItemProcessState.AtVendor)
                     && p.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(p => p.LocationId == locationId.Value);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -470,6 +519,7 @@ namespace net_backend.Controllers
 
         [HttpGet("export/pending-pi")]
         public async Task<IActionResult> ExportPendingPI(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? createdDateFrom,
             [FromQuery] string? createdDateTo,
@@ -480,13 +530,21 @@ namespace net_backend.Controllers
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
             var query = _context.PurchaseIndents
-                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive
-                    && pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)))
-                .OrderByDescending(pi => pi.CreatedAt)
+                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && i.Item.LocationId == locationId.Value));
+            }
+            else
+            {
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)));
+            }
+
+            query = query.OrderByDescending(pi => pi.CreatedAt)
                 .Include(pi => pi.Creator)
                 .Include(pi => pi.Items).ThenInclude(i => i.Item).ThenInclude(it => it!.ItemType)
                 .AsQueryable();
-
             var searchTrim = (search ?? "").Trim();
             if (!string.IsNullOrEmpty(searchTrim))
             {
@@ -533,6 +591,7 @@ namespace net_backend.Controllers
 
         [HttpGet("export/pending-po")]
         public async Task<IActionResult> ExportPendingPO(
+            [FromQuery] int? locationId,
             [FromQuery] string? search,
             [FromQuery] string? poDateFrom,
             [FromQuery] string? poDateTo,
@@ -544,8 +603,12 @@ namespace net_backend.Controllers
 
             var query = _context.PurchaseOrders
                 .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value)
-                    && po.Status == PoStatus.Pending && po.IsActive)
-                .OrderByDescending(po => po.CreatedAt)
+                    && po.Status == PoStatus.Pending && po.IsActive);
+
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(po => po.LocationId == locationId.Value);
+
+            query = query.OrderByDescending(po => po.CreatedAt)
                 .Include(po => po.Vendor)
                 .Include(po => po.Creator)
                 .AsQueryable();

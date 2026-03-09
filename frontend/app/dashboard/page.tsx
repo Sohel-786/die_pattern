@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+
 import Link from "next/link";
 import api from "@/lib/api";
-import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PODto, PoStatus } from "@/types";
+import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PO, PoStatus } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { useLocationContext } from "@/contexts/location-context";
 import {
   Table,
   TableBody,
@@ -30,6 +32,8 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronUp,
+  LayoutGrid,
+  ClipboardList,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,7 +45,6 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { Dialog } from "@/components/ui/dialog";
-import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { MultiSelectSearch } from "@/components/ui/multi-select-search";
 import type { MultiSelectSearchOption } from "@/components/ui/multi-select-search";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -83,8 +86,16 @@ export default function DashboardPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const [expandedSection, setExpandedSection] = useState<ExpandedSection>(null);
 
-  // Location-wise filters
+  const { selected: globalSelected } = useLocationContext();
   const [locationId, setLocationId] = useState<number | "">("");
+
+  // Sync with global location context on mount or change
+  useEffect(() => {
+    if (globalSelected?.locationId) {
+      setLocationId(globalSelected.locationId);
+    }
+  }, [globalSelected?.locationId]); // Only trigger when the ID actually changes
+
   const [locationSearch, setLocationSearch] = useState("");
   const [locationItemTypeId, setLocationItemTypeId] = useState<number | "">("");
   const [locationStatusId, setLocationStatusId] = useState<number | "">("");
@@ -109,8 +120,8 @@ export default function DashboardPage() {
   const [pendingPOVendorIds, setPendingPOVendorIds] = useState<number[]>([]);
 
   const [approvalTarget, setApprovalTarget] = useState<
-    { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" } | { type: "po"; po: PODto; action: "approve" | "reject" }
-  | null>(null);
+    { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" } | { type: "po"; po: PO; action: "approve" | "reject" }
+    | null>(null);
   const [previewPIId, setPreviewPIId] = useState<number | null>(null);
   const [previewPOId, setPreviewPOId] = useState<number | null>(null);
 
@@ -120,12 +131,15 @@ export default function DashboardPage() {
   const debouncedPendingPOSearch = useDebouncedValue(pendingPOSearch, 400);
 
   const { data: metrics, isLoading: loadingMetrics } = useQuery<DashboardMetrics>({
-    queryKey: ["dashboard-metrics"],
+    queryKey: ["dashboard-metrics", locationId],
     queryFn: async () => {
-      const response = await api.get("/dashboard/metrics");
+      const response = await api.get("/dashboard/metrics", { params: { locationId: locationId || undefined } });
       return response.data.data;
     },
   });
+
+  // No automatic selection - let user see "All Locations" by default if they prefer
+  // or they can pick one.
 
   const locationWiseParams = useMemo(
     () => ({
@@ -154,12 +168,13 @@ export default function DashboardPage() {
 
   const atVendorParams = useMemo(
     () => ({
+      locationId: locationId || undefined,
       search: debouncedVendorSearch || undefined,
       vendorIds: vendorIds.length ? vendorIds.join(",") : undefined,
       itemIds: atVendorItemIds.length ? atVendorItemIds.join(",") : undefined,
       itemTypeId: atVendorItemTypeId === "" ? undefined : atVendorItemTypeId,
     }),
-    [debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId]
+    [locationId, debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId]
   );
 
   const { data: itemsAtVendor = [], isLoading: loadingAtVendor } = useQuery<ItemAtVendorRow[]>({
@@ -173,12 +188,13 @@ export default function DashboardPage() {
 
   const pendingPIParams = useMemo(
     () => ({
+      locationId: locationId || undefined,
       search: debouncedPendingPISearch || undefined,
       createdDateFrom: pendingPIDateFrom || undefined,
       createdDateTo: pendingPIDateTo || undefined,
       itemIds: pendingPIItemIds.length ? pendingPIItemIds.join(",") : undefined,
     }),
-    [debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds]
+    [locationId, debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds]
   );
 
   const { data: pendingPIList = [], isLoading: loadingPendingPI } = useQuery<PurchaseIndent[]>({
@@ -192,15 +208,16 @@ export default function DashboardPage() {
 
   const pendingPOParams = useMemo(
     () => ({
+      locationId: locationId || undefined,
       search: debouncedPendingPOSearch || undefined,
       poDateFrom: pendingPODateFrom || undefined,
       poDateTo: pendingPODateTo || undefined,
       vendorIds: pendingPOVendorIds.length ? pendingPOVendorIds.join(",") : undefined,
     }),
-    [debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds]
+    [locationId, debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds]
   );
 
-  const { data: pendingPOList = [], isLoading: loadingPendingPO } = useQuery<PODto[]>({
+  const { data: pendingPOList = [], isLoading: loadingPendingPO } = useQuery<PO[]>({
     queryKey: ["dashboard", "pending-po", pendingPOParams],
     queryFn: async () => {
       const res = await api.get("/dashboard/pending-po", { params: pendingPOParams });
@@ -306,11 +323,11 @@ export default function DashboardPage() {
           section === "location"
             ? locationWiseParams
             : section === "at-vendor"
-            ? atVendorParams
-            : section === "pending-pi"
-            ? pendingPIParams
-            : pendingPOParams;
-        if (section === "location" && typeof params.locationId !== "number") {
+              ? atVendorParams
+              : section === "pending-pi"
+                ? pendingPIParams
+                : pendingPOParams;
+        if (section === "location" && (typeof locationWiseParams.locationId !== "number")) {
           toast.error("Select a location first.");
           return;
         }
@@ -318,10 +335,10 @@ export default function DashboardPage() {
           section === "location"
             ? "/dashboard/export/location-wise-items"
             : section === "at-vendor"
-            ? "/dashboard/export/items-at-vendor"
-            : section === "pending-pi"
-            ? "/dashboard/export/pending-pi"
-            : "/dashboard/export/pending-po";
+              ? "/dashboard/export/items-at-vendor"
+              : section === "pending-pi"
+                ? "/dashboard/export/pending-pi"
+                : "/dashboard/export/pending-po";
         const response = await api.get(endpoint, { responseType: "blob", params });
         const blob = new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -352,16 +369,13 @@ export default function DashboardPage() {
 
   const toggleSection = (section: ExpandedSection) => {
     setExpandedSection((prev) => (prev === section ? null : section));
-    if (section === "location" && metrics?.locationWiseCount?.length && locationId === "") {
-      setLocationId(metrics.locationWiseCount[0].locationId);
-    }
   };
 
   const statCards = [
     {
-      title: "Location Wise Die/Pattern Count",
+      title: locationId === "" ? "Total Die/Pattern (All Locations)" : `Total Die/Pattern (${metrics?.locationWiseCount?.find(l => l.locationId === locationId)?.locationName ?? "Selected Location"})`,
       value: metrics?.summary?.total ?? 0,
-      icon: MapPin,
+      icon: LayoutGrid,
       gradient: "from-blue-500 to-blue-600",
       baseBg: "bg-blue-50/40",
       shadowColor: "shadow-blue-500/20",
@@ -381,7 +395,7 @@ export default function DashboardPage() {
     {
       title: "Pending PI",
       value: metrics?.summary?.pendingPI ?? 0,
-      icon: FileText,
+      icon: ClipboardList,
       gradient: "from-rose-500 to-rose-600",
       baseBg: "bg-rose-50/40",
       shadowColor: "shadow-rose-500/20",
@@ -391,7 +405,7 @@ export default function DashboardPage() {
     {
       title: "Pending PO",
       value: metrics?.summary?.pendingPO ?? 0,
-      icon: ShoppingCart,
+      icon: FileText,
       gradient: "from-emerald-500 to-emerald-600",
       baseBg: "bg-emerald-50/40",
       shadowColor: "shadow-emerald-500/20",
@@ -400,7 +414,7 @@ export default function DashboardPage() {
     },
   ];
 
-  if (loadingMetrics) {
+  if (loadingMetrics && !metrics) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-secondary-50/50">
         <div className="text-center">
@@ -413,16 +427,14 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-8"
-      >
-        <div>
-          <h1 className="text-3xl font-bold text-text mb-2">Dashboard</h1>
-          <p className="text-secondary-600">
-            Location-wise counts, items at vendor, and pending PI/PO at a glance.
-          </p>
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-text mb-2">Dashboard</h1>
+            <p className="text-secondary-600">
+              Location-wise counts, items at vendor, and pending PI/PO at a glance.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -430,12 +442,8 @@ export default function DashboardPage() {
             const Icon = stat.icon;
             const isExpanded = expandedSection === stat.section;
             return (
-              <motion.div
+              <div
                 key={stat.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -4 }}
                 className="h-full"
               >
                 <div
@@ -485,47 +493,27 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
 
         {/* Location Wise Table */}
-        <AnimatePresence>
-          {expandedSection === "location" && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="shadow-lg border border-secondary-200">
-                <div className="border-b border-secondary-200 px-4 py-3">
-                  <h2 className="text-xl font-bold text-text">Location Wise Die/Pattern Count</h2>
-                  <p className="text-sm text-secondary-500 mt-0.5">
-                    Items currently at each location (opened company only). Select a location and apply filters.
-                  </p>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                    <div>
-                      <label className={filterLabelClass}>Location</label>
-                      <select
-                        value={locationId === "" ? "" : locationId}
-                        onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
-                        className={selectClass}
-                      >
-                        <option value="">Select location</option>
-                        {metrics?.locationWiseCount?.map((loc) => (
-                          <option key={loc.locationId} value={loc.locationId}>
-                            {loc.locationName} ({loc.count})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="relative">
-                      <label className={filterLabelClass}>Search</label>
-                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+        {expandedSection === "location" && (
+          <div>
+            <Card className="shadow-lg border border-secondary-200">
+              <div className="border-b border-secondary-200 px-4 py-3">
+                <h2 className="text-xl font-bold text-text">Location Wise Die/Pattern Count</h2>
+                <p className="text-sm text-secondary-500 mt-0.5">
+                  Items currently at each location (opened company only). Select a location and apply filters.
+                </p>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="flex flex-col">
+                    <label className={filterLabelClass}>Search</label>
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
                       <Input
                         type="search"
                         value={locationSearch}
@@ -534,121 +522,116 @@ export default function DashboardPage() {
                         className={cn(inputClass, "pl-9")}
                       />
                     </div>
-                    <div>
-                      <label className={filterLabelClass}>Item Type</label>
-                      <select
-                        value={locationItemTypeId === "" ? "" : locationItemTypeId}
-                        onChange={(e) => setLocationItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
-                        className={selectClass}
-                      >
-                        <option value="">All</option>
-                        {itemTypes.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={filterLabelClass}>Item Condition</label>
-                      <select
-                        value={locationStatusId === "" ? "" : locationStatusId}
-                        onChange={(e) => setLocationStatusId(e.target.value === "" ? "" : Number(e.target.value))}
-                        className={selectClass}
-                      >
-                        <option value="">All</option>
-                        {itemStatuses.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                      <label className={filterLabelClass}>Item</label>
-                      <MultiSelectSearch
-                        options={itemOptions}
-                        value={locationItemIds as (number | string)[]}
-                        onChange={(v) => setLocationItemIds(v as number[])}
-                        placeholder="Select item"
-                        searchPlaceholder="Search…"
-                      />
-                    </div>
                   </div>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => handleExport("location")}
-                      disabled={loadingLocationWise || (typeof locationId !== "number")}
-                      className="shadow-sm"
+                  <div>
+                    <label className={filterLabelClass}>Item Type</label>
+                    <select
+                      value={locationItemTypeId === "" ? "" : locationItemTypeId}
+                      onChange={(e) => setLocationItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
+                      className={selectClass}
                     >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export Excel
-                    </Button>
+                      <option value="">All</option>
+                      {itemTypes.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>Item Condition</label>
+                    <select
+                      value={locationStatusId === "" ? "" : locationStatusId}
+                      onChange={(e) => setLocationStatusId(e.target.value === "" ? "" : Number(e.target.value))}
+                      className={selectClass}
+                    >
+                      <option value="">All</option>
+                      {itemStatuses.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                    <label className={filterLabelClass}>Item</label>
+                    <MultiSelectSearch
+                      options={itemOptions}
+                      value={locationItemIds as (number | string)[]}
+                      onChange={(v) => setLocationItemIds(v as number[])}
+                      placeholder="Select item"
+                      searchPlaceholder="Search…"
+                    />
                   </div>
                 </div>
-                <div className="border-t border-secondary-100 overflow-x-auto">
-                  {typeof locationId !== "number" ? (
-                    <div className="py-12 text-center text-secondary-500">
-                      Select a location to view items at that location.
-                    </div>
-                  ) : loadingLocationWise ? (
-                    <div className="py-12 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                      <p className="mt-4 text-secondary-600">Loading...</p>
-                    </div>
-                  ) : locationWiseItems.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Condition</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {locationWiseItems.map((row, idx) => (
-                          <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                            <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
-                            <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{row.statusName ?? "—"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="py-12 text-center text-secondary-500">
-                      No items at this location match your filters.
-                    </div>
-                  )}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => handleExport("location")}
+                    disabled={loadingLocationWise || (typeof locationId !== "number")}
+                    className="shadow-sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Excel
+                  </Button>
                 </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+              <div className="border-t border-secondary-100 overflow-x-auto">
+                {typeof locationId !== "number" ? (
+                  <div className="py-12 text-center text-secondary-500">
+                    Select a location to view items at that location.
+                  </div>
+                ) : loadingLocationWise ? (
+                  <div className="py-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                    <p className="mt-4 text-secondary-600">Loading...</p>
+                  </div>
+                ) : locationWiseItems.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Condition</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {locationWiseItems.map((row, idx) => (
+                        <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                          <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                          <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.statusName ?? "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-12 text-center text-secondary-500">
+                    No items at this location match your filters.
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Patterns at Vendor Table */}
-        <AnimatePresence>
-          {expandedSection === "at-vendor" && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="shadow-lg border border-secondary-200">
-                <div className="border-b border-secondary-200 px-4 py-3">
-                  <h2 className="text-xl font-bold text-text">Patterns at Vendor</h2>
-                  <p className="text-sm text-secondary-500 mt-0.5">
-                    Die and pattern currently at vendor (In Jobwork / At Vendor). Filter by vendor, item, and type.
-                  </p>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                    <div className="relative">
-                      <label className={filterLabelClass}>Search</label>
-                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+        {expandedSection === "at-vendor" && (
+          <div>
+            <Card className="shadow-lg border border-secondary-200">
+              <div className="border-b border-secondary-200 px-4 py-3">
+                <h2 className="text-xl font-bold text-text">Patterns at Vendor</h2>
+                <p className="text-sm text-secondary-500 mt-0.5">
+                  Die and pattern currently at vendor (In Jobwork / At Vendor). Filter by vendor, item, and type.
+                </p>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="flex flex-col">
+                    <label className={filterLabelClass}>Search</label>
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
                       <Input
                         type="search"
                         value={vendorSearch}
@@ -657,104 +640,99 @@ export default function DashboardPage() {
                         className={cn(inputClass, "pl-9")}
                       />
                     </div>
-                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                      <label className={filterLabelClass}>Vendor</label>
-                      <MultiSelectSearch
-                        options={vendorOptions}
-                        value={vendorIds as (number | string)[]}
-                        onChange={(v) => setVendorIds(v as number[])}
-                        placeholder="Select vendor"
-                        searchPlaceholder="Search…"
-                      />
-                    </div>
-                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                      <label className={filterLabelClass}>Item</label>
-                      <MultiSelectSearch
-                        options={itemOptions}
-                        value={atVendorItemIds as (number | string)[]}
-                        onChange={(v) => setAtVendorItemIds(v as number[])}
-                        placeholder="Select item"
-                        searchPlaceholder="Search…"
-                      />
-                    </div>
-                    <div>
-                      <label className={filterLabelClass}>Item Type</label>
-                      <select
-                        value={atVendorItemTypeId === "" ? "" : atVendorItemTypeId}
-                        onChange={(e) => setAtVendorItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
-                        className={selectClass}
-                      >
-                        <option value="">All</option>
-                        {itemTypes.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => handleExport("at-vendor")} disabled={loadingAtVendor} className="shadow-sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Excel
-                      </Button>
-                    </div>
+                  </div>
+                  <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                    <label className={filterLabelClass}>Vendor</label>
+                    <MultiSelectSearch
+                      options={vendorOptions}
+                      value={vendorIds as (number | string)[]}
+                      onChange={(v) => setVendorIds(v as number[])}
+                      placeholder="Select vendor"
+                      searchPlaceholder="Search…"
+                    />
+                  </div>
+                  <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                    <label className={filterLabelClass}>Item</label>
+                    <MultiSelectSearch
+                      options={itemOptions}
+                      value={atVendorItemIds as (number | string)[]}
+                      onChange={(v) => setAtVendorItemIds(v as number[])}
+                      placeholder="Select item"
+                      searchPlaceholder="Search…"
+                    />
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>Item Type</label>
+                    <select
+                      value={atVendorItemTypeId === "" ? "" : atVendorItemTypeId}
+                      onChange={(e) => setAtVendorItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
+                      className={selectClass}
+                    >
+                      <option value="">All</option>
+                      {itemTypes.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => handleExport("at-vendor")} disabled={loadingAtVendor} className="shadow-sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </Button>
                   </div>
                 </div>
-                <div className="border-t border-secondary-100 overflow-x-auto">
-                  {loadingAtVendor ? (
-                    <div className="py-12 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                      <p className="mt-4 text-secondary-600">Loading...</p>
-                    </div>
-                  ) : itemsAtVendor.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
+              </div>
+              <div className="border-t border-secondary-100 overflow-x-auto">
+                {loadingAtVendor ? (
+                  <div className="py-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                    <p className="mt-4 text-secondary-600">Loading...</p>
+                  </div>
+                ) : itemsAtVendor.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {itemsAtVendor.map((row, idx) => (
+                        <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                          <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                          <TableCell className="px-4 py-3 font-medium text-text">{row.vendorName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                              {row.currentProcess}
+                            </span>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {itemsAtVendor.map((row, idx) => (
-                          <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                            <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
-                            <TableCell className="px-4 py-3 font-medium text-text">{row.vendorName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3">
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                                {row.currentProcess}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="py-12 text-center text-secondary-500">
-                      No patterns at vendor match your filters.
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-12 text-center text-secondary-500">
+                    No patterns at vendor match your filters.
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Pending PI Table */}
-        <AnimatePresence>
-          {expandedSection === "pending-pi" && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
+        {
+          expandedSection === "pending-pi" && (
+            <div>
               <Card className="shadow-lg border border-secondary-200">
                 <div className="border-b border-secondary-200 px-4 py-3">
                   <h2 className="text-xl font-bold text-text">Pending PI</h2>
@@ -764,16 +742,18 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                    <div className="relative">
+                    <div className="flex flex-col">
                       <label className={filterLabelClass}>Search</label>
-                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
-                      <Input
-                        type="search"
-                        value={pendingPISearch}
-                        onChange={(e) => setPendingPISearch(e.target.value)}
-                        placeholder="PI No., creator, remarks…"
-                        className={cn(inputClass, "pl-9")}
-                      />
+                      <div className="relative flex items-center">
+                        <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
+                        <Input
+                          type="search"
+                          value={pendingPISearch}
+                          onChange={(e) => setPendingPISearch(e.target.value)}
+                          placeholder="PI No., creator, remarks…"
+                          className={cn(inputClass, "pl-9")}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className={filterLabelClass}>Created From</label>
@@ -887,31 +867,25 @@ export default function DashboardPage() {
                   )}
                 </div>
               </Card>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
 
         {/* Pending PO Table */}
-        <AnimatePresence>
-          {expandedSection === "pending-po" && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="shadow-lg border border-secondary-200">
-                <div className="border-b border-secondary-200 px-4 py-3">
-                  <h2 className="text-xl font-bold text-text">Pending PO</h2>
-                  <p className="text-sm text-secondary-500 mt-0.5">
-                    Purchase orders awaiting approval. Approve or reject from here.
-                  </p>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                    <div className="relative">
-                      <label className={filterLabelClass}>Search</label>
-                      <Search className="absolute left-3 top-9 h-4 w-4 text-secondary-400 pointer-events-none" />
+        {expandedSection === "pending-po" && (
+          <div>
+            <Card className="shadow-lg border border-secondary-200">
+              <div className="border-b border-secondary-200 px-4 py-3">
+                <h2 className="text-xl font-bold text-text">Pending PO</h2>
+                <p className="text-sm text-secondary-500 mt-0.5">
+                  Purchase orders awaiting approval. Approve or reject from here.
+                </p>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="flex flex-col">
+                    <label className={filterLabelClass}>Search</label>
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
                       <Input
                         type="search"
                         value={pendingPOSearch}
@@ -920,121 +894,121 @@ export default function DashboardPage() {
                         className={cn(inputClass, "pl-9")}
                       />
                     </div>
-                    <div>
-                      <label className={filterLabelClass}>PO Date From</label>
-                      <DatePicker
-                        value={pendingPODateFrom}
-                        onChange={(d) => setPendingPODateFrom(d ? format(d, "yyyy-MM-dd") : "")}
-                        className="h-9 w-full border-secondary-200"
-                        placeholder="From"
-                        clearable
-                      />
-                    </div>
-                    <div>
-                      <label className={filterLabelClass}>PO Date To</label>
-                      <DatePicker
-                        value={pendingPODateTo}
-                        onChange={(d) => setPendingPODateTo(d ? format(d, "yyyy-MM-dd") : "")}
-                        className="h-9 w-full border-secondary-200"
-                        placeholder="To"
-                        clearable
-                      />
-                    </div>
-                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                      <label className={filterLabelClass}>Vendor</label>
-                      <MultiSelectSearch
-                        options={vendorOptions}
-                        value={pendingPOVendorIds as (number | string)[]}
-                        onChange={(v) => setPendingPOVendorIds(v as number[])}
-                        placeholder="Select vendor"
-                        searchPlaceholder="Search…"
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Excel
-                      </Button>
-                    </div>
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>PO Date From</label>
+                    <DatePicker
+                      value={pendingPODateFrom}
+                      onChange={(d) => setPendingPODateFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                      className="h-9 w-full border-secondary-200"
+                      placeholder="From"
+                      clearable
+                    />
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>PO Date To</label>
+                    <DatePicker
+                      value={pendingPODateTo}
+                      onChange={(d) => setPendingPODateTo(d ? format(d, "yyyy-MM-dd") : "")}
+                      className="h-9 w-full border-secondary-200"
+                      placeholder="To"
+                      clearable
+                    />
+                  </div>
+                  <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                    <label className={filterLabelClass}>Vendor</label>
+                    <MultiSelectSearch
+                      options={vendorOptions}
+                      value={pendingPOVendorIds as (number | string)[]}
+                      onChange={(v) => setPendingPOVendorIds(v as number[])}
+                      placeholder="Select vendor"
+                      searchPlaceholder="Search…"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </Button>
                   </div>
                 </div>
-                <div className="border-t border-secondary-100 overflow-x-auto">
-                  {loadingPendingPO ? (
-                    <div className="py-12 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                      <p className="mt-4 text-secondary-600">Loading...</p>
-                    </div>
-                  ) : pendingPOList.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pendingPOList.map((po) => (
-                          <TableRow key={po.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                            <TableCell className="px-4 py-3 font-medium text-text">{po.poNo}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{po.vendorName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3">
-                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
-                                {po.status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600 text-sm">
-                              {format(new Date(po.createdAt), "dd MMM yyyy, HH:mm")}
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{po.creatorName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-right pr-6">
-                              <div className="flex items-center justify-end gap-1">
-                                {permissions?.approvePO && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                        <MoreVertical className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
-                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "approve" })} className="flex items-center gap-2 py-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        Approve
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "reject" })} className="flex items-center gap-2 py-2">
-                                        <XCircle className="w-4 h-4 text-rose-600" />
-                                        Reject
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPOId(po.id)} title="Preview">
-                                  <Eye className="w-4 h-4" />
+              </div>
+              <div className="border-t border-secondary-100 overflow-x-auto">
+                {loadingPendingPO ? (
+                  <div className="py-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                    <p className="mt-4 text-secondary-600">Loading...</p>
+                  </div>
+                ) : pendingPOList.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingPOList.map((po) => (
+                        <TableRow key={po.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                          <TableCell className="px-4 py-3 font-medium text-text">{po.poNo}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{po.vendorName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                              {po.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 text-sm">
+                            {format(new Date(po.createdAt), "dd MMM yyyy, HH:mm")}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{po.creatorName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3 text-right pr-6">
+                            <div className="flex items-center justify-end gap-1">
+                              {permissions?.approvePO && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                    <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "approve" })} className="flex items-center gap-2 py-2">
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "reject" })} className="flex items-center gap-2 py-2">
+                                      <XCircle className="w-4 h-4 text-rose-600" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPOId(po.id)} title="Preview">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Link href="/purchase-orders">
+                                <Button variant="outline" size="sm" className="h-8 text-xs">
+                                  Open PO
                                 </Button>
-                                <Link href="/purchase-orders">
-                                  <Button variant="outline" size="sm" className="h-8 text-xs">
-                                    Open PO
-                                  </Button>
-                                </Link>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="py-12 text-center text-secondary-500">
-                      No pending POs match your filters.
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                              </Link>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-12 text-center text-secondary-500">
+                    No pending POs match your filters.
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Approve / Reject Dialog */}
         <Dialog
@@ -1086,13 +1060,17 @@ export default function DashboardPage() {
           </div>
         </Dialog>
 
-        {previewPIId != null && (
-          <PurchaseIndentPreviewModal piId={previewPIId} onClose={() => setPreviewPIId(null)} />
-        )}
-        {previewPOId != null && (
-          <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
-        )}
-      </motion.div>
+        {
+          previewPIId != null && (
+            <PurchaseIndentPreviewModal piId={previewPIId} onClose={() => setPreviewPIId(null)} />
+          )
+        }
+        {
+          previewPOId != null && (
+            <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
+          )
+        }
+      </div>
     </div>
   );
 }
