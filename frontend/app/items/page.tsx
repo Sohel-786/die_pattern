@@ -297,7 +297,7 @@ export default function ItemsPage() {
                                             key={entry.id}
                                             className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
                                         >
-                                            <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{openingHistory.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-[11px]">
                                                 {new Date(entry.importedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                                             </td>
@@ -444,183 +444,183 @@ export default function ItemsPage() {
 
             {/* Standard Master Filter Card - only when not Opening History */}
             {tabState !== "openingHistory" && (
-            <>
-            <Card className="shadow-sm border-secondary-200 bg-white mb-6">
-                <div className="p-4 flex flex-col gap-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                            <Input
-                                placeholder="Search by name, part, or drawing..."
-                                className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-secondary-700">Filter</span>
-                            <select
-                                value={activeFilter}
-                                onChange={(e) => setActiveFilter(e.target.value as any)}
-                                className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
-                            >
-                                <option value="all">All Records</option>
-                                <option value="active">Active Only</option>
-                                <option value="inactive">Inactive Only</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-secondary-100 pt-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Material</label>
-                            <select
-                                value={materialFilter}
-                                onChange={(e) => setMaterialFilter(e.target.value)}
-                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
-                            >
-                                <option value="all">All Materials</option>
-                                {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Condition Status</label>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
-                            >
-                                <option value="all">All Statuses</option>
-                                {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Ownership</label>
-                            <select
-                                value={ownerFilter}
-                                onChange={(e) => setOwnerFilter(e.target.value)}
-                                className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
-                            >
-                                <option value="all">All Ownership</option>
-                                {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
-                <div className="px-6 py-4 border-b border-secondary-100 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-secondary-900">
-                        {tabState === 'all' ? 'All Assets' : tabState === 'Die' ? 'Dies Repository' : 'Patterns Repository'} ({filteredItems.length})
-                    </h3>
-                </div>
-                <div className="table-container overflow-x-auto">
-                    <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
-                        <thead>
-                            <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                                <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Part Name</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Display Name</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Asset Type</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Drawing Number</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Revision</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Material</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Ownership</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Current Process</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                [1, 2, 3].map((i) => (
-                                    <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(11).fill(0).map((_, j) => (
-                                            <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
-                                        ))}
-                                    </tr>
-                                ))
-                            ) : filteredItems.length > 0 ? (
-                                filteredItems.map((item, idx) => (
-                                    <tr
-                                        key={item.id}
-                                        className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
+                <>
+                    <Card className="shadow-sm border-secondary-200 bg-white mb-6">
+                        <div className="p-4 flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                    <Input
+                                        placeholder="Search by name, part, or drawing..."
+                                        className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-secondary-700">Filter</span>
+                                    <select
+                                        value={activeFilter}
+                                        onChange={(e) => setActiveFilter(e.target.value as any)}
+                                        className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
                                     >
-                                        <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{idx + 1}</td>
-                                        <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight text-[11px]">{item.mainPartName}</td>
-                                        <td className="px-4 py-3 text-secondary-700 uppercase font-bold text-[11px]">{item.currentName || "—"}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.itemTypeName === 'Die' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                                                {item.itemTypeName}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 font-bold text-secondary-700 uppercase text-[11px]">{item.drawingNo || 'N/A'}</td>
-                                        <td className="px-4 py-3 text-center text-secondary-700 font-bold text-[11px]">{item.revisionNo || '00'}</td>
-                                        <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.materialName}</td>
-                                        <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.ownerTypeName}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
-                                                    ? 'bg-green-50 text-green-700 border-green-200'
-                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                                                    }`}>
-                                                    {item.statusName}
-                                                </span>
-                                                {!item.isActive && (
-                                                    <span className="text-[9px] text-red-600 font-bold uppercase px-1.5 py-0.5 bg-red-50 rounded border border-red-100">Inactive</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border bg-secondary-50 border-secondary-200 text-secondary-800">
-                                                {item.currentProcess ?? "—"}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {canManage && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(item)}
-                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                        title="Edit Asset"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </Button>
-                                                )}
+                                        <option value="all">All Records</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="inactive">Inactive Only</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                                                {isAdmin && canManage && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => toggleStatus(item)}
-                                                        className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
-                                                            ? 'text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100'
-                                                            : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                                                            }`}
-                                                        title={item.isActive ? "Deactivate" : "Activate"}
-                                                    >
-                                                        {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-secondary-100 pt-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Material</label>
+                                    <select
+                                        value={materialFilter}
+                                        onChange={(e) => setMaterialFilter(e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                    >
+                                        <option value="all">All Materials</option>
+                                        {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Condition Status</label>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                    >
+                                        <option value="all">All Statuses</option>
+                                        {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Ownership</label>
+                                    <select
+                                        value={ownerFilter}
+                                        onChange={(e) => setOwnerFilter(e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                    >
+                                        <option value="all">All Ownership</option>
+                                        {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
+                        <div className="px-6 py-4 border-b border-secondary-100 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-secondary-900">
+                                {tabState === 'all' ? 'All Assets' : tabState === 'Die' ? 'Dies Repository' : 'Patterns Repository'} ({filteredItems.length})
+                            </h3>
+                        </div>
+                        <div className="table-container overflow-x-auto">
+                            <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
+                                <thead>
+                                    <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                                        <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Part Name</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Display Name</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Asset Type</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Drawing Number</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Revision</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Material</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Ownership</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Current Process</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={11} className="py-16 text-center text-secondary-400 italic font-medium">
-                                        No assets found matching selected filters.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-            </>
+                                </thead>
+                                <tbody>
+                                    {isLoading ? (
+                                        [1, 2, 3].map((i) => (
+                                            <tr key={i} className="animate-pulse border-b border-secondary-100">
+                                                {Array(11).fill(0).map((_, j) => (
+                                                    <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
+                                                ))}
+                                            </tr>
+                                        ))
+                                    ) : filteredItems.length > 0 ? (
+                                        filteredItems.map((item, idx) => (
+                                            <tr
+                                                key={item.id}
+                                                className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
+                                            >
+                                                <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{filteredItems.length - idx}</td>
+                                                <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight text-[11px]">{item.mainPartName}</td>
+                                                <td className="px-4 py-3 text-secondary-700 uppercase font-bold text-[11px]">{item.currentName || "—"}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.itemTypeName === 'Die' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                                        {item.itemTypeName}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 font-bold text-secondary-700 uppercase text-[11px]">{item.drawingNo || 'N/A'}</td>
+                                                <td className="px-4 py-3 text-center text-secondary-700 font-bold text-[11px]">{item.revisionNo || '00'}</td>
+                                                <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.materialName}</td>
+                                                <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.ownerTypeName}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
+                                                            ? 'bg-green-50 text-green-700 border-green-200'
+                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                            }`}>
+                                                            {item.statusName}
+                                                        </span>
+                                                        {!item.isActive && (
+                                                            <span className="text-[9px] text-red-600 font-bold uppercase px-1.5 py-0.5 bg-red-50 rounded border border-red-100">Inactive</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border bg-secondary-50 border-secondary-200 text-secondary-800">
+                                                        {item.currentProcess ?? "—"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {canManage && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleEdit(item)}
+                                                                className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                                title="Edit Asset"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
+
+                                                        {isAdmin && canManage && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => toggleStatus(item)}
+                                                                className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
+                                                                    ? 'text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100'
+                                                                    : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
+                                                                    }`}
+                                                                title={item.isActive ? "Deactivate" : "Activate"}
+                                                            >
+                                                                {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={11} className="py-16 text-center text-secondary-400 italic font-medium">
+                                                No assets found matching selected filters.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </>
             )}
 
             <ItemDialog

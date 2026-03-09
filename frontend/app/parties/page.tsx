@@ -214,7 +214,7 @@ export default function PartiesPage() {
                                         key={party.id}
                                         className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
                                     >
-                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
+                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{filteredParties.length - idx}</td>
                                         <td className="px-4 py-3">
                                             <div className="font-bold text-secondary-900 uppercase tracking-tight">{party.name}</div>
                                         </td>

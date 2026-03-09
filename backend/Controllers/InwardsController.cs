@@ -115,7 +115,7 @@ namespace net_backend.Controllers
             [FromQuery] DateTime? endDate)
         {
             var locationId = await GetCurrentLocationIdAsync();
-            var query = _context.Inwards
+            IQueryable<Inward> query = _context.Inwards
                 .Where(i => i.LocationId == locationId)
                 .Include(i => i.Vendor)
                 .Include(i => i.Creator)
@@ -125,9 +125,7 @@ namespace net_backend.Controllers
                 .Include(i => i.Lines)
                     .ThenInclude(l => l.Item!)
                         .ThenInclude(i => i!.Material)
-                .Include(i => i.Lines)
-                .OrderByDescending(i => i.CreatedAt)
-                .AsQueryable();
+                .Include(i => i.Lines);
 
             if (vendorIds != null && vendorIds.Any())
                 query = query.Where(i => vendorIds.Contains(i.VendorId ?? 0));
@@ -163,7 +161,7 @@ namespace net_backend.Controllers
             if (!isActive.HasValue && !await IsAdmin())
                 query = query.Where(i => i.IsActive);
 
-            var list = await query.ToListAsync();
+            var list = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
             
             // Pre-fetch source numbers for display
             var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();

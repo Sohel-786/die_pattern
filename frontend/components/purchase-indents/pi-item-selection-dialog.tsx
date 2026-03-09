@@ -18,6 +18,7 @@ const STATUS_LABELS: Record<ItemProcessState, string> = {
   InwardDone: "Inward Done",
   InQC: "In QC",
   InJobwork: "In Job work",
+  AtVendor: "At Vendor",
   Outward: "Outward",
   InStock: "In Stock",
 };
@@ -29,6 +30,7 @@ const STATUS_PILL_CLASS: Record<ItemProcessState, string> = {
   InwardDone: "bg-sky-100 text-sky-800 border-sky-200",
   InQC: "bg-violet-100 text-violet-800 border-violet-200",
   InJobwork: "bg-teal-100 text-teal-800 border-teal-200",
+  AtVendor: "bg-pink-100 text-pink-800 border-pink-200",
   Outward: "bg-orange-100 text-orange-800 border-orange-200",
   InStock: "bg-emerald-100 text-emerald-800 border-emerald-200",
 };

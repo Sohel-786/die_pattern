@@ -206,7 +206,7 @@ export default function QualityControlPage() {
                                                     {expandedQcId === q.id ? <Minus className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                                                 </Button>
                                             </td>
-                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{qcs.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{q.qcNo}</td>
                                             <td className="px-4 py-3 text-secondary-700 text-sm">{format(new Date(q.createdAt), "dd MMM yyyy")}</td>
                                             <td className="px-4 py-3 font-medium text-secondary-800 text-sm">{q.partyName ?? "—"}</td>

@@ -62,7 +62,7 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-      });
+      } as any);
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();

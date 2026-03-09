@@ -213,7 +213,7 @@ export default function LocationsPage() {
                     key={location.id}
                     className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group"
                   >
-                    <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
+                    <td className="px-4 py-3 text-secondary-500 font-medium text-center">{filteredLocations.length - idx}</td>
                     <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight">
                       {location.name}
                     </td>

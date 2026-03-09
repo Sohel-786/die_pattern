@@ -26,19 +26,19 @@ namespace net_backend.Controllers
             switch (type.ToLower())
             {
                 case "item-types":
-                    data = (await _context.ItemTypes.OrderBy(x => x.Name).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
+                    data = (await _context.ItemTypes.OrderByDescending(x => x.Id).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
                     fileName = "ItemTypes.xlsx";
                     break;
                 case "materials":
-                    data = (await _context.Materials.OrderBy(x => x.Name).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
+                    data = (await _context.Materials.OrderByDescending(x => x.Id).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
                     fileName = "Materials.xlsx";
                     break;
                 case "item-statuses":
-                    data = (await _context.ItemStatuses.OrderBy(x => x.Name).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
+                    data = (await _context.ItemStatuses.OrderByDescending(x => x.Id).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
                     fileName = "ItemStatuses.xlsx";
                     break;
                 case "owner-types":
-                    data = (await _context.OwnerTypes.OrderBy(x => x.Name).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
+                    data = (await _context.OwnerTypes.OrderByDescending(x => x.Id).ToListAsync()).Select(x => new { x.Name, IsActive = x.IsActive ? "Yes" : "No" });
                     fileName = "OwnerTypes.xlsx";
                     break;
                 default:
@@ -149,10 +149,10 @@ namespace net_backend.Controllers
 
         // Item Types
         [HttpGet("item-types")]
-        public async Task<IActionResult> GetItemTypes() => Ok(new { data = await _context.ItemTypes.OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetItemTypes() => Ok(new { data = await _context.ItemTypes.OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpGet("item-types/active")]
-        public async Task<IActionResult> GetActiveItemTypes() => Ok(new { data = await _context.ItemTypes.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetActiveItemTypes() => Ok(new { data = await _context.ItemTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpPost("item-types")]
         public async Task<IActionResult> CreateItemType([FromBody] ItemType item)
@@ -196,10 +196,10 @@ namespace net_backend.Controllers
 
         // Item Statuses
         [HttpGet("item-statuses")]
-        public async Task<IActionResult> GetItemStatuses() => Ok(new { data = await _context.ItemStatuses.OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetItemStatuses() => Ok(new { data = await _context.ItemStatuses.OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpGet("item-statuses/active")]
-        public async Task<IActionResult> GetActiveItemStatuses() => Ok(new { data = await _context.ItemStatuses.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetActiveItemStatuses() => Ok(new { data = await _context.ItemStatuses.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpPost("item-statuses")]
         public async Task<IActionResult> CreateItemStatus([FromBody] ItemStatus item)
@@ -243,10 +243,10 @@ namespace net_backend.Controllers
 
         // Materials
         [HttpGet("materials")]
-        public async Task<IActionResult> GetMaterials() => Ok(new { data = await _context.Materials.OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetMaterials() => Ok(new { data = await _context.Materials.OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpGet("materials/active")]
-        public async Task<IActionResult> GetActiveMaterials() => Ok(new { data = await _context.Materials.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetActiveMaterials() => Ok(new { data = await _context.Materials.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpPost("materials")]
         public async Task<IActionResult> CreateMaterial([FromBody] Material item)
@@ -290,10 +290,10 @@ namespace net_backend.Controllers
 
         // Owner Types
         [HttpGet("owner-types")]
-        public async Task<IActionResult> GetOwnerTypes() => Ok(new { data = await _context.OwnerTypes.OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetOwnerTypes() => Ok(new { data = await _context.OwnerTypes.OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpGet("owner-types/active")]
-        public async Task<IActionResult> GetActiveOwnerTypes() => Ok(new { data = await _context.OwnerTypes.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync() });
+        public async Task<IActionResult> GetActiveOwnerTypes() => Ok(new { data = await _context.OwnerTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
 
         [HttpPost("owner-types")]
         public async Task<IActionResult> CreateOwnerType([FromBody] OwnerType item)

@@ -110,14 +110,14 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemStatus>>>> GetAll()
         {
-            var items = await _context.ItemStatuses.OrderBy(s => s.Name).ToListAsync();
+            var items = await _context.ItemStatuses.OrderByDescending(s => s.Id).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<ItemStatus>> { Data = items });
         }
 
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemStatus>>>> GetActive()
         {
-            var items = await _context.ItemStatuses.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            var items = await _context.ItemStatuses.Where(s => s.IsActive).OrderByDescending(s => s.Id).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<ItemStatus>> { Data = items });
         }
 

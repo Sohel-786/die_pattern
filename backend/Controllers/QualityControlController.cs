@@ -105,7 +105,7 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ViewQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var query = _context.QcEntries
+            IQueryable<QualityControlEntry> query = _context.QcEntries
                 .Where(q => q.LocationId == locationId)
                 .Include(q => q.Party)
                 .Include(q => q.Creator)
@@ -120,9 +120,7 @@ namespace net_backend.Controllers
                 .Include(q => q.Items)
                     .ThenInclude(i => i.InwardLine)
                         .ThenInclude(l => l!.Item)
-                            .ThenInclude(it => it!.Material)
-                .OrderByDescending(q => q.CreatedAt)
-                .AsQueryable();
+                            .ThenInclude(it => it!.Material);
 
             if (partyId.HasValue)
                 query = query.Where(q => q.PartyId == partyId.Value);
@@ -150,7 +148,7 @@ namespace net_backend.Controllers
                     (q.Remarks != null && q.Remarks.ToLower().Contains(term)));
             }
 
-            var list = await query.ToListAsync();
+            var list = await query.OrderByDescending(q => q.CreatedAt).ToListAsync();
 
             // Fetch Source Numbers for Professional Display
             var poIds = list.SelectMany(q => q.Items).Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();

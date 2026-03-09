@@ -338,7 +338,7 @@ export default function PurchaseOrdersPage() {
                           )}
                         </Button>
                       </td>
-                      <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{orders.indexOf(po) + 1}</td>
+                      <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{orders.length - orders.indexOf(po)}</td>
                       <td className="px-4 py-3 font-bold text-secondary-900 text-sm">
                         {po.poNo}
                       </td>

@@ -32,15 +32,14 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
-            var query = _context.Items
+            IQueryable<Item> query = _context.Items
                 .Where(p => p.LocationId == locationId)
                 .Include(p => p.ItemType)
                 .Include(p => p.Material)
                 .Include(p => p.OwnerType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
-                .Include(p => p.CurrentParty)
-                .AsQueryable();
+                .Include(p => p.CurrentParty);
 
             if (isActive.HasValue)
                 query = query.Where(p => p.IsActive == isActive.Value);
@@ -67,7 +66,7 @@ namespace net_backend.Controllers
             }
 
             // Materialize first so we can use switch expressions and service methods in-memory
-            var items = await query.ToListAsync();
+            var items = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             var data = items.Select(p => new ItemDto
             {
                 Id = p.Id,

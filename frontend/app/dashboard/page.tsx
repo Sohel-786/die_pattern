@@ -596,7 +596,7 @@ export default function DashboardPage() {
                     <TableBody>
                       {locationWiseItems.map((row, idx) => (
                         <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                          <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                          <TableCell className="px-4 py-3 text-center text-secondary-600">{locationWiseItems.length - idx}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
@@ -704,7 +704,7 @@ export default function DashboardPage() {
                     <TableBody>
                       {itemsAtVendor.map((row, idx) => (
                         <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                          <TableCell className="px-4 py-3 text-center text-secondary-600">{idx + 1}</TableCell>
+                          <TableCell className="px-4 py-3 text-center text-secondary-600">{itemsAtVendor.length - idx}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.vendorName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>

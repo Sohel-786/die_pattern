@@ -28,7 +28,7 @@ namespace net_backend.Controllers
             if (!await HasPermission("ManageCompany")) return Forbidden();
 
             var companies = await _context.Companies
-                .OrderBy(c => c.Name)
+                .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
             var data = companies.Select(c => new {
                 c.Name,
@@ -268,7 +268,7 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("ManageCompany")) return Forbidden();
             var companies = await _context.Companies
-                .OrderBy(c => c.Name)
+                .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new CompanyDto
                 {
                     Id = c.Id,
@@ -297,7 +297,7 @@ namespace net_backend.Controllers
         {
             var companies = await _context.Companies
                 .Where(c => c.IsActive)
-                .OrderBy(c => c.Name)
+                .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new CompanyDto
                 {
                     Id = c.Id,

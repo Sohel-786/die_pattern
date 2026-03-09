@@ -301,7 +301,7 @@ export default function PurchaseIndentsPage() {
                                                     title={!canSelectPIForPO(pi) && (pi.items ?? []).every((i: { isInPO?: boolean }) => i.isInPO) ? "All items already in a PO" : undefined}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center">{indents.length - idx}</td>
                                             <td className="px-4 py-3">
                                                 <div className="font-bold text-secondary-900 uppercase tracking-tight">{pi.piNo}</div>
                                             </td>

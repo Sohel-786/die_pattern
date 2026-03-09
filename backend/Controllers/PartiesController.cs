@@ -25,7 +25,7 @@ namespace net_backend.Controllers
             var companyId = await GetCurrentCompanyIdAsync();
             var parties = await _context.Parties
                 .Where(p => p.CompanyId == companyId)
-                .OrderBy(p => p.Name)
+                .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
             var data = parties.Select(p => new {
                 Name = p.Name,
@@ -233,7 +233,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.LinkedCompanyId == null || p.LinkedCompanyId == companyId);
             }
 
-            var parties = await query.OrderBy(p => p.Name).ToListAsync();
+            var parties = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
         }
 
@@ -254,7 +254,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.LinkedCompanyId == null || p.LinkedCompanyId == companyId);
             }
 
-            var parties = await query.OrderBy(p => p.Name).ToListAsync();
+            var parties = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
         }
 

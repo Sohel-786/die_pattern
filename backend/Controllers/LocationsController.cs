@@ -24,7 +24,7 @@ namespace net_backend.Controllers
 
             var locations = await _context.Locations
                 .Include(l => l.Company)
-                .OrderBy(l => l.Name)
+                .OrderByDescending(l => l.CreatedAt)
                 .ToListAsync();
             var data = locations.Select(l => new {
                 Name = l.Name,
@@ -189,7 +189,7 @@ namespace net_backend.Controllers
                     l.IsActive,
                     l.CreatedAt
                 })
-                .OrderBy(l => l.Name)
+                .OrderByDescending(l => l.CreatedAt)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<object>> { Data = locations });
         }
@@ -199,8 +199,8 @@ namespace net_backend.Controllers
         {
             var locations = await _context.Locations
                 .Where(l => l.IsActive)
+                .OrderByDescending(l => l.CreatedAt)
                 .Select(l => new { l.Id, l.Name, l.Address, l.CompanyId })
-                .OrderBy(l => l.Name)
                 .ToListAsync();
             return Ok(new ApiResponse<IEnumerable<object>> { Data = locations });
         }

@@ -54,9 +54,8 @@ namespace net_backend.Controllers
         {
             var locationId = await GetCurrentLocationIdAsync();
             var isAdmin = await IsAdmin();
-            var query = _context.PurchaseIndents
+            IQueryable<PurchaseIndent> query = _context.PurchaseIndents
                 .Where(p => p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId))
-                .OrderByDescending(p => p.CreatedAt)
                 .Include(p => p.Creator)
                 .Include(p => p.Approver)
                 .Include(p => p.Items)
@@ -64,8 +63,7 @@ namespace net_backend.Controllers
                         .ThenInclude(it => it!.ItemType)
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Item)
-                        .ThenInclude(it => it!.Material)
-                .AsQueryable();
+                        .ThenInclude(it => it!.Material);
 
             if (!isAdmin)
                 query = query.Where(p => p.IsActive);
@@ -94,6 +92,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.Items.Any(i => itemIdList.Contains(i.ItemId)));
 
             var data = await query
+                .OrderByDescending(p => p.CreatedAt)
                 .Select(p => new PurchaseIndentDto
                 {
                     Id = p.Id,

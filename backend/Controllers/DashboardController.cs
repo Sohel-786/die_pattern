@@ -139,7 +139,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => itemIdList.Contains(p.Id));
 
             var list = await query
-                .OrderBy(p => p.MainPartName)
+                .OrderByDescending(p => p.Id)
                 .Select(p => new LocationWiseItemRowDto
                 {
                     Id = p.Id,
@@ -202,8 +202,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
 
             var list = await query
-                .OrderBy(p => p.CurrentParty != null ? p.CurrentParty.Name : "")
-                .ThenBy(p => p.MainPartName)
+                .OrderByDescending(p => p.Id)
                 .Select(p => new ItemAtVendorRowDto
                 {
                     Id = p.Id,
@@ -444,7 +443,7 @@ namespace net_backend.Controllers
                 .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
             if (itemIdList.Count > 0) query = query.Where(p => itemIdList.Contains(p.Id));
 
-            var rows = await query.OrderBy(p => p.MainPartName)
+            var rows = await query.OrderByDescending(p => p.Id)
                 .Select(p => new LocationWiseItemRowDto
                 {
                     Id = p.Id,
@@ -500,7 +499,7 @@ namespace net_backend.Controllers
             if (itemIdList.Count > 0) query = query.Where(p => itemIdList.Contains(p.Id));
             if (itemTypeId.HasValue && itemTypeId.Value > 0) query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
 
-            var rows = await query.OrderBy(p => p.CurrentParty != null ? p.CurrentParty.Name : "").ThenBy(p => p.MainPartName)
+            var rows = await query.OrderByDescending(p => p.Id)
                 .Select(p => new ItemAtVendorRowDto
                 {
                     Id = p.Id,

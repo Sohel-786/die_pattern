@@ -224,7 +224,7 @@ export default function OtherMastersPage() {
                                         key={`${activeTab}-${item.id}`}
                                         className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group"
                                     >
-                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{idx + 1}</td>
+                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{filteredData.length - idx}</td>
                                         <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight">{item.name}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.isActive
