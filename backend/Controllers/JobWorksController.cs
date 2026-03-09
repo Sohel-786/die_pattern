@@ -31,14 +31,16 @@ namespace net_backend.Controllers
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetPending([FromQuery] int? vendorId)
         {
-            var locationId = await GetCurrentLocationIdAsync();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             
             // JW items that are NOT yet Inwarded
             var query = _context.JobWorkItems
                 .Include(i => i.JobWork)
                     .ThenInclude(jw => jw!.ToParty)
+                .Include(i => i.JobWork)
+                    .ThenInclude(jw => jw!.Location)
                 .Include(i => i.Item)
-                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.IsActive && i.JobWork.Status != JobWorkStatus.Completed)
+                .Where(i => i.JobWork!.LocationId == locationId && i.JobWork.Location!.CompanyId == companyId && i.JobWork.IsActive && i.JobWork.Status != JobWorkStatus.Completed)
                 .AsQueryable();
 
             if (vendorId.HasValue && vendorId > 0)
@@ -91,17 +93,18 @@ namespace net_backend.Controllers
             [FromQuery] bool? isActive)
         {
             if (!await HasPermission("ViewMovement")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             var query = _context.JobWorks
                 .Include(j => j.Creator)
                 .Include(j => j.ToParty)
+                .Include(j => j.Location)
                 .Include(j => j.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(i => i!.ItemType)
                 .Include(j => j.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(i => i!.Material)
-                .Where(j => j.LocationId == locationId)
+                .Where(j => j.LocationId == locationId && j.Location!.CompanyId == companyId)
                 .AsQueryable();
 
             if (status.HasValue)
@@ -161,17 +164,18 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<JobWorkDto>>> GetById(int id)
         {
             if (!await HasPermission("ViewMovement")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             var jw = await _context.JobWorks
                 .Include(j => j.ToParty)
                 .Include(j => j.Creator)
+                .Include(j => j.Location)
                 .Include(j => j.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(i => i!.ItemType)
                 .Include(j => j.Items)
                     .ThenInclude(i => i.Item)
                         .ThenInclude(i => i!.Material)
-                .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
+                .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId && j.Location!.CompanyId == companyId);
             
             if (jw == null) return NotFound();
             if (!jw.IsActive && !await IsAdmin()) return NotFound();
@@ -196,19 +200,19 @@ namespace net_backend.Controllers
             if (!await HasPermission("CreateMovement")) return Forbidden();
             
             var userId = CurrentUserId;
-            var currentUser = await _context.Users
-                .Include(u => u.DefaultCompany)
-                .Include(u => u.DefaultLocation)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             
-            if (currentUser == null) return Unauthorized();
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+            
+            if (company == null || location == null) 
+                return BadRequest(new ApiResponse<JobWork> { Success = false, Message = "Invalid company or location session." });
 
             if (dto.Items == null || dto.Items.Count == 0)
                 return BadRequest(new ApiResponse<JobWork> { Success = false, Message = "At least one item is required." });
 
-            var companyName = currentUser.DefaultCompany?.Name ?? "General";
-            var locationName = currentUser.DefaultLocation?.Name ?? "General";
-            var locationId = currentUser.DefaultLocationId ?? 0;
+            var companyName = company.Name;
+            var locationName = location.Name;
             
             // Clean names for folder path
             companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));
@@ -294,8 +298,11 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreateJobWorkDto dto)
         {
             if (!await HasPermission("EditMovement")) return Forbidden();
-            var locationId = await GetCurrentLocationIdAsync();
-            var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId);
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var jw = await _context.JobWorks
+                .Include(j => j.Items)
+                .Include(j => j.Location)
+                .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId && j.Location!.CompanyId == companyId);
             if (jw == null) return NotFound();
 
             if (!jw.IsActive)
@@ -304,16 +311,13 @@ namespace net_backend.Controllers
             if (dto.Items == null || dto.Items.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
 
-            var userId = CurrentUserId;
-            var currentUser = await _context.Users
-                .Include(u => u.DefaultCompany)
-                .Include(u => u.DefaultLocation)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+            _ = CurrentUserId;
 
-            if (currentUser == null) return Unauthorized();
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
 
-            var companyName = currentUser.DefaultCompany?.Name ?? "General";
-            var locationName = currentUser.DefaultLocation?.Name ?? "General";
+            var companyName = (company?.Name ?? "General");
+            var locationName = (location?.Name ?? "General");
             companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));
             locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars()));
 
@@ -559,11 +563,15 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<object>>> UploadAttachment(IFormFile file)
         {
             if (file == null || file.Length == 0) return BadRequest("No file uploaded.");
-            var currentUser = await _context.Users.Include(u => u.DefaultCompany).Include(u => u.DefaultLocation).FirstOrDefaultAsync(u => u.Id == CurrentUserId);
-            if (currentUser == null) return Unauthorized();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+            
+            if (company == null || location == null) return BadRequest("Invalid company/location session.");
 
-            var companyName = currentUser.DefaultCompany?.Name ?? "General";
-            var locationName = currentUser.DefaultLocation?.Name ?? "General";
+            var companyName = company.Name;
+            var locationName = location.Name;
             
             // Clean names for folder path
             companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));

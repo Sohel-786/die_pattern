@@ -176,12 +176,21 @@ namespace net_backend.Controllers
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
             
             var lineIds = list.SelectMany(i => i.Lines).Select(l => l.Id).ToList();
-            var qcs = await _context.QcItems
+            var qcInfo = await _context.QcItems
                 .Where(q => lineIds.Contains(q.InwardLineId))
                 .Include(q => q.QcEntry)
-                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
+                .Select(q => new { q.InwardLineId, q.QcEntry!.QcNo, q.QcEntry.IsActive, q.QcEntry.CreatedAt })
+                .ToListAsync();
 
-            var data = list.Select(i => MapToDto(i, pos, jws, null, qcs, poRates)).ToList();
+            var qcs = qcInfo.Where(q => q.IsActive)
+                .GroupBy(q => q.InwardLineId)
+                .ToDictionary(g => g.Key, g => {
+                    var latest = g.OrderByDescending(x => x.CreatedAt).First();
+                    return new { latest.QcNo, latest.CreatedAt };
+                });
+            var activeQcLineIds = qcInfo.Where(q => q.IsActive).Select(q => q.InwardLineId).ToHashSet();
+
+            var data = list.Select(i => MapToDto(i, pos, jws, null, qcs, poRates, activeQcLineIds)).ToList();
             return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
         }
 
@@ -190,11 +199,92 @@ namespace net_backend.Controllers
         {
             if (!await IsAdmin()) return Forbidden();
             if (!await HasPermission("EditInward")) return Forbidden();
-            var inward = await _context.Inwards.FindAsync(id);
+            
+            var inward = await _context.Inwards
+                .Include(i => i.Lines)
+                .FirstOrDefaultAsync(i => i.Id == id);
             if (inward == null) return NotFound();
+            
+            if (inward.IsActive == active) return Ok(new ApiResponse<bool> { Data = true });
+            
+            if (active)
+            {
+                // Rule 1: Cannot reactivate if any item in this inward is already active in *another* inward for the same source
+                foreach (var line in inward.Lines)
+                {
+                    if (line.SourceRefId.HasValue)
+                    {
+                        var alreadyActiveInwardNo = await _context.InwardLines
+                            .Include(l => l.Inward)
+                            .Where(l => l.SourceType == line.SourceType && 
+                                       l.SourceRefId == line.SourceRefId && 
+                                       l.ItemId == line.ItemId && 
+                                       l.InwardId != id && 
+                                       l.Inward!.IsActive)
+                            .Select(l => l.Inward!.InwardNo)
+                            .FirstOrDefaultAsync();
+
+                        if (alreadyActiveInwardNo != null)
+                        {
+                            return BadRequest(new ApiResponse<bool> 
+                            { 
+                                Success = false, 
+                                Message = $"Cannot reactivate Inward {inward.InwardNo}: Item ID {line.ItemId} is already associated with an active Inward entry ({alreadyActiveInwardNo}) for this source. One item can only have one active inward record at a time." 
+                            });
+                        }
+                    }
+                }
+                
+                // Rule 2: Sync item states (Back to InwardDone)
+                await ProcessInwardMovementsAsync(inward);
+            }
+            else
+            {
+                // Rule 3: Cannot deactivate if any line has an Active QC entry
+                var lineIds = inward.Lines.Select(l => l.Id).ToList();
+                var hasActiveQC = await _context.QcItems
+                    .AnyAsync(qi => lineIds.Contains(qi.InwardLineId) && qi.QcEntry != null && qi.QcEntry.IsActive);
+                
+                if (hasActiveQC)
+                {
+                    return BadRequest(new ApiResponse<bool> 
+                    { 
+                        Success = false, 
+                        Message = "Cannot deactivate Inward entry because one or more items are currently under Quality Control or have already been inspected in an active entry." 
+                    });
+                }
+                
+                // Rule 4: Revert item states
+                foreach (var line in inward.Lines)
+                {
+                    var item = await _context.Items.FindAsync(line.ItemId);
+                    if (item != null && item.CurrentProcess == ItemProcessState.InwardDone)
+                    {
+                        if (line.SourceType == InwardSourceType.PO)
+                        {
+                            item.CurrentProcess = ItemProcessState.InPO;
+                            item.CurrentPartyId = null;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                        else if (line.SourceType == InwardSourceType.JobWork)
+                        {
+                            item.CurrentProcess = ItemProcessState.InJobwork;
+                            var jw = await _context.JobWorks.FindAsync(line.SourceRefId);
+                            if (jw != null) item.CurrentPartyId = jw.ToPartyId;
+                            item.CurrentLocationId = null;
+                            item.UpdatedAt = DateTime.Now;
+                        }
+                    }
+                }
+            }
+            
             inward.IsActive = active;
             inward.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
+            
+            // Rule 5: Refresh source statuses (e.g. Completed -> InTransit if an inward is deactivated)
+            await RefreshSourceStatusesAsync(inward.Lines);
+
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
@@ -225,12 +315,21 @@ namespace net_backend.Controllers
             var jws = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
             
             var lineIds = inward.Lines.Select(l => l.Id).ToList();
-            var qcs = await _context.QcItems
-                .Where(q => lineIds.Contains(q.InwardLineId))
+            var qcInfo = await _context.QcItems
+                .Where(q => q.InwardLine!.InwardId == id)
                 .Include(q => q.QcEntry)
-                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
+                .Select(q => new { q.InwardLineId, q.QcEntry!.QcNo, q.QcEntry.IsActive, q.QcEntry.CreatedAt })
+                .ToListAsync();
 
-            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, null, qcs, poRates) });
+            var qcs = qcInfo.Where(q => q.IsActive)
+                .GroupBy(q => q.InwardLineId)
+                .ToDictionary(g => g.Key, g => {
+                    var latest = g.OrderByDescending(x => x.CreatedAt).First();
+                    return new { latest.QcNo, latest.CreatedAt };
+                });
+            var activeQcLineIds = qcInfo.Where(q => q.IsActive).Select(q => q.InwardLineId).ToHashSet();
+
+            return Ok(new ApiResponse<InwardDto> { Data = MapToDto(inward, pos, jws, null, qcs, poRates, activeQcLineIds) });
         }
 
         [HttpPost]
@@ -275,7 +374,7 @@ namespace net_backend.Controllers
                 // Validate source for each line if provided
                 if (l.SourceRefId.HasValue) {
                    try { 
-                       var vid = await ValidateSourceRefAsync(locationId, l.SourceType, l.SourceRefId.Value); 
+                       var vid = await ValidateInwardLineAsync(locationId, l.SourceType, l.SourceRefId.Value, l.ItemId, null); 
                        if (inward.VendorId == null) inward.VendorId = vid;
                    }
                    catch (ArgumentException ex) { return BadRequest(new ApiResponse<Inward> { Success = false, Message = ex.Message }); }
@@ -359,7 +458,7 @@ namespace net_backend.Controllers
                 
                 if (l.SourceRefId.HasValue) {
                    try { 
-                       var vid = await ValidateSourceRefAsync(locationId, l.SourceType, l.SourceRefId.Value); 
+                       var vid = await ValidateInwardLineAsync(locationId, l.SourceType, l.SourceRefId.Value, l.ItemId, id); 
                        if (inward.VendorId == null) inward.VendorId = vid;
                    }
                    catch (ArgumentException ex) { return BadRequest(new ApiResponse<bool> { Success = false, Message = ex.Message }); }
@@ -394,10 +493,47 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<bool> { Data = true });
         }
 
+        private async Task RefreshSourceStatusesAsync(ICollection<InwardLine> lines)
+        {
+            var jwIdsToCheck = lines
+                .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue)
+                .Select(l => l.SourceRefId!.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (var jwId in jwIdsToCheck)
+            {
+                var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == jwId);
+                if (jw != null)
+                {
+                    var originalItemIds = jw.Items.Select(i => i.ItemId).ToList();
+                    var inwardedItemIds = await _context.InwardLines
+                        .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == jwId && l.Inward != null && l.Inward.IsActive)
+                        .Select(l => l.ItemId)
+                        .ToListAsync();
+
+                    var inwardedSet = inwardedItemIds.ToHashSet();
+                    
+                    if (originalItemIds.Count > 0 && originalItemIds.All(id => inwardedSet.Contains(id)))
+                    {
+                        jw.Status = JobWorkStatus.Completed;
+                    }
+                    else if (inwardedSet.Count > 0)
+                    {
+                        jw.Status = JobWorkStatus.InTransit;
+                    }
+                    else
+                    {
+                        jw.Status = JobWorkStatus.Pending;
+                    }
+                    jw.UpdatedAt = DateTime.Now;
+                }
+            }
+            await _context.SaveChangesAsync();
+        }
+
         private async Task ProcessInwardMovementsAsync(Inward inward)
         {
-            var jwIdsToCheck = new HashSet<int>();
-
             foreach (var line in inward.Lines)
             {
                 var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == line.ItemId);
@@ -410,80 +546,55 @@ namespace net_backend.Controllers
                     item.UpdatedAt = DateTime.Now;
                     _context.Items.Update(item);
                 }
-
-                if (line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
-                {
-                    jwIdsToCheck.Add(line.SourceRefId.Value);
-                }
             }
 
-            foreach (var jwId in jwIdsToCheck)
-            {
-                var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == jwId);
-                if (jw != null)
-                {
-                    // Check if all items in this JW have been inwarded correctly at some point across history
-                    var originalItemIds = jw.Items.Select(i => i.ItemId).ToList();
-                    
-                    var inwardedItemIds = await _context.InwardLines
-                        .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == jwId && l.Inward != null && l.Inward.IsActive)
-                        .Select(l => l.ItemId)
-                        .ToListAsync();
-
-                    var inwardedSet = inwardedItemIds.ToHashSet();
-                    
-                    if (originalItemIds.All(id => inwardedSet.Contains(id)))
-                    {
-                        jw.Status = JobWorkStatus.Completed;
-                        jw.UpdatedAt = DateTime.Now;
-                    }
-                    else
-                    {
-                        jw.Status = JobWorkStatus.InTransit; // Or keep as is, but InTransit makes sense if some are done
-                    }
-                }
-            }
-
-            await _context.SaveChangesAsync();
+            await RefreshSourceStatusesAsync(inward.Lines);
         }
 
-        private async Task<int?> ValidateSourceRefAsync(int locationId, InwardSourceType sourceType, int sourceRefId)
+        private async Task<int?> ValidateInwardLineAsync(int locationId, InwardSourceType sourceType, int sourceRefId, int itemId, int? excludeInwardId)
         {
             int? vendorId = null;
+
+            // Check if item already has an active Inward for this source
+            var alreadyActive = await _context.InwardLines
+                .AnyAsync(l => l.SourceType == sourceType && 
+                               l.SourceRefId == sourceRefId && 
+                               l.ItemId == itemId && 
+                               l.InwardId != excludeInwardId && 
+                               l.Inward!.IsActive);
+            
+            if (alreadyActive)
+                throw new ArgumentException($"Item ID {itemId} already has an active Inward record for this source. Only one active Inward is allowed per item per source.");
+
             if (sourceType == InwardSourceType.PO)
             {
-                var po = await _context.PurchaseOrders.Include(p => p.Items).ThenInclude(i => i.PurchaseIndentItem).FirstOrDefaultAsync(p => p.Id == sourceRefId && p.LocationId == locationId);
+                var po = await _context.PurchaseOrders
+                    .Include(p => p.Items)
+                        .ThenInclude(i => i.PurchaseIndentItem)
+                    .FirstOrDefaultAsync(p => p.Id == sourceRefId && p.LocationId == locationId);
+
                 if (po == null) throw new ArgumentException("Invalid PO reference or PO not in current location.");
                 if (po.Status != PoStatus.Approved) throw new ArgumentException("Only approved POs can be used for Inward.");
                 if (!po.IsActive) throw new ArgumentException("Inactive POs cannot be used for Inward.");
-                var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToHashSet();
-                
-                var inwardedFromPo = await _context.InwardLines
-                    .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive)
-                    .Select(l => l.ItemId)
-                    .ToListAsync();
 
-                var inwardedSet = inwardedFromPo.ToHashSet();
-                if (poItemIds.Count > 0 && poItemIds.All(id => inwardedSet.Contains(id)))
-                    throw new ArgumentException("This PO is already fully inwarded.");
+                var poItemIds = po.Items.Where(poi => poi.PurchaseIndentItem != null).Select(poi => poi.PurchaseIndentItem!.ItemId).ToList();
+                if (!poItemIds.Contains(itemId))
+                    throw new ArgumentException($"Item ID {itemId} does not belong to Purchase Order {po.PoNo}.");
+
                 vendorId = po.VendorId;
             }
             else if (sourceType == InwardSourceType.JobWork)
             {
-                var jw = await _context.JobWorks.Include(j => j.Items).FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
+                var jw = await _context.JobWorks
+                    .Include(j => j.Items)
+                    .FirstOrDefaultAsync(j => j.Id == sourceRefId && j.LocationId == locationId);
+
                 if (jw == null) throw new ArgumentException("Invalid Job Work reference or not in current location.");
-                if (jw.Status == JobWorkStatus.Completed) throw new ArgumentException("This Job Work is already fully completed.");
+                if (!jw.IsActive) throw new ArgumentException("Inactive Job Work entries cannot be used for Inward.");
                 
-                var inwardedFromJw = await _context.InwardLines
-                    .Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId == sourceRefId && l.Inward != null && l.Inward.IsActive)
-                    .Select(l => l.ItemId)
-                    .ToListAsync();
-                
-                var inwardedSet = inwardedFromJw.ToHashSet();
                 var jwItemIds = jw.Items.Select(i => i.ItemId).ToList();
-                
-                if (jwItemIds.Count > 0 && jwItemIds.All(id => inwardedSet.Contains(id)))
-                    throw new ArgumentException("This Job Work is already fully inwarded.");
+                if (!jwItemIds.Contains(itemId))
+                    throw new ArgumentException($"Item ID {itemId} does not belong to Job Work {jw.JobWorkNo}.");
                 
                 vendorId = jw.ToPartyId;
             }
@@ -495,8 +606,9 @@ namespace net_backend.Controllers
             Dictionary<int, PurchaseOrder>? pos = null, 
             Dictionary<int, JobWork>? jws = null,
             Dictionary<int, string>? outs = null,
-            Dictionary<int, string>? qcs = null,
-            Dictionary<string, decimal>? poRates = null)
+            dynamic? qcs = null,
+            Dictionary<string, decimal>? poRates = null,
+            HashSet<int>? activeQcLineIds = null)
         {
             var sourceTypes = i.Lines.Select(l => l.SourceType).Distinct().ToList();
             var fromStrs = new List<string>();
@@ -517,6 +629,7 @@ namespace net_backend.Controllers
                 IsActive = i.IsActive,
                 InwardFrom = string.Join(", ", fromStrs),
                 CreatedAt = i.CreatedAt,
+                HasActiveQC = activeQcLineIds != null && i.Lines.Any(l => activeQcLineIds.Contains(l.Id)),
                 AttachmentUrls = string.IsNullOrWhiteSpace(i.AttachmentUrlsJson)
                     ? new List<string>()
                     : (JsonSerializer.Deserialize<List<string>>(i.AttachmentUrlsJson) ?? new List<string>()),
@@ -540,7 +653,9 @@ namespace net_backend.Controllers
                                      : l.SourceRefId?.ToString(),
                     IsQCPending = l.IsQCPending,
                     IsQCApproved = l.IsQCApproved,
-                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id] : "—",
+                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id].QcNo : "—",
+                    QCDate = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id].CreatedAt : null,
+                    HasActiveQC = activeQcLineIds != null && activeQcLineIds.Contains(l.Id),
                     Rate = l.Rate,
                     GstPercent = l.GstPercent,
                     SourceRate = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && poRates != null && poRates.ContainsKey($"{l.SourceRefId}_{l.ItemId}")) 

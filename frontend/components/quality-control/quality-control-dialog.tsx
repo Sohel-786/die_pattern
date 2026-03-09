@@ -41,6 +41,20 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    const uniqueInwards = useMemo(() => {
+        const map = new Map<number, { id: number; no: string }>();
+        selectedItems.forEach(item => {
+            if (item.inwardId && !map.has(item.inwardId)) {
+                map.set(item.inwardId, { id: item.inwardId, no: item.inwardNo || "—" });
+            }
+        });
+        return Array.from(map.values());
+    }, [selectedItems]);
+
+    const removeInwardSource = (inwardId: number) => {
+        setSelectedItems(prev => prev.filter(item => item.inwardId !== inwardId));
+    };
+
     const { data: qcDetail } = useQuery<QC>({
         queryKey: ["quality-control", qc?.id],
         queryFn: async () => {
@@ -59,6 +73,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
             setSelectedItems(
                 (qcDetail.items || []).map((it) => ({
                     inwardLineId: it.inwardLineId,
+                    inwardId: it.inwardId,
                     itemId: it.itemId,
                     itemName: it.currentName ?? it.mainPartName ?? "—",
                     mainPartName: it.mainPartName ?? "",
@@ -80,7 +95,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
             setAttachmentUrlsToDelete([]);
         } else if (!isEditing) {
             setPartyId(0);
-            setSourceType("");
+            setSourceType(InwardSourceType.PO);
             setRemarks("");
             setSelectedItems([]);
             setAttachmentUrls([]);
@@ -99,9 +114,9 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     });
 
     const { data: pendingItems = [] } = useQuery<PendingQC[]>({
-        queryKey: ["quality-control", "pending", partyId, sourceType],
+        queryKey: ["quality-control", "pending", partyId, sourceType, qc?.id],
         queryFn: async () => {
-            const res = await api.get(`/quality-control/pending?partyId=${partyId}&sourceType=${sourceType}`);
+            const res = await api.get(`/quality-control/pending?partyId=${partyId}&sourceType=${sourceType}${qc?.id ? `&excludeEntryId=${qc.id}` : ""}`);
             return res.data.data;
         },
         enabled: open && !!partyId && !!sourceType,
@@ -118,7 +133,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
     });
 
     const mutation = useMutation({
-        mutationFn: (data: { partyId?: number; sourceType?: InwardSourceType; remarks?: string; inwardLineIds: number[] }) =>
+        mutationFn: (data: { partyId: number; sourceType: InwardSourceType; remarks?: string; inwardLineIds: number[]; attachmentUrls?: string[] }) =>
             isEditing ? api.put(`/quality-control/${qc!.id}`, data) : api.post("/quality-control", data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["quality-control"] });
@@ -160,10 +175,13 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
 
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
 
+    const isFormValid = !!partyId && !!sourceType && includedIds.length > 0 && effectiveAttachmentCount > 0;
+
     const handleSubmit = async () => {
         if (!partyId) return toast.error("Please select Party");
         if (sourceType === "") return toast.error("Please select Source Type");
         if (includedIds.length === 0) return toast.error("Include at least one item in this QC entry");
+        if (effectiveAttachmentCount === 0) return toast.error("Please attach at least one inspection document before saving.");
 
         setUploading(true);
         try {
@@ -181,11 +199,13 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
             const keptUrls = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u));
             const finalUrls = [...keptUrls, ...newUrls];
 
-            const payload: any = { remarks, attachmentUrls: finalUrls, inwardLineIds: includedIds };
-            if (!isEditing) {
-                payload.partyId = partyId;
-                payload.sourceType = sourceType;
-            }
+            const payload = {
+                partyId,
+                sourceType,
+                remarks,
+                attachmentUrls: finalUrls,
+                inwardLineIds: includedIds
+            };
 
             await mutation.mutateAsync(payload);
         } catch (err: any) {
@@ -256,7 +276,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                     />
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Vendor / Party *</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Vendor / Party <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <SearchableSelect
                                             options={parties.map((p) => ({ label: p.name, value: p.id }))}
@@ -266,12 +286,12 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                                 if (Number(id)) setSelectedItems([]);
                                             }}
                                             placeholder="Search party..."
-                                            disabled={isReadOnly || isEditing}
+                                            disabled={isReadOnly || selectedItems.length > 0}
                                         />
                                     </div>
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Source Type *</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Source Type <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <select
                                             value={sourceType}
@@ -280,7 +300,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                                 setSourceType(v);
                                                 setSelectedItems([]);
                                             }}
-                                            disabled={isReadOnly || isEditing}
+                                            disabled={isReadOnly || selectedItems.length > 0}
                                             className="h-9 w-full px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-semibold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
                                         >
                                             <option value="">Select source type</option>
@@ -295,7 +315,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                 <div className="col-span-12 flex flex-col gap-2 border-t border-secondary-100 pt-4 mt-2">
                                     <div className="flex items-end gap-2 flex-wrap">
                                         <div className="w-48 min-w-0">
-                                            <Label className="text-xs font-semibold text-secondary-600">Inspection Documents</Label>
+                                            <Label className="text-xs font-semibold text-secondary-600">Inspection Documents <span className="text-rose-500">*</span></Label>
                                             <div className={cn(
                                                 "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
                                                 (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200"
@@ -346,6 +366,36 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Selected Inward Sources Chips */}
+                            {uniqueInwards.length > 0 && (
+                                <div className="flex flex-col gap-1.5 px-1">
+                                    <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest leading-none">Selected Inward Sources</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {uniqueInwards.map((src) => (
+                                            <span
+                                                key={src.id}
+                                                className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700 shadow-sm transition-all hover:bg-white"
+                                            >
+                                                <span className="opacity-50 text-[10px]">INWARD</span>
+                                                {src.no}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => !isReadOnly && removeInwardSource(src.id)}
+                                                    className={cn(
+                                                        "p-0.5 rounded-full hover:bg-rose-100 transition-colors",
+                                                        isReadOnly ? "cursor-not-allowed text-primary-300" : "text-primary-400 hover:text-rose-600"
+                                                    )}
+                                                    title={isReadOnly ? "" : "Remove this inward"}
+                                                    disabled={isReadOnly}
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
                                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
@@ -441,7 +491,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                             {!isReadOnly && (
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={mutation.isPending || uploading || includedIds.length === 0}
+                                    disabled={mutation.isPending || uploading || !isFormValid}
                                     className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                                 >
                                     {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

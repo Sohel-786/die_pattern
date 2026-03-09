@@ -133,6 +133,7 @@ namespace net_backend.DTOs
         public string? RevisionNo { get; set; }
         public string? MaterialName { get; set; }
         public string? PiNo { get; set; }
+        public DateTime? PiDate { get; set; }
         public int? PurchaseIndentId { get; set; }
         public decimal Rate { get; set; }
         public decimal? GstPercent { get; set; }
@@ -266,6 +267,8 @@ namespace net_backend.DTOs
 
     public class UpdateQCDto
     {
+        public int PartyId { get; set; }
+        public InwardSourceType SourceType { get; set; }
         public string? Remarks { get; set; }
         public List<string>? AttachmentUrls { get; set; }
         public List<int> InwardLineIds { get; set; } = new();
@@ -286,6 +289,7 @@ namespace net_backend.DTOs
         public bool IsActive { get; set; } = true;
         public string? InwardFrom { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool HasActiveQC { get; set; }
         public List<InwardLineDto> Lines { get; set; } = new();
     }
 
@@ -308,6 +312,8 @@ namespace net_backend.DTOs
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
         public string? QCNo { get; set; }
+        public DateTime? QCDate { get; set; }
+        public bool HasActiveQC { get; set; }
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
         public decimal? SourceRate { get; set; }

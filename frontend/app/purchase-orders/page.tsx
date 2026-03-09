@@ -14,6 +14,7 @@ import {
   Ban,
   MoreVertical,
   XCircle,
+  RotateCcw,
 } from "lucide-react";
 import api from "@/lib/api";
 import { PO, PoStatus } from "@/types";
@@ -67,6 +68,7 @@ export default function PurchaseOrdersPage() {
   const [activeTarget, setActiveTarget] = useState<PO | null>(null);
   const [poDialogOpen, setPoDialogOpen] = useState(false);
   const [editPO, setEditPO] = useState<PO | null>(null);
+  const [revertTarget, setRevertTarget] = useState<PO | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -177,6 +179,19 @@ export default function PurchaseOrdersPage() {
     },
     onError: (err: any) =>
       toast.error(err.response?.data?.message || "Rejection failed"),
+  });
+
+  const revertToPendingMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/revert-to-pending`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      toast.success("PO reverted to Pending.");
+      setRevertTarget(null);
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Revert failed"),
   });
 
   const resetFilters = useCallback(() => {
@@ -384,39 +399,46 @@ export default function PurchaseOrdersPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="min-w-[11rem] py-1">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    const target = po;
-                                    requestAnimationFrame(() => setApproveTarget(target));
-                                  }}
-                                  className={cn(
-                                    "flex items-center gap-2 cursor-pointer py-2",
-                                    !canApproveOrReject(po) && "opacity-60"
-                                  )}
-                                >
-                                  <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                                  <span>Approve</span>
-                                  {!canApproveOrReject(po) && (
-                                    <span className="text-[10px] text-secondary-400 ml-auto">Pending only</span>
-                                  )}
-                                </DropdownMenuItem>
-                                <div className="my-1 border-t border-secondary-100" role="separator" />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    const target = po;
-                                    requestAnimationFrame(() => setRejectTarget(target));
-                                  }}
-                                  className={cn(
-                                    "flex items-center gap-2 cursor-pointer py-2",
-                                    !canApproveOrReject(po) && "opacity-60"
-                                  )}
-                                >
-                                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                                  <span>Reject</span>
-                                  {!canApproveOrReject(po) && (
-                                    <span className="text-[10px] text-secondary-400 ml-auto">Pending only</span>
-                                  )}
-                                </DropdownMenuItem>
+                                {po.status === PoStatus.Pending ? (
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        const target = po;
+                                        requestAnimationFrame(() => setApproveTarget(target));
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer py-2"
+                                    >
+                                      <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                      <span>Approve</span>
+                                    </DropdownMenuItem>
+                                    <div className="my-1 border-t border-secondary-100" role="separator" />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        const target = po;
+                                        requestAnimationFrame(() => setRejectTarget(target));
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer py-2"
+                                    >
+                                      <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                      <span>Reject</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                ) : (po.status === PoStatus.Approved || po.status === PoStatus.Rejected) && !po.hasInward ? (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      const target = po;
+                                      requestAnimationFrame(() => setRevertTarget(target));
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer py-2 text-amber-700 font-medium"
+                                  >
+                                    <RotateCcw className="w-4 h-4 shrink-0" />
+                                    <span>Revert to Pending</span>
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <div className="px-3 py-2 text-xs text-secondary-500 italic">
+                                    No approval actions available
+                                  </div>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
@@ -450,13 +472,13 @@ export default function PurchaseOrdersPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                disabled={po.hasInward || po.items?.some(i => i.isInwarded)}
+                                disabled={!!(po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-")))}
                                 onClick={() => setInactiveTarget(po)}
                                 className={cn(
                                   "h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100",
-                                  (po.hasInward || po.items?.some(i => i.isInwarded)) && "opacity-30 cursor-not-allowed"
+                                  (po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-"))) && "opacity-30 cursor-not-allowed"
                                 )}
-                                title={po.hasInward || po.items?.some(i => i.isInwarded) ? "Cannot deactivate because some items have been inwarded in active entries" : "Deactivate PO"}
+                                title={po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-")) ? "Cannot deactivate because some items have been inwarded in active entries" : "Deactivate PO"}
                               >
                                 <Ban className="w-4 h-4" />
                               </Button>
@@ -482,7 +504,7 @@ export default function PurchaseOrdersPage() {
                           key={`expand-${po.id}`}
                           className="bg-secondary-50/50 border-b border-secondary-100"
                         >
-                          <td colSpan={10} className="p-0 bg-secondary-50/30 max-w-0">
+                          <td colSpan={11} className="p-0 bg-secondary-50/30 max-w-0">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
@@ -508,6 +530,9 @@ export default function PurchaseOrdersPage() {
                                           </TableHead>
                                           <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
                                             PI NO.
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            PI DATE
                                           </TableHead>
                                           <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
                                             ITEM DESCRIPTION
@@ -557,6 +582,9 @@ export default function PurchaseOrdersPage() {
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-secondary-700 font-semibold text-[13px]">
                                                 {i.piNo ?? "—"}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                {i.piDate ? format(new Date(i.piDate), "dd MMM yyyy") : "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col min-w-0">
@@ -813,7 +841,41 @@ export default function PurchaseOrdersPage() {
               }
               disabled={activeMutation.isPending}
             >
-              {activeMutation.isPending ? "Processing..." : "Activate"}
+              {activeMutation.isPending ? "Processing..." : "Confirm Activate"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={!!revertTarget}
+        onClose={() => setRevertTarget(null)}
+        title="Revert Purchase Order"
+        size="sm"
+      >
+        <div className="space-y-4 font-sans text-sm">
+          <p className="text-secondary-600 leading-relaxed">
+            Revert PO <span className="font-bold text-secondary-900">{revertTarget?.poNo}</span> back to Pending?
+          </p>
+          <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg text-amber-800 text-[12px] font-medium leading-relaxed">
+            This will allow editing the order again. Items will be reverted to &apos;PI Issued&apos; state. You cannot revert if any inward entry exists.
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setRevertTarget(null)}
+              className="flex-1 font-bold h-10"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold h-10"
+              onClick={() =>
+                revertTarget && revertToPendingMutation.mutate(revertTarget.id)
+              }
+              disabled={revertToPendingMutation.isPending}
+            >
+              {revertToPendingMutation.isPending ? "Reverting..." : "Confirm Revert"}
             </Button>
           </div>
         </div>

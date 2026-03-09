@@ -197,7 +197,8 @@ namespace net_backend.Controllers
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PendingQCDto>>>> GetPending(
             [FromQuery] int? partyId,
-            [FromQuery] InwardSourceType? sourceType)
+            [FromQuery] InwardSourceType? sourceType,
+            [FromQuery] int? excludeEntryId)
         {
             if (!await HasPermission("CreateQC") && !await HasPermission("EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -216,7 +217,7 @@ namespace net_backend.Controllers
 
             // Hide items already in an active Pending QC entry
             var inActiveQc = await _context.QcItems
-                .Where(qi => qi.QcEntry!.IsActive && qi.QcEntry.Status == QcStatus.Pending)
+                .Where(qi => qi.QcEntry!.IsActive && qi.QcEntry.Status == QcStatus.Pending && qi.QcEntryId != excludeEntryId)
                 .Select(qi => qi.InwardLineId)
                 .ToListAsync();
 
@@ -511,6 +512,8 @@ namespace net_backend.Controllers
             if (entry.Status != QcStatus.Pending)
                 return BadRequest(new ApiResponse<QCDto> { Success = false, Message = "Only pending QC entries can be updated." });
 
+            entry.PartyId = dto.PartyId;
+            entry.SourceType = dto.SourceType;
             entry.Remarks = dto.Remarks ?? entry.Remarks;
             if (dto.AttachmentUrls != null)
                 entry.AttachmentUrlsJson = dto.AttachmentUrls.Count > 0 ? JsonSerializer.Serialize(dto.AttachmentUrls) : null;
@@ -592,6 +595,19 @@ namespace net_backend.Controllers
 
             if (entry.Status == QcStatus.Approved)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Approved QC entries cannot be toggled." });
+
+            // Check for existing active QC on items
+            var itemLineIds = await _context.QcItems.Where(qi => qi.QcEntryId == id).Select(qi => qi.InwardLineId).ToListAsync();
+            var alreadyActive = await _context.QcItems
+                .Include(qi => qi.QcEntry)
+                .Where(qi => qi.InwardLineId != 0 && itemLineIds.Contains(qi.InwardLineId) && qi.QcEntryId != id && qi.QcEntry!.IsActive)
+                .Select(qi => qi.QcEntry!.QcNo)
+                .FirstOrDefaultAsync();
+
+            if (alreadyActive != null)
+            {
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Cannot activate. One or more items in this entry are already part of another active QC entry ({alreadyActive})." });
+            }
 
             entry.IsActive = true;
             entry.UpdatedAt = DateTime.Now;

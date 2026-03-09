@@ -43,6 +43,7 @@ interface InwardLineDraft {
     sourceRate?: number | null;
     sourceGstPercent?: number | null;
     isQCPending?: boolean;
+    hasActiveQC?: boolean;
 }
 
 export function InwardDialog({
@@ -113,6 +114,7 @@ export function InwardDialog({
         },
         enabled: open && !!inwardId
     });
+    const isReadOnly = isEditing && inward?.isActive === false;
 
     const { data: vendors = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
@@ -155,6 +157,7 @@ export function InwardDialog({
                 sourceRate: l.sourceRate,
                 sourceGstPercent: l.sourceGstPercent,
                 isQCPending: l.isQCPending,
+                hasActiveQC: l.hasActiveQC,
                 included: true
             })));
             setAttachmentUrls((inward.attachmentUrls as string[]) || []);
@@ -351,7 +354,9 @@ export function InwardDialog({
                                                 }
                                             }}
                                             placeholder="Search vendors..."
+                                            disabled={isReadOnly || lines.length > 0}
                                         />
+
                                     </div>
                                 </div>
                                 <div className="col-span-4">
@@ -368,7 +373,7 @@ export function InwardDialog({
                                         <select
                                             value={selectedSourceType}
                                             onChange={(e) => setSelectedSourceType(e.target.value as InwardSourceType)}
-                                            disabled={!vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
+                                            disabled={isReadOnly || !vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
                                             className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {sourceOptions.map(opt => (
@@ -378,7 +383,7 @@ export function InwardDialog({
                                         <Button
                                             type="button"
                                             onClick={() => setSourceSelectionOpen(true)}
-                                            disabled={!vendorId || lines.some(l => l.isQCPending === false)}
+                                            disabled={isReadOnly || !vendorId || lines.some(l => l.isQCPending === false)}
                                             className="h-9 px-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest gap-2 rounded-lg shadow-sm shadow-primary-200"
                                         >
                                             <Plus className="w-4 h-4" />
@@ -396,14 +401,14 @@ export function InwardDialog({
                                         <Label className="text-[10px] font-black uppercase text-secondary-400 tracking-widest block leading-none mb-1">Attachment Upload</Label>
                                         <div className={cn(
                                             "flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
-                                            uploading && "opacity-50 cursor-not-allowed"
+                                            (uploading || isReadOnly) && "opacity-50 cursor-not-allowed"
                                         )}>
-                                            <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", uploading ? "cursor-not-allowed" : "cursor-pointer")}>
+                                            <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", (uploading || isReadOnly) ? "cursor-not-allowed" : "cursor-pointer")}>
                                                 <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
                                                 <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
                                                     {uploading ? "Saving..." : effectiveAttachmentCount === 0 ? "PDF / Images" : "PDF / Images"}
                                                 </span>
-                                                <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading} />
+                                                <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
                                             </label>
                                         </div>
                                     </div>
@@ -436,10 +441,13 @@ export function InwardDialog({
                                                 {src.display}
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeSourceGroup(src.type, src.id)}
-                                                    className="p-0.5 rounded-full hover:bg-rose-100 text-primary-400 hover:text-rose-600 transition-colors"
-                                                    title="Remove entire source"
-                                                    disabled={lines.filter(l => l.sourceType === src.type && l.sourceRefId === src.id).some(l => l.isQCPending === false)}
+                                                    onClick={() => !isReadOnly && removeSourceGroup(src.type, src.id)}
+                                                    className={cn(
+                                                        "p-0.5 rounded-full hover:bg-rose-100 transition-colors",
+                                                        isReadOnly ? "cursor-not-allowed text-primary-300" : "text-primary-400 hover:text-rose-600"
+                                                    )}
+                                                    title={isReadOnly ? "" : "Remove entire source"}
+                                                    disabled={isReadOnly || lines.filter(l => l.sourceType === src.type && l.sourceRefId === src.id).some(l => l.isQCPending === false || l.hasActiveQC)}
                                                 >
                                                     <X className="w-3 h-3" />
                                                 </button>
@@ -482,7 +490,7 @@ export function InwardDialog({
                                             ) : (
                                                 lines.map((line, idx) => {
                                                     const included = line.included !== false;
-                                                    const hasQcDone = line.isQCPending === false;
+                                                    const isQCLocked = line.isQCPending === false || line.hasActiveQC === true;
                                                     return (
                                                         <tr key={idx} className={cn("hover:bg-primary-50/30 transition-colors", !included && "opacity-60 bg-secondary-50/50")}>
                                                             <td className="py-2.5 px-3 text-center align-middle">
@@ -490,9 +498,9 @@ export function InwardDialog({
                                                                     type="checkbox"
                                                                     checked={included}
                                                                     onChange={() => toggleLineIncluded(idx)}
-                                                                    disabled={hasQcDone}
-                                                                    className={cn("h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer mx-auto block", hasQcDone && "opacity-50 cursor-not-allowed")}
-                                                                    title={hasQcDone ? "Locked - QC evaluates this item" : (included ? "Include in Inward" : "Exclude from Inward")}
+                                                                    disabled={isQCLocked}
+                                                                    className={cn("h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer mx-auto block", isQCLocked && "opacity-50 cursor-not-allowed")}
+                                                                    title={isQCLocked ? "Locked - QC evaluates this item" : (included ? "Include in Inward" : "Exclude from Inward")}
                                                                 />
                                                             </td>
                                                             <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
@@ -528,9 +536,9 @@ export function InwardDialog({
                                                                                         return next;
                                                                                     });
                                                                                 }}
-                                                                                disabled={hasQcDone}
+                                                                                disabled={isQCLocked}
                                                                                 placeholder="0.00"
-                                                                                className={cn("h-8 border-secondary-200 text-right text-xs font-semibold", hasQcDone && "opacity-60 cursor-not-allowed bg-secondary-100")}
+                                                                                className={cn("h-8 border-secondary-200 text-right text-xs font-semibold", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
                                                                             />
                                                                         ) : "—"}
                                                                     </td>
@@ -547,9 +555,9 @@ export function InwardDialog({
                                                                                         return next;
                                                                                     });
                                                                                 }}
-                                                                                disabled={hasQcDone}
+                                                                                disabled={isQCLocked}
                                                                                 placeholder="0%"
-                                                                                className={cn("h-8 border-secondary-200 text-right text-xs", hasQcDone && "opacity-60 cursor-not-allowed bg-secondary-100")}
+                                                                                className={cn("h-8 border-secondary-200 text-right text-xs", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
                                                                             />
                                                                         ) : "—"}
                                                                     </td>
@@ -565,8 +573,8 @@ export function InwardDialog({
                                                                     placeholder="Line notes..."
                                                                     value={line.remarks}
                                                                     onChange={(e) => updateLineRemark(idx, e.target.value)}
-                                                                    disabled={!included || hasQcDone}
-                                                                    className={cn("h-8 border-secondary-200 focus:border-primary-400 text-sm bg-secondary-50/30 rounded-lg", (!included || hasQcDone) && "opacity-50 cursor-not-allowed")}
+                                                                    disabled={!included || isQCLocked}
+                                                                    className={cn("h-8 border-secondary-200 focus:border-primary-400 text-sm bg-secondary-50/30 rounded-lg", (!included || isQCLocked) && "opacity-50 cursor-not-allowed")}
                                                                 />
                                                             </td>
                                                         </tr>
@@ -584,8 +592,9 @@ export function InwardDialog({
                                 <Textarea
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
+                                    readOnly={isReadOnly}
                                     placeholder="Optional header level remarks..."
-                                    className="min-h-[64px] text-sm border-secondary-100 bg-secondary-50/20 rounded-lg resize-none"
+                                    className={cn("min-h-[64px] text-sm border-secondary-100 rounded-lg resize-none", isReadOnly ? "bg-secondary-50" : "bg-secondary-50/20")}
                                 />
                             </div>
                         </div>
@@ -612,8 +621,9 @@ export function InwardDialog({
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={mutation.isPending || uploading || !isValid}
+                                    disabled={mutation.isPending || uploading || !isValid || isReadOnly}
                                     className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:bg-secondary-200 disabled:text-secondary-400 disabled:opacity-100 transition-all shadow-lg shadow-primary-200/20"
+                                    title={isEditing && inward?.isActive === false ? "Inactive inward receipts cannot be updated" : ""}
                                 >
                                     {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
                                 </Button>

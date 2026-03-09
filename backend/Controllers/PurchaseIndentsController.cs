@@ -440,34 +440,55 @@ namespace net_backend.Controllers
             var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
 
-            // Do not allow deactivating if any item of this PI is in an active PO
             if (pi.IsActive)
             {
+                // DEACTIVATING
+                // Do not allow deactivating if any item of this PI is in an active PO
                 var piItemIds = pi.Items.Select(i => i.Id).ToList();
                 var hasActivePo = await _context.PurchaseOrderItems
                     .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
                 if (hasActivePo)
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this indent are in an active Purchase Order." });
-            }
-            else
-            {
-                // Do not allow reactivating an inactive PI that has items (items are released for a new PI)
-                if (pi.Items.Any())
-                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "An inactive Purchase Indent that contains items cannot be reactivated. Those items are available for a new PI." });
-            }
 
-            pi.IsActive = !pi.IsActive;
-            pi.UpdatedAt = DateTime.Now;
+                pi.IsActive = false;
+                pi.UpdatedAt = DateTime.Now;
 
-            // When deactivating, release items back to NotInStock so they can be used in a new PI
-            if (!pi.IsActive)
-            {
+                // When deactivating, release items back to NotInStock so they can be used in a new PI
                 foreach (var piItem in pi.Items)
                 {
                     var item = await _context.Items.FindAsync(piItem.ItemId);
                     if (item != null)
                     {
                         item.CurrentProcess = ItemProcessState.NotInStock;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
+            else
+            {
+                // REACTIVATING
+                // Allow reactivating an inactive PI if all its items are currently NotInStock (not in another active PI)
+                foreach (var piItem in pi.Items)
+                {
+                    var canAdd = await _itemState.CanAddToPIAsync(piItem.ItemId, pi.Id);
+                    if (!canAdd)
+                    {
+                        var state = await _itemState.GetStateAsync(piItem.ItemId, pi.Id);
+                        var stateName = state.ToString().Replace("In", "In ").Replace("Outward", "Outward to party");
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Cannot reactivate: item (ID {piItem.ItemId}) is already in another process ({stateName}). Reactivation is only allowed if all items are available." });
+                    }
+                }
+
+                pi.IsActive = true;
+                pi.UpdatedAt = DateTime.Now;
+
+                // Set items back to InPI
+                foreach (var piItem in pi.Items)
+                {
+                    var item = await _context.Items.FindAsync(piItem.ItemId);
+                    if (item != null)
+                    {
+                        item.CurrentProcess = ItemProcessState.InPI;
                         item.UpdatedAt = DateTime.Now;
                     }
                 }

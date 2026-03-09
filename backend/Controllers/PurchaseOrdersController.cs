@@ -202,6 +202,23 @@ namespace net_backend.Controllers
 
             po.IsActive = false;
             po.UpdatedAt = DateTime.Now;
+
+            // Release items back to InPI if they were in InPO
+            await _context.Entry(po).Collection(p => p.Items).LoadAsync();
+            foreach (var poItem in po.Items)
+            {
+                var piItem = await _context.PurchaseIndentItems.FindAsync(poItem.PurchaseIndentItemId);
+                if (piItem != null)
+                {
+                    var item = await _context.Items.FindAsync(piItem.ItemId);
+                    if (item != null && item.CurrentProcess == ItemProcessState.InPO)
+                    {
+                        item.CurrentProcess = ItemProcessState.InPI;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });
         }
@@ -289,9 +306,12 @@ namespace net_backend.Controllers
                     Items = remainingItems.Select(i => new POItemDto
                     {
                         Id = i.Id,
+                        PurchaseIndentItemId = i.PurchaseIndentItemId,
                         ItemId = i.PurchaseIndentItem!.ItemId,
                         MainPartName = i.PurchaseIndentItem!.Item?.MainPartName,
                         CurrentName = i.PurchaseIndentItem!.Item?.CurrentName,
+                        PiNo = i.PurchaseIndentItem!.PurchaseIndent?.PiNo,
+                        PiDate = i.PurchaseIndentItem!.PurchaseIndent?.CreatedAt,
                         Rate = i.Rate,
                         GstPercent = p.GstPercent,
                         IsInwarded = false
@@ -396,10 +416,12 @@ namespace net_backend.Controllers
 
             // Get all InwardLine IDs to fetch QC numbers
             var inwardLineIds = inwardDetails.Select(d => d.Id).Distinct().ToList();
-            var qcNumbers = await _context.QcItems
-                .Where(q => inwardLineIds.Contains(q.InwardLineId))
+            var qcNumbers = (await _context.QcItems
+                .Where(q => inwardLineIds.Contains(q.InwardLineId) && q.QcEntry!.IsActive)
                 .Include(q => q.QcEntry)
-                .ToDictionaryAsync(q => q.InwardLineId, q => q.QcEntry!.QcNo);
+                .ToListAsync())
+                .GroupBy(q => q.InwardLineId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.QcEntry!.CreatedAt).First().QcEntry!.QcNo);
 
             var inwardMap = inwardDetails
                 .GroupBy(x => $"{x.SourceRefId}_{x.ItemId}")
@@ -412,7 +434,10 @@ namespace net_backend.Controllers
 
             var data = list.Select(p =>
             {
-                var dto = new PODto();
+                var dto = new PODto
+                {
+                    HasInward = poIdsWithInward.Contains(p.Id)
+                };
                 MapToDto(p, dto);
 
                 // Populate Items with inward details
@@ -434,6 +459,7 @@ namespace net_backend.Controllers
                         RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
                         MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                         PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                        PiDate = i.PurchaseIndentItem.PurchaseIndent!.CreatedAt,
                         PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                         Rate = i.Rate,
                         GstPercent = p.GstPercent,
@@ -443,8 +469,8 @@ namespace net_backend.Controllers
                     };
                 }).ToList();
 
-                // HasInward is true if any item is inwarded in an active entry
-                dto.HasInward = dto.Items.Any(i => i.IsInwarded);
+                // Double check HasInward from items as well
+                if (!dto.HasInward) dto.HasInward = dto.Items.Any(i => i.IsInwarded);
 
                 return dto;
             }).ToList();
@@ -465,8 +491,8 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Duplicate die/pattern in the same PO is not allowed." });
 
             var alreadyInPo = await _context.PurchaseOrderItems
-                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId));
-            if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO." });
+                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
+            if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to an active PO." });
 
             if (string.IsNullOrWhiteSpace(dto.PurchaseType))
                 return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Purchase Type is mandatory." });
@@ -582,6 +608,7 @@ namespace net_backend.Controllers
                     RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
                     MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
                     PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                    PiDate = i.PurchaseIndentItem.PurchaseIndent!.CreatedAt,
                     PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
                     Rate = i.Rate,
                     GstPercent = po.GstPercent,
@@ -616,9 +643,9 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Duplicate die/pattern in the same PO is not allowed." });
 
             var alreadyInOtherPo = await _context.PurchaseOrderItems
-                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrderId != id);
+                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrderId != id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
             if (alreadyInOtherPo)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items are already in another PO." });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items are already in another active PO." });
 
             if (string.IsNullOrWhiteSpace(dto.PurchaseType))
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Purchase Type is mandatory." });
@@ -686,6 +713,12 @@ namespace net_backend.Controllers
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be approved." });
 
+            // Ensure no active inward exists (safety check)
+            var hasActiveInward = await _context.InwardLines
+                .AnyAsync(il => il.SourceType == InwardSourceType.PO && il.SourceRefId == id && _context.Inwards.Any(inv => inv.Id == il.InwardId && inv.IsActive));
+            if (hasActiveInward)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot approve: one or more items from this order have been inwarded in an active entry." });
+
             po.Status = PoStatus.Approved;
             po.ApprovedBy = CurrentUserId;
             po.ApprovedAt = DateTime.Now;
@@ -695,7 +728,6 @@ namespace net_backend.Controllers
             await _context.Entry(po).Collection(p => p.Items).LoadAsync();
             foreach (var poItem in po.Items)
             {
-                // We need to fetch the PI item to get the ItemId
                 var piItem = await _context.PurchaseIndentItems.FindAsync(poItem.PurchaseIndentItemId);
                 if (piItem != null)
                 {
@@ -728,6 +760,50 @@ namespace net_backend.Controllers
             po.ApprovedBy = null;
             po.ApprovedAt = null;
             po.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
+        [HttpPost("{id}/revert-to-pending")]
+        public async Task<ActionResult<ApiResponse<bool>>> RevertToPending(int id)
+        {
+            if (!await HasPermission("ApprovePO")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var po = await _context.PurchaseOrders
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
+            if (po == null) return NotFound();
+            if (!po.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only active Purchase Orders can be reverted to pending." });
+            if (po.Status != PoStatus.Approved && po.Status != PoStatus.Rejected)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only approved or rejected POs can be reverted to pending." });
+
+            // Check if any item has been inwarded in an active entry
+            var hasActiveInward = await _context.InwardLines
+                .AnyAsync(il => il.SourceType == InwardSourceType.PO && il.SourceRefId == id && _context.Inwards.Any(inv => inv.Id == il.InwardId && inv.IsActive));
+            if (hasActiveInward)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot revert: one or more items from this order have already been inwarded in an active entry." });
+
+            po.Status = PoStatus.Pending;
+            po.ApprovedBy = null;
+            po.ApprovedAt = null;
+            po.UpdatedAt = DateTime.Now;
+
+            // When reverting to pending, items move back to InPI (PI Issued) if they were in InPO
+            foreach (var poItem in po.Items)
+            {
+                var piItem = await _context.PurchaseIndentItems.FindAsync(poItem.PurchaseIndentItemId);
+                if (piItem != null)
+                {
+                    var item = await _context.Items.FindAsync(piItem.ItemId);
+                    if (item != null && item.CurrentProcess == ItemProcessState.InPO)
+                    {
+                        item.CurrentProcess = ItemProcessState.InPI;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                }
+            }
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = true });

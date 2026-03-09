@@ -41,8 +41,7 @@ interface JobWorkDialogProps {
 
 export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProps) {
     const isEditing = !!jobWork?.id;
-    // Removed strict isReadOnly: backend and item-level logic will handle locking
-    const isReadOnly = false;
+    const isReadOnly = isEditing && jobWork?.isActive === false;
     const queryClient = useQueryClient();
 
     const [nextCode, setNextCode] = useState("");
@@ -271,7 +270,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                 </div>
                             </div>
                             <div className="col-span-12 md:col-span-4">
-                                <Label className="text-xs font-semibold text-secondary-600">Party (Send To) *</Label>
+                                <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Party (Send To) <span className="text-rose-500">*</span></Label>
                                 <div className="mt-1">
                                     <SearchableSelect
                                         options={parties.map(p => ({ value: p.id, label: p.name }))}
@@ -283,7 +282,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                 </div>
                             </div>
                             <div className="col-span-12 md:col-span-4">
-                                <Label className="text-xs font-semibold text-secondary-600">Purpose / Description *</Label>
+                                <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Purpose / Description <span className="text-rose-500">*</span></Label>
                                 <Input
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
@@ -334,7 +333,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                 <Button
                                     type="button"
                                     onClick={() => setItemSelectionOpen(true)}
-                                    className="h-9 shrink-0 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs px-4 rounded-lg shadow-sm gap-2"
+                                    disabled={isReadOnly || hasAnyInward}
+                                    className="h-9 shrink-0 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs px-4 rounded-lg shadow-sm gap-2 disabled:opacity-50"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Add Items
@@ -414,7 +414,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                                                     value={item.rate || ""}
                                                                     onChange={(e) => updateItem(item.itemId, "rate", Number(e.target.value))}
                                                                     disabled={isReadOnly || isLocked}
-                                                                    className={cn("h-8 text-right font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", isLocked && "opacity-60 cursor-not-allowed")}
+                                                                    className={cn("h-8 text-right font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                     placeholder="0.00"
                                                                 />
                                                             </td>
@@ -424,7 +424,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                                                     value={item.gstPercent ?? 18}
                                                                     onChange={(e) => updateItem(item.itemId, "gstPercent", Number(e.target.value))}
                                                                     disabled={isReadOnly || isLocked}
-                                                                    className={cn("h-8 text-center font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", isLocked && "opacity-60 cursor-not-allowed")}
+                                                                    className={cn("h-8 text-center font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                 />
                                                             </td>
                                                             <td className="py-2.5 px-4 text-right font-bold text-secondary-900 tabular-nums">
@@ -435,8 +435,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                                                                     value={item.remarks || ""}
                                                                     onChange={(e) => updateItem(item.itemId, "remarks", e.target.value)}
                                                                     disabled={isReadOnly || isLocked}
-                                                                    placeholder={isLocked ? "Locked - Inwarded" : "Line note..."}
-                                                                    className={cn("h-8 text-xs italic border-secondary-200 bg-secondary-50/30 w-full", isLocked && "opacity-60 cursor-not-allowed")}
+                                                                    placeholder={isLocked ? "Locked - Inwarded" : (isReadOnly ? "Locked - Inactive" : "Line note...")}
+                                                                    className={cn("h-8 text-xs italic border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                 />
                                                             </td>
                                                             <td className="py-2.5 px-4 text-center">
@@ -485,8 +485,9 @@ export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProp
                             {!isReadOnly && (
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={uploading || mutation.isPending || items.length === 0 || !isValid}
+                                    disabled={uploading || mutation.isPending || items.length === 0 || !isValid || isReadOnly}
                                     className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                                    title={isReadOnly ? "Inactive Job Works cannot be updated" : ""}
                                 >
                                     {uploading || mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                                     {isEditing ? "Update" : "Save"}

@@ -49,7 +49,11 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
             queryClient.invalidateQueries({ queryKey: ["inwards"] });
             queryClient.invalidateQueries({ queryKey: ["items"] });
             queryClient.invalidateQueries({ queryKey: ["job-works"] });
-            toast.success(variables.isApproved ? "Item approved ✓" : "Item rejected ✗");
+            if (variables.isApproved !== undefined) {
+                toast.success(variables.isApproved ? "Item approved ✓" : "Item rejected ✗");
+            } else {
+                toast.success("Note updated");
+            }
         },
         onError: (err: any, variables) => {
             // Rollback optimistic update on error
@@ -86,9 +90,22 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
     });
 
     const handleItemDecision = (itId: number, approved: boolean) => {
+        if (isReadOnly) return;
         approveItemMutation.mutate({
             qcItemId: itId,
             isApproved: approved,
+            remarks: remarksMap[itId] || "",
+        });
+    };
+
+    const handleUpdateNote = (itId: number) => {
+        if (isReadOnly) return;
+        const currentStatus = statusMap[itId];
+        if (currentStatus === null || currentStatus === undefined) return;
+
+        approveItemMutation.mutate({
+            qcItemId: itId,
+            isApproved: currentStatus,
             remarks: remarksMap[itId] || "",
         });
     };
@@ -102,7 +119,10 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
     };
 
     const handleRejectEntry = () => {
-        rejectEntryMutation.mutate(rejectEntryRemark || undefined);
+        if (isReadOnly) return;
+        if (window.confirm("Are you sure you want to reject the entire QC entry? This will mark all items as rejected and return them to stock.")) {
+            rejectEntryMutation.mutate(rejectEntryRemark || undefined);
+        }
     };
 
     const isReadOnly = qc.status !== QcStatus.Pending;
@@ -143,43 +163,8 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                     </div>
                 </div>
 
-                {/* Bulk Action Bar */}
-                {!isReadOnly && (
-                    <div className="px-6 py-3 bg-white border-b border-secondary-100">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <Button
-                                onClick={handleApproveEntry}
-                                disabled={!allItemsResolved || approveEntryMutation.isPending}
-                                className="h-9 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-tight text-[11px] gap-2 shadow-md shadow-emerald-500/20 disabled:opacity-40 whitespace-nowrap transition-all active:scale-[0.98]"
-                            >
-                                {approveEntryMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                Approve Entire QC
-                            </Button>
-                            <div className="h-7 w-[1px] bg-secondary-200" />
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <Input
-                                    value={rejectEntryRemark}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRejectEntryRemark(e.target.value)}
-                                    placeholder="Optional: Add remark before rejecting entire entry..."
-                                    className="h-9 text-xs border-secondary-200 flex-1 min-w-0"
-                                />
-                                <Button
-                                    onClick={handleRejectEntry}
-                                    disabled={rejectEntryMutation.isPending}
-                                    className="h-9 px-5 bg-white border-2 border-rose-500 text-rose-600 hover:bg-rose-50 font-black uppercase tracking-tight text-[11px] gap-2 disabled:opacity-40 shrink-0 whitespace-nowrap transition-all active:scale-[0.98]"
-                                >
-                                    {rejectEntryMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                                    Reject Entire QC
-                                </Button>
-                            </div>
-                            {!allItemsResolved && someItemsResolved && (
-                                <span className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 whitespace-nowrap">
-                                    Resolve all items to enable entry approval
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+                {/* Bulk Action Bar Removed - replaced by individual item decisions + Finalize button */}
+
 
                 {/* Items Table */}
                 <div className="p-5 overflow-hidden min-h-0 flex-1">
@@ -301,22 +286,25 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <Input
-                                                        value={remarksMap[it.id] || ""}
-                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRemarksMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
-                                                        onBlur={() => {
-                                                            if (statusMap[it.id] !== null && statusMap[it.id] !== undefined) {
-                                                                approveItemMutation.mutate({
-                                                                    qcItemId: it.id,
-                                                                    isApproved: statusMap[it.id] as boolean,
-                                                                    remarks: remarksMap[it.id] || "",
-                                                                });
-                                                            }
-                                                        }}
-                                                        placeholder="Inspection notes..."
-                                                        disabled={isReadOnly}
-                                                        className="h-8 text-[11px] border-secondary-200 focus:ring-primary-500 bg-transparent hover:bg-white transition-colors"
-                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <Input
+                                                            value={remarksMap[it.id] || ""}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRemarksMap((prev) => ({ ...prev, [it.id]: e.target.value }))}
+                                                            placeholder="Inspection notes..."
+                                                            disabled={isReadOnly}
+                                                            className="h-8 text-[11px] border-secondary-200 focus:ring-primary-500 bg-transparent hover:bg-white transition-colors flex-1"
+                                                        />
+                                                        {!isReadOnly && statusMap[it.id] !== null && remarksMap[it.id] !== (it.remarks || "") && (
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleUpdateNote(it.id)}
+                                                                disabled={approveItemMutation.isPending}
+                                                                className="h-7 px-2 text-[9px] bg-secondary-100 hover:bg-secondary-200 text-secondary-600 border-none font-bold"
+                                                            >
+                                                                Save Note
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -327,14 +315,33 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
                     </div>
                 </div>
 
-                <div className="px-6 py-4 bg-secondary-50/50 border-t border-secondary-200 flex justify-end shrink-0">
-                    <Button
-                        variant="secondary"
-                        onClick={() => onOpenChange(false)}
-                        className="h-9 px-8 font-bold border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-all rounded-lg"
-                    >
-                        Close Review
-                    </Button>
+                <div className="px-6 py-4 bg-secondary-50/50 border-t border-secondary-200 flex justify-between items-center shrink-0">
+                    <div className="flex items-center gap-2">
+                        {!isReadOnly && !allItemsResolved && someItemsResolved && (
+                            <span className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 animate-pulse">
+                                Resolve all items to enable finalization
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex gap-3">
+                        {!isReadOnly && (
+                            <Button
+                                onClick={handleApproveEntry}
+                                disabled={!allItemsResolved || approveEntryMutation.isPending}
+                                className="h-9 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-tight text-[11px] gap-2 shadow-md shadow-emerald-500/20 disabled:opacity-40 transition-all active:scale-[0.98]"
+                            >
+                                {approveEntryMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                Finalize QC Inspection
+                            </Button>
+                        )}
+                        <Button
+                            variant="secondary"
+                            onClick={() => onOpenChange(false)}
+                            className="h-9 px-8 font-bold border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-all rounded-lg text-[11px] uppercase tracking-wider"
+                        >
+                            Close Review
+                        </Button>
+                    </div>
                 </div>
             </div>
         </Dialog>

@@ -57,7 +57,7 @@ namespace net_backend.Data
             .IsUnique();
 
         modelBuilder.Entity<JobWork>()
-            .HasIndex(j => j.JobWorkNo)
+            .HasIndex(j => new { j.LocationId, j.JobWorkNo })
             .IsUnique();
 
         modelBuilder.Entity<Inward>()

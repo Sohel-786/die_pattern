@@ -33,6 +33,7 @@ interface PurchaseIndentDialogProps {
 
 export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview }: PurchaseIndentDialogProps) {
     const isEditing = !!indent;
+    const isReadOnly = isEditing && (indent?.isActive === false || indent?.status !== PurchaseIndentStatus.Pending);
     const queryClient = useQueryClient();
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
     const [remarks, setRemarks] = useState("");
@@ -172,7 +173,11 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value as PurchaseIndentType)}
-                                className="w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                disabled={isReadOnly}
+                                className={cn(
+                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                                    isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                                )}
                             >
                                 <option value={PurchaseIndentType.New}>New Procurement</option>
                                 <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
@@ -188,6 +193,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                     onChange={(date) => setReqDateOfDelivery(date ? format(date, "yyyy-MM-dd") : "")}
                                     placeholder="Select date"
                                     clearable
+                                    disabled={isReadOnly}
                                     disabledDays={(date: Date) => {
                                         const today = new Date();
                                         today.setHours(0, 0, 0, 0);
@@ -202,7 +208,11 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <select
                                 value={mtcReq ? "yes" : "no"}
                                 onChange={(e) => setMtcReq(e.target.value === "yes")}
-                                className="w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                disabled={isReadOnly}
+                                className={cn(
+                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                                    isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                                )}
                             >
                                 <option value="no">No</option>
                                 <option value="yes">Yes</option>
@@ -216,7 +226,8 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         <Button
                             type="button"
                             onClick={() => setItemSelectionOpen(true)}
-                            className="h-9 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2"
+                            disabled={isReadOnly}
+                            className="h-9 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold gap-2 disabled:opacity-50"
                         >
                             <Plus className="w-4 h-4" />
                             Add Die / Pattern
@@ -294,8 +305,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <Textarea
                                 value={remarks}
                                 onChange={(e) => setRemarks(e.target.value)}
+                                readOnly={isReadOnly}
                                 placeholder="Reason for raising this indent..."
-                                className="mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none"
+                                className={cn("mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none", isReadOnly && "bg-secondary-50")}
                             />
                         </div>
                     </div>
@@ -338,8 +350,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         </Button>
                         <Button
                             onClick={handleSubmit}
-                            disabled={mutation.isPending || selectedItemIds.length === 0}
-                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2"
+                            disabled={mutation.isPending || selectedItemIds.length === 0 || isReadOnly}
+                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                            title={isEditing && indent?.isActive === false ? "Inactive indents cannot be updated" : (isEditing && indent?.status !== PurchaseIndentStatus.Pending ? "Approved or Rejected indents cannot be updated" : "")}
                         >
                             {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             {isEditing ? "Update" : "Save"}

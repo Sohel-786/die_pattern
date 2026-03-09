@@ -124,6 +124,10 @@ export interface Company {
   logoUrl?: string | null;
   gstNo?: string | null;
   gstDate?: string | null;
+  isQCApproved: boolean;
+  qcNo: string;
+  qcDate?: string;
+  hasActiveQC: boolean;
   useAsParty: boolean;
   themeColor: string;
   isActive: boolean;
@@ -397,6 +401,7 @@ export interface POItem {
   revisionNo?: string;
   materialName?: string;
   piNo: string;
+  piDate?: string;
   rate: number;
   gstPercent?: number | null;
   lineAmount?: number; // same as rate (one unit per die/pattern)
@@ -461,6 +466,7 @@ export interface Inward {
   creatorName?: string | null;
   isActive: boolean;
   inwardFrom?: string | null;
+  hasActiveQC?: boolean;
   lines: InwardLine[];
   createdAt?: string;
   updatedAt?: string;
@@ -487,6 +493,8 @@ export interface InwardLine {
   sourceRate?: number | null;
   sourceGstPercent?: number | null;
   qcNo?: string | null;
+  qcDate?: string | null;
+  hasActiveQC?: boolean;
   movementId?: number | null;
   isQCPending: boolean;
   isQCApproved: boolean;

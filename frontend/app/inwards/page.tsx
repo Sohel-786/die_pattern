@@ -231,11 +231,13 @@ export default function InwardsPage() {
                                                                 if (i.isActive) setInactiveTarget(i);
                                                                 else toggleActiveMutation.mutate({ id: i.id!, active: true });
                                                             }}
+                                                            disabled={i.isActive && i.hasActiveQC}
                                                             className={cn(
                                                                 "h-8 w-8 p-0 border border-transparent rounded-lg transition-all",
-                                                                i.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                                i.isActive ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50" : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50",
+                                                                i.isActive && i.hasActiveQC && "opacity-30 cursor-not-allowed grayscale"
                                                             )}
-                                                            title={i.isActive ? "Deactivate" : "Activate"}
+                                                            title={i.isActive ? (i.hasActiveQC ? "Cannot deactivate - active QC entry exists" : "Deactivate") : "Activate"}
                                                         >
                                                             {i.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                                                         </Button>
@@ -293,6 +295,7 @@ export default function InwardsPage() {
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">LINE REMARKS</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC NO.</TableHead>
+                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC DATE</TableHead>
                                                                                 <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center w-24">QC STATUS</TableHead>
                                                                             </TableRow>
                                                                         </TableHeader>
@@ -345,6 +348,9 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.materialName ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-sm text-secondary-600 max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{line.qcNo || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                        {line.qcDate ? format(new Date(line.qcDate), "dd MMM yyyy") : "—"}
+                                                                                    </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
                                                                                         {line.qcNo ? (
                                                                                             line.isQCApproved ? (
