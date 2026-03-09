@@ -85,7 +85,7 @@ export function InwardFilters({
                             <label className={filterLabelClass}>Source Type</label>
                             <select
                                 value={filters.sourceType}
-                                onChange={(e) => update({ sourceType: e.target.value === "" ? "" : Number(e.target.value) as InwardSourceType })}
+                                onChange={(e) => update({ sourceType: e.target.value as InwardSourceType | "" })}
                                 className={selectClass}
                             >
                                 <option value="">All</option>

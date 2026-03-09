@@ -239,8 +239,11 @@ namespace net_backend.Controllers
             if (!await HasPermission("CreateInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
+            if (dto.VendorId <= 0)
+                return BadRequest(new ApiResponse<Inward> { Success = false, Message = "Vendor / Party is mandatory." });
+
             if (dto.Lines == null || dto.Lines.Count == 0)
-                return BadRequest(new ApiResponse<Inward> { Success = false, Message = "At least one line is required." });
+                return BadRequest(new ApiResponse<Inward> { Success = false, Message = "At least one inward item is required." });
 
             var inward = new Inward
             {
@@ -316,8 +319,11 @@ namespace net_backend.Controllers
             var inward = await _context.Inwards.Include(i => i.Lines).FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (inward == null) return NotFound();
 
+            if (dto.VendorId <= 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Vendor / Party is mandatory." });
+
             if (dto.Lines == null || dto.Lines.Count == 0)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one line is required." });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one inward item is required." });
 
             var existingLineIds = inward.Lines.Select(l => l.Id).ToList();
             var hasActiveQC = await _context.QcItems.AnyAsync(qi => existingLineIds.Contains(qi.InwardLineId) && qi.QcEntry != null && qi.QcEntry.IsActive);

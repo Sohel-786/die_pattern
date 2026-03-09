@@ -450,9 +450,13 @@ export default function PurchaseOrdersPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                disabled={po.hasInward || po.items?.some(i => i.isInwarded)}
                                 onClick={() => setInactiveTarget(po)}
-                                className="h-8 w-8 p-0 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                                title="Deactivate PO"
+                                className={cn(
+                                  "h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100",
+                                  (po.hasInward || po.items?.some(i => i.isInwarded)) && "opacity-30 cursor-not-allowed"
+                                )}
+                                title={po.hasInward || po.items?.some(i => i.isInwarded) ? "Cannot deactivate because some items have been inwarded in active entries" : "Deactivate PO"}
                               >
                                 <Ban className="w-4 h-4" />
                               </Button>

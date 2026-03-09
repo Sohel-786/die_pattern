@@ -218,14 +218,25 @@ export function PurchaseOrderDialog({
   useEffect(() => {
     if (!open || isEditing || !preSelectedKey || !piItemsAvailable?.length) return;
     const ids = preSelectedPiItemIds;
-    const preselected = piItemsAvailable
-      .filter((p) => ids.includes(p.id))
-      .map((p) => ({ purchaseIndentItemId: p.id, rate: 0, gstPercent: 18, included: true } as POGridItem));
-    if (preselected.length === 0) return;
+    const matchingItems = piItemsAvailable.filter((p) => ids.includes(p.id));
+
+    if (matchingItems.length === 0) return;
+
+    const preselected = matchingItems.map((p) => ({
+      purchaseIndentItemId: p.id,
+      rate: 0,
+      gstPercent: 18,
+      sourcePiId: p.purchaseIndentId,
+      included: true
+    } as POGridItem));
+
+    const piIds = Array.from(new Set(matchingItems.map(p => p.purchaseIndentId)));
+    setSelectedPiIds(piIds);
+
     setItems((prev) => (prev.length === 0 ? preselected : prev));
     setItemsDisplayMap((prev) => {
       const next = { ...prev };
-      piItemsAvailable.filter((p) => ids.includes(p.id)).forEach((p) => {
+      matchingItems.forEach((p) => {
         next[p.id] = {
           currentName: p.currentName ?? "",
           mainPartName: p.mainPartName ?? "",
@@ -306,43 +317,59 @@ export function PurchaseOrderDialog({
   };
 
   const addItemsFromPi = (pi: PurchaseIndent) => {
-    if (selectedPiIds.includes(pi.id)) return;
-    const piItemIds = (pi.items || []).map((it) => it.id);
+    // Only include items that are actually available (not in another PO)
+    const validPiItems = (pi.items || []).filter(it =>
+      piItemsAvailable.some(available => available.id === it.id)
+    );
+
+    if (validPiItems.length === 0 && !selectedPiIds.includes(pi.id)) return;
+
+    const piItemIds = validPiItems.map((it) => it.id);
     const existingIds = new Set(items.map((i) => i.purchaseIndentItemId));
     const toAdd = piItemIds.filter((id) => !existingIds.has(id));
-    const newItems: POGridItem[] = (pi.items || [])
-      .filter((it) => toAdd.includes(it.id))
-      .map((it) => ({
-        purchaseIndentItemId: it.id,
-        rate: 0,
-        gstPercent: 18,
-        sourcePiId: pi.id,
-        included: true,
-      }));
-    const displayUpdates: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }> = {};
-    (pi.items || []).forEach((it) => {
-      displayUpdates[it.id] = {
-        currentName: it.currentName ?? "",
-        mainPartName: it.mainPartName ?? "",
-        drawingNo: it.drawingNo,
-        revisionNo: it.revisionNo,
-        materialName: it.materialName,
-        itemTypeName: it.itemTypeName,
-        piNo: pi.piNo,
-      };
-    });
-    setSelectedPiIds((prev) => (prev.includes(pi.id) ? prev : [...prev, pi.id]));
-    setItems((prev) => {
-      const merged = [...prev];
-      newItems.forEach((ni) => {
-        if (!merged.some((m) => m.purchaseIndentItemId === ni.purchaseIndentItemId)) merged.push(ni);
+
+    if (toAdd.length > 0) {
+      const newItems: POGridItem[] = validPiItems
+        .filter((it) => toAdd.includes(it.id))
+        .map((it) => ({
+          purchaseIndentItemId: it.id,
+          rate: 0,
+          gstPercent: 18,
+          sourcePiId: pi.id,
+          included: true,
+        }));
+
+      const displayUpdates: Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }> = {};
+      validPiItems.forEach((it) => {
+        displayUpdates[it.id] = {
+          currentName: it.currentName ?? "",
+          mainPartName: it.mainPartName ?? "",
+          drawingNo: it.drawingNo,
+          revisionNo: it.revisionNo,
+          materialName: it.materialName,
+          itemTypeName: it.itemTypeName,
+          piNo: pi.piNo,
+        };
       });
-      return merged;
-    });
-    setItemsDisplayMap((prev) => ({ ...prev, ...displayUpdates }));
+
+      setItems((prev) => {
+        const merged = [...prev];
+        newItems.forEach((ni) => {
+          if (!merged.some((m) => m.purchaseIndentItemId === ni.purchaseIndentItemId)) merged.push(ni);
+        });
+        return merged;
+      });
+      setItemsDisplayMap((prev) => ({ ...prev, ...displayUpdates }));
+    }
+
+    if (!selectedPiIds.includes(pi.id)) {
+      setSelectedPiIds((prev) => [...prev, pi.id]);
+    }
   };
 
   const handleSelectPIs = (pis: PurchaseIndent[]) => {
+    // Add or Update items from selected PIs (additive only, no removals here)
+    // Removal is handled by the "X" button on the PI tags.
     pis.forEach((pi) => addItemsFromPi(pi));
     setIsPiSelectionOpen(false);
   };
@@ -376,8 +403,9 @@ export function PurchaseOrderDialog({
     quotationNo.trim() !== "" &&
     deliveryDate.trim() !== "" &&
     deliveryDateNotPast &&
+    effectiveQuotationCount >= 1 &&
     includedItems.length >= 1 &&
-    includedItems.some((i) => (i.rate ?? 0) > 0);
+    includedItems.every((i) => (i.rate ?? 0) > 0);
 
   const handleSubmit = async () => {
     if (!vendorId) {
@@ -388,10 +416,15 @@ export function PurchaseOrderDialog({
       toast.error("Quotation Number is required");
       return;
     }
+    if (effectiveQuotationCount === 0) {
+      toast.error("At least one quotation file must be uploaded");
+      return;
+    }
     if (deliveryDate.trim() === "") {
       toast.error("Delivery Date is required");
       return;
     }
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     if (deliveryDate < todayStr) {
       toast.error("Delivery Date cannot be in the past");
       return;
@@ -400,9 +433,9 @@ export function PurchaseOrderDialog({
       toast.error("At least one item must be included in the PO (check the box).");
       return;
     }
-    const itemsWithRate = includedItems.filter((i) => (i.rate ?? 0) > 0);
-    if (itemsWithRate.length === 0) {
-      toast.error("Enter rate for at least one included item");
+    const missingRates = includedItems.filter((i) => (i.rate ?? 0) <= 0);
+    if (missingRates.length > 0) {
+      toast.error("Enter rate for all included items");
       return;
     }
     setUploading(true);
@@ -495,7 +528,7 @@ export function PurchaseOrderDialog({
                   <Input value={format(new Date(), "dd-MMM-yyyy")} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm" />
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-secondary-600">Purchase Type</Label>
+                  <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>
                   <select
                     value={purchaseType}
                     onChange={(e) => setPurchaseType(e.target.value as PurchaseType)}
@@ -511,7 +544,7 @@ export function PurchaseOrderDialog({
                   </select>
                 </div>
                 <div className="col-span-3">
-                  <Label className="text-xs font-semibold text-secondary-600">Party Name *</Label>
+                  <Label className="text-xs font-semibold text-secondary-600">Party Name <span className="text-rose-500">*</span></Label>
                   <div className="mt-0.5">
                     <SearchableSelect
                       options={vendors.map((v) => ({ label: v.name, value: v.id }))}
@@ -530,7 +563,7 @@ export function PurchaseOrderDialog({
 
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-3">
-                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number *</Label>
+                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number <span className="text-rose-500">*</span></Label>
                   <Input
                     placeholder="Supplier quote ref"
                     value={quotationNo}
@@ -541,7 +574,7 @@ export function PurchaseOrderDialog({
                 </div>
                 <div className="col-span-9 flex items-end gap-2 flex-wrap">
                   <div className="w-48 min-w-0">
-                    <Label className="text-xs font-semibold text-secondary-600">Quotation Upload *</Label>
+                    <Label className="text-xs font-semibold text-secondary-600">Quotation Upload <span className="text-rose-500">*</span></Label>
                     <div className={cn(
                       "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
                       isReadOnly && "opacity-50 cursor-not-allowed hover:border-secondary-200"
@@ -725,12 +758,17 @@ export function PurchaseOrderDialog({
             <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-6">
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
-                  <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date *</Label>
+                  <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date <span className="text-rose-500">*</span></Label>
                   <div className="mt-0.5 w-40">
                     <DatePicker
                       value={deliveryDate}
                       onChange={(date) => setDeliveryDate(date ? format(date, "yyyy-MM-dd") : "")}
                       disabled={isReadOnly}
+                      disabledDays={(date: Date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
                       className="h-9 w-full text-sm border-secondary-200 bg-white"
                     />
                   </div>
@@ -772,6 +810,8 @@ export function PurchaseOrderDialog({
         onClose={() => setIsPiSelectionOpen(false)}
         availablePIs={availablePIsForDialog}
         selectedPiIds={selectedPiIds}
+        availablePiItemIds={piItemsAvailable.map((a) => a.id)}
+        currentPiItemIdsInOrder={items.map((i) => i.purchaseIndentItemId)}
         onSelectPIs={handleSelectPIs}
       />
     </Dialog>

@@ -117,10 +117,23 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             toast.error("Please select at least one item");
             return;
         }
+        if (!reqDateOfDelivery) {
+            toast.error("Required Date of Delivery is mandatory");
+            return;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selected = new Date(reqDateOfDelivery);
+        if (selected < today) {
+            toast.error("Required Date of Delivery cannot be in the past");
+            return;
+        }
+
         mutation.mutate({
             type,
             remarks: remarks || undefined,
-            reqDateOfDelivery: reqDateOfDelivery || undefined,
+            reqDateOfDelivery,
             mtcReq,
             itemIds: selectedItemIds
         });
@@ -168,13 +181,18 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             </select>
                         </div>
                         <div className="col-span-2">
-                            <Label className="text-xs font-semibold text-secondary-600">Req. Date of Delivery</Label>
+                            <Label className="text-xs font-semibold text-secondary-600">Req. Date of Delivery <span className="text-rose-500">*</span></Label>
                             <div className="mt-0.5">
                                 <DatePicker
                                     value={reqDateOfDelivery || null}
                                     onChange={(date) => setReqDateOfDelivery(date ? format(date, "yyyy-MM-dd") : "")}
                                     placeholder="Select date"
                                     clearable
+                                    disabledDays={(date: Date) => {
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+                                        return date < today;
+                                    }}
                                     className="h-9 text-sm border-secondary-200 bg-white"
                                 />
                             </div>

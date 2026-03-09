@@ -99,6 +99,8 @@ export function InwardDialog({
             .reduce((sum, l) => sum + calculateLineTotal(l), 0);
     }, [lines]);
 
+    const isValid = !!vendorId && lines.some(l => l.included !== false);
+
     const removeSourceGroup = (type: InwardSourceType, id: number) => {
         setLines(prev => prev.filter(l => !(l.sourceType === type && l.sourceRefId === id)));
     };
@@ -251,10 +253,9 @@ export function InwardDialog({
 
     const handleSubmit = async () => {
         if (!vendorId) return toast.error("Please select Vendor / Party");
-        if (lines.length === 0) return toast.error("At least one item line is required");
 
         const includedLines = lines.filter(l => l.included !== false);
-        if (includedLines.length === 0) return toast.error("Please include at least one item");
+        if (includedLines.length === 0) return toast.error("Please include at least one item for inward");
 
         setUploading(true);
         try {
@@ -338,7 +339,7 @@ export function InwardDialog({
                                     </div>
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600">Vendor / Party *</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600">Vendor / Party <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <SearchableSelect
                                             options={vendors.map(v => ({ label: v.name, value: v.id }))}
@@ -366,7 +367,7 @@ export function InwardDialog({
                                     <div className="flex items-center gap-2">
                                         <select
                                             value={selectedSourceType}
-                                            onChange={(e) => setSelectedSourceType(Number(e.target.value))}
+                                            onChange={(e) => setSelectedSourceType(e.target.value as InwardSourceType)}
                                             disabled={!vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
                                             className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
@@ -611,8 +612,8 @@ export function InwardDialog({
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={mutation.isPending || uploading || lines.length === 0}
-                                    className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                                    disabled={mutation.isPending || uploading || !isValid}
+                                    className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:bg-secondary-200 disabled:text-secondary-400 disabled:opacity-100 transition-all shadow-lg shadow-primary-200/20"
                                 >
                                     {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isEditing ? "Update" : "Save")}
                                 </Button>

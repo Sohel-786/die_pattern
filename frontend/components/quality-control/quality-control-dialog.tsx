@@ -276,7 +276,7 @@ export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlD
                                         <select
                                             value={sourceType}
                                             onChange={(e) => {
-                                                const v = e.target.value === "" ? "" : Number(e.target.value) as InwardSourceType;
+                                                const v = e.target.value === "" ? "" : e.target.value as InwardSourceType;
                                                 setSourceType(v);
                                                 setSelectedItems([]);
                                             }}

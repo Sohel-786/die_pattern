@@ -59,19 +59,19 @@ export enum MovementType {
 }
 
 export enum InwardSourceType {
-  PO = 0,
-  JobWork = 1,
+  PO = 'PO',
+  JobWork = 'JobWork',
 }
 
 export enum InwardStatus {
-  Draft = 0,
-  Submitted = 1,
+  Draft = 'Draft',
+  Submitted = 'Submitted',
 }
 
 export enum JobWorkStatus {
-  Pending = 0,
-  InTransit = 1,
-  Completed = 2,
+  Pending = 'Pending',
+  InTransit = 'InTransit',
+  Completed = 'Completed',
 }
 
 export enum ItemStatus {
@@ -402,6 +402,7 @@ export interface POItem {
   lineAmount?: number; // same as rate (one unit per die/pattern)
   inwardNo?: string;
   qcNo?: string;
+  isInwarded?: boolean;
 }
 
 export interface CreatePOItem {

@@ -69,7 +69,7 @@ export function SourceSelectionDialog({
             return s.jobWorkNo?.toLowerCase().includes(term) || s.toPartyName?.toLowerCase().includes(term);
         }
         return false;
-    }).filter((s: any) => !alreadySelectedIds.includes(s.id));
+    });
 
     const toggleSelection = (sourceId: number) => {
         setTempSelectedIds(prev =>
@@ -208,7 +208,14 @@ export function SourceSelectionDialog({
                                                 )}
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-sm font-bold text-secondary-900 uppercase tracking-tight">{refNo}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-secondary-900 uppercase tracking-tight">{refNo}</span>
+                                                    {alreadySelectedIds.includes(item.id) && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black bg-primary-100 text-primary-700 uppercase tracking-wider border border-primary-200">
+                                                            Already Added
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-4 text-sm font-semibold text-secondary-700">{party}</td>
                                             <td className="px-4 py-4 text-sm text-secondary-500 font-medium">{dateText}</td>

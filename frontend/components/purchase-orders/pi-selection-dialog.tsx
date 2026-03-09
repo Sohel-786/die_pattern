@@ -16,6 +16,8 @@ interface PiSelectionDialogProps {
     onClose: () => void;
     availablePIs: PurchaseIndent[];
     selectedPiIds: number[];
+    availablePiItemIds: number[];
+    currentPiItemIdsInOrder: number[];
     onSelectPIs: (pis: PurchaseIndent[]) => void;
 }
 
@@ -24,23 +26,32 @@ export function PiSelectionDialog({
     onClose,
     availablePIs,
     selectedPiIds,
+    availablePiItemIds = [],
+    currentPiItemIdsInOrder = [],
     onSelectPIs,
 }: PiSelectionDialogProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [tempSelectedIds, setTempSelectedIds] = useState<number[]>([]);
 
     useEffect(() => {
-        if (isOpen) setTempSelectedIds(selectedPiIds);
-    }, [isOpen, selectedPiIds]);
-
-
+        if (isOpen) setTempSelectedIds([]);
+    }, [isOpen]);
 
     const filteredPIs = useMemo(() => {
-        // Filter rejected PIs AND PIs that are already selected in the main PO dialog
-        let result = availablePIs.filter(pi =>
-            pi.status !== PurchaseIndentStatus.Rejected &&
-            !selectedPiIds.includes(pi.id)
-        );
+        // Filter rejected PIs
+        let result = availablePIs.filter(pi => {
+            if (pi.status === PurchaseIndentStatus.Rejected) return false;
+
+            // Scenario 1: Not selected yet
+            if (!selectedPiIds.includes(pi.id)) return true;
+
+            // Scenario 2: Already selected, but has items not in the current PO order
+            const hasPendingItems = pi.items?.some(it =>
+                availablePiItemIds.includes(it.id) &&
+                !currentPiItemIdsInOrder.includes(it.id)
+            );
+            return hasPendingItems;
+        });
 
         // Filter by search query
         if (searchQuery.trim()) {
@@ -54,7 +65,7 @@ export function PiSelectionDialog({
         }
 
         return result;
-    }, [availablePIs, searchQuery]);
+    }, [availablePIs, searchQuery, selectedPiIds, availablePiItemIds, currentPiItemIdsInOrder]);
 
     const toggleSelection = (pi: PurchaseIndent) => {
         if (pi.status !== PurchaseIndentStatus.Approved) return;
@@ -101,7 +112,7 @@ export function PiSelectionDialog({
                         <div className="flex flex-col items-center justify-center py-20 text-secondary-500">
                             <AlertCircle className="w-12 h-12 mb-3 text-secondary-300" />
                             <p className="text-lg font-bold">No Indents Available</p>
-                            <p className="text-sm">Only approved indents that are not yet in a PO will be shown here.</p>
+                            <p className="text-sm">Only approved indents that are not yet in a PO (or have pending items) will be shown here.</p>
                         </div>
                     ) : (
                         <table className="w-full">
@@ -139,10 +150,19 @@ export function PiSelectionDialog({
                                                 )}
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-sm font-black text-secondary-900 uppercase tracking-tight">{pi.piNo}</span>
-                                                {pi.remarks && (
-                                                    <p className="text-[10px] text-secondary-500 line-clamp-1 mt-1 font-medium">{pi.remarks}</p>
-                                                )}
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-black text-secondary-900 uppercase tracking-tight">{pi.piNo}</span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        {selectedPiIds.includes(pi.id) && (
+                                                            <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                                Already Added
+                                                            </span>
+                                                        )}
+                                                        {pi.remarks && (
+                                                            <p className="text-[10px] text-secondary-500 line-clamp-1 font-medium">{pi.remarks}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="px-4 py-4 text-sm font-bold text-secondary-700">{pi.creatorName}</td>
                                             <td className="px-4 py-4 text-sm text-secondary-500">{format(new Date(pi.createdAt), 'dd MMM yyyy')}</td>
@@ -156,7 +176,7 @@ export function PiSelectionDialog({
                                             </td>
                                             <td className="px-4 py-4 text-right">
                                                 <span className="text-xs font-black text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">
-                                                    {pi.items?.length || 0}
+                                                    {pi.items?.filter(it => availablePiItemIds.includes(it.id)).length || 0} / {pi.items?.length || 0}
                                                 </span>
                                             </td>
                                         </tr>

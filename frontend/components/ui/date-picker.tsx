@@ -20,6 +20,7 @@ interface DatePickerProps {
     className?: string
     disabled?: boolean
     clearable?: boolean
+    disabledDays?: any // Can be Matcher | Matcher[]
 }
 
 export function DatePicker({
@@ -29,7 +30,10 @@ export function DatePicker({
     className,
     disabled,
     clearable = false,
+    disabledDays,
 }: DatePickerProps) {
+    const [open, setOpen] = React.useState(false);
+
     const date = React.useMemo(() => {
         if (!value) return undefined
         if (value instanceof Date) return value
@@ -37,20 +41,27 @@ export function DatePicker({
         return isValid(parsed) ? parsed : undefined
     }, [value])
 
+    const handleSelect = (selectedDate: Date | undefined) => {
+        onChange?.(selectedDate);
+        setOpen(false); // Close on select
+    };
+
     return (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal pr-8 relative",
+                        "w-full justify-start text-left font-normal pr-8 relative whitespace-nowrap overflow-hidden",
                         !date && "text-secondary-500",
                         className
                     )}
                     disabled={disabled}
                 >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>{placeholder}</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                        {date ? format(date, "dd/MM/yyyy") : placeholder}
+                    </span>
                     {clearable && date && !disabled && (
                         <div
                             onClick={(e) => {
@@ -68,7 +79,8 @@ export function DatePicker({
                 <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={onChange}
+                    onSelect={handleSelect}
+                    disabled={disabledDays}
                     initialFocus
                 />
             </PopoverContent>

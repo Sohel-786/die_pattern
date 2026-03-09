@@ -167,6 +167,12 @@ namespace net_backend.Controllers
             if (itemIds.Count == 0)
                 return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "At least one item is required." });
 
+            if (!dto.ReqDateOfDelivery.HasValue)
+                return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "Required Date of Delivery is mandatory." });
+
+            if (dto.ReqDateOfDelivery.Value.Date < DateTime.Now.Date)
+                return BadRequest(new ApiResponse<PurchaseIndent> { Success = false, Message = "Required Date of Delivery cannot be in the past." });
+
             foreach (var itemId in itemIds)
             {
                 var canAdd = await _itemState.CanAddToPIAsync(itemId, null);
@@ -229,6 +235,12 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Duplicate die/pattern in the same PI is not allowed." });
             if (itemIds.Count == 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required." });
+
+            if (!dto.ReqDateOfDelivery.HasValue)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Required Date of Delivery is mandatory." });
+
+            if (dto.ReqDateOfDelivery.Value.Date < DateTime.Now.Date)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Required Date of Delivery cannot be in the past." });
 
             foreach (var itemId in itemIds)
             {

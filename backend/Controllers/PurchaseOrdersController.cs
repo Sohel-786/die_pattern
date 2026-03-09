@@ -196,9 +196,9 @@ namespace net_backend.Controllers
             var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
             if (po == null) return NotFound();
 
-            var hasInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id);
-            if (hasInward)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this PO have been inwarded. Inactive is allowed only when no inward has been done against this PO." });
+            var hasActiveInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward != null && l.Inward.IsActive);
+            if (hasActiveInward)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot deactivate: one or more items from this PO have been inwarded in an active entry. Deactivation is allowed only when no active inward exists for this PO." });
 
             po.IsActive = false;
             po.UpdatedAt = DateTime.Now;
@@ -412,50 +412,40 @@ namespace net_backend.Controllers
 
             var data = list.Select(p =>
             {
-                var dto = new PODto
-                {
-                    Id = p.Id,
-                    HasInward = poIdsWithInward.Contains(p.Id),
-                    PoNo = p.PoNo,
-                    VendorId = p.VendorId,
-                    VendorName = p.Vendor != null ? p.Vendor.Name : "Unknown",
-                    DeliveryDate = p.DeliveryDate,
-                    QuotationNo = p.QuotationNo,
-                    Status = p.Status,
-                    Remarks = p.Remarks,
-                    CreatedAt = p.CreatedAt,
-                    CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : null,
-                    ApprovedBy = p.ApprovedBy,
-                    ApproverName = p.Approver != null ? p.Approver.FirstName + " " + p.Approver.LastName : null,
-                    ApprovedAt = p.ApprovedAt,
-                    Items = p.Items.Select(i => {
-                        var key = $"{p.Id}_{i.PurchaseIndentItem!.ItemId}";
-                        var inv = inwardMap.ContainsKey(key) ? inwardMap[key] : null;
-                        var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id) 
-                            ? qcNumbers[inv.Id] : null;
-
-                        return new POItemDto
-                        {
-                            Id = i.Id,
-                            PurchaseIndentItemId = i.PurchaseIndentItemId,
-                            ItemId = i.PurchaseIndentItem!.ItemId,
-                            MainPartName = i.PurchaseIndentItem!.Item!.MainPartName,
-                            CurrentName = i.PurchaseIndentItem.Item.CurrentName,
-                            ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
-                            DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
-                            RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
-                            MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
-                            PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
-                            PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
-                            Rate = i.Rate,
-                            GstPercent = p.GstPercent,
-                            IsInwarded = inv != null,
-                            InwardNo = inv?.InwardNo,
-                            QCNo = qcNo
-                        };
-                    }).ToList()
-                };
+                var dto = new PODto();
                 MapToDto(p, dto);
+
+                // Populate Items with inward details
+                dto.Items = p.Items.Select(i => {
+                    var key = $"{p.Id}_{i.PurchaseIndentItem!.ItemId}";
+                    var inv = inwardMap.ContainsKey(key) ? inwardMap[key] : null;
+                    var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id) 
+                        ? qcNumbers[inv.Id] : null;
+
+                    return new POItemDto
+                    {
+                        Id = i.Id,
+                        PurchaseIndentItemId = i.PurchaseIndentItemId,
+                        ItemId = i.PurchaseIndentItem!.ItemId,
+                        MainPartName = i.PurchaseIndentItem!.Item!.MainPartName,
+                        CurrentName = i.PurchaseIndentItem.Item.CurrentName,
+                        ItemTypeName = i.PurchaseIndentItem.Item.ItemType?.Name,
+                        DrawingNo = i.PurchaseIndentItem.Item.DrawingNo,
+                        RevisionNo = i.PurchaseIndentItem.Item.RevisionNo,
+                        MaterialName = i.PurchaseIndentItem.Item.Material?.Name,
+                        PiNo = i.PurchaseIndentItem.PurchaseIndent!.PiNo,
+                        PurchaseIndentId = i.PurchaseIndentItem.PurchaseIndentId,
+                        Rate = i.Rate,
+                        GstPercent = p.GstPercent,
+                        IsInwarded = inv != null,
+                        InwardNo = inv?.InwardNo,
+                        QCNo = qcNo
+                    };
+                }).ToList();
+
+                // HasInward is true if any item is inwarded in an active entry
+                dto.HasInward = dto.Items.Any(i => i.IsInwarded);
+
                 return dto;
             }).ToList();
 
@@ -478,7 +468,22 @@ namespace net_backend.Controllers
                 .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId));
             if (alreadyInPo) return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "One or more items are already assigned to a PO." });
 
-            if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value.Date < DateTime.Today)
+            if (string.IsNullOrWhiteSpace(dto.PurchaseType))
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Purchase Type is mandatory." });
+
+            if (dto.VendorId <= 0)
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Party Name is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.QuotationNo))
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Quotation Number is mandatory." });
+
+            if (dto.QuotationUrls == null || dto.QuotationUrls.Count == 0)
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "At least one quotation file must be uploaded." });
+
+            if (!dto.DeliveryDate.HasValue)
+                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Delivery Date is mandatory." });
+
+            if (dto.DeliveryDate.Value.Date < DateTime.Today)
                 return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Delivery date cannot be in the past." });
 
             var po = new PurchaseOrder
@@ -539,8 +544,11 @@ namespace net_backend.Controllers
             if (!isAdmin && !po.IsActive)
                 return NotFound();
 
+            var hasInward = await _context.InwardLines
+                .AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward != null && l.Inward.IsActive);
+
             var inwardedItemsForPo = await _context.InwardLines
-                .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward!.Status == InwardStatus.Submitted)
+                .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward != null && l.Inward.IsActive)
                 .Select(l => l.ItemId)
                 .Distinct()
                 .ToListAsync();
@@ -549,6 +557,7 @@ namespace net_backend.Controllers
             var dto = new PODto
             {
                 Id = po.Id,
+                HasInward = hasInward,
                 PoNo = po.PoNo,
                 VendorId = po.VendorId,
                 VendorName = po.Vendor?.Name,
@@ -595,9 +604,9 @@ namespace net_backend.Controllers
             if (po.Status != PoStatus.Pending)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending POs can be edited." });
 
-            var hasInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id);
+            var hasInward = await _context.InwardLines.AnyAsync(l => l.SourceType == InwardSourceType.PO && l.SourceRefId == id && l.Inward != null && l.Inward.IsActive);
             if (hasInward)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot edit: one or more items from this PO have been inwarded. Edit is allowed only when no inward has been done against this PO." });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot update: one or more items from this PO have been inwarded in an active entry. Update is only allowed when no active inward exists for this PO." });
 
             var items = dto.Items?.Where(i => i.PurchaseIndentItemId > 0).ToList() ?? new List<CreatePOItemDto>();
             if (items.Count == 0) return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item with rate is required." });
@@ -611,7 +620,22 @@ namespace net_backend.Controllers
             if (alreadyInOtherPo)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items are already in another PO." });
 
-            if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value.Date < DateTime.Today)
+            if (string.IsNullOrWhiteSpace(dto.PurchaseType))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Purchase Type is mandatory." });
+
+            if (dto.VendorId <= 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Party Name is mandatory." });
+
+            if (string.IsNullOrWhiteSpace(dto.QuotationNo))
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Quotation Number is mandatory." });
+
+            if (dto.QuotationUrls == null || dto.QuotationUrls.Count == 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one quotation file must be uploaded." });
+
+            if (!dto.DeliveryDate.HasValue)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Delivery Date is mandatory." });
+
+            if (dto.DeliveryDate.Value.Date < DateTime.Today)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Delivery date cannot be in the past." });
 
             po.VendorId = dto.VendorId;
