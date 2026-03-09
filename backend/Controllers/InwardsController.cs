@@ -186,7 +186,7 @@ namespace net_backend.Controllers
                 .GroupBy(q => q.InwardLineId)
                 .ToDictionary(g => g.Key, g => {
                     var latest = g.OrderByDescending(x => x.CreatedAt).First();
-                    return new { latest.QcNo, latest.CreatedAt };
+                    return (latest.QcNo, latest.CreatedAt);
                 });
             var activeQcLineIds = qcInfo.Where(q => q.IsActive).Select(q => q.InwardLineId).ToHashSet();
 
@@ -325,7 +325,7 @@ namespace net_backend.Controllers
                 .GroupBy(q => q.InwardLineId)
                 .ToDictionary(g => g.Key, g => {
                     var latest = g.OrderByDescending(x => x.CreatedAt).First();
-                    return new { latest.QcNo, latest.CreatedAt };
+                    return (latest.QcNo, latest.CreatedAt);
                 });
             var activeQcLineIds = qcInfo.Where(q => q.IsActive).Select(q => q.InwardLineId).ToHashSet();
 
@@ -606,7 +606,7 @@ namespace net_backend.Controllers
             Dictionary<int, PurchaseOrder>? pos = null, 
             Dictionary<int, JobWork>? jws = null,
             Dictionary<int, string>? outs = null,
-            dynamic? qcs = null,
+            Dictionary<int, (string QcNo, DateTime CreatedAt)>? qcs = null,
             Dictionary<string, decimal>? poRates = null,
             HashSet<int>? activeQcLineIds = null)
         {
@@ -653,8 +653,8 @@ namespace net_backend.Controllers
                                      : l.SourceRefId?.ToString(),
                     IsQCPending = l.IsQCPending,
                     IsQCApproved = l.IsQCApproved,
-                    QCNo = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id].QcNo : "—",
-                    QCDate = (qcs != null && qcs.ContainsKey(l.Id)) ? qcs[l.Id].CreatedAt : null,
+                    QCNo = (qcs != null && qcs.TryGetValue(l.Id, out var qcRow)) ? qcRow.QcNo : "—",
+                    QCDate = (qcs != null && qcs.TryGetValue(l.Id, out var qcRowDate)) ? qcRowDate.CreatedAt : null,
                     HasActiveQC = activeQcLineIds != null && activeQcLineIds.Contains(l.Id),
                     Rate = l.Rate,
                     GstPercent = l.GstPercent,
