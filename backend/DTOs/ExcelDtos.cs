@@ -9,9 +9,10 @@ namespace net_backend.DTOs
         public string? Revision { get; set; }
         public string Material { get; set; } = string.Empty;
         public string Ownership { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
+        public string Condition { get; set; } = string.Empty;
         public string CustodianType { get; set; } = string.Empty; // Location / Vendor
         public string? CustodianName { get; set; }
+        public string? IsActive { get; set; }
     }
 
     public class MasterImportDto

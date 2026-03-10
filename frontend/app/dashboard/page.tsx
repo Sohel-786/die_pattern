@@ -59,6 +59,32 @@ const inputClass =
 const selectClass =
   "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
+const getProcessColor = (process?: string) => {
+  switch (process?.toLowerCase()) {
+    case "in stock": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+    case "not in stock": return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5";
+    case "at vendor": return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5";
+    case "in qc": return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5";
+    case "inward done": return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5";
+    case "pi issued": return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5";
+    case "po issued": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+    case "in job work": return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5";
+    default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+  }
+};
+
+const getConditionColor = (condition?: string) => {
+  switch (condition?.toLowerCase()) {
+    case "good condition": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+    case "under repair": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+    case "scrapped": return "bg-rose-50 text-rose-700 border-rose-200/60 shadow-sm shadow-rose-500/5";
+    case "new": return "bg-blue-50 text-blue-700 border-blue-200/60 shadow-sm shadow-blue-500/5";
+    case "available": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+    case "on hold": return "bg-gray-50 text-gray-700 border-gray-200/60 shadow-sm shadow-gray-500/5";
+    default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+  }
+};
+
 type ExpandedSection = "location" | "at-vendor" | "pending-pi" | "pending-po" | null;
 
 interface LocationWiseItemRow {
@@ -69,6 +95,8 @@ interface LocationWiseItemRow {
   drawingNo?: string | null;
   itemTypeName?: string | null;
   statusName?: string | null;
+  currentProcess: string;
+  isActive: boolean;
 }
 
 interface ItemAtVendorRow {
@@ -80,6 +108,17 @@ interface ItemAtVendorRow {
   itemTypeName?: string | null;
   currentProcess: string;
 }
+
+const PROCESS_OPTIONS = [
+  { id: 7, name: "In Stock" },
+  { id: 4, name: "In QC" },
+  { id: 3, name: "Inward Done" },
+  { id: 6, name: "At Vendor" },
+  { id: 5, name: "In Job Work" },
+  { id: 1, name: "PI Issued" },
+  { id: 2, name: "PO Issued" },
+  { id: 0, name: "Not In Stock" },
+];
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
@@ -99,6 +138,7 @@ export default function DashboardPage() {
   const [locationSearch, setLocationSearch] = useState("");
   const [locationItemTypeId, setLocationItemTypeId] = useState<number | "">("");
   const [locationStatusId, setLocationStatusId] = useState<number | "">("");
+  const [locationProcessId, setLocationProcessId] = useState<number | "">("");
   const [locationItemIds, setLocationItemIds] = useState<number[]>([]);
 
   // At-vendor filters
@@ -147,9 +187,10 @@ export default function DashboardPage() {
       search: debouncedLocationSearch || undefined,
       itemTypeId: locationItemTypeId === "" ? undefined : locationItemTypeId,
       statusId: locationStatusId === "" ? undefined : locationStatusId,
+      currentProcessId: locationProcessId === "" ? undefined : locationProcessId,
       itemIds: locationItemIds.length ? locationItemIds.join(",") : undefined,
     }),
-    [locationId, debouncedLocationSearch, locationItemTypeId, locationStatusId, locationItemIds]
+    [locationId, debouncedLocationSearch, locationItemTypeId, locationStatusId, locationProcessId, locationItemIds]
   );
 
   const { data: locationWiseItems = [], isLoading: loadingLocationWise } = useQuery<
@@ -373,7 +414,7 @@ export default function DashboardPage() {
 
   const statCards = [
     {
-      title: locationId === "" ? "Total Die/Pattern (All Locations)" : `Total Die/Pattern (${metrics?.locationWiseCount?.find(l => l.locationId === locationId)?.locationName ?? "Selected Location"})`,
+      title: locationId === "" ? "Total Die/Pattern (All Locations)" : `Total Die/Pattern At Location (${metrics?.locationWiseCount?.find(l => l.locationId === locationId)?.locationName ?? "Selected Location"})`,
       value: metrics?.summary?.total ?? 0,
       icon: LayoutGrid,
       gradient: "from-blue-500 to-blue-600",
@@ -503,7 +544,7 @@ export default function DashboardPage() {
           <div>
             <Card className="shadow-lg border border-secondary-200">
               <div className="border-b border-secondary-200 px-4 py-3">
-                <h2 className="text-xl font-bold text-text">Location Wise Die/Pattern Count</h2>
+                <h2 className="text-xl font-bold text-text">Die/Pattern Counts At Location</h2>
                 <p className="text-sm text-secondary-500 mt-0.5">
                   Items currently at each location (opened company only). Select a location and apply filters.
                 </p>
@@ -559,6 +600,19 @@ export default function DashboardPage() {
                       searchPlaceholder="Search…"
                     />
                   </div>
+                  <div>
+                    <label className={filterLabelClass}>Current Process</label>
+                    <select
+                      value={locationProcessId === "" ? "" : locationProcessId}
+                      onChange={(e) => setLocationProcessId(e.target.value === "" ? "" : Number(e.target.value))}
+                      className={selectClass}
+                    >
+                      <option value="">All</option>
+                      {PROCESS_OPTIONS.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex justify-end">
                   <Button
@@ -591,6 +645,8 @@ export default function DashboardPage() {
                         <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
                         <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
                         <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Condition</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -601,7 +657,23 @@ export default function DashboardPage() {
                           <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
-                          <TableCell className="px-4 py-3 text-secondary-600">{row.statusName ?? "—"}</TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getConditionColor(row.statusName ?? undefined)}`}>
+                              {row.statusName ?? "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getProcessColor(row.currentProcess)}`}>
+                              {row.currentProcess ?? "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            {row.isActive ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Active</span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Inactive</span>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -711,8 +783,8 @@ export default function DashboardPage() {
                           <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3">
-                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                              {row.currentProcess}
+                            <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getProcessColor(row.currentProcess)}`}>
+                              {row.currentProcess ?? "—"}
                             </span>
                           </TableCell>
                         </TableRow>

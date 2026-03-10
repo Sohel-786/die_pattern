@@ -44,7 +44,8 @@ namespace net_backend.Controllers
             [FromQuery] int? toPartyId,
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
-            [FromQuery] bool? isActive)
+            [FromQuery] bool? isActive,
+            [FromQuery] string? search)
         {
             if (!await HasPermission("ViewTransfer")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -72,14 +73,42 @@ namespace net_backend.Controllers
                 var val = toPartyId.Value == 0 ? (int?)null : toPartyId.Value;
                 query = query.Where(t => t.ToPartyId == val);
             }
-            if (startDate.HasValue) query = query.Where(t => t.TransferDate >= startDate);
-            if (endDate.HasValue) query = query.Where(t => t.TransferDate <= endDate);
+            if (startDate.HasValue)
+            {
+                var sd = startDate.Value.Date;
+                query = query.Where(t => t.TransferDate >= sd);
+            }
+            if (endDate.HasValue)
+            {
+                var ed = endDate.Value.Date.AddDays(1);
+                query = query.Where(t => t.TransferDate < ed);
+            }
             
             // SECURITY: Only Admin can see inactive entries. For others, force only active records.
             if (!await IsAdmin())
                 query = query.Where(t => t.IsActive);
             else if (isActive.HasValue)
                 query = query.Where(t => t.IsActive == isActive.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(t =>
+                    t.TransferNo.ToLower().Contains(s) ||
+                    (t.FromParty != null && t.FromParty.Name.ToLower().Contains(s)) ||
+                    (t.ToParty != null && t.ToParty.Name.ToLower().Contains(s)) ||
+                    (t.Remarks != null && t.Remarks.ToLower().Contains(s)) ||
+                    (t.OutFor != null && t.OutFor.ToLower().Contains(s)) ||
+                    (t.ReasonDetails != null && t.ReasonDetails.ToLower().Contains(s)) ||
+                    (t.VehicleNo != null && t.VehicleNo.ToLower().Contains(s)) ||
+                    (t.PersonName != null && t.PersonName.ToLower().Contains(s)) ||
+                    t.Items.Any(i =>
+                        (i.Item != null && i.Item.MainPartName.ToLower().Contains(s)) ||
+                        (i.Item != null && (i.Item.CurrentName ?? "").ToLower().Contains(s)) ||
+                        (i.Remarks != null && i.Remarks.ToLower().Contains(s))
+                    )
+                );
+            }
 
             var list = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
             var location = await _context.Locations.FindAsync(locationId);
@@ -245,7 +274,7 @@ namespace net_backend.Controllers
                     }
                     else
                     {
-                        if (item.CurrentLocationId != locationId || item.CurrentProcess != ItemProcessState.InStock)
+                        if (item.CurrentProcess != ItemProcessState.InStock || item.LocationId != locationId)
                             throw new Exception($"Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}. One item can only be in one process at a time.");
                     }
 
@@ -410,7 +439,7 @@ namespace net_backend.Controllers
                         }
                         else
                         {
-                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.LocationId != locationId)
                                 return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}. One item can only be in one process at a time." });
                         }
                     }
@@ -537,7 +566,7 @@ namespace net_backend.Controllers
                         }
                         else
                         {
-                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.LocationId != locationId)
                             {
                                 return BadRequest(new ApiResponse<bool>
                                 {
@@ -578,7 +607,7 @@ namespace net_backend.Controllers
                         }
                         else
                         {
-                            if (item.CurrentProcess != ItemProcessState.InStock || item.CurrentLocationId != locationId)
+                            if (item.CurrentProcess != ItemProcessState.InStock || item.LocationId != locationId)
                             {
                                 return BadRequest(new ApiResponse<bool>
                                 {
@@ -637,7 +666,8 @@ namespace net_backend.Controllers
             else
             {
                 // Items currently in local stock (if fromPartyId is 0 or null)
-                query = query.Where(i => i.CurrentLocationId == locationId && i.CurrentProcess == ItemProcessState.InStock);
+                // Only 'In Stock' items can be transferred out.
+                query = query.Where(i => i.CurrentProcess == ItemProcessState.InStock);
             }
 
             var items = await query.ToListAsync();

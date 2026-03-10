@@ -392,7 +392,7 @@ namespace net_backend.Controllers
                 .Include(il => il.Inward).ThenInclude(inv => inv!.Vendor)
                 .Select(il => new ItemLedgerRowDto
                 {
-                    EventDate = il.Inward!.InwardDate,
+                    EventDate = il.Inward!.CreatedAt,
                     EventType = "Inward",
                     ReferenceNo = il.Inward.InwardNo,
                     LocationName = il.Inward.Location != null ? il.Inward.Location.Name : null,
@@ -464,7 +464,7 @@ namespace net_backend.Controllers
                 var toName = t.ToPartyId.HasValue && t.ToParty != null ? t.ToParty.Name : (t.Location != null ? t.Location.Name : "—");
                 rows.Add(new ItemLedgerRowDto
                 {
-                    EventDate = t.TransferDate,
+                    EventDate = t.CreatedAt,
                     EventType = "Transfer",
                     ReferenceNo = t.TransferNo,
                     LocationName = t.Location != null ? t.Location.Name : null,

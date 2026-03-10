@@ -269,7 +269,7 @@ namespace net_backend.Services
                     worksheet.Cell(rowIdx, 5).Value = dto.Revision ?? "";
                     worksheet.Cell(rowIdx, 6).Value = dto.Material ?? "";
                     worksheet.Cell(rowIdx, 7).Value = dto.Ownership ?? "";
-                    worksheet.Cell(rowIdx, 8).Value = dto.Status ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = dto.Condition ?? "";
                     worksheet.Cell(rowIdx, 9).Value = dto.CustodianType ?? "";
                     worksheet.Cell(rowIdx, 10).Value = dto.CustodianName ?? "";
                     rowIdx++;
@@ -291,7 +291,7 @@ namespace net_backend.Services
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Location Wise Items");
-                var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition" };
+                var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition", "Process", "Active Status" };
                 for (int c = 0; c < headers.Length; c++)
                 {
                     var cell = worksheet.Cell(1, c + 1);
@@ -309,6 +309,8 @@ namespace net_backend.Services
                     worksheet.Cell(rowIdx, 4).Value = r.DrawingNo ?? "";
                     worksheet.Cell(rowIdx, 5).Value = r.ItemTypeName ?? "";
                     worksheet.Cell(rowIdx, 6).Value = r.StatusName ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = r.CurrentProcess ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = r.IsActive ? "Active" : "Inactive";
                     rowIdx++;
                 }
                 worksheet.Column(1).Width = 22;
@@ -317,6 +319,8 @@ namespace net_backend.Services
                 worksheet.Column(4).Width = 16;
                 worksheet.Column(5).Width = 14;
                 worksheet.Column(6).Width = 14;
+                worksheet.Column(7).Width = 16;
+                worksheet.Column(8).Width = 12;
                 if (rowList.Count > 0)
                     worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())

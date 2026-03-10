@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import api from "@/lib/api";
-import { Transfer, Party } from "@/types";
+import { Transfer, Party, Role } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -227,7 +227,7 @@ export default function TransfersPage() {
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
-                                                    {permissions?.editTransfer && currentUser?.role === "ADMIN" && (
+                                                    {permissions?.editTransfer && currentUser?.role === Role.ADMIN && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"

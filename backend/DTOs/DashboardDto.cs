@@ -10,6 +10,8 @@ public class LocationWiseItemRowDto
     public string? DrawingNo { get; set; }
     public string? ItemTypeName { get; set; }
     public string? StatusName { get; set; }
+    public string CurrentProcess { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }
 
 /// <summary>Row for Patterns at Vendor table and export.</summary>

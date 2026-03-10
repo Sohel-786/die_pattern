@@ -32,7 +32,7 @@ export function TransferFilters({
     onClear,
     className,
 }: TransferFiltersProps) {
-    const hasActive = filters.search !== "" || filters.fromPartyId !== null || filters.toPartyId !== null || filters.dateFrom !== "" || filters.dateTo !== "" || filters.isActive !== true;
+    const hasActive = filters.search !== "" || filters.fromPartyId !== null || filters.toPartyId !== null || filters.dateFrom !== "" || filters.dateTo !== "" || filters.isActive !== null;
 
     const update = (patch: Partial<TransferFiltersState>) => {
         onFiltersChange({ ...filters, ...patch });

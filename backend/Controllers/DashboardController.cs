@@ -39,7 +39,7 @@ namespace net_backend.Controllers
             foreach (var loc in locations)
             {
                 var count = await _context.Items.CountAsync(p =>
-                    p.CurrentLocationId == loc.Id && inHouseStates.Contains(p.CurrentProcess) && p.IsActive);
+                    p.LocationId == loc.Id && inHouseStates.Contains(p.CurrentProcess) && p.IsActive);
                 
                 // If filtering by locationId, only sum up if it matches
                 if (!locationId.HasValue || locationId.Value == 0 || locationId.Value == loc.Id)
@@ -104,6 +104,7 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] int? itemTypeId,
             [FromQuery] int? statusId,
+            [FromQuery] int? currentProcessId,
             [FromQuery] string? itemIds)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
@@ -118,7 +119,21 @@ namespace net_backend.Controllers
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
-                .Where(p => p.CurrentLocationId == locationId && (p.CurrentProcess == ItemProcessState.InStock || p.CurrentProcess == ItemProcessState.InQC || p.CurrentProcess == ItemProcessState.InwardDone) && p.IsActive);
+                .Where(p => p.LocationId == locationId && p.IsActive);
+
+            if (currentProcessId.HasValue)
+            {
+                var processState = (ItemProcessState)currentProcessId.Value;
+                query = query.Where(p => p.CurrentProcess == processState);
+            }
+            else
+            {
+                // Default view: only items considered "at location"
+                query = query.Where(p =>
+                    p.CurrentProcess == ItemProcessState.InStock ||
+                    p.CurrentProcess == ItemProcessState.InQC ||
+                    p.CurrentProcess == ItemProcessState.InwardDone);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -132,6 +147,7 @@ namespace net_backend.Controllers
                 query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
             if (statusId.HasValue && statusId.Value > 0)
                 query = query.Where(p => p.StatusId == statusId.Value);
+
 
             var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
@@ -148,7 +164,9 @@ namespace net_backend.Controllers
                     CurrentName = p.CurrentName,
                     DrawingNo = p.DrawingNo,
                     ItemTypeName = p.ItemType != null ? p.ItemType.Name : null,
-                    StatusName = p.Status != null ? p.Status.Name : null
+                    StatusName = p.Status != null ? p.Status.Name : null,
+                    CurrentProcess = p.CurrentProcess.ToString(),
+                    IsActive = p.IsActive
                 })
                 .ToListAsync();
 
@@ -413,6 +431,7 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] int? itemTypeId,
             [FromQuery] int? statusId,
+            [FromQuery] int? currentProcessId,
             [FromQuery] string? itemIds)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
@@ -427,7 +446,20 @@ namespace net_backend.Controllers
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
                 .Include(p => p.CurrentLocation)
-                .Where(p => p.CurrentLocationId == locationId && p.CurrentProcess == ItemProcessState.InStock && p.IsActive);
+                .Where(p => p.LocationId == locationId && p.IsActive);
+
+            if (currentProcessId.HasValue)
+            {
+                var processState = (ItemProcessState)currentProcessId.Value;
+                query = query.Where(p => p.CurrentProcess == processState);
+            }
+            else
+            {
+                query = query.Where(p =>
+                    p.CurrentProcess == ItemProcessState.InStock ||
+                    p.CurrentProcess == ItemProcessState.InQC ||
+                    p.CurrentProcess == ItemProcessState.InwardDone);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -439,6 +471,7 @@ namespace net_backend.Controllers
             }
             if (itemTypeId.HasValue && itemTypeId.Value > 0) query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
             if (statusId.HasValue && statusId.Value > 0) query = query.Where(p => p.StatusId == statusId.Value);
+
             var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
             if (itemIdList.Count > 0) query = query.Where(p => itemIdList.Contains(p.Id));
@@ -452,7 +485,9 @@ namespace net_backend.Controllers
                     CurrentName = p.CurrentName,
                     DrawingNo = p.DrawingNo,
                     ItemTypeName = p.ItemType != null ? p.ItemType.Name : null,
-                    StatusName = p.Status != null ? p.Status.Name : null
+                    StatusName = p.Status != null ? p.Status.Name : null,
+                    CurrentProcess = p.CurrentProcess.ToString(),
+                    IsActive = p.IsActive
                 }).ToListAsync();
 
             var bytes = _excelService.GenerateLocationWiseItemsExcel(rows);

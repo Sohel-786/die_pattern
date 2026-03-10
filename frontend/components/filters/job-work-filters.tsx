@@ -91,7 +91,7 @@ export function JobWorkFilters({
                             <label className={filterLabelClass}>Status</label>
                             <select
                                 value={filters.status}
-                                onChange={(e) => update({ status: e.target.value === "" ? "" : Number(e.target.value) as JobWorkStatus })}
+                                onChange={(e) => update({ status: e.target.value as JobWorkStatus | "" })}
                                 className={selectClass}
                             >
                                 <option value="">All Statuses</option>

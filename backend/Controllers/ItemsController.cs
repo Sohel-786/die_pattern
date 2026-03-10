@@ -28,7 +28,8 @@ namespace net_backend.Controllers
             [FromQuery] int? itemTypeId,
             [FromQuery] int? materialId,
             [FromQuery] int? ownerTypeId,
-            [FromQuery] int? statusId)
+            [FromQuery] int? statusId,
+            [FromQuery] int? currentProcessId)
         {
             if (!await HasPermission("ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -55,6 +56,12 @@ namespace net_backend.Controllers
 
             if (statusId.HasValue && statusId.Value > 0)
                 query = query.Where(p => p.StatusId == statusId.Value);
+
+            if (currentProcessId.HasValue)
+            {
+                var processState = (ItemProcessState)currentProcessId.Value;
+                query = query.Where(p => p.CurrentProcess == processState);
+            }
 
             if (!string.IsNullOrEmpty(search))
             {
@@ -309,9 +316,10 @@ namespace net_backend.Controllers
                 Revision = i.RevisionNo,
                 Material = i.Material?.Name,
                 Ownership = i.OwnerType?.Name,
-                Status = i.Status?.Name,
+                Condition = i.Status?.Name,
                 CustodianType = i.CurrentProcess == ItemProcessState.NotInStock ? "Not in stock" : (i.CurrentProcess == ItemProcessState.InStock ? "Location" : "Vendor"),
-                CustodianName = i.CurrentProcess == ItemProcessState.NotInStock ? "—" : (i.CurrentProcess == ItemProcessState.InStock ? i.CurrentLocation?.Name : i.CurrentParty?.Name)
+                CustodianName = i.CurrentProcess == ItemProcessState.NotInStock ? "—" : (i.CurrentProcess == ItemProcessState.InStock ? i.CurrentLocation?.Name : i.CurrentParty?.Name),
+                IsActive = i.IsActive ? "Yes" : "No"
             });
 
             var file = _excelService.GenerateExcel(data, "Die Pattern Masters");
@@ -371,7 +379,7 @@ namespace net_backend.Controllers
                     var assetTypeTrim = row.Data.AssetType?.Trim() ?? "";
                     var materialTrim = row.Data.Material?.Trim() ?? "";
                     var ownershipTrim = row.Data.Ownership?.Trim() ?? "";
-                    var statusTrim = row.Data.Status?.Trim() ?? "";
+                    var statusTrim = row.Data.Condition?.Trim() ?? "";
                     var custodianTypeTrim = row.Data.CustodianType?.Trim() ?? "";
                     var custodianNameTrim = row.Data.CustodianName?.Trim() ?? "";
 
@@ -425,7 +433,7 @@ namespace net_backend.Controllers
                         LocationId = locationId,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now,
-                        IsActive = true
+                        IsActive = !(row.Data.IsActive?.Trim().Equals("No", StringComparison.OrdinalIgnoreCase) ?? false)
                     });
                 }
                 await _context.SaveChangesAsync();
@@ -625,10 +633,10 @@ namespace net_backend.Controllers
                     invalidReasons.Add("Ownership is required");
                 else if (!ownerTypesLower.Contains(d.Ownership.Trim().ToLower()))
                     invalidReasons.Add($"Ownership '{d.Ownership}' not found in Owner Master");
-                if (string.IsNullOrWhiteSpace(d.Status))
-                    invalidReasons.Add("Status is required");
-                else if (!statusesLower.Contains(d.Status.Trim().ToLower()))
-                    invalidReasons.Add($"Status '{d.Status}' not found in Status Master");
+                if (string.IsNullOrWhiteSpace(d.Condition))
+                    invalidReasons.Add("Condition is required");
+                else if (!statusesLower.Contains(d.Condition.Trim().ToLower()))
+                    invalidReasons.Add($"Condition '{d.Condition}' not found in Status Master");
                 if (!string.IsNullOrWhiteSpace(d.DrawingNo))
                 {
                     var drawingLower = d.DrawingNo.Trim().ToLower();

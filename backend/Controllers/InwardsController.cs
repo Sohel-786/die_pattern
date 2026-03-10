@@ -143,23 +143,40 @@ namespace net_backend.Controllers
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(i => i.InwardNo.Contains(search) || (i.Vendor != null && i.Vendor.Name.Contains(search)));
+                var s = search.Trim().ToLower();
+                query = query.Where(i =>
+                    i.InwardNo.ToLower().Contains(s) ||
+                    (i.Vendor != null && i.Vendor.Name.ToLower().Contains(s)) ||
+                    (i.Remarks != null && i.Remarks.ToLower().Contains(s)) ||
+                    i.Lines.Any(l =>
+                        (l.Item != null && l.Item.MainPartName.ToLower().Contains(s)) ||
+                        (l.Item != null && (l.Item.CurrentName ?? "").ToLower().Contains(s)) ||
+                        (l.Remarks != null && l.Remarks.ToLower().Contains(s))
+                    )
+                );
             }
             
             if (!string.IsNullOrWhiteSpace(sourceNo))
             {
+                var sn = sourceNo.Trim().ToLower();
                 // This is a bit expensive but requested: filter by source number across POs and JWs
                 query = query.Where(i => i.Lines.Any(l => 
-                    (l.SourceType == InwardSourceType.PO && _context.PurchaseOrders.Any(p => p.Id == l.SourceRefId && p.PoNo.Contains(sourceNo))) ||
-                    (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.Contains(sourceNo)))
+                    (l.SourceType == InwardSourceType.PO && _context.PurchaseOrders.Any(p => p.Id == l.SourceRefId && p.PoNo.ToLower().Contains(sn))) ||
+                    (l.SourceType == InwardSourceType.JobWork && _context.JobWorks.Any(j => j.Id == l.SourceRefId && j.JobWorkNo.ToLower().Contains(sn)))
                 ));
             }
 
             if (startDate.HasValue)
-                query = query.Where(i => i.InwardDate >= startDate.Value.Date);
+            {
+                var sd = startDate.Value.Date;
+                query = query.Where(i => i.InwardDate >= sd);
+            }
             
             if (endDate.HasValue)
-                query = query.Where(i => i.InwardDate <= endDate.Value.Date);
+            {
+                var ed = endDate.Value.Date.AddDays(1);
+                query = query.Where(i => i.InwardDate < ed);
+            }
 
             if (!isActive.HasValue && !await IsAdmin())
                 query = query.Where(i => i.IsActive);

@@ -13,5 +13,5 @@ export const initialTransferFilters: TransferFiltersState = {
     toPartyId: null,
     dateFrom: "",
     dateTo: "",
-    isActive: true,
+    isActive: null,
 };

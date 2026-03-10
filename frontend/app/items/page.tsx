@@ -30,6 +30,43 @@ import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
 
+const getProcessColor = (process?: string) => {
+    switch (process?.toLowerCase()) {
+        case "in stock": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+        case "not in stock": return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5";
+        case "at vendor": return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5";
+        case "in qc": return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5";
+        case "inward done": return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5";
+        case "pi issued": return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5";
+        case "po issued": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+        case "in job work": return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5";
+        default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+    }
+};
+
+const getConditionColor = (condition?: string) => {
+    switch (condition?.toLowerCase()) {
+        case "good condition": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+        case "under repair": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+        case "scrapped": return "bg-rose-50 text-rose-700 border-rose-200/60 shadow-sm shadow-rose-500/5";
+        case "new": return "bg-blue-50 text-blue-700 border-blue-200/60 shadow-sm shadow-blue-500/5";
+        case "available": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+        case "on hold": return "bg-gray-50 text-gray-700 border-gray-200/60 shadow-sm shadow-gray-500/5";
+        default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+    }
+};
+
+const PROCESS_OPTIONS = [
+    { id: 7, name: "In Stock" },
+    { id: 4, name: "In QC" },
+    { id: 3, name: "Inward Done" },
+    { id: 6, name: "At Vendor" },
+    { id: 5, name: "In Job Work" },
+    { id: 1, name: "PI Issued" },
+    { id: 2, name: "PO Issued" },
+    { id: 0, name: "Not In Stock" },
+];
+
 export default function ItemsPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const { user } = useAuth();
@@ -45,6 +82,7 @@ export default function ItemsPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [materialFilter, setMaterialFilter] = useState<string>("all");
     const [ownerFilter, setOwnerFilter] = useState<string>("all");
+    const [processFilter, setProcessFilter] = useState<string>("all");
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<Item | null>(null);
     const [viewImportedForEntry, setViewImportedForEntry] = useState<OpeningHistoryEntry | null>(null);
@@ -78,7 +116,7 @@ export default function ItemsPage() {
     });
 
     const { data: items = [], isLoading } = useQuery<Item[]>({
-        queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter],
+        queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter, processFilter],
         enabled: tabState !== "openingHistory",
         queryFn: async () => {
             const params: any = {};
@@ -94,6 +132,7 @@ export default function ItemsPage() {
             if (statusFilter !== "all") params.statusId = statusFilter;
             if (materialFilter !== "all") params.materialId = materialFilter;
             if (ownerFilter !== "all") params.ownerTypeId = ownerFilter;
+            if (processFilter !== "all") params.currentProcessId = processFilter;
 
             const res = await api.get("/items", { params });
             return res.data.data;
@@ -190,7 +229,8 @@ export default function ItemsPage() {
         activeFilter !== "all" ||
         statusFilter !== "all" ||
         materialFilter !== "all" ||
-        ownerFilter !== "all";
+        ownerFilter !== "all" ||
+        processFilter !== "all";
 
     const handleResetFilters = () => {
         setSearch("");
@@ -198,6 +238,7 @@ export default function ItemsPage() {
         setStatusFilter("all");
         setMaterialFilter("all");
         setOwnerFilter("all");
+        setProcessFilter("all");
     };
 
     if (permissions && !permissions.viewMaster) {
@@ -471,7 +512,7 @@ export default function ItemsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-secondary-100 pt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-t border-secondary-100 pt-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Material</label>
                                     <select
@@ -492,6 +533,19 @@ export default function ItemsPage() {
                                     >
                                         <option value="all">All Statuses</option>
                                         {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Current Process</label>
+                                    <select
+                                        value={processFilter}
+                                        onChange={(e) => setProcessFilter(e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                    >
+                                        <option value="all">All Processes</option>
+                                        {PROCESS_OPTIONS.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
@@ -527,8 +581,9 @@ export default function ItemsPage() {
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Revision</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Material</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Ownership</th>
-                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Condition</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Current Process</th>
+                                        <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Active Status</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -536,7 +591,7 @@ export default function ItemsPage() {
                                     {isLoading ? (
                                         [1, 2, 3].map((i) => (
                                             <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                                {Array(11).fill(0).map((_, j) => (
+                                                {Array(12).fill(0).map((_, j) => (
                                                     <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
                                                 ))}
                                             </tr>
@@ -560,22 +615,25 @@ export default function ItemsPage() {
                                                 <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.materialName}</td>
                                                 <td className="px-4 py-3 text-secondary-700 font-bold uppercase text-[11px]">{item.ownerTypeName}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${item.statusName?.toLowerCase().includes('avail')
-                                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                                                            }`}>
-                                                            {item.statusName}
-                                                        </span>
-                                                        {!item.isActive && (
-                                                            <span className="text-[9px] text-red-600 font-bold uppercase px-1.5 py-0.5 bg-red-50 rounded border border-red-100">Inactive</span>
-                                                        )}
-                                                    </div>
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getConditionColor(item.statusName)}`}>
+                                                        {item.statusName}
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border bg-secondary-50 border-secondary-200 text-secondary-800">
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getProcessColor(item.currentProcess ?? "")}`}>
                                                         {item.currentProcess ?? "—"}
                                                     </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {item.isActive ? (
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                            Active
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">
+                                                            Inactive
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
@@ -611,7 +669,7 @@ export default function ItemsPage() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={11} className="py-16 text-center text-secondary-400 italic font-medium">
+                                            <td colSpan={12} className="py-16 text-center text-secondary-400 italic font-medium">
                                                 No assets found matching selected filters.
                                             </td>
                                         </tr>
