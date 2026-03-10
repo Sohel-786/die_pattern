@@ -21,7 +21,7 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
-            if (!await HasPermission("ManageParty")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", "ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
             var parties = await _context.Parties
                 .Where(p => p.CompanyId == companyId)
@@ -48,6 +48,7 @@ namespace net_backend.Controllers
         [HttpPost("validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<PartyImportDto>>>> Validate(IFormFile file)
         {
+            if (!await HasAllPermissions("ViewMaster", "ManageParty")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<PartyImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
@@ -63,7 +64,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasAllPermissions("ImportMaster", "ManageParty")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", "ManageParty")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -217,7 +218,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll([FromQuery] bool includeSelf = true)
         {
-            if (!await HasPermission("ManageParty")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
             var query = _context.Parties.Where(p => p.CompanyId == companyId);
 
@@ -240,6 +241,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive([FromQuery] bool includeSelf = false)
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
             var query = _context.Parties.Where(p => p.CompanyId == companyId && p.IsActive);
             

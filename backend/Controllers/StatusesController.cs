@@ -20,6 +20,7 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", "ManageItemStatus")) return Forbidden();
             var items = await _context.ItemStatuses
                 .OrderBy(s => s.Name)
                 .ToListAsync();
@@ -35,6 +36,7 @@ namespace net_backend.Controllers
         [HttpPost("validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<MasterImportDto>>>> Validate(IFormFile file)
         {
+            if (!await HasAllPermissions("ViewMaster", "ManageItemStatus")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<MasterImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
@@ -50,7 +52,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasAllPermissions("ImportMaster", "ManageItemStatus")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", "ManageItemStatus")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
 
             try
@@ -110,6 +112,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemStatus>>>> GetAll()
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var items = await _context.ItemStatuses.OrderByDescending(s => s.Id).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<ItemStatus>> { Data = items });
         }
@@ -117,6 +120,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemStatus>>>> GetActive()
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var items = await _context.ItemStatuses.Where(s => s.IsActive).OrderByDescending(s => s.Id).ToListAsync();
             return Ok(new ApiResponse<IEnumerable<ItemStatus>> { Data = items });
         }

@@ -185,11 +185,11 @@ namespace net_backend.Controllers
 
         /// <summary>Master create requires both AddMaster and module manage permission.</summary>
         protected async Task<bool> CanCreateMaster(string managePermission)
-            => await HasAllPermissions("AddMaster", managePermission);
+            => await HasAllPermissions("ViewMaster", "AddMaster", managePermission);
 
         /// <summary>Master edit requires both EditMaster and module manage permission.</summary>
         protected async Task<bool> CanEditMaster(string managePermission)
-            => await HasAllPermissions("EditMaster", managePermission);
+            => await HasAllPermissions("ViewMaster", "EditMaster", managePermission);
 
         protected ActionResult Forbidden()
         {

@@ -15,6 +15,7 @@ import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
 
@@ -25,19 +26,11 @@ export default function PartiesPage() {
     const canManage = permissions?.manageParty ?? false;
     const canAdd = canManage && (permissions?.addMaster ?? false);
     const canEdit = canManage && (permissions?.editMaster ?? false);
+    const canExport = canManage && (permissions?.exportMaster ?? false);
+    const canImport = canManage && (permissions?.importMaster ?? false);
 
     if (permissions && !permissions.viewMaster) {
-        return (
-            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
-                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
-                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Search className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
-                    <p className="text-secondary-500 font-medium">You don't have the required clearance to view parties.</p>
-                </div>
-            </div>
-        );
+        return <AccessDenied actionLabel="Go to Parties" actionHref="/parties" />;
     }
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -137,13 +130,15 @@ export default function PartiesPage() {
                     <p className="text-secondary-500 font-medium">Manage master data for vendors & external entities</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {canManage && (
+                    {(canExport || canImport) && (
                         <ExportImportButtons
                             onExport={handleExport}
                             onImport={handleImport}
                             exportLoading={exportLoading}
                             importLoading={importLoading}
                             inputId="parties"
+                            showExport={canExport}
+                            showImport={canImport}
                         />
                     )}
                     {canAdd && (

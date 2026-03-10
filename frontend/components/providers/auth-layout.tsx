@@ -9,7 +9,7 @@ import { HorizontalNav } from '@/components/layout/horizontal-nav';
 import { User, UserPermission } from '@/types';
 import { SoftwareProfileDraftProvider } from '@/contexts/software-profile-draft-context';
 import { useCurrentUserPermissions } from '@/hooks/use-settings';
-import { ShieldAlert } from 'lucide-react';
+import { AccessDenied } from '@/components/ui/access-denied';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -326,16 +326,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
               "flex-1 flex items-center justify-center p-6",
               isFixedLayout ? "min-h-0 overflow-y-auto" : "overflow-visible"
             )}>
-              <div className="text-center max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg border border-red-100">
-                <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShieldAlert className="w-8 h-8 text-red-600" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-                <p className="text-gray-600 mb-6">You do not have permission to view this page.</p>
-                <Button onClick={() => router.push(firstAllowed)} variant="outline" className="w-full">
-                  Go to {ROUTE_LABELS[firstAllowed] ?? 'Dashboard'}
-                </Button>
-              </div>
+              <AccessDenied
+                actionLabel={`Go to ${ROUTE_LABELS[firstAllowed] ?? 'Dashboard'}`}
+                actionHref={firstAllowed}
+              />
             </main>
           </div>
         </div>

@@ -27,6 +27,7 @@ import { ItemChangeDialog } from "@/components/masters/item-change-dialog";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
 
@@ -74,6 +75,8 @@ export default function ItemsPage() {
     const canManage = permissions?.manageItem;
     const canAdd = !!canManage && (permissions?.addMaster ?? false);
     const canEdit = !!canManage && (permissions?.editMaster ?? false);
+    const canExport = !!canManage && (permissions?.exportMaster ?? false);
+    const canImport = !!canManage && (permissions?.importMaster ?? false);
 
     const [search, setSearch] = useState("");
     const [isEntryOpen, setIsEntryOpen] = useState(false);
@@ -244,14 +247,7 @@ export default function ItemsPage() {
     };
 
     if (permissions && !permissions.viewMaster) {
-        return (
-            <div className="flex h-[80vh] items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-xl font-bold text-secondary-900">Access Denied</h2>
-                    <p className="text-secondary-500">You don&apos;t have permission to view Die &amp; Pattern Masters.</p>
-                </div>
-            </div>
-        );
+        return <AccessDenied actionLabel="Go to Items" actionHref="/items" />;
     }
 
     return (
@@ -262,13 +258,15 @@ export default function ItemsPage() {
                     <p className="text-secondary-500 font-medium">Systematic repository for engineering dies and pattern assets</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {canManage && (
+                    {(canExport || canImport) && (
                         <ExportImportButtons
                             onExport={handleExport}
                             onImport={handleImport}
                             exportLoading={exportLoading}
                             importLoading={importLoading}
                             inputId="items"
+                            showExport={canExport}
+                            showImport={canImport}
                         />
                     )}
                     {canAdd && (

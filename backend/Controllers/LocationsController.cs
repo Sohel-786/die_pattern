@@ -20,7 +20,7 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
-            if (!await HasPermission("ManageLocation")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", "ManageLocation")) return Forbidden();
 
             var locations = await _context.Locations
                 .Include(l => l.Company)
@@ -41,6 +41,7 @@ namespace net_backend.Controllers
         [HttpPost("validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<LocationImportDto>>>> Validate(IFormFile file)
         {
+            if (!await HasAllPermissions("ViewMaster", "ManageLocation")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<LocationImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
@@ -56,7 +57,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasAllPermissions("ImportMaster", "ManageLocation")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", "ManageLocation")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -177,7 +178,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetAll()
         {
-            if (!await HasPermission("ManageLocation")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageLocation")) return Forbidden();
             var locations = await _context.Locations
                 .Include(l => l.Company)
                 .Select(l => new {
@@ -197,6 +198,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetActive()
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var locations = await _context.Locations
                 .Where(l => l.IsActive)
                 .OrderByDescending(l => l.CreatedAt)

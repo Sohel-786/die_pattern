@@ -31,7 +31,7 @@ namespace net_backend.Controllers
             [FromQuery] int? statusId,
             [FromQuery] int? currentProcessId)
         {
-            if (!await HasPermission("ManageItem")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             IQueryable<Item> query = _context.Items
                 .Where(p => p.LocationId == locationId)
@@ -108,6 +108,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetActive()
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             // Materialize first so we can use switch expressions and service methods in-memory
             var items = await _context.Items
@@ -296,7 +297,7 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
-            if (!await HasPermission("ManageItem")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", "ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var items = await _context.Items
                 .Where(i => i.LocationId == locationId)
@@ -329,6 +330,7 @@ namespace net_backend.Controllers
         [HttpPost("validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<ItemImportDto>>>> Validate(IFormFile file)
         {
+            if (!await HasAllPermissions("ViewMaster", "ManageItem")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
             using var stream = file.OpenReadStream();
             var excelResult = _excelService.ImportExcel<ItemImportDto>(stream);
@@ -340,7 +342,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasAllPermissions("ImportMaster", "ManageItem")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", "ManageItem")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
             var locationId = await GetCurrentLocationIdAsync();
             var currentLocation = await _context.Locations.Include(l => l.Company).AsNoTracking().FirstOrDefaultAsync(l => l.Id == locationId);

@@ -25,7 +25,7 @@ namespace net_backend.Controllers
         [HttpGet("export")]
         public async Task<IActionResult> Export()
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", "ManageCompany")) return Forbidden();
 
             var companies = await _context.Companies
                 .OrderByDescending(c => c.CreatedAt)
@@ -51,6 +51,7 @@ namespace net_backend.Controllers
         [HttpPost("validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<CompanyImportDto>>>> Validate(IFormFile file)
         {
+            if (!await HasAllPermissions("ViewMaster", "ManageCompany")) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<CompanyImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
@@ -66,7 +67,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasAllPermissions("ImportMaster", "ManageCompany")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", "ManageCompany")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -223,7 +224,7 @@ namespace net_backend.Controllers
         [HttpPost("upload-logo")]
         public async Task<ActionResult<ApiResponse<object>>> UploadLogo([FromForm] IFormFile? file, [FromQuery] string? companyName)
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageCompany")) return Forbidden();
 
             var uploadFile = file ?? Request.Form.Files?.FirstOrDefault(f => f.Name == "file" || f.Name == "logo" || f.Length > 0);
             if (uploadFile == null || uploadFile.Length == 0)
@@ -266,7 +267,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageCompany")) return Forbidden();
             var companies = await _context.Companies
                 .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new CompanyDto
@@ -295,6 +296,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetActive()
         {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
             var companies = await _context.Companies
                 .Where(c => c.IsActive)
                 .OrderByDescending(c => c.CreatedAt)

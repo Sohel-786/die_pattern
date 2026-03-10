@@ -26,6 +26,7 @@ import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { toast } from "react-hot-toast";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
@@ -61,19 +62,11 @@ export default function StoreItemsPage() {
   const canEditMaster = permissions?.manageItem ?? false;
   const canImportExportMaster = permissions?.manageItem ?? false;
   const canEdit = (permissions?.manageItem ?? false) && (permissions?.editMaster ?? false);
+  const canExport = (permissions?.manageItem ?? false) && (permissions?.exportMaster ?? false);
+  const canImport = (permissions?.manageItem ?? false) && (permissions?.importMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center font-sans px-4">
-        <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
-          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <LayoutDashboard className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
-          <p className="text-secondary-500 font-medium">You don't have the required master-level clearance to view store assets.</p>
-        </div>
-      </div>
-    );
+    return <AccessDenied actionLabel="Go to Store Items" actionHref="/store-items" />;
   }
 
   const {
@@ -166,13 +159,15 @@ export default function StoreItemsPage() {
               const f = e.target.files?.[0];
               if (f) { handleImport(f); e.target.value = ""; }
             }} />
-            {canImportExportMaster && (
+            {(canExport || canImport) && (
               <ExportImportButtons
                 onExport={handleExport}
                 onImport={handleImport}
                 exportLoading={exportLoading}
                 importLoading={importLoading}
                 inputId="store-items"
+                showExport={canExport}
+                showImport={canImport}
               />
             )}
             {canAddMaster && (

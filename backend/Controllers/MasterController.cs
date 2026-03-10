@@ -20,6 +20,16 @@ namespace net_backend.Controllers
         [HttpGet("{type}/export")]
         public async Task<IActionResult> Export(string type)
         {
+            var permission = type.ToLower() switch
+            {
+                "item-types" => "ManageItemType",
+                "materials" => "ManageMaterial",
+                "item-statuses" => "ManageItemStatus",
+                "owner-types" => "ManageOwnerType",
+                _ => "ViewMaster"
+            };
+            if (!await HasAllPermissions("ViewMaster", "ExportMaster", permission)) return Forbidden();
+
             IEnumerable<object> data;
             string fileName;
 
@@ -52,6 +62,15 @@ namespace net_backend.Controllers
         [HttpPost("{type}/validate")]
         public async Task<ActionResult<ApiResponse<ValidationResultDto<MasterImportDto>>>> Validate(string type, IFormFile file)
         {
+            var permission = type.ToLower() switch
+            {
+                "item-types" => "ManageItemType",
+                "materials" => "ManageMaterial",
+                "item-statuses" => "ManageItemStatus",
+                "owner-types" => "ManageOwnerType",
+                _ => "ViewMaster"
+            };
+            if (!await HasAllPermissions("ViewMaster", permission)) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<ValidationResultDto<MasterImportDto>> { Success = false, Message = "No file uploaded" });
             try
             {
@@ -75,7 +94,7 @@ namespace net_backend.Controllers
                 "owner-types" => "ManageOwnerType",
                 _ => "ViewMaster"
             };
-            if (!await HasAllPermissions("ImportMaster", permission)) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ImportMaster", permission)) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
 
             try
@@ -149,10 +168,18 @@ namespace net_backend.Controllers
 
         // Item Types
         [HttpGet("item-types")]
-        public async Task<IActionResult> GetItemTypes() => Ok(new { data = await _context.ItemTypes.OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetItemTypes()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.ItemTypes.OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpGet("item-types/active")]
-        public async Task<IActionResult> GetActiveItemTypes() => Ok(new { data = await _context.ItemTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetActiveItemTypes()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.ItemTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpPost("item-types")]
         public async Task<IActionResult> CreateItemType([FromBody] ItemType item)
@@ -196,10 +223,18 @@ namespace net_backend.Controllers
 
         // Item Statuses
         [HttpGet("item-statuses")]
-        public async Task<IActionResult> GetItemStatuses() => Ok(new { data = await _context.ItemStatuses.OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetItemStatuses()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.ItemStatuses.OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpGet("item-statuses/active")]
-        public async Task<IActionResult> GetActiveItemStatuses() => Ok(new { data = await _context.ItemStatuses.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetActiveItemStatuses()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.ItemStatuses.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpPost("item-statuses")]
         public async Task<IActionResult> CreateItemStatus([FromBody] ItemStatus item)
@@ -243,10 +278,18 @@ namespace net_backend.Controllers
 
         // Materials
         [HttpGet("materials")]
-        public async Task<IActionResult> GetMaterials() => Ok(new { data = await _context.Materials.OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetMaterials()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.Materials.OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpGet("materials/active")]
-        public async Task<IActionResult> GetActiveMaterials() => Ok(new { data = await _context.Materials.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetActiveMaterials()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.Materials.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpPost("materials")]
         public async Task<IActionResult> CreateMaterial([FromBody] Material item)
@@ -290,10 +333,18 @@ namespace net_backend.Controllers
 
         // Owner Types
         [HttpGet("owner-types")]
-        public async Task<IActionResult> GetOwnerTypes() => Ok(new { data = await _context.OwnerTypes.OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetOwnerTypes()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.OwnerTypes.OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpGet("owner-types/active")]
-        public async Task<IActionResult> GetActiveOwnerTypes() => Ok(new { data = await _context.OwnerTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        public async Task<IActionResult> GetActiveOwnerTypes()
+        {
+            if (!await HasPermission("ViewMaster")) return Forbidden();
+            return Ok(new { data = await _context.OwnerTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
+        }
 
         [HttpPost("owner-types")]
         public async Task<IActionResult> CreateOwnerType([FromBody] OwnerType item)

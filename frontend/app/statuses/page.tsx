@@ -11,6 +11,7 @@ import { Plus, Edit2, Search, Ban, CheckCircle } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { toast } from "react-hot-toast";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { StatusDialog } from "@/components/masters/status-dialog";
@@ -33,16 +34,11 @@ export default function StatusesPage() {
   const canManageStatus = permissions?.manageItemStatus ?? false;
   const canAdd = canManageStatus && (permissions?.addMaster ?? false);
   const canEdit = canManageStatus && (permissions?.editMaster ?? false);
+  const canExport = canManageStatus && (permissions?.exportMaster ?? false);
+  const canImport = canManageStatus && (permissions?.importMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
-    return (
-      <div className="flex h-[80vh] items-center justify-center font-sans">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-secondary-900 border-b border-primary-100 pb-2 mb-2">Access Denied</h2>
-          <p className="text-secondary-500 font-medium">You don't have permission to view functional statuses.</p>
-        </div>
-      </div>
-    );
+    return <AccessDenied actionLabel="Go to Statuses" actionHref="/statuses" />;
   }
 
   const {
@@ -123,13 +119,15 @@ export default function StatusesPage() {
           <p className="text-secondary-500 font-medium">Define master data for item life-cycle states</p>
         </div>
         <div className="flex items-center gap-2">
-          {canManageStatus && (
+          {(canExport || canImport) && (
             <ExportImportButtons
               onExport={handleExport}
               onImport={handleImport}
               exportLoading={exportLoading}
               importLoading={importLoading}
               inputId="statuses"
+              showExport={canExport}
+              showImport={canImport}
             />
           )}
           {canAdd && (

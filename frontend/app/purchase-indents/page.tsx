@@ -22,6 +22,7 @@ import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase
 import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { Role } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "react-hot-toast";
@@ -188,17 +189,7 @@ export default function PurchaseIndentsPage() {
     };
 
     if (permissions && !permissions.viewPI) {
-        return (
-            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
-                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
-                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
-                    <p className="text-secondary-500 font-medium">You don&apos;t have the required clearance to view purchase indents.</p>
-                </div>
-            </div>
-        );
+        return <AccessDenied actionLabel="Go to Purchase Indents" actionHref="/purchase-indents" />;
     }
 
     return (

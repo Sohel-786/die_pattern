@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { InwardDialog } from "@/components/inwards/inward-dialog";
@@ -118,17 +119,7 @@ export default function InwardsPage() {
     }, []);
 
     if (permissions && !permissions.viewInward) {
-        return (
-            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
-                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
-                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Package className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
-                    <p className="text-secondary-500 font-medium">You don&apos;t have permission to view inward entries.</p>
-                </div>
-            </div>
-        );
+        return <AccessDenied actionLabel="Go to Inwards" actionHref="/inwards" />;
     }
 
     return (
