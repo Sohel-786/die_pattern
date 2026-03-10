@@ -72,6 +72,7 @@ export default function ItemsPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageItem;
+    const canAdd = !!canManage && ((permissions?.addMaster ?? false) || isAdmin);
 
     const [search, setSearch] = useState("");
     const [isEntryOpen, setIsEntryOpen] = useState(false);
@@ -269,7 +270,7 @@ export default function ItemsPage() {
                             inputId="items"
                         />
                     )}
-                    {canManage && (
+                    {canAdd && (
                         <button
                             onClick={handleAdd}
                             className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold px-4 py-2 rounded-lg flex items-center transition-colors"

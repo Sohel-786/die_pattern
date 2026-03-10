@@ -157,7 +157,6 @@ namespace net_backend.Controllers
                 "ViewPIPReport" => p.ViewPIPReport,
                 "ViewInwardReport" => p.ViewInwardReport,
                 "ViewItemLedgerReport" => p.ViewItemLedgerReport,
-                "ManageUsers" => p.ManageUsers,
                 "AccessSettings" => p.AccessSettings,
                 _ => false
             };

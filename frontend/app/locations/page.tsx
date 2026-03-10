@@ -19,6 +19,7 @@ import { useCurrentUserPermissions } from "@/hooks/use-settings"
 export default function LocationsPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const canManage = permissions?.manageLocation ?? false;
+  const canAdd = canManage && (permissions?.addMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -142,7 +143,7 @@ export default function LocationsPage() {
               inputId="locations"
             />
           )}
-          {canManage && (
+          {canAdd && (
             <Button
               onClick={handleAdd}
               className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"

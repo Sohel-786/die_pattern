@@ -100,7 +100,7 @@ namespace net_backend.Controllers
             var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int currentUserId = 0;
             int.TryParse(currentUserIdStr, out currentUserId);
-            bool canManage = await CheckPermission("ManageUsers");
+            bool canManage = await CheckPermission("AccessSettings");
             if (!canManage && userId != currentUserId)
                 return Forbidden();
 
@@ -130,7 +130,7 @@ namespace net_backend.Controllers
             var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int currentUserId = 0;
             int.TryParse(currentUserIdStr, out currentUserId);
-            bool canManage = await CheckPermission("ManageUsers");
+            bool canManage = await CheckPermission("AccessSettings");
             if (!canManage && userId != currentUserId)
                 return Forbidden();
 
@@ -206,7 +206,6 @@ namespace net_backend.Controllers
             permissions.ViewPIPReport = updatedPerms.ViewPIPReport;
             permissions.ViewInwardReport = updatedPerms.ViewInwardReport;
             permissions.ViewItemLedgerReport = updatedPerms.ViewItemLedgerReport;
-            permissions.ManageUsers = updatedPerms.ManageUsers;
             permissions.AccessSettings = updatedPerms.AccessSettings;
             
             permissions.NavigationLayout = updatedPerms.NavigationLayout;
@@ -380,7 +379,6 @@ namespace net_backend.Controllers
                 "ViewPIPReport" => permissions.ViewPIPReport,
                 "ViewInwardReport" => permissions.ViewInwardReport,
                 "ViewItemLedgerReport" => permissions.ViewItemLedgerReport,
-                "ManageUsers" => permissions.ManageUsers,
                 "AccessSettings" => permissions.AccessSettings,
                 _ => false
             };
@@ -443,7 +441,6 @@ namespace net_backend.Controllers
                 perm.ManageChanges = true;
                 perm.RevertChanges = true;
                 perm.ViewReports = true;
-                perm.ManageUsers = true;
                 perm.AccessSettings = true;
             }
             else if (role == Role.MANAGER)

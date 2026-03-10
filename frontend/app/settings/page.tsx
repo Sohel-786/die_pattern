@@ -172,7 +172,6 @@ const permissionLabels: Record<string, string> = {
   manageChanges: "Manage Audit Logs",
   revertChanges: "Revert Changes",
   viewReports: "View Intelligence Reports",
-  manageUsers: "Manage User Accounts",
   accessSettings: "Access System Settings",
 };
 
@@ -456,7 +455,7 @@ export default function SettingsPage() {
       updateLocationAccess.mutate(
         localLocationAccess.map((a) => ({ companyId: a.companyId, locationId: a.locationId })),
         {
-          onError: () => {},
+          onError: () => { },
           onSuccess: () => {
             if (selectedUserId === currentUser?.id) {
               window.dispatchEvent(new CustomEvent("refreshLocationAccess"));
@@ -855,13 +854,7 @@ export default function SettingsPage() {
                                   </div>
                                   <input type="checkbox" checked={localPermissions.accessSettings} onChange={(e) => handlePermissionChange("accessSettings", e.target.checked)} disabled={localPermissions.accessSettings && (currentUser?.id === selectedUserId || isManagedUserAdmin)} className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" />
                                 </label>
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
-                                  <div>
-                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Users</p>
-                                    <p className="text-xs text-secondary-500 mt-0.5">Create and manage accounts.</p>
-                                  </div>
-                                  <input type="checkbox" checked={localPermissions.manageUsers} onChange={(e) => handlePermissionChange("manageUsers", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500 cursor-pointer" />
-                                </label>
+
                                 <div className="p-4 hover:bg-secondary-50/50 transition-colors">
                                   <div className="mb-2">
                                     <p className="text-sm font-medium text-primary-900">Navigation Layout</p>

@@ -57,7 +57,7 @@ export default function StoreItemsPage() {
   const isAdmin = currentUser?.role === Role.QC_ADMIN;
 
   const { data: permissions } = useCurrentUserPermissions();
-  const canAddMaster = permissions?.manageItem ?? false;
+  const canAddMaster = (permissions?.manageItem ?? false) && (permissions?.addMaster ?? false);
   const canEditMaster = permissions?.manageItem ?? false;
   const canImportExportMaster = permissions?.manageItem ?? false;
 

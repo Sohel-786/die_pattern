@@ -297,18 +297,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Redirect to first allowed route when current route is forbidden (no full reload)
-  if (!hasPermission && permissions) {
-    const firstAllowed = getFirstAllowedRoute(permissions);
-    if (pathname !== firstAllowed && !pathname.startsWith(`${firstAllowed}/`)) {
-      router.replace(firstAllowed);
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-secondary-50">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
-        </div>
-      );
-    }
-  }
+
 
   if (!hasPermission) {
     const firstAllowed = getFirstAllowedRoute(permissions);

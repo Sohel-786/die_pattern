@@ -698,7 +698,6 @@ export interface UserPermission {
   viewPIPReport: boolean;
   viewInwardReport: boolean;
   viewItemLedgerReport: boolean;
-  manageUsers: boolean;
   accessSettings: boolean;
   navigationLayout: 'SIDEBAR' | 'HORIZONTAL';
 }

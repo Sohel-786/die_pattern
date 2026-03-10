@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Edit2, Ban, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ type MasterType = 'item-types' | 'materials' | 'item-statuses' | 'owner-types';
 export default function OtherMastersPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
+    const { data: permissions } = useCurrentUserPermissions();
     const [activeTab, setActiveTab] = useState<MasterType>('item-types');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
@@ -31,6 +33,28 @@ export default function OtherMastersPage() {
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<any | null>(null);
     const queryClient = useQueryClient();
+
+    const canManageTab =
+        activeTab === "item-types" ? (permissions?.manageItemType ?? false)
+            : activeTab === "materials" ? (permissions?.manageMaterial ?? false)
+                : activeTab === "item-statuses" ? (permissions?.manageItemStatus ?? false)
+                    : (permissions?.manageOwnerType ?? false);
+
+    const canAdd = canManageTab && ((permissions?.addMaster ?? false) || isAdmin);
+
+    if (permissions && !permissions.viewMaster) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center font-sans px-4">
+                <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-secondary-100 max-w-sm">
+                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Search className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-black text-secondary-900 tracking-tight mb-2 uppercase">Access Restricted</h2>
+                    <p className="text-secondary-500 font-medium">You don't have the required clearance to view masters.</p>
+                </div>
+            </div>
+        );
+    }
 
     const {
         handleExport,
@@ -139,20 +163,24 @@ export default function OtherMastersPage() {
                     <p className="text-secondary-500 font-medium">Manage supplementary parameters and metadata categories</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <ExportImportButtons
-                        onExport={handleExport}
-                        onImport={handleImport}
-                        exportLoading={exportLoading}
-                        importLoading={importLoading}
-                        inputId="masters"
-                    />
-                    <Button
-                        onClick={handleAdd}
-                        className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add {getTitle()}
-                    </Button>
+                    {canManageTab && (
+                        <ExportImportButtons
+                            onExport={handleExport}
+                            onImport={handleImport}
+                            exportLoading={exportLoading}
+                            importLoading={importLoading}
+                            inputId="masters"
+                        />
+                    )}
+                    {canAdd && (
+                        <Button
+                            onClick={handleAdd}
+                            className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add {getTitle()}
+                        </Button>
+                    )}
                 </div>
             </div>
 

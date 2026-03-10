@@ -19,6 +19,7 @@ import { useCurrentUserPermissions } from "@/hooks/use-settings";
 export default function CompaniesPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const canManage = permissions?.manageCompany ?? false;
+  const canAdd = canManage && (permissions?.addMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -157,7 +158,7 @@ export default function CompaniesPage() {
               inputId="companies"
             />
           )}
-          {canManage && (
+          {canAdd && (
             <Button
               onClick={handleAdd}
               className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"

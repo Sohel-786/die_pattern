@@ -123,7 +123,6 @@ namespace net_backend.Data
             adminPerm.ViewPIPReport = true;
             adminPerm.ViewInwardReport = true;
             adminPerm.ViewItemLedgerReport = true;
-            adminPerm.ManageUsers = true;
             adminPerm.AccessSettings = true;
             
             context.SaveChanges();

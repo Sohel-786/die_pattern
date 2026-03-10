@@ -18,7 +18,7 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<User>>>> GetAll()
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var users = await _context.Users.ToListAsync();
             return Ok(new ApiResponse<IEnumerable<User>> { Data = users });
         }
@@ -26,7 +26,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<User>>> GetById(int id)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             
             if (user == null) return NotFound();
@@ -36,7 +36,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<User>>> Create([FromBody] CreateUserRequest request)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return Conflict(new ApiResponse<User> { Success = false, Message = "Username already exists" });
 
@@ -98,7 +98,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<User>>> Update(int id, [FromBody] UpdateUserRequest request)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             
             if (user == null) return NotFound();
@@ -165,7 +165,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}/permissions")]
         public async Task<ActionResult<ApiResponse<UserPermission>>> GetPermissions(int id)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var permission = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == id);
             if (permission == null)
             {
@@ -180,7 +180,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}/permissions")]
         public async Task<ActionResult<ApiResponse<UserPermission>>> UpdatePermissions(int id, [FromBody] UserPermission request)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var permission = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == id);
             if (permission == null) return NotFound();
 
@@ -224,7 +224,6 @@ namespace net_backend.Controllers
             permission.ViewPIPReport = request.ViewPIPReport;
             permission.ViewInwardReport = request.ViewInwardReport;
             permission.ViewItemLedgerReport = request.ViewItemLedgerReport;
-            permission.ManageUsers = request.ManageUsers;
             permission.AccessSettings = request.AccessSettings;
             
             permission.UpdatedAt = DateTime.Now;
@@ -236,7 +235,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}/location-access")]
         public async Task<ActionResult<ApiResponse<List<CompanyLocationAccessDto>>>> GetLocationAccess(int id)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var access = await _context.UserLocationAccess
                 .Include(ula => ula.Company)
                 .Include(ula => ula.Location)
@@ -256,7 +255,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}/location-access")]
         public async Task<ActionResult<ApiResponse<bool>>> UpdateLocationAccess(int id, [FromBody] List<UserLocationAccessItemDto> request)
         {
-            if (!await HasPermission("ManageUsers")) return Forbidden();
+            if (!await HasPermission("AccessSettings")) return Forbidden();
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
             var existing = await _context.UserLocationAccess.Where(ula => ula.UserId == id).ToListAsync();

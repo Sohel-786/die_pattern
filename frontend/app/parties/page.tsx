@@ -23,6 +23,7 @@ export default function PartiesPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageParty ?? false;
+    const canAdd = canManage && ((permissions?.addMaster ?? false) || isAdmin);
 
     if (permissions && !permissions.viewMaster) {
         return (
@@ -144,7 +145,7 @@ export default function PartiesPage() {
                             inputId="parties"
                         />
                     )}
-                    {canManage && (
+                    {canAdd && (
                         <Button
                             onClick={handleAdd}
                             className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold"

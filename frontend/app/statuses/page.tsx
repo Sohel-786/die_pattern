@@ -31,6 +31,7 @@ export default function StatusesPage() {
 
   const { data: permissions } = useCurrentUserPermissions();
   const canManageStatus = permissions?.manageItemStatus ?? false;
+  const canAdd = canManageStatus && (permissions?.addMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -130,7 +131,7 @@ export default function StatusesPage() {
               inputId="statuses"
             />
           )}
-          {canManageStatus && (
+          {canAdd && (
             <Button onClick={() => handleOpenForm()} className="bg-primary-600 hover:bg-primary-700 text-white shadow-md font-bold">
               <Plus className="w-4 h-4 mr-2" />
               Define Status
