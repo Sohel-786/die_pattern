@@ -137,7 +137,7 @@ export default function ItemsPage() {
             if (statusFilter !== "all") params.statusId = statusFilter;
             if (materialFilter !== "all") params.materialId = materialFilter;
             if (ownerFilter !== "all") params.ownerTypeId = ownerFilter;
-            if (processFilter !== "all") params.currentProcessId = processFilter;
+            if (processFilter !== "all") params.currentProcessId = Number(processFilter);
 
             const res = await api.get("/items", { params });
             return res.data.data;

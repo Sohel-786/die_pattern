@@ -26,8 +26,8 @@ export function buildPIFilterParams(f: PIFiltersState): URLSearchParams {
   const search = (f.search || "").trim();
   if (search) params.set("search", search);
   if (f.status) params.set("status", f.status);
-  if (f.createdDateFrom) params.set("startDate", f.createdDateFrom);
-  if (f.createdDateTo) params.set("endDate", f.createdDateTo);
+  if (f.createdDateFrom) params.set("createdDateFrom", f.createdDateFrom);
+  if (f.createdDateTo) params.set("createdDateTo", f.createdDateTo);
   if (f.isActive !== null) params.set("isActive", String(f.isActive));
   f.itemIds.forEach(id => params.append("itemIds", String(id)));
   f.creatorIds.forEach(id => params.append("creatorIds", String(id)));

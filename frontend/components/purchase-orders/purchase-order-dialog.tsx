@@ -48,6 +48,8 @@ interface PurchaseOrderDialogProps {
   po?: PO | null;
   preSelectedPiItemIds?: number[];
   onPreviewRequest?: (poId: number) => void;
+  /** When true, dialog becomes view-only (no Save/Update). */
+  readOnly?: boolean;
 }
 
 export function PurchaseOrderDialog({
@@ -56,9 +58,10 @@ export function PurchaseOrderDialog({
   po,
   preSelectedPiItemIds = [],
   onPreviewRequest,
+  readOnly,
 }: PurchaseOrderDialogProps) {
   const isEditing = !!po?.id;
-  const isReadOnly = isEditing && (po?.isActive === false || po?.status !== PoStatus.Pending);
+  const isReadOnly = !!readOnly || (isEditing && (po?.isActive === false || po?.status !== PoStatus.Pending));
   const queryClient = useQueryClient();
 
   const [vendorId, setVendorId] = useState<number>(0);
@@ -790,15 +793,17 @@ export function PurchaseOrderDialog({
                 <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-5 font-semibold">
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={mutation.isPending || !isValid || isReadOnly}
-                  className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
-                  title={isEditing && po?.isActive === false ? "Inactive POs cannot be updated" : (isEditing && po?.status !== PoStatus.Pending ? "Approved or Rejected POs cannot be updated" : "")}
-                >
-                  {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                  {isEditing ? "Update" : "Save"}
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={mutation.isPending || !isValid}
+                    className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                    title={isEditing && po?.isActive === false ? "Inactive POs cannot be updated" : (isEditing && po?.status !== PoStatus.Pending ? "Approved or Rejected POs cannot be updated" : "")}
+                  >
+                    {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                    {isEditing ? "Update" : "Save"}
+                  </Button>
+                )}
               </div>
             </footer>
           </>

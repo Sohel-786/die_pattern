@@ -31,6 +31,10 @@ export interface PIFiltersProps {
   className?: string;
 }
 
+function normalizeIds(v: (number | string)[]): number[] {
+  return (Array.isArray(v) ? v : []).map((x) => Number(x)).filter((n) => !Number.isNaN(n));
+}
+
 export function PIFilters({
   filters,
   onFiltersChange,
@@ -111,7 +115,7 @@ export function PIFilters({
               <MultiSelectSearch
                 options={itemOptions}
                 value={filters.itemIds}
-                onChange={(v) => update({ itemIds: v as number[] })}
+                onChange={(v) => update({ itemIds: normalizeIds(v) })}
                 placeholder="Select item"
                 searchPlaceholder="Search…"
                 aria-label="Filter by item"
@@ -122,7 +126,7 @@ export function PIFilters({
               <MultiSelectSearch
                 options={creatorOptions}
                 value={filters.creatorIds}
-                onChange={(v) => update({ creatorIds: v as number[] })}
+                onChange={(v) => update({ creatorIds: normalizeIds(v) })}
                 placeholder="Select user"
                 searchPlaceholder="Search user…"
                 aria-label="Filter by creator"

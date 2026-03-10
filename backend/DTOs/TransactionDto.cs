@@ -54,6 +54,12 @@ namespace net_backend.DTOs
         public List<int> ItemIds { get; set; } = new();
     }
 
+    public class RemovePiItemsDto
+    {
+        /// <summary>Item IDs (Item.Id) to be removed from this PI. Only those without any active PO are allowed.</summary>
+        public List<int> ItemIds { get; set; } = new();
+    }
+
     /// <summary>Full data for Purchase Indent print view (header, table, footer).</summary>
     public class PurchaseIndentPrintDto
     {

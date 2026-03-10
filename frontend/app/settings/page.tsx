@@ -1008,23 +1008,27 @@ export default function SettingsPage() {
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <div className="p-4 space-y-2">
-                                  <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Indents</p>
+                                  <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-3">Purchase Indents</p>
                                   <div className="grid grid-cols-4 gap-2">
                                     {["viewPI", "createPI", "editPI", "approvePI"].map(k => (
                                       <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transition-colors">
                                         <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("PI", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Appr")}</span>
+                                        <span className="text-xs font-semibold text-secondary-700 uppercase tracking-tight">
+                                          {k.replace("PI", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Approve")}
+                                        </span>
                                       </label>
                                     ))}
                                   </div>
                                 </div>
                                 <div className="p-4 space-y-2">
-                                  <p className="text-xs font-black text-secondary-400 uppercase tracking-tighter mb-2">Purchase Orders</p>
+                                  <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-3">Purchase Orders</p>
                                   <div className="grid grid-cols-4 gap-2">
                                     {["viewPO", "createPO", "editPO", "approvePO"].map(k => (
                                       <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 bg-secondary-50/30 cursor-pointer hover:bg-white transition-colors">
                                         <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
-                                        <span className="text-[9px] font-bold text-secondary-500 uppercase">{k.replace("PO", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Appr")}</span>
+                                        <span className="text-xs font-semibold text-secondary-700 uppercase tracking-tight">
+                                          {k.replace("PO", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Approve")}
+                                        </span>
                                       </label>
                                     ))}
                                   </div>

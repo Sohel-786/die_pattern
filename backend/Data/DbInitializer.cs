@@ -236,6 +236,33 @@ namespace net_backend.Data
             {
                 Console.WriteLine($"User location access seeding skipped: {ex.Message}");
             }
+
+            // 8. Sync item current process: items in an active PO should show as InPO (PO Issued), not InPI
+            try
+            {
+                var itemIdsInActivePo = context.PurchaseOrderItems
+                    .Where(poi => poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                    .Join(context.PurchaseIndentItems, poi => poi.PurchaseIndentItemId, pii => pii.Id, (poi, pii) => pii.ItemId)
+                    .Distinct()
+                    .ToList();
+                if (itemIdsInActivePo.Any())
+                {
+                    var itemsToSync = context.Items
+                        .Where(i => itemIdsInActivePo.Contains(i.Id) && i.CurrentProcess == ItemProcessState.InPI)
+                        .ToList();
+                    foreach (var item in itemsToSync)
+                    {
+                        item.CurrentProcess = ItemProcessState.InPO;
+                        item.UpdatedAt = DateTime.Now;
+                    }
+                    if (itemsToSync.Any())
+                        context.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Item process sync skipped: {ex.Message}");
+            }
         }
     }
 }

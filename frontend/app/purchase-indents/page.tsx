@@ -59,7 +59,7 @@ export default function PurchaseIndentsPage() {
         () => buildPIFilterParams({ ...filters, search: debouncedSearch }),
         [filters, debouncedSearch]
     );
-    const queryKey = useMemo(() => ["purchase-indents", filterParams], [filterParams]);
+    const queryKey = useMemo(() => ["purchase-indents", filterParams.toString()], [filterParams]);
 
     const { data: indents = [], isLoading } = useQuery<PurchaseIndent[]>({
         queryKey,
@@ -70,9 +70,9 @@ export default function PurchaseIndentsPage() {
     });
 
     const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
-        queryKey: ["items", "active"],
+        queryKey: ["items", "minimal"],
         queryFn: async () => {
-            const res = await api.get("/items/active");
+            const res = await api.get("/items/minimal");
             return res.data.data ?? [];
         },
     });
@@ -396,7 +396,7 @@ export default function PurchaseIndentsPage() {
                                                             <Eye className="w-4 h-4" />
                                                         </Button>
                                                     )}
-                                                    {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && permissions?.editPI && pi.isActive && (
+                                                    {(pi.status === PurchaseIndentStatus.Pending || pi.status === PurchaseIndentStatus.Approved) && pi.isActive && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -564,6 +564,14 @@ export default function PurchaseIndentsPage() {
                 onOpenChange={setDialogOpen}
                 indent={selectedIndent}
                 onOpenPreview={(id) => setPreviewPIId(id)}
+                readOnly={
+                    !!selectedIndent &&
+                    (
+                        permissions?.editPI !== true ||
+                        selectedIndent.isActive === false ||
+                        selectedIndent.status !== PurchaseIndentStatus.Pending
+                    )
+                }
             />
 
             {/* Inactivate Confirmation */}

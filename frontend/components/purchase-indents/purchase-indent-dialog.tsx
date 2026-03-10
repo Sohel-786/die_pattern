@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import {
-    Item,
     PurchaseIndent,
     PurchaseIndentType,
     PurchaseIndentStatus,
@@ -29,12 +28,15 @@ interface PurchaseIndentDialogProps {
     indent?: PurchaseIndent;
     /** Callback to open the print/preview view for this PI (e.g. set preview id so modal opens). */
     onOpenPreview?: (id: number) => void;
+    /** When true, dialog becomes view-only (no Save/Update). */
+    readOnly?: boolean;
 }
 
-export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview }: PurchaseIndentDialogProps) {
+export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview, readOnly }: PurchaseIndentDialogProps) {
     const isEditing = !!indent;
-    const isReadOnly = isEditing && (indent?.isActive === false || indent?.status !== PurchaseIndentStatus.Pending);
+    const isReadOnly = !!readOnly;
     const queryClient = useQueryClient();
+    const [initialItemIds, setInitialItemIds] = useState<number[]>([]);
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
     const [remarks, setRemarks] = useState("");
     const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
@@ -45,7 +47,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
 
     useEffect(() => {
         if (indent && open) {
-            setSelectedItemIds(indent.items.map(i => i.itemId));
+            const ids = indent.items.map(i => i.itemId);
+            setSelectedItemIds(ids);
+            setInitialItemIds(ids);
             setRemarks(indent.remarks || "");
             setType(indent.type);
             setReqDateOfDelivery(indent.reqDateOfDelivery ? format(new Date(indent.reqDateOfDelivery), "yyyy-MM-dd") : "");
@@ -53,6 +57,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             setNextPiCode(indent.piNo);
         } else if (open) {
             setSelectedItemIds([]);
+            setInitialItemIds([]);
             setRemarks("");
             setType(PurchaseIndentType.New);
             setReqDateOfDelivery("");
@@ -70,20 +75,36 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
         if (!open) setItemSelectionOpen(false);
     }, [open]);
 
-    const { data: items = [] } = useQuery<Item[]>({
-        queryKey: ["items"],
+    type PiItemLookup = { id: number; currentName?: string; mainPartName?: string; itemTypeName?: string };
+    const { data: items = [] } = useQuery<PiItemLookup[]>({
+        queryKey: ["purchase-indents", "items-with-status", indent?.id ?? "new"],
         queryFn: async () => {
-            const res = await api.get("/items");
-            return res.data.data;
+            const params = indent?.id ? { excludePiId: indent.id } : {};
+            const res = await api.get("/purchase-indents/items-with-status", { params });
+            const data = res.data?.data ?? [];
+            if (!Array.isArray(data)) return [];
+            return data.map((x: any) => ({
+                id: x.itemId,
+                currentName: x.currentName,
+                mainPartName: x.mainPartName,
+                itemTypeName: x.itemTypeName,
+            })) as PiItemLookup[];
         },
-        enabled: open
+        enabled: open,
     });
 
     const mutation = useMutation({
-        mutationFn: (data: { type: PurchaseIndentType; remarks?: string; reqDateOfDelivery?: string; mtcReq: boolean; itemIds: number[] }) =>
-            isEditing
-                ? api.put(`/purchase-indents/${indent!.id}`, data)
-                : api.post("/purchase-indents", data),
+        mutationFn: async (data: { type: PurchaseIndentType; remarks?: string; reqDateOfDelivery?: string; mtcReq: boolean; itemIds: number[] }) => {
+            if (isEditing) {
+                // If dialog is in read-only mode (approved PI), only allow removing unused items.
+                if (isReadOnly && indent) {
+                    const removedItemIds = initialItemIds.filter(id => !selectedItemIds.includes(id));
+                    return api.put(`/purchase-indents/${indent.id}/remove-unused-items`, { itemIds: removedItemIds });
+                }
+                return api.put(`/purchase-indents/${indent!.id}`, data);
+            }
+            return api.post("/purchase-indents", data);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
             toast.success(`Indent ${isEditing ? "updated" : "created"} successfully`);
@@ -118,17 +139,19 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             toast.error("Please select at least one item");
             return;
         }
-        if (!reqDateOfDelivery) {
+        if (!reqDateOfDelivery && !isReadOnly) {
             toast.error("Required Date of Delivery is mandatory");
             return;
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const selected = new Date(reqDateOfDelivery);
-        if (selected < today) {
-            toast.error("Required Date of Delivery cannot be in the past");
-            return;
+        if (!isReadOnly) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selected = new Date(reqDateOfDelivery);
+            if (selected < today) {
+                toast.error("Required Date of Delivery cannot be in the past");
+                return;
+            }
         }
 
         mutation.mutate({
@@ -348,15 +371,23 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         >
                             Cancel
                         </Button>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={mutation.isPending || selectedItemIds.length === 0 || isReadOnly}
-                            className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
-                            title={isEditing && indent?.isActive === false ? "Inactive indents cannot be updated" : (isEditing && indent?.status !== PurchaseIndentStatus.Pending ? "Approved or Rejected indents cannot be updated" : "")}
-                        >
-                            {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            {isEditing ? "Update" : "Save"}
-                        </Button>
+                        {(!isReadOnly || (isReadOnly && initialItemIds.some(id => !selectedItemIds.includes(id)))) && (
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={mutation.isPending || selectedItemIds.length === 0}
+                                className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
+                                title={
+                                    isEditing && indent?.isActive === false
+                                        ? "Inactive indents cannot be updated"
+                                        : (isEditing && indent?.status !== PurchaseIndentStatus.Pending
+                                            ? "Approved or Rejected indents cannot be updated except for removing unused items."
+                                            : "")
+                                }
+                            >
+                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                {isEditing ? "Update" : "Save"}
+                            </Button>
+                        )}
                     </div>
                 </footer>
             </div>

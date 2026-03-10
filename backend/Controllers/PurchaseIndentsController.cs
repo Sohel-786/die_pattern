@@ -23,6 +23,8 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
+            if (!await HasPermission("ViewPI")) return Forbidden();
+            if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var code = await _codeGenerator.GenerateCode("PI", locationId);
             return Ok(new ApiResponse<string> { Data = code });
@@ -54,6 +56,7 @@ namespace net_backend.Controllers
             [FromQuery] List<int>? creatorIds,
             [FromQuery] bool? isActive)
         {
+            if (!await HasPermission("ViewPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var isAdmin = await IsAdmin();
             IQueryable<PurchaseIndent> query = _context.PurchaseIndents
@@ -169,7 +172,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<PurchaseIndent>>> Create([FromBody] CreatePurchaseIndentDto dto)
         {
-            if (!await HasPermission("CreatePI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "CreatePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
             if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
@@ -229,7 +232,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreatePurchaseIndentDto dto)
         {
-            if (!await HasPermission("EditPI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "EditPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Items)
@@ -239,7 +242,7 @@ namespace net_backend.Controllers
             if (!pi.IsActive)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "An inactive Purchase Indent cannot be edited. Inactivated indents cannot be modified or reactivated." });
             if (pi.Status != PurchaseIndentStatus.Pending)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be edited." });
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only pending indents can be edited. For approved indents, use the remove-items action to delete unused items." });
 
             var itemIds = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
             if (itemIds.Count != (dto.ItemIds?.Count ?? 0))
@@ -325,7 +328,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/submit")]
         public async Task<ActionResult<ApiResponse<bool>>> Submit(int id)
         {
-            if (!await HasPermission("CreatePI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "CreatePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
@@ -338,7 +341,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/approve")]
         public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
-            if (!await HasPermission("ApprovePI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "ApprovePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Items)
@@ -384,7 +387,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/reject")]
         public async Task<ActionResult<ApiResponse<bool>>> Reject(int id)
         {
-            if (!await HasPermission("ApprovePI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "ApprovePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Items)
@@ -421,7 +424,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/revert-to-pending")]
         public async Task<ActionResult<ApiResponse<bool>>> RevertToPending(int id)
         {
-            if (!await HasPermission("ApprovePI")) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "ApprovePI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
@@ -447,6 +450,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> ToggleStatus(int id)
         {
             if (!await IsAdmin()) return Forbidden();
+            if (!await HasAllPermissions("ViewPI", "EditPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents.Include(p => p.Items).FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
             if (pi == null) return NotFound();
@@ -508,10 +512,63 @@ namespace net_backend.Controllers
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Data = pi.IsActive });
         }
-        
+
+        /// <summary>
+        /// Remove one or more items from an approved Purchase Indent, but only when those items are not in any active Purchase Order.
+        /// This is used for the "partial cleanup" case where some lines have not yet been used.
+        /// </summary>
+        [HttpPut("{id}/remove-unused-items")]
+        public async Task<ActionResult<ApiResponse<bool>>> RemoveUnusedItems(int id, [FromBody] RemovePiItemsDto dto)
+        {
+            if (!await HasAllPermissions("ViewPI", "EditPI")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+
+            var pi = await _context.PurchaseIndents
+                .Include(p => p.Items)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Items.Any(i => i.Item != null && i.Item.LocationId == locationId));
+
+            if (pi == null) return NotFound();
+            if (!pi.IsActive)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "An inactive Purchase Indent cannot be modified." });
+            if (pi.Status != PurchaseIndentStatus.Approved)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Only approved indents support removing unused items." });
+
+            var itemIdsToRemove = dto.ItemIds?.Distinct().ToList() ?? new List<int>();
+            if (itemIdsToRemove.Count == 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one item is required to remove." });
+
+            var piItemsToRemove = pi.Items.Where(i => itemIdsToRemove.Contains(i.ItemId)).ToList();
+            if (piItemsToRemove.Count == 0)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "No matching items found in this Purchase Indent." });
+
+            // Ensure none of the items we are trying to remove are in any active PO
+            var piItemIds = piItemsToRemove.Select(i => i.Id).ToList();
+            var hasActivePo = await _context.PurchaseOrderItems
+                .AnyAsync(poi => piItemIds.Contains(poi.PurchaseIndentItemId) && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive);
+            if (hasActivePo)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more selected items are already in an active Purchase Order and cannot be removed." });
+
+            // Remove the PI items and reset their item process state back to NotInStock
+            foreach (var piItem in piItemsToRemove)
+            {
+                var item = await _context.Items.FindAsync(piItem.ItemId);
+                if (item != null)
+                {
+                    item.CurrentProcess = ItemProcessState.NotInStock;
+                    item.UpdatedAt = DateTime.Now;
+                }
+                _context.PurchaseIndentItems.Remove(piItem);
+            }
+
+            pi.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<bool> { Data = true });
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<PurchaseIndentDto>>> GetById(int id)
         {
+            if (!await HasPermission("ViewPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Creator)
@@ -593,6 +650,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}/print")]
         public async Task<ActionResult<ApiResponse<PurchaseIndentPrintDto>>> GetPrint(int id)
         {
+            if (!await HasPermission("ViewPI")) return Forbidden();
             var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             var pi = await _context.PurchaseIndents
                 .Include(p => p.Creator)
@@ -668,6 +726,7 @@ namespace net_backend.Controllers
         [HttpGet("items-with-status")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemWithStatusDto>>>> GetItemsWithStatus([FromQuery] int? excludePiId)
         {
+            if (!await HasPermission("ViewPI")) return Forbidden();
             if (!await HasPermission("CreatePI") && !await HasPermission("EditPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var items = await _context.Items
@@ -695,6 +754,11 @@ namespace net_backend.Controllers
         [HttpGet("approved-items")]
         public async Task<ActionResult<ApiResponse<IEnumerable<PurchaseIndentItemDto>>>> GetApprovedItems()
         {
+            var allowed =
+                await HasPermission("ViewPI") ||
+                await HasAllPermissions("ViewPO", "CreatePO") ||
+                await HasAllPermissions("ViewPO", "EditPO");
+            if (!allowed) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             // Items from approved PIs that are NOT already in a PO (scoped to current location)
             var items = await _context.PurchaseIndentItems

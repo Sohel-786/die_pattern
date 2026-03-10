@@ -106,9 +106,9 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data: itemsList = [] } = useQuery<Item[]>({
-    queryKey: ["items", "active"],
+    queryKey: ["items", "minimal"],
     queryFn: async () => {
-      const res = await api.get("/items/active");
+      const res = await api.get("/items/minimal");
       return res.data.data ?? [];
     },
   });
@@ -245,8 +245,8 @@ export default function PurchaseOrdersPage() {
   const canEdit = (po: PO) =>
     po.isActive !== false &&
     !po.hasInward &&
-    (permissions?.editPO === true || user?.role === Role.ADMIN);
-  const hasApprovalAccess = permissions?.approvePO === true || user?.role === Role.ADMIN;
+    permissions?.editPO === true;
+  const hasApprovalAccess = permissions?.approvePO === true;
   const canApproveOrReject = (po: PO) => po.isActive !== false && po.status === PoStatus.Pending && hasApprovalAccess;
 
   if (permissions && !permissions.viewPO) {
@@ -461,7 +461,7 @@ export default function PurchaseOrdersPage() {
                               <Eye className="w-4 h-4" />
                             </Button>
                           )}
-                          {(permissions?.editPO || user?.role === Role.ADMIN) && po.isActive !== false && (
+                          {po.isActive !== false && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -699,6 +699,7 @@ export default function PurchaseOrdersPage() {
           open={poDialogOpen}
           onOpenChange={setPoDialogOpen}
           po={editPO ?? undefined}
+          readOnly={!!editPO && !permissions?.editPO}
           onPreviewRequest={(poId) => setPreviewPOId(poId)}
         />
       )}
