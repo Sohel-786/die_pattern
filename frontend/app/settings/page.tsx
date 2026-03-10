@@ -166,8 +166,8 @@ const permissionLabels: Record<string, string> = {
   editMovement: "Edit Job Work",
 
   viewTransfer: "View Transfer Entry",
-  createTransfer: "Create Transfer Entry",
-  editTransfer: "Edit Transfer Entry",
+  createTransfer: "Add Transfer",
+  editTransfer: "Edit Transfer",
 
   manageChanges: "Manage Audit Logs",
   revertChanges: "Revert Changes",
@@ -981,9 +981,9 @@ export default function SettingsPage() {
                               <CardContent className="p-0 divide-y divide-secondary-100">
                                 <div className="p-4 space-y-4">
                                   <div>
-                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-3">Item Transfer Operations</p>
+                                    <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-3">Transfer Entry</p>
                                     <div className="grid grid-cols-2 gap-2">
-                                      {[{ key: "viewTransfer", label: "View Transfers" }, { key: "createTransfer", label: "Create Transfer" }, { key: "editTransfer", label: "Edit Transfer" }].map(item => (
+                                      {[{ key: "viewTransfer", label: "View Transfer" }, { key: "createTransfer", label: "Add Transfer" }, { key: "editTransfer", label: "Edit Transfer" }].map(item => (
                                         <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-cyan-100 bg-cyan-50/20 hover:bg-white hover:border-cyan-300 transition-all">
                                           <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-cyan-600 focus:ring-cyan-500" />
                                           <span className="text-xs font-semibold text-secondary-700 group-hover:text-cyan-700">{item.label}</span>

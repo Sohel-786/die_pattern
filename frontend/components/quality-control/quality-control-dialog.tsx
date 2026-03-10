@@ -22,11 +22,12 @@ interface QualityControlDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     qc?: QC | null;
+    readOnly?: boolean;
 }
 
-export function QualityControlDialog({ open, onOpenChange, qc }: QualityControlDialogProps) {
+export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: QualityControlDialogProps) {
     const isEditing = !!qc?.id;
-    const isReadOnly = isEditing && qc?.status !== QcStatus.Pending;
+    const isReadOnly = !!readOnly || (isEditing && qc?.status !== QcStatus.Pending);
     const queryClient = useQueryClient();
 
     const [partyId, setPartyId] = useState<number>(0);

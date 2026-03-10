@@ -223,20 +223,18 @@ export default function InwardsPage() {
                                             </td>
                                             <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
-                                                    {permissions?.editInward && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setEditingInwardId(i.id!);
-                                                                setDialogOpen(true);
-                                                            }}
-                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                            title="Edit Inward"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setEditingInwardId(i.id!);
+                                                            setDialogOpen(true);
+                                                        }}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                        title="Edit Inward"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </Button>
                                                     {isAdmin && (
                                                         <Button
                                                             variant="ghost"
@@ -415,6 +413,7 @@ export default function InwardsPage() {
                     if (!open) setEditingInwardId(null);
                 }}
                 inwardId={editingInwardId}
+                readOnly={!!editingInwardId && !permissions?.editInward}
             />
 
             <Dialog

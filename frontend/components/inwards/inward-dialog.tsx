@@ -23,6 +23,7 @@ interface InwardDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     inwardId?: number | null;
+    readOnly?: boolean;
 }
 
 interface InwardLineDraft {
@@ -49,7 +50,8 @@ interface InwardLineDraft {
 export function InwardDialog({
     open,
     onOpenChange,
-    inwardId
+    inwardId,
+    readOnly,
 }: InwardDialogProps) {
     const isEditing = !!inwardId;
     const queryClient = useQueryClient();
@@ -114,7 +116,7 @@ export function InwardDialog({
         },
         enabled: open && !!inwardId
     });
-    const isReadOnly = isEditing && inward?.isActive === false;
+    const isReadOnly = !!readOnly || (isEditing && inward?.isActive === false);
 
     const { data: vendors = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],

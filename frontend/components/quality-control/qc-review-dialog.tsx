@@ -15,9 +15,10 @@ interface QCReviewDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     qc: QC;
+    canApprove: boolean;
 }
 
-export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) {
+export function QCReviewDialog({ open, onOpenChange, qc, canApprove }: QCReviewDialogProps) {
     const queryClient = useQueryClient();
     const [remarksMap, setRemarksMap] = useState<Record<number, string>>({});
     const [statusMap, setStatusMap] = useState<Record<number, boolean | null>>({});
@@ -90,7 +91,7 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
     });
 
     const handleItemDecision = (itId: number, approved: boolean) => {
-        if (isReadOnly) return;
+        if (isReadOnly || !canApprove) return;
         approveItemMutation.mutate({
             qcItemId: itId,
             isApproved: approved,
@@ -99,7 +100,7 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
     };
 
     const handleUpdateNote = (itId: number) => {
-        if (isReadOnly) return;
+        if (isReadOnly || !canApprove) return;
         const currentStatus = statusMap[itId];
         if (currentStatus === null || currentStatus === undefined) return;
 
@@ -115,11 +116,12 @@ export function QCReviewDialog({ open, onOpenChange, qc }: QCReviewDialogProps) 
         if (!allResolved) {
             return toast.error("Resolve all items (Approve or Reject) before approving the entry.");
         }
+        if (!canApprove) return;
         approveEntryMutation.mutate();
     };
 
     const handleRejectEntry = () => {
-        if (isReadOnly) return;
+        if (isReadOnly || !canApprove) return;
         if (window.confirm("Are you sure you want to reject the entire QC entry? This will mark all items as rejected and return them to stock.")) {
             rejectEntryMutation.mutate(rejectEntryRemark || undefined);
         }

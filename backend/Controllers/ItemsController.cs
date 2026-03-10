@@ -20,6 +20,32 @@ namespace net_backend.Controllers
             _itemState = itemState;
         }
 
+        [HttpGet("minimal")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetMinimal()
+        {
+            // Allow minimal item lookup for users who can either view masters for items,
+            // or who have transactional access to Job Work or Inwards.
+            var canUse =
+                await HasAllPermissions("ViewMaster", "ManageItem") ||
+                await HasPermission("ViewMovement") ||
+                await HasPermission("ViewInward");
+            if (!canUse) return Forbidden();
+
+            var locationId = await GetCurrentLocationIdAsync();
+            var items = await _context.Items
+                .Where(p => p.LocationId == locationId && p.IsActive && !string.IsNullOrEmpty(p.DrawingNo))
+                .OrderBy(p => p.MainPartName)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.MainPartName,
+                    p.CurrentName
+                })
+                .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = items });
+        }
+
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll(

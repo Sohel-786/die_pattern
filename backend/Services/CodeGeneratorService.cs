@@ -62,10 +62,12 @@ namespace net_backend.Services
             }
             else if (type == "JW")
             {
-                var query = _context.JobWorks.Where(j => j.JobWorkNo.StartsWith("JW-"));
-                if (locationId.HasValue) query = query.Where(j => j.LocationId == locationId);
-                
-                var lastCode = await query.OrderByDescending(j => j.Id).Select(j => j.JobWorkNo).FirstOrDefaultAsync();
+                // JobWorkNo must be globally unique (IX_job_works_JobWorkNo or composite); use max across all locations to avoid duplicates
+                var lastCode = await _context.JobWorks
+                    .Where(j => j.JobWorkNo.StartsWith("JW-"))
+                    .OrderByDescending(j => j.Id)
+                    .Select(j => j.JobWorkNo)
+                    .FirstOrDefaultAsync();
                 
                 int maxNo = 0;
                 if (!string.IsNullOrEmpty(lastCode) && lastCode.Length > 3)

@@ -132,7 +132,7 @@ export default function TransfersPage() {
                         className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all shadow-primary-500/20"
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        New Transfer
+                        Add Transfer
                     </Button>
                 )}
             </div>
@@ -230,20 +230,18 @@ export default function TransfersPage() {
                                             </td>
                                             <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
-                                                    {permissions?.editTransfer && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setSelectedTransfer(tr);
-                                                                setDialogOpen(true);
-                                                            }}
-                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                            title="Edit Transfer"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedTransfer(tr);
+                                                            setDialogOpen(true);
+                                                        }}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                        title="Edit Transfer"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </Button>
                                                     {permissions?.editTransfer && currentUser?.role === Role.ADMIN && (
                                                         <Button
                                                             variant="ghost"

@@ -236,7 +236,7 @@ export default function QualityControlPage() {
                                             <td className="px-4 py-3 text-right text-secondary-600 text-sm">{q.creatorName ?? "System"}</td>
                                             <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
-                                                    {q.isActive !== false && (
+                                                    {permissions?.approveQC && q.isActive !== false && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -247,7 +247,7 @@ export default function QualityControlPage() {
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
-                                                    {permissions?.editQC && q.status === QcStatus.Pending && q.isActive !== false && (
+                                                    {q.status === QcStatus.Pending && q.isActive !== false && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -386,10 +386,16 @@ export default function QualityControlPage() {
                     if (!open) setEditingQc(null);
                 }}
                 qc={editingQc ?? undefined}
+                readOnly={!!editingQc && !permissions?.editQC}
             />
 
             {reviewQc && (
-                <QCReviewDialog open={!!reviewQc} onOpenChange={(open) => !open && setReviewQc(null)} qc={reviewQc} />
+                <QCReviewDialog
+                    open={!!reviewQc}
+                    onOpenChange={(open) => !open && setReviewQc(null)}
+                    qc={reviewQc}
+                    canApprove={!!permissions?.approveQC}
+                />
             )}
 
             <Dialog isOpen={!!inactiveTarget} onClose={() => setInactiveTarget(null)} title="Confirm Deactivation" size="sm">

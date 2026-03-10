@@ -300,21 +300,19 @@ export default function JobWorksPage() {
                                                     >
                                                         <Eye className="w-3.5 h-3.5" />
                                                     </Button>
-                                                    {permissions?.createMovement && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            disabled={!jw.isActive}
-                                                            onClick={() => {
-                                                                setSelectedJobWork(jw);
-                                                                setDialogOpen(true);
-                                                            }}
-                                                            className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title={jw.isActive ? "Edit Job Work" : "Inactive entries cannot be edited"}
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={!jw.isActive}
+                                                        onClick={() => {
+                                                            setSelectedJobWork(jw);
+                                                            setDialogOpen(true);
+                                                        }}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title={jw.isActive ? "Edit Job Work" : "Inactive entries cannot be edited"}
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </Button>
                                                     {isAdmin && (
                                                         jw.isActive ? (
                                                             <Button
@@ -494,6 +492,7 @@ export default function JobWorksPage() {
                     if (!open) setSelectedJobWork(null);
                 }}
                 jobWork={selectedJobWork}
+                readOnly={!!selectedJobWork && !permissions?.editMovement}
             />
 
             {previewJwId && (

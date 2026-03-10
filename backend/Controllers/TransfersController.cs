@@ -226,7 +226,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Transfer>>> Create([FromBody] CreateTransferDto dto)
         {
-            if (!await HasPermission("CreateTransfer")) return Forbidden();
+            if (!await HasAllPermissions("ViewTransfer", "CreateTransfer")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             if (dto.Items == null || !dto.Items.Any())
@@ -371,7 +371,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreateTransferDto dto)
         {
-            if (!await HasPermission("EditTransfer")) return Forbidden();
+            if (!await HasAllPermissions("ViewTransfer", "EditTransfer")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             var transfer = await _context.Transfers
@@ -530,7 +530,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
         {
             if (!await IsAdmin()) return Forbidden();
-            if (!await HasPermission("EditTransfer")) return Forbidden();
+            if (!await HasAllPermissions("ViewTransfer", "EditTransfer")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             var transfer = await _context.Transfers
@@ -705,6 +705,7 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
+            if (!await HasPermission("CreateTransfer") && !await HasPermission("EditTransfer")) return Forbidden();
             return Ok(new ApiResponse<string> { Data = await GenerateTransferNo() });
         }
 
@@ -734,6 +735,7 @@ namespace net_backend.Controllers
         [HttpPost("upload-attachment")]
         public async Task<ActionResult<ApiResponse<object>>> UploadAttachment(IFormFile file)
         {
+            if (!await HasPermission("CreateTransfer") && !await HasPermission("EditTransfer")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
 
             var (compDir, locDir) = await GetStorageContextNames();
@@ -760,8 +762,9 @@ namespace net_backend.Controllers
         }
 
         [HttpDelete("attachment")]
-        public ActionResult<ApiResponse<bool>> DeleteAttachment([FromQuery] string url)
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteAttachment([FromQuery] string url)
         {
+            if (!await HasPermission("CreateTransfer") && !await HasPermission("EditTransfer")) return Forbidden();
             if (string.IsNullOrEmpty(url)) return BadRequest("URL required");
             try
             {

@@ -37,11 +37,12 @@ interface JobWorkDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     jobWork?: JobWork | null;
+    readOnly?: boolean;
 }
 
-export function JobWorkDialog({ open, onOpenChange, jobWork }: JobWorkDialogProps) {
+export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWorkDialogProps) {
     const isEditing = !!jobWork?.id;
-    const isReadOnly = isEditing && jobWork?.isActive === false;
+    const isReadOnly = !!readOnly || (isEditing && jobWork?.isActive === false);
     const queryClient = useQueryClient();
 
     const [nextCode, setNextCode] = useState("");

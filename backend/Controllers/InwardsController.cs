@@ -101,6 +101,7 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
+            if (!await HasPermission("CreateInward") && !await HasPermission("EditInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var code = await _codeGenerator.GenerateCode("INWARD", locationId);
             return Ok(new ApiResponse<string> { Data = code });
@@ -118,6 +119,7 @@ namespace net_backend.Controllers
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate)
         {
+            if (!await HasPermission("ViewInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             IQueryable<Inward> query = _context.Inwards
                 .Where(i => i.LocationId == locationId)
@@ -335,6 +337,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<InwardDto>>> GetById(int id)
         {
+            if (!await HasPermission("ViewInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var inward = await _context.Inwards
                 .Include(i => i.Location)

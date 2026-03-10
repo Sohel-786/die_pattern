@@ -23,6 +23,7 @@ namespace net_backend.Controllers
         [HttpGet("next-code")]
         public async Task<ActionResult<ApiResponse<string>>> GetNextCode()
         {
+            if (!await HasPermission("CreateMovement") && !await HasPermission("EditMovement")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var code = await _codeGenerator.GenerateCode("JW", locationId);
             return Ok(new ApiResponse<string> { Data = code });
@@ -31,6 +32,7 @@ namespace net_backend.Controllers
         [HttpGet("pending")]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetPending([FromQuery] int? vendorId, [FromQuery] int? excludeInwardId)
         {
+            if (!await HasPermission("ViewMovement")) return Forbidden();
             var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             
             // JW items that are NOT yet Inwarded
@@ -310,7 +312,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreateJobWorkDto dto)
         {
-            if (!await HasPermission("EditMovement")) return Forbidden();
+            if (!await HasAllPermissions("ViewMovement", "EditMovement")) return Forbidden();
             var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
             var jw = await _context.JobWorks
                 .Include(j => j.Items)
@@ -475,7 +477,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> ToggleActive(int id, [FromQuery] bool active)
         {
             if (!await IsAdmin()) return Forbidden();
-            if (!await HasPermission("EditMovement")) return Forbidden();
+            if (!await HasAllPermissions("ViewMovement", "EditMovement")) return Forbidden();
             var jw = await _context.JobWorks.Include(j => j.Items).ThenInclude(i => i.Item).FirstOrDefaultAsync(j => j.Id == id);
             if (jw == null) return NotFound();
 

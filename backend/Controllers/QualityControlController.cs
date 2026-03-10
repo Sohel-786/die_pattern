@@ -270,7 +270,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<QualityControlEntry>>> Create([FromBody] CreateQCDto dto)
         {
-            if (!await HasPermission("CreateQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "CreateQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             if (dto.InwardLineIds == null || !dto.InwardLineIds.Any())
@@ -329,7 +329,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/approve-item")]
         public async Task<ActionResult<ApiResponse<bool>>> ApproveItem(int id, [FromBody] ApproveQCItemDto dto)
         {
-            if (!await HasPermission("ApproveQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "ApproveQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var qi = await _context.QcItems
                 .Include(i => i.QcEntry)
@@ -386,7 +386,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/approve")]
         public async Task<ActionResult<ApiResponse<bool>>> Approve(int id)
         {
-            if (!await HasPermission("ApproveQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "ApproveQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries
                 .Include(q => q.Items)
@@ -459,7 +459,7 @@ namespace net_backend.Controllers
         [HttpPost("{id}/reject")]
         public async Task<ActionResult<ApiResponse<bool>>> Reject(int id, [FromBody] RejectQCEntryDto? dto = null)
         {
-            if (!await HasPermission("ApproveQC")) return Forbidden(); // Or RejectQC permission
+            if (!await HasAllPermissions("ViewQC", "ApproveQC")) return Forbidden(); // Or RejectQC permission
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries
                 .Include(q => q.Items)
@@ -512,7 +512,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<QCDto>>> Update(int id, [FromBody] UpdateQCDto dto)
         {
-            if (!await HasPermission("EditQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries
                 .Include(q => q.Items)
@@ -580,7 +580,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> SetInactive(int id)
         {
             if (!await IsAdmin()) return Forbidden();
-            if (!await HasPermission("EditQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
             if (entry == null) return NotFound();
@@ -615,7 +615,7 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> SetActive(int id)
         {
             if (!await IsAdmin()) return Forbidden();
-            if (!await HasPermission("EditQC")) return Forbidden();
+            if (!await HasAllPermissions("ViewQC", "EditQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var entry = await _context.QcEntries.FirstOrDefaultAsync(q => q.Id == id && q.LocationId == locationId);
             if (entry == null) return NotFound();
