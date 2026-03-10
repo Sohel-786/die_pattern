@@ -49,10 +49,15 @@ const ROUTE_PERMISSIONS: Record<string, keyof UserPermission> = Object.fromEntri
   ROUTE_PERMISSIONS_ORDERED.map(({ route, permission }) => [route, permission])
 );
 
+function canAccessOtherMasters(permissions: UserPermission | null | undefined): boolean {
+  return !!(permissions?.manageItemType || permissions?.manageMaterial || permissions?.manageItemStatus || permissions?.manageOwnerType);
+}
+
 function getFirstAllowedRoute(permissions: UserPermission | null | undefined): string {
   if (!permissions) return '/dashboard';
   for (const { route, permission } of ROUTE_PERMISSIONS_ORDERED) {
-    if (permissions[permission]) return route;
+    const allowed = route === '/masters' ? canAccessOtherMasters(permissions) : !!permissions[permission];
+    if (allowed) return route;
   }
   return '/dashboard';
 }
@@ -290,10 +295,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     );
 
     if (requiredPermissionKey) {
-      const permissionProp = ROUTE_PERMISSIONS[requiredPermissionKey];
-      if (permissions[permissionProp] === false) {
-        hasPermission = false;
-      }
+      const allowed = requiredPermissionKey === '/masters'
+        ? canAccessOtherMasters(permissions)
+        : permissions[ROUTE_PERMISSIONS[requiredPermissionKey]] === true;
+      if (!allowed) hasPermission = false;
     }
   }
 

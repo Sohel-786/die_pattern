@@ -198,7 +198,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetActive()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageLocation")) return Forbidden();
             var locations = await _context.Locations
                 .Where(l => l.IsActive)
                 .OrderByDescending(l => l.CreatedAt)

@@ -296,7 +296,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetActive()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageCompany")) return Forbidden();
             var companies = await _context.Companies
                 .Where(c => c.IsActive)
                 .OrderByDescending(c => c.CreatedAt)

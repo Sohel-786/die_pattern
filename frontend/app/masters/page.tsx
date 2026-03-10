@@ -11,7 +11,7 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { GeneralMasterDialog } from "@/components/masters/general-master-dialog";
@@ -46,9 +46,21 @@ export default function OtherMastersPage() {
     const canExport = canManageTab && (permissions?.exportMaster ?? false);
     const canImport = canManageTab && (permissions?.importMaster ?? false);
 
-    if (permissions && !permissions.viewMaster) {
-        return <AccessDenied actionLabel="Go to Masters" actionHref="/masters" />;
-    }
+    const allowedTabs = useMemo((): MasterType[] => {
+        if (!permissions) return [];
+        const t: MasterType[] = [];
+        if (permissions.manageItemType) t.push("item-types");
+        if (permissions.manageMaterial) t.push("materials");
+        if (permissions.manageItemStatus) t.push("item-statuses");
+        if (permissions.manageOwnerType) t.push("owner-types");
+        return t;
+    }, [permissions]);
+
+    useEffect(() => {
+        if (allowedTabs.length > 0 && !allowedTabs.includes(activeTab)) {
+            setActiveTab(allowedTabs[0]);
+        }
+    }, [allowedTabs, activeTab]);
 
     const {
         handleExport,
@@ -66,10 +78,10 @@ export default function OtherMastersPage() {
         return res.data.data;
     };
 
-    const { data: itemTypes = [], isLoading: loadingTypes } = useQuery({ queryKey: ["item-types"], queryFn: () => fetchMaster("item-types") });
-    const { data: materials = [], isLoading: loadingMaterials } = useQuery({ queryKey: ["materials"], queryFn: () => fetchMaster("materials") });
-    const { data: statuses = [], isLoading: loadingStatuses } = useQuery({ queryKey: ["item-statuses"], queryFn: () => fetchMaster("item-statuses") });
-    const { data: owners = [], isLoading: loadingOwners } = useQuery({ queryKey: ["owner-types"], queryFn: () => fetchMaster("owner-types") });
+    const { data: itemTypes = [], isLoading: loadingTypes } = useQuery({ queryKey: ["item-types"], queryFn: () => fetchMaster("item-types"), enabled: !!permissions?.manageItemType });
+    const { data: materials = [], isLoading: loadingMaterials } = useQuery({ queryKey: ["materials"], queryFn: () => fetchMaster("materials"), enabled: !!permissions?.manageMaterial });
+    const { data: statuses = [], isLoading: loadingStatuses } = useQuery({ queryKey: ["item-statuses"], queryFn: () => fetchMaster("item-statuses"), enabled: !!permissions?.manageItemStatus });
+    const { data: owners = [], isLoading: loadingOwners } = useQuery({ queryKey: ["owner-types"], queryFn: () => fetchMaster("owner-types"), enabled: !!permissions?.manageOwnerType });
 
     const createMutation = useMutation({
         mutationFn: (data: any) => api.post(`/masters/${activeTab}`, data),
@@ -149,6 +161,17 @@ export default function OtherMastersPage() {
         return matchesSearch && matchesFilter;
     }), [currentData, debouncedSearch, activeFilter]);
 
+    if (!permissions) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center">
+                <p className="text-secondary-500 font-medium">Loading…</p>
+            </div>
+        );
+    }
+    if (allowedTabs.length === 0) {
+        return <AccessDenied actionLabel="Go to Dashboard" actionHref="/dashboard" />;
+    }
+
     return (
         <div className="flex flex-col h-full min-h-0 p-6 gap-4 overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0">
@@ -183,10 +206,10 @@ export default function OtherMastersPage() {
             <div className="shrink-0">
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MasterType)}>
                     <TabsList className="bg-white border border-secondary-200 p-1.5 rounded-xl h-12 shadow-sm">
-                        <TabsTrigger value="item-types" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Types</TabsTrigger>
-                        <TabsTrigger value="materials" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Materials</TabsTrigger>
-                        <TabsTrigger value="item-statuses" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Statuses</TabsTrigger>
-                        <TabsTrigger value="owner-types" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Owners</TabsTrigger>
+                        {allowedTabs.includes("item-types") && <TabsTrigger value="item-types" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Types</TabsTrigger>}
+                        {allowedTabs.includes("materials") && <TabsTrigger value="materials" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Materials</TabsTrigger>}
+                        {allowedTabs.includes("item-statuses") && <TabsTrigger value="item-statuses" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Statuses</TabsTrigger>}
+                        {allowedTabs.includes("owner-types") && <TabsTrigger value="owner-types" className="rounded-lg px-6 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-primary-50 data-[state=active]:text-primary-600">Owners</TabsTrigger>}
                     </TabsList>
                 </Tabs>
             </div>

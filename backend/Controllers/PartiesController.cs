@@ -241,7 +241,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive([FromQuery] bool includeSelf = false)
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
             var query = _context.Parties.Where(p => p.CompanyId == companyId && p.IsActive);
             

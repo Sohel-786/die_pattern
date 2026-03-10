@@ -38,38 +38,38 @@ const navigationSections = {
   masterEntries: [
     {
       href: "/companies",
-      label: "Company",
+      label: "Company Master",
       icon: Building2,
       getColor: (active: boolean) => active ? "text-violet-600" : "text-violet-500",
       permission: "manageCompany",
     },
     {
       href: "/locations",
-      label: "Location",
+      label: "Location Master",
       icon: MapPin,
       getColor: (active: boolean) => active ? "text-emerald-600" : "text-emerald-500",
       permission: "manageLocation",
     },
     {
       href: "/parties",
-      label: "Parties",
+      label: "Party Master",
       icon: Users,
       getColor: (active: boolean) => active ? "text-orange-600" : "text-orange-500",
       permission: "manageParty",
     },
     {
-      href: "/masters",
-      label: "Masters",
-      icon: Layers,
-      getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
-      permission: "viewMaster",
-    },
-    {
       href: "/items",
-      label: "Items",
+      label: "Item Master",
       icon: Package,
       getColor: (active: boolean) => active ? "text-indigo-600" : "text-indigo-500",
       permission: "manageItem",
+    },
+    {
+      href: "/masters",
+      label: "Other Masters",
+      icon: Layers,
+      getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
+      permission: "viewMaster",
     },
   ],
   transactionEntries: [
@@ -157,6 +157,9 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
   const filterItems = (items: NavItem[]) => {
     return items.filter((item) => {
       if (!permissions) return false;
+      if (item.href === "/masters") {
+        return !!(permissions.manageItemType || permissions.manageMaterial || permissions.manageItemStatus || permissions.manageOwnerType);
+      }
       const key = item.permission as keyof typeof permissions;
       return !!permissions[key];
     });

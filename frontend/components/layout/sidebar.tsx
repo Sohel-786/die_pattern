@@ -181,8 +181,8 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
         <div className="space-y-0.5">
           {permissions?.viewDashboard && renderMenuItem("/dashboard", "Dashboard", LayoutDashboard)}
 
-          {/* Master Entry */}
-          {permissions?.viewMaster && (
+          {/* Master Entry: show section if viewMaster and at least one module permission */}
+          {(permissions?.viewMaster && (permissions?.manageCompany || permissions?.manageLocation || permissions?.manageParty || permissions?.manageItem || permissions?.manageItemType || permissions?.manageMaterial || permissions?.manageItemStatus || permissions?.manageOwnerType)) && (
             <div className="pt-1">
               {showFullSidebar ? (
                 <>
@@ -198,14 +198,15 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                       {permissions?.manageCompany && renderSubMenuItem("/companies", "Company Master", Building2)}
                       {permissions?.manageLocation && renderSubMenuItem("/locations", "Location Master", MapPin)}
                       {permissions?.manageParty && renderSubMenuItem("/parties", "Party Master", Users)}
-                      {renderSubMenuItem("/masters", "Other Masters", Layers)}
-                      {permissions?.manageItem && renderSubMenuItem("/items", "Item Entry", Package)}
+                      {permissions?.manageItem && renderSubMenuItem("/items", "Item Master", Package)}
+                      {(permissions?.manageItemType || permissions?.manageMaterial || permissions?.manageItemStatus || permissions?.manageOwnerType) && renderSubMenuItem("/masters", "Other Masters", Layers)}
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 py-1">
-                  {permissions?.manageItem && renderMenuItem("/items", "Items", Package)}
+                  {permissions?.manageItem && renderMenuItem("/items", "Item Master", Package)}
+                  {(permissions?.manageItemType || permissions?.manageMaterial || permissions?.manageItemStatus || permissions?.manageOwnerType) && renderMenuItem("/masters", "Other Masters", Layers)}
                 </div>
               )}
             </div>

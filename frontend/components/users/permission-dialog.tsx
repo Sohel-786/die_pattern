@@ -158,13 +158,14 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                     <PermissionToggle label="Import Bulk" checked={permissions?.importMaster || false} onChange={(v) => updatePermission('importMaster', v)} icon={ArrowDownLeft} description="Process bulk data intake" />
                                     <PermissionToggle label="Export Data" checked={permissions?.exportMaster || false} onChange={(v) => updatePermission('exportMaster', v)} icon={ArrowUpRight} description="Generate and download datasets" />
                                     <div className="col-span-full h-px bg-gray-50 my-4" />
-                                    <PermissionToggle label="Manage Items" checked={permissions?.manageItem || false} onChange={(v) => updatePermission('manageItem', v)} icon={Layers} description="Configure Die/Pattern masters" />
-                                    <PermissionToggle label="Manage Types" checked={permissions?.manageItemType || false} onChange={(v) => updatePermission('manageItemType', v)} icon={Search} description="Control asset classification" />
-                                    <PermissionToggle label="Manage Materials" checked={permissions?.manageMaterial || false} onChange={(v) => updatePermission('manageMaterial', v)} icon={Layers} description="Material composition registry" />
-                                    <PermissionToggle label="Manage Status" checked={permissions?.manageItemStatus || false} onChange={(v) => updatePermission('manageItemStatus', v)} icon={Activity} description="Asset lifecycle states" />
-                                    <PermissionToggle label="Manage Location" checked={permissions?.manageLocation || false} onChange={(v) => updatePermission('manageLocation', v)} icon={MapPin} description="Site & Storage hierarchy" />
-                                    <PermissionToggle label="Manage Party" checked={permissions?.manageParty || false} onChange={(v) => updatePermission('manageParty', v)} icon={Users} description="Vendor & Client interaction" />
-                                    <PermissionToggle label="Manage Company" checked={permissions?.manageCompany || false} onChange={(v) => updatePermission('manageCompany', v)} icon={Building2} description="Organization entity control" />
+                                    <PermissionToggle label="Company Master" checked={permissions?.manageCompany || false} onChange={(v) => updatePermission('manageCompany', v)} icon={Building2} description="Organization entity control" />
+                                    <PermissionToggle label="Location Master" checked={permissions?.manageLocation || false} onChange={(v) => updatePermission('manageLocation', v)} icon={MapPin} description="Site & Storage hierarchy" />
+                                    <PermissionToggle label="Party Master" checked={permissions?.manageParty || false} onChange={(v) => updatePermission('manageParty', v)} icon={Users} description="Vendor & Client interaction" />
+                                    <PermissionToggle label="Item Master" checked={permissions?.manageItem || false} onChange={(v) => updatePermission('manageItem', v)} icon={Layers} description="Configure Die/Pattern masters" />
+                                    <PermissionToggle label="Types Master" checked={permissions?.manageItemType || false} onChange={(v) => updatePermission('manageItemType', v)} icon={Search} description="Other Masters: asset classification" />
+                                    <PermissionToggle label="Material Master" checked={permissions?.manageMaterial || false} onChange={(v) => updatePermission('manageMaterial', v)} icon={Layers} description="Other Masters: material registry" />
+                                    <PermissionToggle label="Statuses Master" checked={permissions?.manageItemStatus || false} onChange={(v) => updatePermission('manageItemStatus', v)} icon={Activity} description="Other Masters: lifecycle states" />
+                                    <PermissionToggle label="Owners Master" checked={permissions?.manageOwnerType || false} onChange={(v) => updatePermission('manageOwnerType', v)} icon={Users} description="Other Masters: owner types" />
                                 </div>
                             </div>
 

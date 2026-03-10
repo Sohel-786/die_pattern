@@ -133,14 +133,14 @@ const permissionLabels: Record<string, string> = {
   importMaster: "Import Master Data",
   exportMaster: "Export Master Data",
 
-  manageItem: "Manage Items",
-  manageItemType: "Manage Item Types",
-  manageMaterial: "Manage Materials",
-  manageItemStatus: "Manage Item Statuses",
-  manageOwnerType: "Manage Owner Types",
-  manageParty: "Manage Parties",
-  manageLocation: "Manage Locations",
-  manageCompany: "Manage Companies",
+  manageCompany: "Company Master",
+  manageLocation: "Location Master",
+  manageParty: "Party Master",
+  manageItem: "Item Master",
+  manageItemType: "Types Master",
+  manageMaterial: "Material Master",
+  manageItemStatus: "Statuses Master",
+  manageOwnerType: "Owners Master",
 
   viewPI: "View Purchase Indent",
   createPI: "Create Purchase Indent",
@@ -899,13 +899,26 @@ export default function SettingsPage() {
 
                                 <div className="p-4 bg-orange-50/5">
                                   <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-3">Module Permissions</p>
-                                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                                    {[{ key: "manageItem", label: "Items (Die/Pattern)" }, { key: "manageItemType", label: "Item Types" }, { key: "manageMaterial", label: "Materials" }, { key: "manageItemStatus", label: "Item Statuses" }, { key: "manageOwnerType", label: "Owner Types" }, { key: "manageParty", label: "Parties (Vendors)" }, { key: "manageLocation", label: "Locations" }, { key: "manageCompany", label: "Companies" }].map(item => (
-                                      <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
-                                        <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
-                                        <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
-                                      </label>
-                                    ))}
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                      {[{ key: "manageCompany", label: "Company Master" }, { key: "manageLocation", label: "Location Master" }, { key: "manageParty", label: "Party Master" }, { key: "manageItem", label: "Item Master" }].map(item => (
+                                        <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
+                                          <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
+                                          <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                    <div className="border-t border-orange-100 pt-3 mt-3">
+                                      <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-wider mb-2">Other Master</p>
+                                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                        {[{ key: "manageItemType", label: "Types Master" }, { key: "manageMaterial", label: "Material Master" }, { key: "manageItemStatus", label: "Statuses Master" }, { key: "manageOwnerType", label: "Owners Master" }].map(item => (
+                                          <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
+                                            <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
+                                            <span className="text-xs font-medium text-secondary-600 group-hover:text-primary-900 transition-colors uppercase tracking-tight">{item.label}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </CardContent>

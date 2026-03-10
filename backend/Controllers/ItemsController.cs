@@ -108,7 +108,7 @@ namespace net_backend.Controllers
         [HttpGet("active")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetActive()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             // Materialize first so we can use switch expressions and service methods in-memory
             var items = await _context.Items

@@ -170,14 +170,14 @@ namespace net_backend.Controllers
         [HttpGet("item-types")]
         public async Task<IActionResult> GetItemTypes()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItemType")) return Forbidden();
             return Ok(new { data = await _context.ItemTypes.OrderByDescending(x => x.Id).ToListAsync() });
         }
 
         [HttpGet("item-types/active")]
         public async Task<IActionResult> GetActiveItemTypes()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItemType")) return Forbidden();
             return Ok(new { data = await _context.ItemTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
         }
 
@@ -225,14 +225,14 @@ namespace net_backend.Controllers
         [HttpGet("item-statuses")]
         public async Task<IActionResult> GetItemStatuses()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItemStatus")) return Forbidden();
             return Ok(new { data = await _context.ItemStatuses.OrderByDescending(x => x.Id).ToListAsync() });
         }
 
         [HttpGet("item-statuses/active")]
         public async Task<IActionResult> GetActiveItemStatuses()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItemStatus")) return Forbidden();
             return Ok(new { data = await _context.ItemStatuses.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
         }
 
@@ -280,14 +280,14 @@ namespace net_backend.Controllers
         [HttpGet("materials")]
         public async Task<IActionResult> GetMaterials()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageMaterial")) return Forbidden();
             return Ok(new { data = await _context.Materials.OrderByDescending(x => x.Id).ToListAsync() });
         }
 
         [HttpGet("materials/active")]
         public async Task<IActionResult> GetActiveMaterials()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageMaterial")) return Forbidden();
             return Ok(new { data = await _context.Materials.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
         }
 
@@ -335,14 +335,14 @@ namespace net_backend.Controllers
         [HttpGet("owner-types")]
         public async Task<IActionResult> GetOwnerTypes()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageOwnerType")) return Forbidden();
             return Ok(new { data = await _context.OwnerTypes.OrderByDescending(x => x.Id).ToListAsync() });
         }
 
         [HttpGet("owner-types/active")]
         public async Task<IActionResult> GetActiveOwnerTypes()
         {
-            if (!await HasPermission("ViewMaster")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageOwnerType")) return Forbidden();
             return Ok(new { data = await _context.OwnerTypes.Where(x => x.IsActive).OrderByDescending(x => x.Id).ToListAsync() });
         }
 
