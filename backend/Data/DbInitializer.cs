@@ -237,6 +237,36 @@ namespace net_backend.Data
                 Console.WriteLine($"User location access seeding skipped: {ex.Message}");
             }
 
+            // 7b. Ensure every admin has access to every current location (so Select Company & Location and API work)
+            try
+            {
+                var adminIds = context.Users.Where(u => u.Role == Role.ADMIN).Select(u => u.Id).ToList();
+                var locationPairs = context.Locations
+                    .Select(l => new { l.CompanyId, l.Id })
+                    .ToList();
+                foreach (var uid in adminIds)
+                {
+                    foreach (var loc in locationPairs)
+                    {
+                        if (context.UserLocationAccess.Any(ula => ula.UserId == uid && ula.CompanyId == loc.CompanyId && ula.LocationId == loc.Id))
+                            continue;
+                        context.UserLocationAccess.Add(new UserLocationAccess
+                        {
+                            UserId = uid,
+                            CompanyId = loc.CompanyId,
+                            LocationId = loc.Id,
+                            CreatedAt = DateTime.Now
+                        });
+                    }
+                }
+                if (adminIds.Count > 0 && locationPairs.Count > 0)
+                    context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Admin location access backfill skipped: {ex.Message}");
+            }
+
             // 8. Sync item current process: items in an active PO should show as InPO (PO Issued), not InPI
             try
             {

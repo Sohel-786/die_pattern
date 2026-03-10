@@ -312,7 +312,7 @@ namespace net_backend.Controllers
                 .ToListAsync();
 
             var users = await _context.Users
-                .Where(u => u.IsActive && (userIdsByLocation.Contains(u.Id) || u.Role == Role.ADMIN))
+                .Where(u => u.IsActive && userIdsByLocation.Contains(u.Id))
                 .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
                 .ToListAsync();
 

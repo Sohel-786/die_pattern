@@ -117,24 +117,9 @@ namespace net_backend.Controllers
             });
         }
 
+        /// <summary>Returns company/location options for the selector and scope. All users (including admin) see only locations they have in UserLocationAccess.</summary>
         private async Task<List<CompanyLocationAccessDto>> GetLocationAccessForUserAsync(int userId, bool isAdmin)
         {
-            if (isAdmin)
-            {
-                var locs = await _context.Locations
-                    .Include(l => l.Company)
-                    .Where(l => l.Company != null && l.Company.IsActive)
-                    .OrderBy(l => l.Company!.Name).ThenBy(l => l.Name)
-                    .ToListAsync();
-                var byCompany = locs.GroupBy(l => new { l.CompanyId, CompanyName = l.Company!.Name, CompanyLogo = l.Company.LogoUrl }).ToList();
-                return byCompany.Select(g => new CompanyLocationAccessDto
-                {
-                    CompanyId = g.Key.CompanyId,
-                    CompanyName = g.Key.CompanyName,
-                    CompanyLogo = g.Key.CompanyLogo,
-                    Locations = g.Select(l => new LocationOptionDto { Id = l.Id, Name = l.Name }).ToList()
-                }).ToList();
-            }
             var access = await _context.UserLocationAccess
                 .Include(ula => ula.Company)
                 .Include(ula => ula.Location)

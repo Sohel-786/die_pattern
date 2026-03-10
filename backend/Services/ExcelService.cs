@@ -302,6 +302,14 @@ namespace net_backend.Services
                     rowIdx++;
                 }
 
+                // Add Generation Timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
+                worksheet.Range(rowIdx, 1, rowIdx, 8).Merge();
+                rowIdx++;
+
                 var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition", "Process", "Active Status" };
                 for (int c = 0; c < headers.Length; c++)
                 {
@@ -361,6 +369,14 @@ namespace net_backend.Services
                     rowIdx++;
                 }
 
+                // Add Generation Timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
+                worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                rowIdx++;
+
                 var headers = new[] { "Vendor", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Process" };
                 for (int c = 0; c < headers.Length; c++)
                 {
@@ -415,6 +431,14 @@ namespace net_backend.Services
                     worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
                     rowIdx++;
                 }
+
+                // Add Generation Timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
+                worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
+                rowIdx++;
 
                 var headers = new[] { "PI No", "Type", "Status", "Remarks", "Created At", "Created By", "Item Count" };
                 for (int c = 0; c < headers.Length; c++)
@@ -473,6 +497,14 @@ namespace net_backend.Services
                     worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
                     rowIdx++;
                 }
+
+                // Add Generation Timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
+                worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                rowIdx++;
 
                 var headers = new[] { "PO No", "Vendor", "Status", "Remarks", "Created At", "Created By" };
                 for (int c = 0; c < headers.Length; c++)

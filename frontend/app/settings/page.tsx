@@ -243,9 +243,21 @@ export default function SettingsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: companies = [] } = useCompaniesActive();
   const { data: locations = [] } = useLocationsActive();
+  const queryClient = useQueryClient();
   const { data: userLocationAccessData } = useUserLocationAccess(selectedUserId ?? null);
   const userLocationAccess = userLocationAccessData ?? EMPTY_LOCATION_ACCESS;
   const updateLocationAccess = useUpdateUserLocationAccess(selectedUserId ?? 0);
+
+  // When a new location is created (or access refreshed), refetch current user's location access so Settings pills update without reload
+  useEffect(() => {
+    const onRefresh = () => {
+      if (currentUser?.id) {
+        queryClient.invalidateQueries({ queryKey: ["users", currentUser.id, "location-access"] });
+      }
+    };
+    window.addEventListener("refreshLocationAccess", onRefresh);
+    return () => window.removeEventListener("refreshLocationAccess", onRefresh);
+  }, [queryClient, currentUser?.id]);
 
   const {
     register,

@@ -63,16 +63,9 @@ namespace net_backend.Controllers
             return companyId;
         }
 
-        /// <summary>Allowed (CompanyId, LocationId) pairs for current user. Admin: all locations in system.</summary>
+        /// <summary>Allowed (CompanyId, LocationId) pairs for current user. Admin and non-admin both use UserLocationAccess only.</summary>
         protected async Task<HashSet<(int companyId, int locationId)>> GetAllowedLocationIdsAsync()
         {
-            if (await IsAdmin())
-            {
-                var fromLocs = await _context.Locations.Select(l => new { l.CompanyId, l.Id }).ToListAsync();
-                var set = new HashSet<(int, int)>();
-                foreach (var x in fromLocs) set.Add((x.CompanyId, x.Id));
-                return set;
-            }
             var list = await _context.UserLocationAccess
                 .Where(ula => ula.UserId == CurrentUserId)
                 .Select(ula => new { ula.CompanyId, ula.LocationId })

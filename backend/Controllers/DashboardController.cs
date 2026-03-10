@@ -118,7 +118,7 @@ namespace net_backend.Controllers
                 .AsNoTracking()
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
-                .Include(p => p.CurrentLocation)
+                .Include(p => p.Location) // home location (registered location)
                 .Where(p => p.LocationId == locationId && p.IsActive);
 
             if (currentProcessId.HasValue)
@@ -159,7 +159,7 @@ namespace net_backend.Controllers
                 .Select(p => new LocationWiseItemRowDto
                 {
                     Id = p.Id,
-                    LocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : "",
+                    LocationName = p.Location != null ? p.Location.Name : "",
                     MainPartName = p.MainPartName,
                     CurrentName = p.CurrentName,
                     DrawingNo = p.DrawingNo,
@@ -445,7 +445,7 @@ namespace net_backend.Controllers
                 .AsNoTracking()
                 .Include(p => p.ItemType)
                 .Include(p => p.Status)
-                .Include(p => p.CurrentLocation)
+                .Include(p => p.Location) // home location (registered location)
                 .Where(p => p.LocationId == locationId && p.IsActive);
 
             if (currentProcessId.HasValue)
@@ -480,7 +480,7 @@ namespace net_backend.Controllers
                 .Select(p => new LocationWiseItemRowDto
                 {
                     Id = p.Id,
-                    LocationName = p.CurrentLocation != null ? p.CurrentLocation.Name : "",
+                    LocationName = p.Location != null ? p.Location.Name : "",
                     MainPartName = p.MainPartName,
                     CurrentName = p.CurrentName,
                     DrawingNo = p.DrawingNo,

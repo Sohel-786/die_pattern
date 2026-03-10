@@ -227,7 +227,35 @@ namespace net_backend.Controllers
             _context.Locations.Add(location);
             await _context.SaveChangesAsync();
 
+            await GrantNewLocationAccessToAdminsAsync(request.CompanyId, location.Id);
+
             return StatusCode(201, new ApiResponse<Location> { Data = location });
+        }
+
+        /// <summary>When a new location is created, grant all admin users access so they see it in Select Company &amp; Location and in Settings pills.</summary>
+        private async Task GrantNewLocationAccessToAdminsAsync(int companyId, int locationId)
+        {
+            var adminIds = await _context.Users
+                .Where(u => u.Role == Role.ADMIN && u.IsActive)
+                .Select(u => u.Id)
+                .ToListAsync();
+            var existing = await _context.UserLocationAccess
+                .Where(ula => ula.CompanyId == companyId && ula.LocationId == locationId)
+                .Select(ula => ula.UserId)
+                .ToListAsync();
+            var existingSet = new HashSet<int>(existing);
+            foreach (var uid in adminIds)
+            {
+                if (existingSet.Contains(uid)) continue;
+                _context.UserLocationAccess.Add(new UserLocationAccess
+                {
+                    UserId = uid,
+                    CompanyId = companyId,
+                    LocationId = locationId,
+                    CreatedAt = DateTime.Now
+                });
+            }
+            await _context.SaveChangesAsync();
         }
 
         [HttpPut("{id}")]
