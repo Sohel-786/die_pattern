@@ -46,6 +46,8 @@ namespace net_backend.DTOs
     public class UpdateItemDto
     {
         public int Id { get; set; }
+        /// <summary>Main Die/Part Name. Only applied when item has no transaction or transfer history (admin-only update).</summary>
+        public string? MainPartName { get; set; }
         public string? CurrentName { get; set; }
         public int ItemTypeId { get; set; }
         public string? DrawingNo { get; set; }

@@ -160,6 +160,7 @@ export default function ItemsPage() {
             const id = selectedItem?.id ?? data.id;
             const payload = {
                 id,
+                mainPartName: data.mainPartName?.trim() || undefined,
                 currentName: data.currentName ?? undefined,
                 itemTypeId: Number(data.itemTypeId) || 0,
                 drawingNo: data.drawingNo ?? undefined,
@@ -637,13 +638,13 @@ export default function ItemsPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        {canManage && (
+                                                        {isAdmin && canManage && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={() => handleEdit(item)}
                                                                 className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                                title="Edit Asset"
+                                                                title="Edit Asset (admin only)"
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </Button>
@@ -689,7 +690,7 @@ export default function ItemsPage() {
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
                 existingItems={items}
-                readOnly={!!selectedItem && !canEdit}
+                readOnly={!!selectedItem && !isAdmin}
             />
 
             <ItemChangeDialog

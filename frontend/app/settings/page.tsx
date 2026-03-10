@@ -169,8 +169,6 @@ const permissionLabels: Record<string, string> = {
   createTransfer: "Add Transfer",
   editTransfer: "Edit Transfer",
 
-  manageChanges: "Manage Audit Logs",
-  revertChanges: "Revert Changes",
   viewReports: "View Intelligence Reports",
   accessSettings: "Access System Settings",
 };
@@ -1033,32 +1031,6 @@ export default function SettingsPage() {
                                     ))}
                                   </div>
                                 </div>
-                              </CardContent>
-                            </Card>
-                            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-rose-500">
-                              <CardHeader className="bg-gradient-to-r from-rose-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-rose-100/50 rounded-lg text-rose-600">
-                                    <Shield className="w-5 h-5" />
-                                  </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900">Data Control</CardTitle>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="p-0 divide-y divide-secondary-100">
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
-                                  <div>
-                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Manage Pattern Changes</p>
-                                    <p className="text-xs text-secondary-500 mt-0.5">Edit protected pattern fields.</p>
-                                  </div>
-                                  <input type="checkbox" checked={localPermissions.manageChanges} onChange={(e) => handlePermissionChange("manageChanges", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500" />
-                                </label>
-                                <label className="flex items-center justify-between p-4 hover:bg-secondary-50/50 cursor-pointer group">
-                                  <div>
-                                    <p className="text-sm font-medium text-primary-900 group-hover:text-primary-700 transition-colors">Revert Changes</p>
-                                    <p className="text-xs text-secondary-500 mt-0.5">Undo history movements.</p>
-                                  </div>
-                                  <input type="checkbox" checked={localPermissions.revertChanges} onChange={(e) => handlePermissionChange("revertChanges", e.target.checked)} className="w-5 h-5 rounded border-secondary-300 text-rose-600 focus:ring-rose-500" />
-                                </label>
                               </CardContent>
                             </Card>
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 border-t-4 border-t-purple-500">

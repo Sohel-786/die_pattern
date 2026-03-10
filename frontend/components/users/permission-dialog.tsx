@@ -7,7 +7,7 @@ import {
     ShoppingCart, ArrowLeftRight, ClipboardCheck,
     BarChart3, Settings, Shield as ShieldIcon,
     CheckCircle2, AlertTriangle, Users, ArrowUpRight,
-    Building2, MapPin, Layers, History, RotateCcw,
+    Building2, MapPin, Layers, History,
     Search, CheckSquare, Edit, Activity, Plus,
     ArrowDownLeft, Briefcase, Truck
 } from "lucide-react";
@@ -230,8 +230,6 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                 <h3 className="text-xs font-black text-rose-500/30 uppercase tracking-[0.3em] border-b border-rose-50 pb-4 mb-8">Administrative Override</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <PermissionToggle label="System Config" checked={permissions?.accessSettings || false} onChange={(v) => updatePermission('accessSettings', v)} icon={Settings} description="Global parameters" />
-                                    <PermissionToggle label="Change History" checked={permissions?.manageChanges || false} onChange={(v) => updatePermission('manageChanges', v)} icon={History} description="Audit trail oversight" />
-                                    <PermissionToggle label="Strategic Revert" checked={permissions?.revertChanges || false} onChange={(v) => updatePermission('revertChanges', v)} icon={RotateCcw} description="Rollback capabilities" />
                                 </div>
                             </div>
                         </div>

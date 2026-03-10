@@ -226,7 +226,7 @@ namespace net_backend.Controllers
         [HttpPost("change-process")]
         public async Task<ActionResult<ApiResponse<Item>>> ChangeProcess([FromBody] ItemChangeRequestDto dto)
         {
-            if (!await HasPermission("ManageChanges")) return Forbidden();
+            if (!await IsAdmin()) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == dto.ItemId && i.LocationId == locationId);
             if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
@@ -259,13 +259,27 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Item>>> Update(int id, [FromBody] UpdateItemDto dto)
         {
-            if (!await CanEditMaster("ManageItem")) return Forbidden();
+            if (!await IsAdmin()) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             if (id != dto.Id) return BadRequest(new ApiResponse<Item> { Success = false, Message = "ID mismatch" });
 
             var existing = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
+
+            if (await _itemState.HasAnyTransactionHistoryAsync(id))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "This item has transaction or transfer history. Master data cannot be updated." });
+
+            if (!string.IsNullOrWhiteSpace(dto.MainPartName))
+            {
+                var mainPartTrim = dto.MainPartName.Trim();
+                if (mainPartTrim.ToLower() != existing.MainPartName.ToLower())
+                {
+                    if (await _context.Items.AnyAsync(p => p.LocationId == locationId && p.Id != id && p.MainPartName.ToLower() == mainPartTrim.ToLower()))
+                        return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique within this location" });
+                    existing.MainPartName = mainPartTrim;
+                }
+            }
 
             if (dto.CurrentName != null)
             {
@@ -300,9 +314,6 @@ namespace net_backend.Controllers
 
             if (dto.CurrentHolderType != null)
             {
-                if (await _itemState.HasAnyTransactionHistoryAsync(id))
-                    return BadRequest(new ApiResponse<Item> { Success = false, Message = "This item has already been used in one or more transactions (PI, PO, Inward, Job Work, or Transfer). Process state cannot be changed manually. Traceability is maintained by the system." });
-
                 var s = dto.CurrentHolderType.Trim().ToLower();
                 existing.CurrentProcess = s switch {
                     var x when x == "location" || x == "at location" || x == "at_location" || x == "instock" || x == "inwarddone" || x == "inqc" => ItemProcessState.InStock,
