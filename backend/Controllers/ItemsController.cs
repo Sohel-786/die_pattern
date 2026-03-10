@@ -46,6 +46,36 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<IEnumerable<object>> { Data = items });
         }
 
+        /// <summary>All items (active + inactive) for filter dropdowns only. Not for use when selecting items for new transactions/transfers.</summary>
+        [HttpGet("for-filter")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetForFilter()
+        {
+            var canUse =
+                await HasAllPermissions("ViewMaster", "ManageItem") ||
+                await HasPermission("ViewTransfer") ||
+                await HasPermission("ViewPI") ||
+                await HasPermission("ViewPO") ||
+                await HasPermission("ViewInward") ||
+                await HasPermission("ViewMovement") ||
+                await HasPermission("ViewQC");
+            if (!canUse) return Forbidden();
+
+            var locationId = await GetCurrentLocationIdAsync();
+            var items = await _context.Items
+                .Where(p => p.LocationId == locationId)
+                .OrderBy(p => p.MainPartName)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.MainPartName,
+                    p.CurrentName,
+                    p.ItemTypeId,
+                    ItemTypeName = p.ItemType != null ? p.ItemType.Name : (string?)null
+                })
+                .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = items });
+        }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemDto>>>> GetAll(
@@ -329,6 +359,27 @@ namespace net_backend.Controllers
 
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<Item> { Data = existing });
+        }
+
+        /// <summary>Toggle item active state. Admin only. Deactivation allowed only when process is Not In Stock or In Stock.</summary>
+        [HttpPatch("{id}/active")]
+        public async Task<ActionResult<ApiResponse<Item>>> SetActive(int id, [FromBody] ToggleItemActiveDto dto)
+        {
+            if (!await IsAdmin()) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var existing = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
+            if (existing == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
+
+            if (!dto.IsActive)
+            {
+                if (existing.CurrentProcess != ItemProcessState.NotInStock && existing.CurrentProcess != ItemProcessState.InStock)
+                    return BadRequest(new ApiResponse<Item> { Success = false, Message = "Only items with process 'Not In Stock' or 'In Stock' can be deactivated. This item is currently in a transaction or transfer flow." });
+            }
+
+            existing.IsActive = dto.IsActive;
+            existing.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<Item> { Data = existing, Message = dto.IsActive ? "Item activated" : "Item deactivated" });
         }
 
         [HttpGet("export")]

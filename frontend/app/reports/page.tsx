@@ -97,9 +97,9 @@ function ReportsContent() {
   });
 
   const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string; itemTypeId?: number; itemTypeName?: string }[]>({
-    queryKey: ["items", "active"],
+    queryKey: ["items-for-filter"],
     queryFn: async () => {
-      const res = await api.get("/items/active");
+      const res = await api.get("/items/for-filter");
       return res.data?.data ?? [];
     },
     enabled: canAccess,

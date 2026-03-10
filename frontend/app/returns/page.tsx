@@ -115,9 +115,9 @@ export default function ReturnsPage() {
   });
 
   const { data: filterItems = [] } = useQuery({
-    queryKey: ["items", "active"],
+    queryKey: ["items-for-filter"],
     queryFn: async () => {
-      const res = await api.get("/items/active");
+      const res = await api.get("/items/for-filter");
       return res.data?.data ?? [];
     },
   });

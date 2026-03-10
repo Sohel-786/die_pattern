@@ -94,9 +94,9 @@ export default function TransfersPage() {
         [locationUsers]);
 
     const { data: allItems = [] } = useQuery<any[]>({
-        queryKey: ["items-minimal"],
+        queryKey: ["items-for-filter"],
         queryFn: async () => {
-            const res = await api.get("/items");
+            const res = await api.get("/items/for-filter");
             return res.data.data ?? [];
         }
     });

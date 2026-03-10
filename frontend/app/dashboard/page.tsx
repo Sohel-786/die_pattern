@@ -60,17 +60,43 @@ const selectClass =
   "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
 const getProcessColor = (process?: string) => {
-  switch (process?.toLowerCase()) {
-    case "in stock": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
-    case "not in stock": return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5";
-    case "at vendor": return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5";
-    case "in qc": return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5";
-    case "inward done": return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5";
-    case "pi issued": return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5";
-    case "po issued": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
-    case "in job work": return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5";
-    default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+  const p = process?.replace(/\s+/g, "").toLowerCase() || "";
+  switch (p) {
+    case "instock":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+    case "notinstock":
+      return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5";
+    case "atvendor":
+      return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5";
+    case "inqc":
+      return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5";
+    case "inwarddone":
+      return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5";
+    case "pi":
+    case "inpi":
+    case "piissued":
+      return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5";
+    case "po":
+    case "inpo":
+    case "poissued":
+      return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+    case "injobwork":
+      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5";
+    default:
+      return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
   }
+};
+
+const formatProcess = (process?: string) => {
+  if (!process) return "—";
+  if (process === "InPI") return "In PI";
+  if (process === "InPO") return "In PO";
+  if (process === "PI") return "PI";
+  if (process === "PO") return "PO";
+
+  return process
+    .replace(/([A-Z])/g, " $1")
+    .trim();
 };
 
 const getConditionColor = (condition?: string) => {
@@ -268,9 +294,9 @@ export default function DashboardPage() {
   });
 
   const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
-    queryKey: ["items", "active"],
+    queryKey: ["items-for-filter"],
     queryFn: async () => {
-      const res = await api.get("/items/active");
+      const res = await api.get("/items/for-filter");
       return res.data.data ?? [];
     },
   });
@@ -381,16 +407,25 @@ export default function DashboardPage() {
                 ? "/dashboard/export/pending-pi"
                 : "/dashboard/export/pending-po";
         const response = await api.get(endpoint, { responseType: "blob", params });
+
+        // Extract filename from Content-Disposition header
+        let fileName = `dashboard-${section}-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+        const disposition = response.headers["content-disposition"];
+        if (disposition && disposition.indexOf("attachment") !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) {
+            fileName = matches[1].replace(/['"]/g, "");
+          }
+        }
+
         const blob = new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = downloadUrl;
-        link.setAttribute(
-          "download",
-          `dashboard-${section}-${format(new Date(), "yyyy-MM-dd")}.xlsx`
-        );
+        link.setAttribute("download", fileName);
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -663,8 +698,11 @@ export default function DashboardPage() {
                             </span>
                           </TableCell>
                           <TableCell className="px-4 py-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getProcessColor(row.currentProcess)}`}>
-                              {row.currentProcess ?? "—"}
+                            <span className={cn(
+                              "inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                              getProcessColor(row.currentProcess)
+                            )}>
+                              {formatProcess(row.currentProcess)}
                             </span>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-center">
@@ -783,8 +821,11 @@ export default function DashboardPage() {
                           <TableCell className="px-4 py-3 text-secondary-600 font-mono text-sm">{row.drawingNo ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.itemTypeName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getProcessColor(row.currentProcess)}`}>
-                              {row.currentProcess ?? "—"}
+                            <span className={cn(
+                              "inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                              getProcessColor(row.currentProcess)
+                            )}>
+                              {formatProcess(row.currentProcess)}
                             </span>
                           </TableCell>
                         </TableRow>

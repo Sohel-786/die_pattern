@@ -285,22 +285,35 @@ namespace net_backend.Services
             }
         }
 
-        public byte[] GenerateLocationWiseItemsExcel(IEnumerable<LocationWiseItemRowDto> rows)
+        public byte[] GenerateLocationWiseItemsExcel(IEnumerable<LocationWiseItemRowDto> rows, string? locationName = null)
         {
             var rowList = rows?.ToList() ?? new List<LocationWiseItemRowDto>();
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Location Wise Items");
+                int rowIdx = 1;
+
+                if (!string.IsNullOrEmpty(locationName))
+                {
+                    worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
+                    worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
+                    worksheet.Range(rowIdx, 1, rowIdx, 8).Merge();
+                    rowIdx++;
+                }
+
                 var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition", "Process", "Active Status" };
                 for (int c = 0; c < headers.Length; c++)
                 {
-                    var cell = worksheet.Cell(1, c + 1);
+                    var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 }
-                int rowIdx = 2;
+                var headerRow = rowIdx;
+                rowIdx++;
+
                 foreach (var r in rowList)
                 {
                     worksheet.Cell(rowIdx, 1).Value = r.LocationName ?? "";
@@ -322,7 +335,7 @@ namespace net_backend.Services
                 worksheet.Column(7).Width = 16;
                 worksheet.Column(8).Width = 12;
                 if (rowList.Count > 0)
-                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                    worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -331,22 +344,35 @@ namespace net_backend.Services
             }
         }
 
-        public byte[] GenerateItemsAtVendorExcel(IEnumerable<ItemAtVendorRowDto> rows)
+        public byte[] GenerateItemsAtVendorExcel(IEnumerable<ItemAtVendorRowDto> rows, string? locationName = null)
         {
             var rowList = rows?.ToList() ?? new List<ItemAtVendorRowDto>();
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Patterns at Vendor");
+                int rowIdx = 1;
+
+                if (!string.IsNullOrEmpty(locationName))
+                {
+                    worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
+                    worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
+                    worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                    rowIdx++;
+                }
+
                 var headers = new[] { "Vendor", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Process" };
                 for (int c = 0; c < headers.Length; c++)
                 {
-                    var cell = worksheet.Cell(1, c + 1);
+                    var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 }
-                int rowIdx = 2;
+                var headerRow = rowIdx;
+                rowIdx++;
+
                 foreach (var r in rowList)
                 {
                     worksheet.Cell(rowIdx, 1).Value = r.VendorName ?? "";
@@ -364,7 +390,7 @@ namespace net_backend.Services
                 worksheet.Column(5).Width = 14;
                 worksheet.Column(6).Width = 14;
                 if (rowList.Count > 0)
-                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                    worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -373,22 +399,35 @@ namespace net_backend.Services
             }
         }
 
-        public byte[] GeneratePendingPIExcel(IEnumerable<PendingPIRowDto> rows)
+        public byte[] GeneratePendingPIExcel(IEnumerable<PendingPIRowDto> rows, string? locationName = null)
         {
             var rowList = rows?.ToList() ?? new List<PendingPIRowDto>();
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Pending PI");
+                int rowIdx = 1;
+
+                if (!string.IsNullOrEmpty(locationName))
+                {
+                    worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
+                    worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
+                    worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
+                    rowIdx++;
+                }
+
                 var headers = new[] { "PI No", "Type", "Status", "Remarks", "Created At", "Created By", "Item Count" };
                 for (int c = 0; c < headers.Length; c++)
                 {
-                    var cell = worksheet.Cell(1, c + 1);
+                    var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 }
-                int rowIdx = 2;
+                var headerRow = rowIdx;
+                rowIdx++;
+
                 foreach (var r in rowList)
                 {
                     worksheet.Cell(rowIdx, 1).Value = r.PiNo ?? "";
@@ -409,7 +448,7 @@ namespace net_backend.Services
                 worksheet.Column(6).Width = 22;
                 worksheet.Column(7).Width = 12;
                 if (rowList.Count > 0)
-                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                    worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -418,22 +457,35 @@ namespace net_backend.Services
             }
         }
 
-        public byte[] GeneratePendingPOExcel(IEnumerable<PendingPORowDto> rows)
+        public byte[] GeneratePendingPOExcel(IEnumerable<PendingPORowDto> rows, string? locationName = null)
         {
             var rowList = rows?.ToList() ?? new List<PendingPORowDto>();
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Pending PO");
+                int rowIdx = 1;
+
+                if (!string.IsNullOrEmpty(locationName))
+                {
+                    worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
+                    worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
+                    worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                    rowIdx++;
+                }
+
                 var headers = new[] { "PO No", "Vendor", "Status", "Remarks", "Created At", "Created By" };
                 for (int c = 0; c < headers.Length; c++)
                 {
-                    var cell = worksheet.Cell(1, c + 1);
+                    var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 }
-                int rowIdx = 2;
+                var headerRow = rowIdx;
+                rowIdx++;
+
                 foreach (var r in rowList)
                 {
                     worksheet.Cell(rowIdx, 1).Value = r.PoNo ?? "";
@@ -452,7 +504,7 @@ namespace net_backend.Services
                 worksheet.Column(5).Width = 18;
                 worksheet.Column(6).Width = 22;
                 if (rowList.Count > 0)
-                    worksheet.Range(1, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+                    worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);

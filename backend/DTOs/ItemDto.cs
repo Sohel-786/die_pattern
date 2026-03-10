@@ -61,6 +61,12 @@ namespace net_backend.DTOs
         public int? CurrentPartyId { get; set; }
     }
 
+    /// <summary>Body for PATCH /items/{id}/active. Only Not In Stock or In Stock items can be deactivated.</summary>
+    public class ToggleItemActiveDto
+    {
+        public bool IsActive { get; set; }
+    }
+
     public class ItemChangeRequestDto
     {
         public int ItemId { get; set; }

@@ -195,7 +195,7 @@ export default function ItemsPage() {
     });
 
     const toggleActiveMutation = useMutation({
-        mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => api.put(`/items/${id}`, { isActive }),
+        mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => api.patch(`/items/${id}/active`, { isActive }),
         onSuccess: (_, { isActive }) => {
             queryClient.invalidateQueries({ queryKey: ["items"] });
             setInactiveTarget(null);
@@ -650,20 +650,25 @@ export default function ItemsPage() {
                                                             </Button>
                                                         )}
 
-                                                        {isAdmin && canManage && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => toggleStatus(item)}
-                                                                className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${item.isActive
-                                                                    ? 'text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100'
-                                                                    : 'text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100'
-                                                                    }`}
-                                                                title={item.isActive ? "Deactivate" : "Activate"}
-                                                            >
-                                                                {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                                                            </Button>
-                                                        )}
+                                                        {isAdmin && canManage && (() => {
+                                                            const canDeactivate = item.currentProcess === "Not In Stock" || item.currentProcess === "In Stock";
+                                                            const deactivateDisabled = item.isActive && !canDeactivate;
+                                                            return (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => deactivateDisabled ? undefined : toggleStatus(item)}
+                                                                    disabled={deactivateDisabled}
+                                                                    className={`h-8 w-8 p-0 border border-transparent rounded-lg transition-all ${deactivateDisabled ? "opacity-50 cursor-not-allowed text-gray-400" : item.isActive
+                                                                        ? "text-rose-500 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100"
+                                                                        : "text-green-500 hover:text-green-600 hover:bg-green-50 hover:border-green-100"
+                                                                        }`}
+                                                                    title={deactivateDisabled ? "Only Not In Stock or In Stock items can be deactivated" : item.isActive ? "Deactivate" : "Activate"}
+                                                                >
+                                                                    {item.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                                                </Button>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </td>
                                             </tr>

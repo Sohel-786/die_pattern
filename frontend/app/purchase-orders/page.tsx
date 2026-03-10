@@ -106,9 +106,9 @@ export default function PurchaseOrdersPage() {
   });
 
   const { data: itemsList = [] } = useQuery<Item[]>({
-    queryKey: ["items", "minimal"],
+    queryKey: ["items-for-filter"],
     queryFn: async () => {
-      const res = await api.get("/items/minimal");
+      const res = await api.get("/items/for-filter");
       return res.data.data ?? [];
     },
   });

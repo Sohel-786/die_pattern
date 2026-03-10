@@ -490,9 +490,13 @@ namespace net_backend.Controllers
                     IsActive = p.IsActive
                 }).ToListAsync();
 
-            var bytes = _excelService.GenerateLocationWiseItemsExcel(rows);
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "Dashboard_Location_Wise_Items.xlsx");
+            var location = await _context.Locations.FirstOrDefaultAsync(l => l.Id == locationId);
+            var locName = location?.Name ?? "Selected Location";
+
+            var bytes = _excelService.GenerateLocationWiseItemsExcel(rows, locName);
+            var fileName = $"Location_Wise_Items_{locName.Replace(" ", "_")}_{DateTime.Now:ddMMyy_HHmm}.xlsx";
+            
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [HttpGet("export/items-at-vendor")]
@@ -546,9 +550,17 @@ namespace net_backend.Controllers
                     CurrentProcess = p.CurrentProcess == ItemProcessState.InJobwork ? "In Jobwork" : "At Vendor"
                 }).ToListAsync();
 
-            var bytes = _excelService.GenerateItemsAtVendorExcel(rows);
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "Dashboard_Patterns_At_Vendor.xlsx");
+            string locName = "All Locations";
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                var loc = await _context.Locations.FirstOrDefaultAsync(l => l.Id == locationId.Value);
+                if (loc != null) locName = loc.Name;
+            }
+
+            var bytes = _excelService.GenerateItemsAtVendorExcel(rows, locName);
+            var fileName = $"Patterns_At_Vendor_{locName.Replace(" ", "_")}_{DateTime.Now:ddMMyy_HHmm}.xlsx";
+            
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [HttpGet("export/pending-pi")]
@@ -608,6 +620,13 @@ namespace net_backend.Controllers
                 ItemCount = p.Items.Count
             }).ToListAsync();
 
+            string locName = "All Locations";
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                var loc = await _context.Locations.FirstOrDefaultAsync(l => l.Id == locationId.Value);
+                if (loc != null) locName = loc.Name;
+            }
+
             var bytes = _excelService.GeneratePendingPIExcel(list.Select(x => new PendingPIRowDto
             {
                 Id = x.Id,
@@ -618,9 +637,11 @@ namespace net_backend.Controllers
                 CreatedAt = x.CreatedAt,
                 CreatorName = x.CreatorName,
                 ItemCount = x.ItemCount
-            }));
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "Dashboard_Pending_PI.xlsx");
+            }), locName);
+
+            var fileName = $"Pending_PI_{locName.Replace(" ", "_")}_{DateTime.Now:ddMMyy_HHmm}.xlsx";
+            
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [HttpGet("export/pending-po")]
@@ -676,9 +697,17 @@ namespace net_backend.Controllers
                 CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : null
             }).ToListAsync();
 
-            var bytes = _excelService.GeneratePendingPOExcel(list);
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "Dashboard_Pending_PO.xlsx");
+            string locName = "All Locations";
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                var loc = await _context.Locations.FirstOrDefaultAsync(l => l.Id == locationId.Value);
+                if (loc != null) locName = loc.Name;
+            }
+
+            var bytes = _excelService.GeneratePendingPOExcel(list, locName);
+            var fileName = $"Pending_PO_{locName.Replace(" ", "_")}_{DateTime.Now:ddMMyy_HHmm}.xlsx";
+            
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }
