@@ -333,13 +333,15 @@ namespace net_backend.Controllers
             [FromQuery] string? status,
             [FromQuery] DateTime? poDateFrom,
             [FromQuery] DateTime? poDateTo,
-            [FromQuery] string? vendorIds,
-            [FromQuery] string? purchaseType,
+            [FromQuery] List<int>? vendorIds,
+            [FromQuery] List<string>? purchaseTypes,
             [FromQuery] DateTime? deliveryDateFrom,
             [FromQuery] DateTime? deliveryDateTo,
-            [FromQuery] string? itemIds,
+            [FromQuery] List<int>? itemIds,
+            [FromQuery] List<int>? creatorIds,
             [FromQuery] decimal? rateMin,
-            [FromQuery] decimal? rateMax)
+            [FromQuery] decimal? rateMax,
+            [FromQuery] bool? isActive)
         {
             var locationId = await GetCurrentLocationIdAsync();
             var isAdmin = await IsAdmin();
@@ -361,6 +363,18 @@ namespace net_backend.Controllers
                         .ThenInclude(pii => pii!.PurchaseIndent)
                 .AsQueryable();
 
+            if (vendorIds != null && vendorIds.Any())
+                query = query.Where(p => vendorIds.Contains(p.VendorId));
+
+            if (purchaseTypes != null && purchaseTypes.Any())
+                query = query.Where(p => purchaseTypes.Contains(p.PurchaseType));
+
+            if (itemIds != null && itemIds.Any())
+                query = query.Where(p => p.Items.Any(i => i.PurchaseIndentItem != null && itemIds.Contains(i.PurchaseIndentItem.ItemId)));
+
+            if (creatorIds != null && creatorIds.Any())
+                query = query.Where(p => creatorIds.Contains(p.CreatedBy));
+
             var searchTrim = (search ?? "").Trim();
             if (!string.IsNullOrEmpty(searchTrim))
             {
@@ -378,23 +392,14 @@ namespace net_backend.Controllers
             if (poDateTo.HasValue)
                 query = query.Where(p => p.CreatedAt.Date <= poDateTo.Value.Date);
 
-            var vendorIdList = (vendorIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
-            if (vendorIdList.Count > 0)
-                query = query.Where(p => vendorIdList.Contains(p.VendorId));
 
-            if (!string.IsNullOrWhiteSpace(purchaseType))
-                query = query.Where(p => p.PurchaseType == purchaseType);
 
             if (deliveryDateFrom.HasValue)
                 query = query.Where(p => p.DeliveryDate != null && p.DeliveryDate.Value.Date >= deliveryDateFrom.Value.Date);
             if (deliveryDateTo.HasValue)
                 query = query.Where(p => p.DeliveryDate != null && p.DeliveryDate.Value.Date <= deliveryDateTo.Value.Date);
 
-            var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
-            if (itemIdList.Count > 0)
-                query = query.Where(p => p.Items.Any(i => i.PurchaseIndentItem != null && itemIdList.Contains(i.PurchaseIndentItem.ItemId)));
+
 
             if (rateMin.HasValue)
                 query = query.Where(p => p.Items.Any(i => i.Rate >= rateMin.Value));
@@ -403,6 +408,8 @@ namespace net_backend.Controllers
 
             if (!isAdmin)
                 query = query.Where(p => p.IsActive);
+            else if (isActive.HasValue)
+                query = query.Where(p => p.IsActive == isActive.Value);
 
             var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             

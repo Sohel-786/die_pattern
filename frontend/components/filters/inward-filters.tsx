@@ -23,7 +23,10 @@ export interface InwardFiltersProps {
     filters: InwardFiltersState;
     onFiltersChange: (f: InwardFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
+    creatorOptions: MultiSelectSearchOption[];
+    itemOptions: MultiSelectSearchOption[];
     onClear: () => void;
+    isAdmin: boolean;
     className?: string;
 }
 
@@ -31,7 +34,10 @@ export function InwardFilters({
     filters,
     onFiltersChange,
     partyOptions,
+    creatorOptions,
+    itemOptions,
     onClear,
+    isAdmin,
     className,
 }: InwardFiltersProps) {
     const hasActive = hasActiveInwardFilters(filters);
@@ -79,7 +85,7 @@ export function InwardFilters({
                         )}
                     </div>
 
-                    {/* Row 2: Source Type, Source No, Party, Status */}
+                    {/* Row 2: Source Type, Source No, Party, Item */}
                     <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Source Type</label>
@@ -106,29 +112,55 @@ export function InwardFilters({
                             <label className={filterLabelClass}>Vendor / Party</label>
                             <MultiSelectSearch
                                 options={partyOptions}
-                                value={filters.vendorIds as (number | string)[]}
+                                value={filters.vendorIds}
                                 onChange={(v) => update({ vendorIds: v as number[] })}
                                 placeholder="Select party"
                                 searchPlaceholder="Search…"
                             />
                         </div>
-                        <div className="min-w-0">
-                            <label className={filterLabelClass}>Status</label>
-                            <select
-                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                className={selectClass}
-                            >
-                                <option value="">All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Item Selection</label>
+                            <MultiSelectSearch
+                                options={itemOptions}
+                                value={filters.itemIds}
+                                onChange={(v) => update({ itemIds: v as number[] })}
+                                placeholder="Select items"
+                                searchPlaceholder="Search items…"
+                            />
                         </div>
                     </div>
 
-                    {/* Row 3: Inward Date Range */}
-                    <div className="flex gap-4 px-4 pb-3 pt-0 w-full">
-                        <div className="flex-1 min-w-0 max-w-md">
+                    {/* Row 3: Status, Creator + Date Range */}
+                    <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
+                        <div className="min-w-0">
+                            <label className={filterLabelClass}>Entry Status</label>
+                            {isAdmin ? (
+                                <select
+                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                                    className={selectClass}
+                                >
+                                    <option value="">All</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
+                            ) : (
+                                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                                    Active Only
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Created By</label>
+                            <MultiSelectSearch
+                                options={creatorOptions}
+                                value={filters.creatorIds}
+                                onChange={(v) => update({ creatorIds: v as number[] })}
+                                placeholder="Select user"
+                                searchPlaceholder="Search user…"
+                            />
+                        </div>
+                        <div className="col-span-2 min-w-0">
                             <label className={filterLabelClass}>Inward Date Range</label>
                             <div className="flex gap-2">
                                 <div className="flex-1 min-w-0">

@@ -23,7 +23,10 @@ export interface JobWorkFiltersProps {
     filters: JobWorkFiltersState;
     onFiltersChange: (f: JobWorkFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
+    creatorOptions: MultiSelectSearchOption[];
+    itemOptions: MultiSelectSearchOption[];
     onClear: () => void;
+    isAdmin: boolean;
     className?: string;
 }
 
@@ -37,7 +40,10 @@ export function JobWorkFilters({
     filters,
     onFiltersChange,
     partyOptions,
+    creatorOptions,
+    itemOptions,
     onClear,
+    isAdmin,
     className,
 }: JobWorkFiltersProps) {
     const hasActive = hasActiveJobWorkFilters(filters);
@@ -85,7 +91,7 @@ export function JobWorkFilters({
                         )}
                     </div>
 
-                    {/* Row 2: Status, Party, Entry State (Active/Inactive) */}
+                    {/* Row 2: Status, Party, Item, Creator */}
                     <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Status</label>
@@ -101,34 +107,61 @@ export function JobWorkFilters({
                             </select>
                         </div>
 
-                        <div className="col-span-2 min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>Party (Send To)</label>
                             <MultiSelectSearch
                                 options={partyOptions}
-                                value={filters.partyIds as (number | string)[]}
+                                value={filters.partyIds}
                                 onChange={(v) => update({ partyIds: v as number[] })}
                                 placeholder="Select parties"
                                 searchPlaceholder="Search…"
                             />
                         </div>
 
-                        <div className="min-w-0">
-                            <label className={filterLabelClass}>Entry State</label>
-                            <select
-                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                className={selectClass}
-                            >
-                                <option value="">All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Item</label>
+                            <MultiSelectSearch
+                                options={itemOptions}
+                                value={filters.itemIds}
+                                onChange={(v) => update({ itemIds: v as number[] })}
+                                placeholder="Select item"
+                                searchPlaceholder="Search item…"
+                            />
+                        </div>
+
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Created By</label>
+                            <MultiSelectSearch
+                                options={creatorOptions}
+                                value={filters.creatorIds}
+                                onChange={(v) => update({ creatorIds: v as number[] })}
+                                placeholder="Select user"
+                                searchPlaceholder="Search user…"
+                            />
                         </div>
                     </div>
 
-                    {/* Row 3: Date Range */}
-                    <div className="flex gap-4 px-4 pb-4 pt-1 w-full">
-                        <div className="flex-1 min-w-0 max-w-md">
+                    {/* Row 3: Active Status, Date Range */}
+                    <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
+                        <div className="min-w-0">
+                            <label className={filterLabelClass}>Entry Status</label>
+                            {isAdmin ? (
+                                <select
+                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                                    className={selectClass}
+                                >
+                                    <option value="">All</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
+                            ) : (
+                                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                                    Active Only
+                                </div>
+                            )}
+                        </div>
+                        <div className="col-span-3 min-w-0">
                             <label className={filterLabelClass}>Date Range (Created)</label>
                             <div className="flex gap-2">
                                 <div className="flex-1 min-w-0">

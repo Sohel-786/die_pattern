@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { InwardDialog } from "@/components/inwards/inward-dialog";
 import { InwardFilters } from "@/components/filters/inward-filters";
-import { initialInwardFilters, InwardFiltersState } from "@/lib/inward-filters";
+import { initialInwardFilters, InwardFiltersState, buildInwardFilterParams } from "@/lib/inward-filters";
 import { toast } from "react-hot-toast";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -51,19 +51,15 @@ export default function InwardsPage() {
     const debouncedSearch = useDebounce(filters.search, 500);
     const debouncedSourceNo = useDebounce(filters.sourceNo, 500);
 
-    const { data: inwards = [], isLoading } = useQuery<Inward[]>({
-        queryKey: ["inwards", { ...filters, search: debouncedSearch, sourceNo: debouncedSourceNo }],
-        queryFn: async () => {
-            const params = new URLSearchParams();
-            if (debouncedSearch) params.set("search", debouncedSearch);
-            if (filters.sourceType !== "") params.set("sourceType", String(filters.sourceType));
-            if (debouncedSourceNo) params.set("sourceNo", debouncedSourceNo);
-            if (filters.isActive !== null) params.set("isActive", String(filters.isActive));
-            if (filters.dateFrom) params.set("startDate", filters.dateFrom);
-            if (filters.dateTo) params.set("endDate", filters.dateTo);
-            filters.vendorIds.forEach(id => params.append("vendorIds", String(id)));
+    const queryParams = useMemo(() =>
+        buildInwardFilterParams({ ...filters, search: debouncedSearch, sourceNo: debouncedSourceNo }),
+        [filters, debouncedSearch, debouncedSourceNo]
+    );
 
-            const res = await api.get("/inwards?" + params.toString());
+    const { data: inwards = [], isLoading } = useQuery<Inward[]>({
+        queryKey: ["inwards", queryParams.toString()],
+        queryFn: async () => {
+            const res = await api.get("/inwards?" + queryParams.toString());
             return res.data.data ?? [];
         },
         enabled: !!permissions?.viewInward
@@ -80,6 +76,30 @@ export default function InwardsPage() {
     const partyOptions = useMemo(() =>
         parties.map(p => ({ label: p.name, value: p.id })),
         [parties]);
+
+    const { data: locationUsers = [] } = useQuery<any[]>({
+        queryKey: ["location-users"],
+        queryFn: async () => {
+            const res = await api.get("/users/location-users");
+            return res.data.data ?? [];
+        }
+    });
+
+    const creatorOptions = useMemo(() =>
+        locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
+        [locationUsers]);
+
+    const { data: itemsList = [] } = useQuery<any[]>({
+        queryKey: ["items-minimal"],
+        queryFn: async () => {
+            const res = await api.get("/items/minimal");
+            return res.data.data ?? [];
+        }
+    });
+
+    const itemOptions = useMemo(() =>
+        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – "), value: i.id })),
+        [itemsList]);
 
     const toggleActiveMutation = useMutation({
         mutationFn: async ({ id, active }: { id: number, active: boolean }) => {
@@ -137,9 +157,12 @@ export default function InwardsPage() {
             <InwardFilters
                 filters={filters}
                 onFiltersChange={setFilters}
-                onClear={resetFilters}
                 partyOptions={partyOptions}
-                className="shrink-0"
+                creatorOptions={creatorOptions}
+                itemOptions={itemOptions}
+                onClear={resetFilters}
+                isAdmin={isAdmin}
+                className="shrink-0 mb-6"
             />
 
             <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white">

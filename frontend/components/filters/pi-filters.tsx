@@ -25,7 +25,9 @@ export interface PIFiltersProps {
   filters: PIFiltersState;
   onFiltersChange: (f: PIFiltersState) => void;
   itemOptions: MultiSelectSearchOption[];
+  creatorOptions: MultiSelectSearchOption[];
   onClear: () => void;
+  isAdmin: boolean;
   className?: string;
 }
 
@@ -33,7 +35,9 @@ export function PIFilters({
   filters,
   onFiltersChange,
   itemOptions,
+  creatorOptions,
   onClear,
+  isAdmin,
   className,
 }: PIFiltersProps) {
   const hasActive = hasActivePIFilters(filters);
@@ -50,7 +54,7 @@ export function PIFilters({
     >
       <CardContent className="p-0 w-full">
         <div className="flex flex-col gap-0 overflow-visible w-full">
-          {/* Row 1: Search (full width) + Clear Filter — matches PO layout */}
+          {/* Row 1: Search and Clear */}
           <div className="flex items-end gap-4 px-4 pt-3 pb-2 w-full">
             <div className="relative flex-1 min-w-0">
               <label className={filterLabelClass} htmlFor="pi-search">
@@ -86,8 +90,8 @@ export function PIFilters({
             )}
           </div>
 
-          {/* Row 2: Approval Status, Item, Created Date — equal width columns (same grid pattern as PO) */}
-          <div className="grid grid-cols-3 gap-4 px-4 pb-3 pt-0 w-full">
+          {/* Row 2: Status, Item, Creator */}
+          <div className="grid grid-cols-3 gap-4 px-4 py-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Approval Status</label>
               <select
@@ -106,34 +110,66 @@ export function PIFilters({
               <label className={filterLabelClass}>Item</label>
               <MultiSelectSearch
                 options={itemOptions}
-                value={filters.itemIds as (number | string)[]}
+                value={filters.itemIds}
                 onChange={(v) => update({ itemIds: v as number[] })}
                 placeholder="Select item"
                 searchPlaceholder="Search…"
                 aria-label="Filter by item"
               />
             </div>
+            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+              <label className={filterLabelClass}>Created By</label>
+              <MultiSelectSearch
+                options={creatorOptions}
+                value={filters.creatorIds}
+                onChange={(v) => update({ creatorIds: v as number[] })}
+                placeholder="Select user"
+                searchPlaceholder="Search user…"
+                aria-label="Filter by creator"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Active Status, Date Range */}
+          <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
             <div className="min-w-0">
-              <label className={filterLabelClass}>Created Date</label>
-              <div className="flex gap-2">
-                <div className="flex-1 min-w-0">
-                  <DatePicker
-                    value={filters.createdDateFrom}
-                    onChange={(date) => update({ createdDateFrom: date ? format(date, "yyyy-MM-dd") : "" })}
-                    className="h-9 w-full border-secondary-200"
-                    placeholder="From"
-                    clearable={true}
-                  />
+              <label className={filterLabelClass}>Entry Status</label>
+              {isAdmin ? (
+                <select
+                  value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                  onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                  className={selectClass}
+                >
+                  <option value="">All</option>
+                  <option value="true">Active Only</option>
+                  <option value="false">Inactive Only</option>
+                </select>
+              ) : (
+                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                  Active Only
                 </div>
-                <div className="flex-1 min-w-0">
-                  <DatePicker
-                    value={filters.createdDateTo}
-                    onChange={(date) => update({ createdDateTo: date ? format(date, "yyyy-MM-dd") : "" })}
-                    className="h-9 w-full border-secondary-200"
-                    placeholder="To"
-                    clearable={true}
-                  />
-                </div>
+              )}
+            </div>
+            <div className="col-span-3 min-w-0 flex gap-2">
+              <div className="flex-1">
+                <label className={filterLabelClass}>From Date</label>
+                <DatePicker
+                  value={filters.createdDateFrom}
+                  onChange={(date) => update({ createdDateFrom: date ? format(date, "yyyy-MM-dd") : "" })}
+                  className="h-9 w-full border-secondary-200"
+                  placeholder="From"
+                  clearable={true}
+                />
+              </div>
+              <div className="flex-1">
+                <label className={filterLabelClass}>To Date</label>
+                <DatePicker
+                  value={filters.createdDateTo}
+                  onChange={(date) => update({ createdDateTo: date ? format(date, "yyyy-MM-dd") : "" })}
+                  className="h-9 w-full border-secondary-200"
+                  placeholder="To"
+                  clearable={true}
+                />
               </div>
             </div>
           </div>

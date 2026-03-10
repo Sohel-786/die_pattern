@@ -1,6 +1,4 @@
-"use client";
-
-import { Search, X, Calendar } from "lucide-react";
+import { Search, X, Calendar, User as UserIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +8,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { TransferFiltersState } from "@/lib/transfer-filters";
+import { Role } from "@/types";
+
+import { hasActiveTransferFilters } from "@/lib/transfer-filters";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -21,7 +22,10 @@ export interface TransferFiltersProps {
     filters: TransferFiltersState;
     onFiltersChange: (f: TransferFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
+    itemOptions: MultiSelectSearchOption[];
+    creatorOptions: MultiSelectSearchOption[];
     onClear: () => void;
+    isAdmin: boolean;
     className?: string;
 }
 
@@ -29,14 +33,20 @@ export function TransferFilters({
     filters,
     onFiltersChange,
     partyOptions,
+    itemOptions,
+    creatorOptions,
     onClear,
+    isAdmin,
     className,
 }: TransferFiltersProps) {
-    const hasActive = filters.search !== "" || filters.fromPartyId !== null || filters.toPartyId !== null || filters.dateFrom !== "" || filters.dateTo !== "" || filters.isActive !== null;
+    const hasActive = hasActiveTransferFilters(filters);
 
     const update = (patch: Partial<TransferFiltersState>) => {
         onFiltersChange({ ...filters, ...patch });
     };
+
+    // Include "Our Location" as an option in party list
+    const partyOptionsWithLocation = [{ label: "Our Location", value: 0 }, ...partyOptions];
 
     return (
         <Card
@@ -47,6 +57,7 @@ export function TransferFilters({
         >
             <CardContent className="p-0 w-full">
                 <div className="flex flex-col gap-0 overflow-visible w-full">
+                    {/* Row 1: Search and Clear */}
                     <div className="flex items-end gap-4 px-4 pt-3 pb-2 w-full">
                         <div className="relative flex-1 min-w-0">
                             <label className={filterLabelClass}>Search</label>
@@ -56,7 +67,7 @@ export function TransferFilters({
                                     type="search"
                                     value={filters.search}
                                     onChange={(e) => update({ search: e.target.value })}
-                                    placeholder="Transfer No, party or item…"
+                                    placeholder="Transfer No, remarks or details…"
                                     className={cn(inputClass, "pl-9 h-9 w-full")}
                                 />
                             </div>
@@ -77,51 +88,70 @@ export function TransferFilters({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
-                        <div className="min-w-0">
+                    {/* Row 2: Parties and Items */}
+                    <div className="grid grid-cols-3 gap-4 px-4 py-2 w-full">
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>From Party</label>
-                            <select
-                                value={filters.fromPartyId === null ? "" : filters.fromPartyId}
-                                onChange={(e) => update({ fromPartyId: e.target.value === "" ? null : Number(e.target.value) })}
-                                className={selectClass}
-                            >
-                                <option value="">All (Incl. Location)</option>
-                                <option value="0">Our Location</option>
-                                {partyOptions.map(p => (
-                                    <option key={p.value} value={p.value}>{p.label}</option>
-                                ))}
-                            </select>
+                            <MultiSelectSearch
+                                options={partyOptionsWithLocation}
+                                value={filters.fromPartyIds}
+                                onChange={(v) => update({ fromPartyIds: v as number[] })}
+                                placeholder="Select party"
+                            />
                         </div>
-
-                        <div className="min-w-0">
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>To Party</label>
-                            <select
-                                value={filters.toPartyId === null ? "" : filters.toPartyId}
-                                onChange={(e) => update({ toPartyId: e.target.value === "" ? null : Number(e.target.value) })}
-                                className={selectClass}
-                            >
-                                <option value="">All (Incl. Location)</option>
-                                <option value="0">Our Location</option>
-                                {partyOptions.map(p => (
-                                    <option key={p.value} value={p.value}>{p.label}</option>
-                                ))}
-                            </select>
+                            <MultiSelectSearch
+                                options={partyOptionsWithLocation}
+                                value={filters.toPartyIds}
+                                onChange={(v) => update({ toPartyIds: v as number[] })}
+                                placeholder="Select party"
+                            />
+                        </div>
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Item Selection</label>
+                            <MultiSelectSearch
+                                options={itemOptions}
+                                value={filters.itemIds}
+                                onChange={(v) => update({ itemIds: v as number[] })}
+                                placeholder="Select items"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Row 3: Creator, Active, Dates */}
+                    <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Created By</label>
+                            <MultiSelectSearch
+                                options={creatorOptions}
+                                value={filters.creatorIds}
+                                onChange={(v) => update({ creatorIds: v as number[] })}
+                                placeholder="Select user"
+                                searchPlaceholder="Search user…"
+                            />
                         </div>
 
                         <div className="min-w-0">
-                            <label className={filterLabelClass}>Entry State</label>
-                            <select
-                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                className={selectClass}
-                            >
-                                <option value="">All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
+                            <label className={filterLabelClass}>Entry Status</label>
+                            {isAdmin ? (
+                                <select
+                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                                    className={selectClass}
+                                >
+                                    <option value="">All</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
+                            ) : (
+                                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                                    Active Only
+                                </div>
+                            )}
                         </div>
 
-                        <div className="min-w-0 flex gap-2">
+                        <div className="col-span-2 min-w-0 flex gap-2">
                             <div className="flex-1">
                                 <label className={filterLabelClass}>From Date</label>
                                 <DatePicker
@@ -149,3 +179,4 @@ export function TransferFilters({
         </Card>
     );
 }
+

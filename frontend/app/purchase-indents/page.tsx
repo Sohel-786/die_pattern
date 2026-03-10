@@ -80,6 +80,18 @@ export default function PurchaseIndentsPage() {
         [itemsList]
     );
 
+    const { data: locationUsers = [] } = useQuery<any[]>({
+        queryKey: ["location-users"],
+        queryFn: async () => {
+            const res = await api.get("/users/location-users");
+            return res.data.data ?? [];
+        }
+    });
+
+    const creatorOptions = useMemo(() =>
+        locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
+        [locationUsers]);
+
     const approveMutation = useMutation({
         mutationFn: (id: number) => api.post(`/purchase-indents/${id}/approve`),
         onSuccess: () => {
@@ -225,8 +237,10 @@ export default function PurchaseIndentsPage() {
                 filters={filters}
                 onFiltersChange={setFilters}
                 itemOptions={itemOptions}
+                creatorOptions={creatorOptions}
                 onClear={resetFilters}
-                className="shadow-sm"
+                isAdmin={isAdmin}
+                className="shadow-sm mb-6"
             />
 
             <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">

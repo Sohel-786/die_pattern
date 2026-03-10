@@ -302,5 +302,22 @@ namespace net_backend.Controllers
             await _context.SaveChangesAsync();
             return Ok(new ApiResponse<bool> { Success = true, Data = true });
         }
+
+        [HttpGet("location-users")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<User>>>> GetLocationUsers()
+        {
+            var locationId = await GetCurrentLocationIdAsync();
+            var userIdsByLocation = await _context.UserLocationAccess
+                .Where(ula => ula.LocationId == locationId)
+                .Select(ula => ula.UserId)
+                .ToListAsync();
+
+            var users = await _context.Users
+                .Where(u => u.IsActive && (userIdsByLocation.Contains(u.Id) || u.Role == Role.ADMIN))
+                .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
+                .ToListAsync();
+
+            return Ok(new ApiResponse<IEnumerable<User>> { Data = users });
+        }
     }
 }

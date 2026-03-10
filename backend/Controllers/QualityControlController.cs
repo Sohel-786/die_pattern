@@ -97,8 +97,9 @@ namespace net_backend.Controllers
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<QCDto>>>> GetAll(
-            [FromQuery] int? partyId,
             [FromQuery] List<int>? partyIds,
+            [FromQuery] List<int>? creatorIds,
+            [FromQuery] List<int>? itemIds,
             [FromQuery] QcStatus? status,
             [FromQuery] bool? isActive,
             [FromQuery] string? search,
@@ -124,10 +125,15 @@ namespace net_backend.Controllers
                         .ThenInclude(l => l!.Item)
                             .ThenInclude(it => it!.Material);
 
-            if (partyId.HasValue)
-                query = query.Where(q => q.PartyId == partyId.Value);
             if (partyIds != null && partyIds.Any())
                 query = query.Where(q => partyIds.Contains(q.PartyId));
+
+            if (creatorIds != null && creatorIds.Any())
+                query = query.Where(q => creatorIds.Contains(q.CreatedBy));
+
+            if (itemIds != null && itemIds.Any())
+                query = query.Where(q => q.Items.Any(i => i.InwardLine != null && itemIds.Contains(i.InwardLine.ItemId)));
+
             if (status.HasValue)
                 query = query.Where(q => q.Status == status.Value);
             // SECURITY: Only Admin can see inactive entries. For others, force only active records.

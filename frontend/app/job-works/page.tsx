@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { JobWorkDialog } from "@/components/job-works/job-work-dialog";
 import { JobWorkFilters } from "@/components/filters/job-work-filters";
-import { initialJobWorkFilters, JobWorkFiltersState } from "@/lib/job-work-filters";
+import { initialJobWorkFilters, JobWorkFiltersState, buildJobWorkFilterParams } from "@/lib/job-work-filters";
 import { toast } from "react-hot-toast";
 import { registerDialog } from "@/lib/dialog-stack";
 
@@ -88,18 +88,15 @@ export default function JobWorksPage() {
 
     const debouncedSearch = useDebounce(filters.search, 500);
 
-    const { data: jobWorks = [], isLoading } = useQuery<JobWork[]>({
-        queryKey: ["job-works", { ...filters, search: debouncedSearch }],
-        queryFn: async () => {
-            const params = new URLSearchParams();
-            if (debouncedSearch) params.set("search", debouncedSearch);
-            if (filters.status !== "") params.set("status", String(filters.status));
-            if (filters.dateFrom) params.set("startDate", filters.dateFrom);
-            if (filters.dateTo) params.set("endDate", filters.dateTo);
-            filters.partyIds.forEach(id => params.append("partyIds", String(id)));
-            if (filters.isActive !== null) params.set("isActive", String(filters.isActive));
+    const queryParams = useMemo(() =>
+        buildJobWorkFilterParams({ ...filters, search: debouncedSearch }),
+        [filters, debouncedSearch]
+    );
 
-            const res = await api.get("/job-works?" + params.toString());
+    const { data: jobWorks = [], isLoading } = useQuery<JobWork[]>({
+        queryKey: ["job-works", queryParams.toString()],
+        queryFn: async () => {
+            const res = await api.get("/job-works?" + queryParams.toString());
             return res.data.data ?? [];
         },
         enabled: !!permissions?.viewMovement
@@ -116,6 +113,30 @@ export default function JobWorksPage() {
     const partyOptions = useMemo(() =>
         parties.map(p => ({ label: p.name, value: p.id })),
         [parties]);
+
+    const { data: locationUsers = [] } = useQuery<any[]>({
+        queryKey: ["location-users"],
+        queryFn: async () => {
+            const res = await api.get("/users/location-users");
+            return res.data.data ?? [];
+        }
+    });
+
+    const creatorOptions = useMemo(() =>
+        locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
+        [locationUsers]);
+
+    const { data: itemsList = [] } = useQuery<any[]>({
+        queryKey: ["items-minimal"],
+        queryFn: async () => {
+            const res = await api.get("/items/minimal");
+            return res.data.data ?? [];
+        }
+    });
+
+    const itemOptions = useMemo(() =>
+        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – "), value: i.id })),
+        [itemsList]);
 
     const resetFilters = useCallback(() => {
         setFilters(initialJobWorkFilters);
@@ -203,6 +224,9 @@ export default function JobWorksPage() {
                 onFiltersChange={setFilters}
                 onClear={resetFilters}
                 partyOptions={partyOptions}
+                creatorOptions={creatorOptions}
+                itemOptions={itemOptions}
+                isAdmin={isAdmin}
                 className="shrink-0"
             />
 

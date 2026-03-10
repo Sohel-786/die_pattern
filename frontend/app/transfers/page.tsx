@@ -25,7 +25,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { TransferFilters } from "@/components/filters/transfer-filters";
-import { initialTransferFilters, TransferFiltersState } from "@/lib/transfer-filters";
+import { initialTransferFilters, TransferFiltersState, buildTransferFilterParams } from "@/lib/transfer-filters";
 import { toast } from "react-hot-toast";
 import { TransferDialog } from "@/components/transfers/transfer-dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -43,18 +43,15 @@ export default function TransfersPage() {
 
     const debouncedSearch = useDebounce(filters.search, 500);
 
-    const { data: transfers = [], isLoading } = useQuery<Transfer[]>({
-        queryKey: ["transfers", { ...filters, search: debouncedSearch }],
-        queryFn: async () => {
-            const params = new URLSearchParams();
-            if (debouncedSearch) params.set("search", debouncedSearch);
-            if (filters.fromPartyId !== null) params.set("fromPartyId", String(filters.fromPartyId));
-            if (filters.toPartyId !== null) params.set("toPartyId", String(filters.toPartyId));
-            if (filters.dateFrom) params.set("startDate", filters.dateFrom);
-            if (filters.dateTo) params.set("endDate", filters.dateTo);
-            if (filters.isActive !== null) params.set("isActive", String(filters.isActive));
+    const queryParams = useMemo(() =>
+        buildTransferFilterParams({ ...filters, search: debouncedSearch }),
+        [filters, debouncedSearch]
+    );
 
-            const res = await api.get("/transfers?" + params.toString());
+    const { data: transfers = [], isLoading } = useQuery<Transfer[]>({
+        queryKey: ["transfers", queryParams.toString()],
+        queryFn: async () => {
+            const res = await api.get("/transfers?" + queryParams.toString());
             return res.data.data ?? [];
         },
         enabled: !!permissions?.viewTransfer
@@ -82,6 +79,32 @@ export default function TransfersPage() {
     const partyOptions = useMemo(() =>
         parties.map(p => ({ label: p.name, value: p.id })),
         [parties]);
+
+    const { data: locationUsers = [] } = useQuery<any[]>({
+        queryKey: ["location-users"],
+        queryFn: async () => {
+            const res = await api.get("/users/location-users");
+            return res.data.data ?? [];
+        }
+    });
+
+    const creatorOptions = useMemo(() =>
+        locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
+        [locationUsers]);
+
+    const { data: allItems = [] } = useQuery<any[]>({
+        queryKey: ["items-minimal"],
+        queryFn: async () => {
+            const res = await api.get("/items");
+            return res.data.data ?? [];
+        }
+    });
+
+    const itemOptions = useMemo(() =>
+        allItems.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`, value: i.id })),
+        [allItems]);
+
+    const isAdmin = currentUser?.role === Role.ADMIN;
 
     const resetFilters = useCallback(() => {
         setFilters(initialTransferFilters);
@@ -129,7 +152,10 @@ export default function TransfersPage() {
                 onFiltersChange={setFilters}
                 onClear={resetFilters}
                 partyOptions={partyOptions}
-                className="shrink-0"
+                creatorOptions={creatorOptions}
+                itemOptions={itemOptions}
+                isAdmin={isAdmin}
+                className="shrink-0 mb-6"
             />
 
             {/* Main Table Container */}

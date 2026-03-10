@@ -92,7 +92,9 @@ namespace net_backend.Controllers
         public async Task<ActionResult<ApiResponse<IEnumerable<JobWorkDto>>>> GetAll(
             [FromQuery] JobWorkStatus? status, 
             [FromQuery] string? search,
-            [FromQuery] int[]? partyIds,
+            [FromQuery] List<int>? partyIds,
+            [FromQuery] List<int>? creatorIds,
+            [FromQuery] List<int>? itemIds,
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
             [FromQuery] bool? isActive)
@@ -125,14 +127,23 @@ namespace net_backend.Controllers
                 query = query.Where(j => j.IsActive == isActive.Value);
             }
 
-            if (partyIds != null && partyIds.Length > 0)
+            if (partyIds != null && partyIds.Any())
                 query = query.Where(j => partyIds.Contains(j.ToPartyId));
+
+            if (creatorIds != null && creatorIds.Any())
+                query = query.Where(j => creatorIds.Contains(j.CreatedBy));
+
+            if (itemIds != null && itemIds.Any())
+                query = query.Where(j => j.Items.Any(i => itemIds.Contains(i.ItemId)));
 
             if (startDate.HasValue)
                 query = query.Where(j => j.CreatedAt >= startDate.Value.Date);
 
             if (endDate.HasValue)
-                query = query.Where(j => j.CreatedAt <= endDate.Value.Date.AddDays(1).AddTicks(-1));
+            {
+                var ed = endDate.Value.Date.AddDays(1);
+                query = query.Where(j => j.CreatedAt < ed);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {

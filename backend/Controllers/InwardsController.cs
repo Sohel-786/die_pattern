@@ -109,6 +109,8 @@ namespace net_backend.Controllers
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<InwardDto>>>> GetAll(
             [FromQuery] List<int>? vendorIds,
+            [FromQuery] List<int>? creatorIds,
+            [FromQuery] List<int>? itemIds,
             [FromQuery] InwardSourceType? sourceType,
             [FromQuery] string? sourceNo,
             [FromQuery] bool? isActive,
@@ -131,6 +133,12 @@ namespace net_backend.Controllers
 
             if (vendorIds != null && vendorIds.Any())
                 query = query.Where(i => vendorIds.Contains(i.VendorId ?? 0));
+
+            if (creatorIds != null && creatorIds.Any())
+                query = query.Where(i => creatorIds.Contains(i.CreatedBy));
+
+            if (itemIds != null && itemIds.Any())
+                query = query.Where(i => i.Lines.Any(l => itemIds.Contains(l.ItemId)));
 
             if (sourceType.HasValue)
                 query = query.Where(i => i.Lines.Any(l => l.SourceType == sourceType.Value));

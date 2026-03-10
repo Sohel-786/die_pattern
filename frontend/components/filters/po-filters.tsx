@@ -24,7 +24,9 @@ export interface POFiltersProps {
   onFiltersChange: (f: POFiltersState) => void;
   partyOptions: MultiSelectSearchOption[];
   itemOptions: MultiSelectSearchOption[];
+  creatorOptions: MultiSelectSearchOption[];
   onClear: () => void;
+  isAdmin: boolean;
   className?: string;
 }
 
@@ -33,7 +35,9 @@ export function POFilters({
   onFiltersChange,
   partyOptions,
   itemOptions,
+  creatorOptions,
   onClear,
+  isAdmin,
   className,
 }: POFiltersProps) {
   const hasActive = hasActivePOFilters(filters);
@@ -86,7 +90,7 @@ export function POFilters({
             )}
           </div>
 
-          {/* Row 2: Approval Status, Purchase Type, Party, Item — equal width columns */}
+          {/* Row 2: Status, Party, Item, Creator — equal width columns */}
           <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Approval Status</label>
@@ -102,6 +106,43 @@ export function POFilters({
                 <option value={PoStatus.Rejected}>Rejected</option>
               </select>
             </div>
+            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+              <label className={filterLabelClass}>Party</label>
+              <MultiSelectSearch
+                options={partyOptions}
+                value={filters.vendorIds}
+                onChange={(v) => update({ vendorIds: v as number[] })}
+                placeholder="Select party"
+                searchPlaceholder="Search…"
+                aria-label="Filter by party"
+              />
+            </div>
+            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+              <label className={filterLabelClass}>Item</label>
+              <MultiSelectSearch
+                options={itemOptions}
+                value={filters.itemIds}
+                onChange={(v) => update({ itemIds: v as number[] })}
+                placeholder="Select item"
+                searchPlaceholder="Search…"
+                aria-label="Filter by item"
+              />
+            </div>
+            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+              <label className={filterLabelClass}>Created By</label>
+              <MultiSelectSearch
+                options={creatorOptions}
+                value={filters.creatorIds}
+                onChange={(v) => update({ creatorIds: v as number[] })}
+                placeholder="Select creator"
+                searchPlaceholder="Search…"
+                aria-label="Filter by creator"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Purchase Type, Entry Status, Purchase Order Date Wise — equal width columns */}
+          <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Purchase Type</label>
               <select
@@ -116,34 +157,27 @@ export function POFilters({
                 <option value="Critical">Critical</option>
               </select>
             </div>
-            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-              <label className={filterLabelClass}>Party</label>
-              <MultiSelectSearch
-                options={partyOptions}
-                value={filters.vendorIds as (number | string)[]}
-                onChange={(v) => update({ vendorIds: v as number[] })}
-                placeholder="Select party"
-                searchPlaceholder="Search…"
-                aria-label="Filter by party"
-              />
-            </div>
-            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-              <label className={filterLabelClass}>Item</label>
-              <MultiSelectSearch
-                options={itemOptions}
-                value={filters.itemIds as (number | string)[]}
-                onChange={(v) => update({ itemIds: v as number[] })}
-                placeholder="Select item"
-                searchPlaceholder="Search…"
-                aria-label="Filter by item"
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Purchase Order Date Wise, Delivery Date Wise, Rate Wise — equal width columns */}
-          <div className="grid grid-cols-3 gap-4 px-4 pb-3 pt-0 w-full">
             <div className="min-w-0">
-              <label className={filterLabelClass}>Purchase Order Date Wise</label>
+              <label className={filterLabelClass}>Entry Status</label>
+              {isAdmin ? (
+                <select
+                  value={filters.isActive === null ? "" : String(filters.isActive)}
+                  onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                  className={selectClass}
+                  aria-label="Entry status"
+                >
+                  <option value="">All</option>
+                  <option value="true">Active Only</option>
+                  <option value="false">Inactive Only</option>
+                </select>
+              ) : (
+                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                  Active Only
+                </div>
+              )}
+            </div>
+            <div className="col-span-2 min-w-0">
+              <label className={filterLabelClass}>PO Date Range</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                   <DatePicker
@@ -163,58 +197,6 @@ export function POFilters({
                     clearable={true}
                   />
                 </div>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <label className={filterLabelClass}>Delivery Date Wise</label>
-              <div className="flex gap-2">
-                <div className="flex-1 min-w-0">
-                  <DatePicker
-                    value={filters.deliveryDateFrom}
-                    onChange={(date) => update({ deliveryDateFrom: date ? format(date, "yyyy-MM-dd") : "" })}
-                    className="h-9 w-full border-secondary-200"
-                    placeholder="From"
-                    clearable={true}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <DatePicker
-                    value={filters.deliveryDateTo}
-                    onChange={(date) => update({ deliveryDateTo: date ? format(date, "yyyy-MM-dd") : "" })}
-                    className="h-9 w-full border-secondary-200"
-                    placeholder="To"
-                    clearable={true}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <label className={filterLabelClass}>Rate Wise</label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  step={100}
-                  value={filters.rateMin ?? ""}
-                  onChange={(e) =>
-                    update({ rateMin: e.target.value === "" ? null : parseFloat(e.target.value) || null })
-                  }
-                  placeholder="Min"
-                  className={cn(inputClass, "h-9 flex-1 min-w-0")}
-                  aria-label="Minimum rate"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  step={100}
-                  value={filters.rateMax ?? ""}
-                  onChange={(e) =>
-                    update({ rateMax: e.target.value === "" ? null : parseFloat(e.target.value) || null })
-                  }
-                  placeholder="Max"
-                  className={cn(inputClass, "h-9 flex-1 min-w-0")}
-                  aria-label="Maximum rate"
-                />
               </div>
             </div>
           </div>

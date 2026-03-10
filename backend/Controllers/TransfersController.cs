@@ -40,8 +40,10 @@ namespace net_backend.Controllers
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<TransferDto>>>> GetTransfers(
-            [FromQuery] int? fromPartyId,
-            [FromQuery] int? toPartyId,
+            [FromQuery] List<int>? fromPartyIds,
+            [FromQuery] List<int>? toPartyIds,
+            [FromQuery] List<int>? itemIds,
+            [FromQuery] List<int>? creatorIds,
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
             [FromQuery] bool? isActive,
@@ -63,16 +65,30 @@ namespace net_backend.Controllers
                         .ThenInclude(m => m!.Material)
                 .Where(t => t.LocationId == locationId);
 
-            if (fromPartyId.HasValue) 
+            if (fromPartyIds != null && fromPartyIds.Any())
             {
-                var val = fromPartyId.Value == 0 ? (int?)null : fromPartyId.Value;
-                query = query.Where(t => t.FromPartyId == val);
+                // Handle 0 (Our Location) separately if needed, but in Transfer table it's usually NULL
+                // If FromPartyId is NULL, it's our location. We can use 0 to represent it in filters.
+                var includeNull = fromPartyIds.Contains(0);
+                var partyIds = fromPartyIds.Where(id => id > 0).ToList();
+                
+                query = query.Where(t => (includeNull && t.FromPartyId == null) || (t.FromPartyId != null && partyIds.Contains(t.FromPartyId.Value)));
             }
-            if (toPartyId.HasValue) 
+            if (toPartyIds != null && toPartyIds.Any())
             {
-                var val = toPartyId.Value == 0 ? (int?)null : toPartyId.Value;
-                query = query.Where(t => t.ToPartyId == val);
+                var includeNull = toPartyIds.Contains(0);
+                var partyIds = toPartyIds.Where(id => id > 0).ToList();
+                query = query.Where(t => (includeNull && t.ToPartyId == null) || (t.ToPartyId != null && partyIds.Contains(t.ToPartyId.Value)));
             }
+            if (itemIds != null && itemIds.Any())
+            {
+                query = query.Where(t => t.Items.Any(i => itemIds.Contains(i.ItemId)));
+            }
+            if (creatorIds != null && creatorIds.Any())
+            {
+                query = query.Where(t => creatorIds.Contains(t.CreatedBy));
+            }
+
             if (startDate.HasValue)
             {
                 var sd = startDate.Value.Date;

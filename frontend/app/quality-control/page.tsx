@@ -45,16 +45,10 @@ export default function QualityControlPage() {
 
     const debouncedSearch = useDebounce(filters.search, 500);
 
-    const queryParams = useMemo(() => {
-        const p = buildQCFilterParams({ ...filters, search: debouncedSearch });
-        const params = new URLSearchParams();
-        Object.entries(p).forEach(([k, v]) => {
-            if (v === undefined || v === "") return;
-            if (Array.isArray(v)) v.forEach((x) => params.append(k, String(x)));
-            else params.set(k, String(v));
-        });
-        return params;
-    }, [filters, debouncedSearch]);
+    const queryParams = useMemo(() =>
+        buildQCFilterParams({ ...filters, search: debouncedSearch }),
+        [filters, debouncedSearch]
+    );
 
     const { data: qcs = [], isLoading } = useQuery<QC[]>({
         queryKey: ["quality-control", queryParams.toString()],
@@ -73,10 +67,34 @@ export default function QualityControlPage() {
         },
     });
 
+    const { data: locationUsers = [] } = useQuery<any[]>({
+        queryKey: ["location-users"],
+        queryFn: async () => {
+            const res = await api.get("/users/location-users");
+            return res.data.data ?? [];
+        }
+    });
+
+    const creatorOptions = useMemo(() =>
+        locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
+        [locationUsers]);
+
     const partyOptions = useMemo(
         () => parties.map((p) => ({ label: p.name, value: p.id })),
         [parties]
     );
+
+    const { data: itemsList = [] } = useQuery<any[]>({
+        queryKey: ["items-minimal"],
+        queryFn: async () => {
+            const res = await api.get("/items");
+            return res.data.data ?? [];
+        },
+    });
+
+    const itemOptions = useMemo(() =>
+        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`, value: i.id })),
+        [itemsList]);
 
     const setInactiveMutation = useMutation({
         mutationFn: (id: number) => api.patch(`/quality-control/${id}/inactive`),
@@ -158,6 +176,9 @@ export default function QualityControlPage() {
                 onFiltersChange={setFilters}
                 onClear={resetFilters}
                 partyOptions={partyOptions}
+                itemOptions={itemOptions}
+                creatorOptions={creatorOptions}
+                isAdmin={isAdmin}
                 className="shrink-0"
             />
 

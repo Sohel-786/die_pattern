@@ -24,7 +24,10 @@ export interface QCFiltersProps {
     filters: QCFiltersState;
     onFiltersChange: (f: QCFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
+    itemOptions: MultiSelectSearchOption[];
+    creatorOptions: MultiSelectSearchOption[];
     onClear: () => void;
+    isAdmin: boolean;
     className?: string;
 }
 
@@ -32,7 +35,10 @@ export function QCFilters({
     filters,
     onFiltersChange,
     partyOptions,
+    itemOptions,
+    creatorOptions,
     onClear,
+    isAdmin,
     className,
 }: QCFiltersProps) {
     const hasActive = hasActiveQCFilters(filters);
@@ -49,6 +55,7 @@ export function QCFilters({
         >
             <CardContent className="p-0 w-full">
                 <div className="flex flex-col gap-0 overflow-visible w-full">
+                    {/* Row 1: Search and Clear */}
                     <div className="flex items-end gap-4 px-4 pt-3 pb-2 w-full">
                         <div className="relative flex-1 min-w-0">
                             <label className={filterLabelClass}>Search</label>
@@ -79,12 +86,13 @@ export function QCFilters({
                         )}
                     </div>
 
+                    {/* Row 2: Party, Source, Status, Item */}
                     <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
                         <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>Party</label>
                             <MultiSelectSearch
                                 options={partyOptions}
-                                value={filters.partyIds as (number | string)[]}
+                                value={filters.partyIds}
                                 onChange={(v) => update({ partyIds: v as number[] })}
                                 placeholder="Select party"
                                 searchPlaceholder="Search…"
@@ -115,22 +123,49 @@ export function QCFilters({
                                 <option value={QcStatus.Rejected}>Rejected</option>
                             </select>
                         </div>
-                        <div className="min-w-0">
-                            <label className={filterLabelClass}>Active</label>
-                            <select
-                                value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                className={selectClass}
-                            >
-                                <option value="">All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Item Selection</label>
+                            <MultiSelectSearch
+                                options={itemOptions}
+                                value={filters.itemIds}
+                                onChange={(v) => update({ itemIds: v as number[] })}
+                                placeholder="Select items"
+                                searchPlaceholder="Search…"
+                            />
                         </div>
                     </div>
 
-                    <div className="flex gap-4 px-4 pb-3 pt-0 w-full">
-                        <div className="flex-1 min-w-0 max-w-md">
+                    {/* Row 3: Creator, Active Status, Date Range */}
+                    <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
+                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                            <label className={filterLabelClass}>Created By</label>
+                            <MultiSelectSearch
+                                options={creatorOptions}
+                                value={filters.creatorIds}
+                                onChange={(v) => update({ creatorIds: v as number[] })}
+                                placeholder="Select user"
+                                searchPlaceholder="Search user…"
+                            />
+                        </div>
+                        <div className="min-w-0">
+                            <label className={filterLabelClass}>Entry Status</label>
+                            {isAdmin ? (
+                                <select
+                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
+                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
+                                    className={selectClass}
+                                >
+                                    <option value="">All</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
+                            ) : (
+                                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                                    Active Only
+                                </div>
+                            )}
+                        </div>
+                        <div className="col-span-2 min-w-0">
                             <label className={filterLabelClass}>QC Date Range</label>
                             <div className="flex gap-2">
                                 <div className="flex-1 min-w-0">

@@ -89,9 +89,9 @@ export default function PurchaseOrdersPage() {
   );
 
   const { data: orders = [], isLoading } = useQuery<PO[]>({
-    queryKey,
+    queryKey: ["purchase-orders", filterParams.toString()],
     queryFn: async () => {
-      const res = await api.get("/purchase-orders", { params: filterParams });
+      const res = await api.get("/purchase-orders?" + filterParams.toString());
       return res.data.data;
     },
   });
@@ -128,6 +128,25 @@ export default function PurchaseOrdersPage() {
       })),
     [itemsList]
   );
+
+  const { data: locationUsers = [] } = useQuery<any[]>({
+    queryKey: ["location-users"],
+    queryFn: async () => {
+      const res = await api.get("/users/location-users");
+      return res.data.data ?? [];
+    },
+  });
+
+  const creatorOptions = useMemo(
+    () =>
+      locationUsers.map((u) => ({
+        label: `${u.firstName} ${u.lastName}`,
+        value: u.id,
+      })),
+    [locationUsers]
+  );
+
+  const isAdmin = user?.role === Role.ADMIN;
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => api.post(`/purchase-orders/${id}/approve`),
@@ -277,7 +296,9 @@ export default function PurchaseOrdersPage() {
         onFiltersChange={setFilters}
         partyOptions={partyOptions}
         itemOptions={itemOptions}
+        creatorOptions={creatorOptions}
         onClear={resetFilters}
+        isAdmin={isAdmin}
         className="shadow-sm"
       />
 

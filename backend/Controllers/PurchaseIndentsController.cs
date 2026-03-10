@@ -50,7 +50,9 @@ namespace net_backend.Controllers
             [FromQuery] string? status,
             [FromQuery] DateTime? createdDateFrom,
             [FromQuery] DateTime? createdDateTo,
-            [FromQuery] string? itemIds)
+            [FromQuery] List<int>? itemIds,
+            [FromQuery] List<int>? creatorIds,
+            [FromQuery] bool? isActive)
         {
             var locationId = await GetCurrentLocationIdAsync();
             var isAdmin = await IsAdmin();
@@ -66,7 +68,19 @@ namespace net_backend.Controllers
                         .ThenInclude(it => it!.Material);
 
             if (!isAdmin)
+            {
                 query = query.Where(p => p.IsActive);
+            }
+            else if (isActive.HasValue)
+            {
+                query = query.Where(p => p.IsActive == isActive.Value);
+            }
+
+            if (creatorIds != null && creatorIds.Any())
+                query = query.Where(p => creatorIds.Contains(p.CreatedBy));
+
+            if (itemIds != null && itemIds.Any())
+                query = query.Where(p => p.Items.Any(i => itemIds.Contains(i.ItemId)));
 
             var searchTrim = (search ?? "").Trim();
             if (!string.IsNullOrEmpty(searchTrim))
@@ -86,10 +100,7 @@ namespace net_backend.Controllers
             if (createdDateTo.HasValue)
                 query = query.Where(p => p.CreatedAt.Date <= createdDateTo.Value.Date);
 
-            var itemIdList = (itemIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
-            if (itemIdList.Count > 0)
-                query = query.Where(p => p.Items.Any(i => itemIdList.Contains(i.ItemId)));
+
 
             var data = await query
                 .OrderByDescending(p => p.CreatedAt)
