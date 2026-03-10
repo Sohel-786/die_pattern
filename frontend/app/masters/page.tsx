@@ -40,7 +40,8 @@ export default function OtherMastersPage() {
                 : activeTab === "item-statuses" ? (permissions?.manageItemStatus ?? false)
                     : (permissions?.manageOwnerType ?? false);
 
-    const canAdd = canManageTab && ((permissions?.addMaster ?? false) || isAdmin);
+    const canAdd = canManageTab && (permissions?.addMaster ?? false);
+    const canEdit = canManageTab && (permissions?.editMaster ?? false);
 
     if (permissions && !permissions.viewMaster) {
         return (
@@ -313,6 +314,7 @@ export default function OtherMastersPage() {
                 title={getTitle()}
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
+                readOnly={!!selectedItem && !canEdit}
             />
 
             <Dialog

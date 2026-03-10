@@ -44,9 +44,11 @@ interface ItemDialogProps {
     item?: Item | null;
     isLoading?: boolean;
     existingItems?: Item[];
+    readOnly?: boolean;
 }
 
-export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [] }: ItemDialogProps) {
+export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [], readOnly }: ItemDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -136,7 +138,14 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
             title={item ? "Update Die / Pattern Master" : "Add New Die / Pattern Master"}
             size="2xl"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="space-y-8"
+            >
+                <fieldset disabled={isReadOnly} className="space-y-8">
                 {/* Identity Section */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-secondary-100">
@@ -363,34 +372,37 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                         </label>
                     </div>
                 )}
+                </fieldset>
 
                 <div className="flex gap-4 pt-4 border-t border-secondary-100">
-                    <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Registering...
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save
-                            </div>
-                        )}
-                    </Button>
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Registering...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </div>
+                            )}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

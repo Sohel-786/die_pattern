@@ -114,9 +114,11 @@ interface CompanyDialogProps {
     onSubmit: (data: FormValues) => void;
     item?: Company | null;
     isLoading?: boolean;
+    readOnly?: boolean;
 }
 
-export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: CompanyDialogProps) {
+export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, readOnly }: CompanyDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -190,6 +192,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
     }, [item, reset, isOpen]);
 
     const uploadLogo = async (file: File) => {
+        if (isReadOnly) return;
         if (!file.type.startsWith("image/")) {
             toast.error("Please select an image file (jpg, png, gif, webp).");
             return;
@@ -220,6 +223,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
     };
 
     const handleLogoDrop = (e: React.DragEvent) => {
+        if (isReadOnly) return;
         e.preventDefault();
         setDragActive(false);
         const file = e.dataTransfer.files?.[0];
@@ -227,6 +231,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
     };
 
     const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isReadOnly) return;
         const file = e.target.files?.[0];
         if (file) uploadLogo(file);
         e.target.value = "";
@@ -236,7 +241,14 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
 
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title={dialogTitle} size="2xl" contentScroll={false}>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="flex flex-col h-full min-h-0"
+            >
+                <fieldset disabled={isReadOnly} className="flex-1 min-h-0">
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 min-w-0 flex-shrink-0">
                         <div className="sm:col-span-8 space-y-1.5 min-w-0">
@@ -258,12 +270,22 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                             <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Logo</Label>
                             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleLogoSelect} />
                             <div
-                                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                                onDragLeave={() => setDragActive(false)}
+                                onDragOver={(e) => {
+                                    if (isReadOnly) return;
+                                    e.preventDefault();
+                                    setDragActive(true);
+                                }}
+                                onDragLeave={() => {
+                                    if (isReadOnly) return;
+                                    setDragActive(false);
+                                }}
                                 onDrop={handleLogoDrop}
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={() => {
+                                    if (isReadOnly) return;
+                                    fileInputRef.current?.click();
+                                }}
                                 className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
-                                    } ${logoUploading ? "pointer-events-none opacity-70" : ""}`}
+                                    } ${logoUploading || isReadOnly ? "pointer-events-none opacity-70" : ""}`}
                             >
                                 {logoUrl ? (
                                     <>
@@ -490,34 +512,37 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading }: Co
                         )}
                     </div>
                 </div>
+                </fieldset>
 
                 <div className="shrink-0 px-6 py-4 border-t border-secondary-100 flex gap-4 bg-white rounded-b-xl">
-                    <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Processing...
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save
-                            </div>
-                        )}
-                    </Button>
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </div>
+                            )}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

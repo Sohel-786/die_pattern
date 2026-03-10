@@ -107,9 +107,11 @@ interface PartyDialogProps {
     party?: Party | null;
     isLoading?: boolean;
     existingParties?: Party[];
+    readOnly?: boolean;
 }
 
-export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, existingParties = [] }: PartyDialogProps) {
+export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, existingParties = [], readOnly }: PartyDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -169,7 +171,13 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
             title={party ? "Update Party Information" : "Register New Party"}
             size="xl"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="space-y-5"
+            >
                 <div className="space-y-4">
                     {/* Row 1: Party Category + Customer Type */}
                     <div className="grid grid-cols-2 gap-4">
@@ -185,6 +193,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         {...field}
                                         id="partyCategory"
                                         className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
+                                        disabled={isReadOnly}
                                     >
                                         <option value="" disabled hidden>Select Category</option>
                                         <option value="SUPPLIER / VENDOR">SUPPLIER / VENDOR</option>
@@ -207,6 +216,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         {...field}
                                         id="customerType"
                                         className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
+                                        disabled={isReadOnly}
                                     >
                                         <option value="" disabled hidden>Select Type</option>
                                         <option value="MANUFACTURER">MANUFACTURER</option>
@@ -227,10 +237,14 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                         <Autocomplete
                             id="name"
                             value={watchedName || ""}
-                            onChange={(val) => setValue("name", val, { shouldValidate: true })}
+                            onChange={(val) => {
+                                if (isReadOnly) return;
+                                setValue("name", val, { shouldValidate: true });
+                            }}
                             options={partyNames}
                             placeholder="e.g. J&J STEEL CAST"
                             className="h-10"
+                            disabled={isReadOnly}
                         />
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
@@ -246,6 +260,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                 {...register("contactPerson")}
                                 className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
                                 placeholder="e.g. Rahul Rajput"
+                                disabled={isReadOnly}
                             />
                             {errors.contactPerson && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.contactPerson.message}</p>}
                         </div>
@@ -258,9 +273,14 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                 {...register("phoneNumber")}
                                 maxLength={10}
                                 autoComplete="off"
+                                disabled={isReadOnly}
                                 className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium ${errors.phoneNumber ? "border-rose-400" : ""}`}
                                 placeholder="e.g. 9979260161"
                                 onKeyDown={(e) => {
+                                    if (isReadOnly) {
+                                        e.preventDefault();
+                                        return;
+                                    }
                                     const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
                                     if (allow.includes(e.key)) return;
                                     if (!/^[0-9]$/.test(e.key)) { e.preventDefault(); return; }
@@ -268,6 +288,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                     if (current.length >= 10) { e.preventDefault(); }
                                 }}
                                 onChange={(e) => {
+                                    if (isReadOnly) return;
                                     const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
                                     setValue("phoneNumber", raw, { shouldValidate: true });
                                 }}
@@ -281,6 +302,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                 {...register("email")}
                                 className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
                                 placeholder="contact@domain.com"
+                                disabled={isReadOnly}
                             />
                             {errors.email && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.email.message}</p>}
                         </div>
@@ -299,6 +321,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                     maxLength={15}
                                     autoComplete="off"
                                     spellCheck={false}
+                                    disabled={isReadOnly}
                                     className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono font-bold uppercase tracking-widest pr-10 ${watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
                                         ? "border-green-400 focus:ring-green-400 text-green-700"
                                         : errors.gstNo
@@ -307,6 +330,10 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         }`}
                                     placeholder="24AABCU9603R1ZA"
                                     onKeyDown={(e) => {
+                                        if (isReadOnly) {
+                                            e.preventDefault();
+                                            return;
+                                        }
                                         // Allow: backspace, delete, tab, escape, arrows, home, end
                                         const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
                                         if (allow.includes(e.key)) return;
@@ -322,6 +349,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         }
                                     }}
                                     onChange={(e) => {
+                                        if (isReadOnly) return;
                                         // Auto-uppercase and strip non-alphanumeric, enforce max 15
                                         const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
                                         setValue("gstNo", raw, { shouldValidate: true });
@@ -358,12 +386,14 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         <DatePicker
                                             value={field.value || ""}
                                             onChange={(date) => {
+                                                if (isReadOnly) return;
                                                 field.onChange(date ? date.toISOString().split('T')[0] : "");
                                             }}
                                             className={`h-10 shadow-sm text-sm font-medium ${errors.gstDate
                                                 ? "border-rose-400 focus:ring-rose-400"
                                                 : "border-secondary-300 focus:ring-primary-500"
                                                 }`}
+                                            disabled={isReadOnly}
                                         />
                                         {errors.gstDate && (
                                             <p className="text-xs text-rose-500 mt-1 font-medium flex items-center gap-1">
@@ -387,6 +417,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             {...register("address")}
                             className="border-secondary-300 shadow-sm focus:ring-primary-500 text-sm min-h-[60px] font-medium"
                             placeholder="Address details..."
+                            disabled={isReadOnly}
                         />
                         {errors.address && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.address.message}</p>}
                     </div>
@@ -400,7 +431,11 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         type="checkbox"
                                         className="sr-only"
                                         checked={isActive}
-                                        onChange={(e) => setValue("isActive", e.target.checked)}
+                                        onChange={(e) => {
+                                            if (isReadOnly) return;
+                                            setValue("isActive", e.target.checked);
+                                        }}
+                                        disabled={isReadOnly}
                                     />
                                     <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
                                     <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
@@ -413,31 +448,33 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
 
                 <div className="flex gap-4 pt-4 border-t border-secondary-100">
                     <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Processing...
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save
-                            </div>
-                        )}
-                    </Button>
-                    <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </div>
+                            )}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

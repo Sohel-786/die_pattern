@@ -23,7 +23,8 @@ export default function PartiesPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageParty ?? false;
-    const canAdd = canManage && ((permissions?.addMaster ?? false) || isAdmin);
+    const canAdd = canManage && (permissions?.addMaster ?? false);
+    const canEdit = canManage && (permissions?.editMaster ?? false);
 
     if (permissions && !permissions.viewMaster) {
         return (
@@ -291,6 +292,7 @@ export default function PartiesPage() {
                 existingParties={parties}
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
+                readOnly={!!selectedItem && !canEdit}
             />
 
             <Dialog

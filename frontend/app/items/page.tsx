@@ -72,7 +72,8 @@ export default function ItemsPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const canManage = permissions?.manageItem;
-    const canAdd = !!canManage && ((permissions?.addMaster ?? false) || isAdmin);
+    const canAdd = !!canManage && (permissions?.addMaster ?? false);
+    const canEdit = !!canManage && (permissions?.editMaster ?? false);
 
     const [search, setSearch] = useState("");
     const [isEntryOpen, setIsEntryOpen] = useState(false);
@@ -690,6 +691,7 @@ export default function ItemsPage() {
                 onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
                 isLoading={createMutation.isPending || updateMutation.isPending}
                 existingItems={items}
+                readOnly={!!selectedItem && !canEdit}
             />
 
             <ItemChangeDialog

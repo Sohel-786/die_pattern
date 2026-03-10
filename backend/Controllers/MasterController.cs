@@ -75,7 +75,7 @@ namespace net_backend.Controllers
                 "owner-types" => "ManageOwnerType",
                 _ => "ViewMaster"
             };
-            if (!await HasPermission(permission)) return Forbidden();
+            if (!await HasAllPermissions("ImportMaster", permission)) return Forbidden();
             if (file == null || file.Length == 0) return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
 
             try
@@ -157,7 +157,7 @@ namespace net_backend.Controllers
         [HttpPost("item-types")]
         public async Task<IActionResult> CreateItemType([FromBody] ItemType item)
         {
-            if (!await HasPermission("ManageItemType")) return Forbidden();
+            if (!await CanCreateMaster("ManageItemType")) return Forbidden();
             if (await _context.ItemTypes.AnyAsync(x => x.Name.ToLower() == item.Name.Trim().ToLower()))
                 return BadRequest(new { Success = false, Message = "Item type name already exists" });
             _context.ItemTypes.Add(item);
@@ -168,7 +168,7 @@ namespace net_backend.Controllers
         [HttpPut("item-types/{id}")]
         public async Task<IActionResult> UpdateItemType(int id, [FromBody] UpdateMasterRequest request)
         {
-            if (!await HasPermission("ManageItemType")) return Forbidden();
+            if (!await CanEditMaster("ManageItemType")) return Forbidden();
             var existing = await _context.ItemTypes.FindAsync(id);
             if (existing == null) return NotFound();
             
@@ -186,7 +186,7 @@ namespace net_backend.Controllers
         [HttpDelete("item-types/{id}")]
         public async Task<IActionResult> DeleteItemType(int id)
         {
-            if (!await HasPermission("ManageItemType")) return Forbidden();
+            if (!await CanEditMaster("ManageItemType")) return Forbidden();
             var item = await _context.ItemTypes.FindAsync(id);
             if (item == null) return NotFound();
             _context.ItemTypes.Remove(item);
@@ -204,7 +204,7 @@ namespace net_backend.Controllers
         [HttpPost("item-statuses")]
         public async Task<IActionResult> CreateItemStatus([FromBody] ItemStatus item)
         {
-            if (!await HasPermission("ManageItemStatus")) return Forbidden();
+            if (!await CanCreateMaster("ManageItemStatus")) return Forbidden();
             if (await _context.ItemStatuses.AnyAsync(x => x.Name.ToLower() == item.Name.Trim().ToLower()))
                 return BadRequest(new { Success = false, Message = "Item status name already exists" });
             _context.ItemStatuses.Add(item);
@@ -215,7 +215,7 @@ namespace net_backend.Controllers
         [HttpPut("item-statuses/{id}")]
         public async Task<IActionResult> UpdateItemStatus(int id, [FromBody] UpdateMasterRequest request)
         {
-            if (!await HasPermission("ManageItemStatus")) return Forbidden();
+            if (!await CanEditMaster("ManageItemStatus")) return Forbidden();
             var existing = await _context.ItemStatuses.FindAsync(id);
             if (existing == null) return NotFound();
             
@@ -233,7 +233,7 @@ namespace net_backend.Controllers
         [HttpDelete("item-statuses/{id}")]
         public async Task<IActionResult> DeleteItemStatus(int id)
         {
-            if (!await HasPermission("ManageItemStatus")) return Forbidden();
+            if (!await CanEditMaster("ManageItemStatus")) return Forbidden();
             var item = await _context.ItemStatuses.FindAsync(id);
             if (item == null) return NotFound();
             _context.ItemStatuses.Remove(item);
@@ -251,7 +251,7 @@ namespace net_backend.Controllers
         [HttpPost("materials")]
         public async Task<IActionResult> CreateMaterial([FromBody] Material item)
         {
-            if (!await HasPermission("ManageMaterial")) return Forbidden();
+            if (!await CanCreateMaster("ManageMaterial")) return Forbidden();
             if (await _context.Materials.AnyAsync(x => x.Name.ToLower() == item.Name.Trim().ToLower()))
                 return BadRequest(new { Success = false, Message = "Material name already exists" });
             _context.Materials.Add(item);
@@ -262,7 +262,7 @@ namespace net_backend.Controllers
         [HttpPut("materials/{id}")]
         public async Task<IActionResult> UpdateMaterial(int id, [FromBody] UpdateMasterRequest request)
         {
-            if (!await HasPermission("ManageMaterial")) return Forbidden();
+            if (!await CanEditMaster("ManageMaterial")) return Forbidden();
             var existing = await _context.Materials.FindAsync(id);
             if (existing == null) return NotFound();
             
@@ -280,7 +280,7 @@ namespace net_backend.Controllers
         [HttpDelete("materials/{id}")]
         public async Task<IActionResult> DeleteMaterial(int id)
         {
-            if (!await HasPermission("ManageMaterial")) return Forbidden();
+            if (!await CanEditMaster("ManageMaterial")) return Forbidden();
             var item = await _context.Materials.FindAsync(id);
             if (item == null) return NotFound();
             _context.Materials.Remove(item);
@@ -298,7 +298,7 @@ namespace net_backend.Controllers
         [HttpPost("owner-types")]
         public async Task<IActionResult> CreateOwnerType([FromBody] OwnerType item)
         {
-            if (!await HasPermission("ManageOwnerType")) return Forbidden();
+            if (!await CanCreateMaster("ManageOwnerType")) return Forbidden();
             if (await _context.OwnerTypes.AnyAsync(x => x.Name.ToLower() == item.Name.Trim().ToLower()))
                 return BadRequest(new { Success = false, Message = "Owner type name already exists" });
             _context.OwnerTypes.Add(item);
@@ -309,7 +309,7 @@ namespace net_backend.Controllers
         [HttpPut("owner-types/{id}")]
         public async Task<IActionResult> UpdateOwnerType(int id, [FromBody] UpdateMasterRequest request)
         {
-            if (!await HasPermission("ManageOwnerType")) return Forbidden();
+            if (!await CanEditMaster("ManageOwnerType")) return Forbidden();
             var existing = await _context.OwnerTypes.FindAsync(id);
             if (existing == null) return NotFound();
             
@@ -327,7 +327,7 @@ namespace net_backend.Controllers
         [HttpDelete("owner-types/{id}")]
         public async Task<IActionResult> DeleteOwnerType(int id)
         {
-            if (!await HasPermission("ManageOwnerType")) return Forbidden();
+            if (!await CanEditMaster("ManageOwnerType")) return Forbidden();
             var item = await _context.OwnerTypes.FindAsync(id);
             if (item == null) return NotFound();
             _context.OwnerTypes.Remove(item);

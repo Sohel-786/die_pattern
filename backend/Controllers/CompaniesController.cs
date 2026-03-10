@@ -66,7 +66,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await HasAllPermissions("ImportMaster", "ManageCompany")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -351,7 +351,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<CompanyDto>>> Create([FromBody] CreateCompanyRequest request)
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await CanCreateMaster("ManageCompany")) return Forbidden();
 
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest(new ApiResponse<CompanyDto> { Success = false, Message = "Company name is required" });
@@ -442,7 +442,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<CompanyDto>>> Update(int id, [FromBody] UpdateCompanyRequest request)
         {
-            if (!await HasPermission("ManageCompany")) return Forbidden();
+            if (!await CanEditMaster("ManageCompany")) return Forbidden();
 
             var existing = await _context.Companies.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<CompanyDto> { Success = false, Message = "Company not found" });

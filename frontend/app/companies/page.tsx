@@ -20,6 +20,7 @@ export default function CompaniesPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const canManage = permissions?.manageCompany ?? false;
   const canAdd = canManage && (permissions?.addMaster ?? false);
+  const canEdit = canManage && (permissions?.editMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -302,6 +303,7 @@ export default function CompaniesPage() {
         item={selectedItem}
         onSubmit={(data) => selectedItem ? updateMutation.mutate(data) : createMutation.mutate(data)}
         isLoading={createMutation.isPending || updateMutation.isPending}
+        readOnly={!!selectedItem && !canEdit}
       />
 
       <Dialog

@@ -30,9 +30,11 @@ interface LocationDialogProps {
     onSubmit: (data: FormValues) => void;
     item?: Location | null;
     isLoading?: boolean;
+    readOnly?: boolean;
 }
 
-export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: LocationDialogProps) {
+export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, readOnly }: LocationDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -73,7 +75,13 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
             title={item ? "Update Location Details" : "Register New Location"}
             size="md"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="space-y-5"
+            >
                 {/* Parent Company */}
                 <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-secondary-600">
@@ -84,11 +92,12 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                             options={companies.map(c => ({ value: c.id, label: c.name }))}
                             value={companyId || ""}
                             onChange={(val) => {
+                                if (isReadOnly) return;
                                 if (!item) setValue("companyId", Number(val), { shouldValidate: true });
                             }}
                             placeholder="Select Parent Company..."
                             id="parent-company"
-                            disabled={!!item}
+                            disabled={isReadOnly || !!item}
                         />
                         {!!item && (
                             <p className="text-[11px] text-secondary-400 mt-1 italic flex items-center gap-1">
@@ -111,6 +120,7 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                             {...register("name")}
                             className="h-9 pl-9 border-secondary-200 text-sm"
                             placeholder="e.g. Warehouse 01 or Shop Floor"
+                            disabled={isReadOnly}
                         />
                     </div>
                     {errors.name && <p className="text-xs text-rose-500">{errors.name.message}</p>}
@@ -126,6 +136,7 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                         {...register("address")}
                         className="min-h-[80px] text-sm border-secondary-200 rounded-lg resize-none"
                         placeholder="Full address of this location..."
+                        disabled={isReadOnly}
                     />
                     {errors.address && <p className="text-xs text-rose-500">{errors.address.message}</p>}
                 </div>
@@ -135,7 +146,11 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                     <div className="flex items-center gap-3 py-1">
                         <button
                             type="button"
-                            onClick={() => setValue("isActive", !isActive)}
+                            onClick={() => {
+                                if (isReadOnly) return;
+                                setValue("isActive", !isActive);
+                            }}
+                            disabled={isReadOnly}
                             className={`relative w-10 h-5 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}
                         >
                             <span className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full shadow-sm transition-transform ${isActive ? "translate-x-5" : "translate-x-0"}`} />
@@ -149,9 +164,9 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                 {/* Actions */}
                 <div className="flex gap-3 pt-2 border-t border-secondary-100">
                     <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold h-9"
+                        type={isReadOnly ? "button" : "submit"}
+                        disabled={isReadOnly ? false : isLoading}
+                        className={`${isReadOnly ? "w-full" : "flex-1"} bg-primary-600 hover:bg-primary-700 text-white font-semibold h-9 ${isReadOnly ? "hidden" : ""}`}
                     >
                         {isLoading ? (
                             <span className="flex items-center gap-2">
@@ -169,7 +184,7 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading }: L
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-200 text-secondary-700 font-semibold h-9"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-200 text-secondary-700 font-semibold h-9`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel

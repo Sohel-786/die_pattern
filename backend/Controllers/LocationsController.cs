@@ -56,7 +56,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageLocation")) return Forbidden();
+            if (!await HasAllPermissions("ImportMaster", "ManageLocation")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -208,7 +208,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Location>>> Create([FromBody] CreateLocationRequest request)
         {
-            if (!await HasPermission("ManageLocation")) return Forbidden();
+            if (!await CanCreateMaster("ManageLocation")) return Forbidden();
 
             if (await _context.Locations.AnyAsync(l => l.Name.ToLower() == request.Name.Trim().ToLower() && l.CompanyId == request.CompanyId))
                 return BadRequest(new ApiResponse<Location> { Success = false, Message = "Location already exists for this company" });
@@ -231,7 +231,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Location>>> Update(int id, [FromBody] UpdateLocationRequest request)
         {
-            if (!await HasPermission("ManageLocation")) return Forbidden();
+            if (!await CanEditMaster("ManageLocation")) return Forbidden();
 
             var existing = await _context.Locations.FindAsync(id);
             if (existing == null) return NotFound(new ApiResponse<Location> { Success = false, Message = "Location not found" });

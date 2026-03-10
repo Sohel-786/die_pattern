@@ -26,9 +26,11 @@ interface GeneralMasterDialogProps {
     item?: any | null;
     title: string;
     isLoading?: boolean;
+    readOnly?: boolean;
 }
 
-export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, isLoading }: GeneralMasterDialogProps) {
+export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, isLoading, readOnly }: GeneralMasterDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -66,7 +68,13 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
             title={item ? `Update ${title}` : `Register New ${title}`}
             size="md"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="space-y-8"
+            >
                 <div className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="master-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
@@ -77,6 +85,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                             {...register("name")}
                             className="h-11 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
                             placeholder={`Enter ${title.toLowerCase()} name...`}
+                            disabled={isReadOnly}
                         />
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
@@ -89,7 +98,11 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                                         type="checkbox"
                                         className="sr-only"
                                         checked={isActive}
-                                        onChange={(e) => setValue("isActive", e.target.checked)}
+                                        onChange={(e) => {
+                                            if (isReadOnly) return;
+                                            setValue("isActive", e.target.checked);
+                                        }}
+                                        disabled={isReadOnly}
                                     />
                                     <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
                                     <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
@@ -102,31 +115,33 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
 
                 <div className="flex gap-3 pt-4 border-t border-secondary-100 font-sans">
                     <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save
-                            </div>
-                        )}
-                    </Button>
-                    <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Saving...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </div>
+                            )}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

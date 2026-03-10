@@ -12,6 +12,7 @@ namespace net_backend.Controllers
         protected readonly ApplicationDbContext _context;
         private const string LocationIdHeader = "X-Location-Id";
         private const string CompanyIdHeader = "X-Company-Id";
+        private const string PermissionCacheKey = "__perm_ctx";
 
         protected BaseController(ApplicationDbContext context)
         {
@@ -101,66 +102,94 @@ namespace net_backend.Controllers
             return user?.Role == Role.ADMIN;
         }
 
-        protected async Task<bool> HasPermission(string permission)
+        private async Task<(Role role, UserPermission? permission)> GetPermissionContextAsync()
         {
+            if (HttpContext.Items.TryGetValue(PermissionCacheKey, out var cached) &&
+                cached is ValueTuple<Role, UserPermission?> tuple)
+            {
+                return tuple;
+            }
+
             var user = await _context.Users
                 .Include(u => u.Permission)
                 .FirstOrDefaultAsync(u => u.Id == CurrentUserId);
 
-            if (user == null) return false;
-            
-            if (user.Role == Role.ADMIN) return true;
+            var ctx = (user?.Role ?? Role.USER, user?.Permission);
+            HttpContext.Items[PermissionCacheKey] = ctx;
+            return ctx;
+        }
 
-            var p = user.Permission;
-            if (p == null) return false;
+        protected async Task<bool> HasPermission(string permission)
+        {
+            var (role, p) = await GetPermissionContextAsync();
+            if (p == null && role != Role.ADMIN) return false;
+            if (role == Role.ADMIN) return true;
 
+            var perm = p!;
             return permission switch
             {
-                "ViewDashboard" => p.ViewDashboard,
-                "ViewMaster" => p.ViewMaster,
-                "AddMaster" => p.AddMaster,
-                "EditMaster" => p.EditMaster,
-                "ImportMaster" => p.ImportMaster,
-                "ExportMaster" => p.ExportMaster,
-                "ManageItem" => p.ManageItem,
-                "ManageItemType" => p.ManageItemType,
-                "ManageMaterial" => p.ManageMaterial,
-                "ManageItemStatus" => p.ManageItemStatus,
-                "ManageOwnerType" => p.ManageOwnerType,
-                "ManageParty" => p.ManageParty,
-                "ManageLocation" => p.ManageLocation,
-                "ManageCompany" => p.ManageCompany,
-                "ViewPI" => p.ViewPI,
-                "CreatePI" => p.CreatePI,
-                "EditPI" => p.EditPI,
-                "ApprovePI" => p.ApprovePI,
-                "ViewPO" => p.ViewPO,
-                "CreatePO" => p.CreatePO,
-                "EditPO" => p.EditPO,
-                "ApprovePO" => p.ApprovePO,
-                "ViewInward" => p.ViewInward,
-                "CreateInward" => p.CreateInward,
-                "EditInward" => p.EditInward,
-                "ViewQC" => p.ViewQC,
-                "CreateQC" => p.CreateQC,
-                "EditQC" => p.EditQC,
-                "ApproveQC" => p.ApproveQC,
-                "ViewMovement" => p.ViewMovement,
-                "CreateMovement" => p.CreateMovement,
-                "EditMovement" => p.EditMovement,
-                "ViewTransfer" => p.ViewTransfer,
-                "CreateTransfer" => p.CreateTransfer,
-                "EditTransfer" => p.EditTransfer,
-                "ManageChanges" => p.ManageChanges,
-                "RevertChanges" => p.RevertChanges,
-                "ViewReports" => p.ViewReports,
-                "ViewPIPReport" => p.ViewPIPReport,
-                "ViewInwardReport" => p.ViewInwardReport,
-                "ViewItemLedgerReport" => p.ViewItemLedgerReport,
-                "AccessSettings" => p.AccessSettings,
+                "ViewDashboard" => perm.ViewDashboard,
+                "ViewMaster" => perm.ViewMaster,
+                "AddMaster" => perm.AddMaster,
+                "EditMaster" => perm.EditMaster,
+                "ImportMaster" => perm.ImportMaster,
+                "ExportMaster" => perm.ExportMaster,
+                "ManageItem" => perm.ManageItem,
+                "ManageItemType" => perm.ManageItemType,
+                "ManageMaterial" => perm.ManageMaterial,
+                "ManageItemStatus" => perm.ManageItemStatus,
+                "ManageOwnerType" => perm.ManageOwnerType,
+                "ManageParty" => perm.ManageParty,
+                "ManageLocation" => perm.ManageLocation,
+                "ManageCompany" => perm.ManageCompany,
+                "ViewPI" => perm.ViewPI,
+                "CreatePI" => perm.CreatePI,
+                "EditPI" => perm.EditPI,
+                "ApprovePI" => perm.ApprovePI,
+                "ViewPO" => perm.ViewPO,
+                "CreatePO" => perm.CreatePO,
+                "EditPO" => perm.EditPO,
+                "ApprovePO" => perm.ApprovePO,
+                "ViewInward" => perm.ViewInward,
+                "CreateInward" => perm.CreateInward,
+                "EditInward" => perm.EditInward,
+                "ViewQC" => perm.ViewQC,
+                "CreateQC" => perm.CreateQC,
+                "EditQC" => perm.EditQC,
+                "ApproveQC" => perm.ApproveQC,
+                "ViewMovement" => perm.ViewMovement,
+                "CreateMovement" => perm.CreateMovement,
+                "EditMovement" => perm.EditMovement,
+                "ViewTransfer" => perm.ViewTransfer,
+                "CreateTransfer" => perm.CreateTransfer,
+                "EditTransfer" => perm.EditTransfer,
+                "ManageChanges" => perm.ManageChanges,
+                "RevertChanges" => perm.RevertChanges,
+                "ViewReports" => perm.ViewReports,
+                "ViewPIPReport" => perm.ViewPIPReport,
+                "ViewInwardReport" => perm.ViewInwardReport,
+                "ViewItemLedgerReport" => perm.ViewItemLedgerReport,
+                "AccessSettings" => perm.AccessSettings,
                 _ => false
             };
         }
+
+        protected async Task<bool> HasAllPermissions(params string[] permissions)
+        {
+            foreach (var perm in permissions)
+            {
+                if (!await HasPermission(perm)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Master create requires both AddMaster and module manage permission.</summary>
+        protected async Task<bool> CanCreateMaster(string managePermission)
+            => await HasAllPermissions("AddMaster", managePermission);
+
+        /// <summary>Master edit requires both EditMaster and module manage permission.</summary>
+        protected async Task<bool> CanEditMaster(string managePermission)
+            => await HasAllPermissions("EditMaster", managePermission);
 
         protected ActionResult Forbidden()
         {

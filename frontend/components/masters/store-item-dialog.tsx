@@ -39,6 +39,7 @@ interface StoreItemDialogProps {
     item?: StoreItem | null;
     isLoading?: boolean;
     existingItems: StoreItem[];
+    readOnly?: boolean;
 }
 
 export function StoreItemDialog({
@@ -47,8 +48,10 @@ export function StoreItemDialog({
     onSubmit,
     item,
     isLoading,
-    existingItems
+    existingItems,
+    readOnly
 }: StoreItemDialogProps) {
+    const isReadOnly = !!readOnly;
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [imageRemovedByUser, setImageRemovedByUser] = useState(false);
@@ -105,6 +108,7 @@ export function StoreItemDialog({
     }, [imagePreview]);
 
     const handleFormSubmit = (data: ItemFormValues) => {
+        if (isReadOnly) return;
         const hasImage = !!imageFile || (!!item?.image && !imageRemovedByUser);
         if (!hasImage) {
             toast.error("Item image is required.");
@@ -136,6 +140,7 @@ export function StoreItemDialog({
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title={item ? "Update Ledger Record" : "Register Store Asset"} size="2xl">
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
+                <fieldset disabled={isReadOnly} className="space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8">
                     <div className="space-y-6">
                         <div className="space-y-4">
@@ -228,12 +233,15 @@ export function StoreItemDialog({
                         </div>
                     </div>
                 </div>
+                </fieldset>
                 <div className="hidden"><CameraPhotoInput ref={cameraInputRef} onCapture={handleImageCapture} previewUrl={null} hideDefaultTrigger={true} /></div>
                 <div className="flex gap-4 pt-6 border-t">
-                    <Button type="submit" disabled={isLoading} className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12">
-                        {isLoading ? 'Processing...' : "Save"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-12 rounded-xl">Cancel</Button>
+                    <Button type="button" variant="outline" onClick={onClose} className={`${isReadOnly ? "w-full" : "flex-1"} h-12 rounded-xl`}>Cancel</Button>
+                    {!isReadOnly && (
+                        <Button type="submit" disabled={isLoading} className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12">
+                            {isLoading ? 'Processing...' : "Save"}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

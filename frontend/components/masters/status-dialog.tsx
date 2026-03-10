@@ -24,9 +24,11 @@ interface StatusDialogProps {
     onSubmit: (data: FormValues) => void;
     item?: any | null;
     isLoading?: boolean;
+    readOnly?: boolean;
 }
 
-export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading }: StatusDialogProps) {
+export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readOnly }: StatusDialogProps) {
+    const isReadOnly = !!readOnly;
     const {
         register,
         handleSubmit,
@@ -64,7 +66,13 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading }: Sta
             title={item ? "Update Status Protocol" : "Register New Status Label"}
             size="md"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (isReadOnly) return;
+                    onSubmit(data);
+                })}
+                className="space-y-8"
+            >
                 <div className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="status-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
@@ -77,6 +85,7 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading }: Sta
                                 {...register("name")}
                                 className="h-12 pl-11 border-secondary-200 focus:ring-primary-500/20 rounded-xl font-medium shadow-none"
                                 placeholder="e.g. Under Repair, Ready for Production"
+                                disabled={isReadOnly}
                             />
                         </div>
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-bold">{errors.name.message}</p>}
@@ -90,7 +99,11 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading }: Sta
                                         type="checkbox"
                                         className="sr-only"
                                         checked={isActive}
-                                        onChange={(e) => setValue("isActive", e.target.checked)}
+                                        onChange={(e) => {
+                                            if (isReadOnly) return;
+                                            setValue("isActive", e.target.checked);
+                                        }}
+                                        disabled={isReadOnly}
                                     />
                                     <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
                                     <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
@@ -103,31 +116,33 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading }: Sta
 
                 <div className="flex gap-3 pt-6 border-t border-secondary-100">
                     <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12 shadow-lg shadow-primary-200"
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                Save
-                            </div>
-                        )}
-                    </Button>
-                    <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className="flex-1 border-secondary-300 text-secondary-700 font-bold h-12 rounded-xl"
+                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-12 rounded-xl`}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
                     </Button>
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12 shadow-lg shadow-primary-200"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Saving...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </div>
+                            )}
+                        </Button>
+                    )}
                 </div>
             </form>
         </Dialog>

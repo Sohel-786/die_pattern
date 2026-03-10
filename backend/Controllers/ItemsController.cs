@@ -155,7 +155,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Item>>> Create([FromBody] CreateItemDto dto)
         {
-            if (!await HasPermission("ManageItem")) return Forbidden();
+            if (!await CanCreateMaster("ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             if (await _context.Items.AnyAsync(p => p.LocationId == locationId && p.MainPartName.ToLower() == dto.MainPartName.Trim().ToLower()))
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Main Part Name must be unique within this location" });
@@ -232,7 +232,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Item>>> Update(int id, [FromBody] UpdateItemDto dto)
         {
-            if (!await HasPermission("ManageItem")) return Forbidden();
+            if (!await CanEditMaster("ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
 
             if (id != dto.Id) return BadRequest(new ApiResponse<Item> { Success = false, Message = "ID mismatch" });
@@ -340,7 +340,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageItem")) return Forbidden();
+            if (!await HasAllPermissions("ImportMaster", "ManageItem")) return Forbidden();
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
             var locationId = await GetCurrentLocationIdAsync();
             var currentLocation = await _context.Locations.Include(l => l.Company).AsNoTracking().FirstOrDefaultAsync(l => l.Id == locationId);

@@ -60,6 +60,7 @@ export default function StoreItemsPage() {
   const canAddMaster = (permissions?.manageItem ?? false) && (permissions?.addMaster ?? false);
   const canEditMaster = permissions?.manageItem ?? false;
   const canImportExportMaster = permissions?.manageItem ?? false;
+  const canEdit = (permissions?.manageItem ?? false) && (permissions?.editMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -339,6 +340,7 @@ export default function StoreItemsPage() {
         existingItems={items}
         onSubmit={onSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
+        readOnly={!!editingItem && !canEdit}
       />
 
       <Dialog isOpen={!!inactiveTarget} onClose={() => setInactiveTarget(null)} title="Confirm Deactivation" size="sm">

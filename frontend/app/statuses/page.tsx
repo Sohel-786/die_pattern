@@ -32,6 +32,7 @@ export default function StatusesPage() {
   const { data: permissions } = useCurrentUserPermissions();
   const canManageStatus = permissions?.manageItemStatus ?? false;
   const canAdd = canManageStatus && (permissions?.addMaster ?? false);
+  const canEdit = canManageStatus && (permissions?.editMaster ?? false);
 
   if (permissions && !permissions.viewMaster) {
     return (
@@ -256,6 +257,7 @@ export default function StatusesPage() {
         item={editingStatus}
         onSubmit={onSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
+        readOnly={!!editingStatus && !canEdit}
       />
 
       <Dialog

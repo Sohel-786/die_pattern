@@ -63,7 +63,7 @@ namespace net_backend.Controllers
         [HttpPost("import")]
         public async Task<ActionResult<ApiResponse<object>>> Import(IFormFile file)
         {
-            if (!await HasPermission("ManageParty")) return Forbidden();
+            if (!await HasAllPermissions("ImportMaster", "ManageParty")) return Forbidden();
 
             if (file == null || file.Length == 0)
                 return Ok(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
@@ -261,7 +261,7 @@ namespace net_backend.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Party>>> Create([FromBody] Party party)
         {
-            if (!await HasPermission("ManageParty")) return Forbidden();
+            if (!await CanCreateMaster("ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
 
             // ── 1. Mandatory field check ─────────────────────────────────────
@@ -323,7 +323,7 @@ namespace net_backend.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<Party>>> Update(int id, [FromBody] UpdatePartyRequest request)
         {
-            if (!await HasPermission("ManageParty")) return Forbidden();
+            if (!await CanEditMaster("ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
             var existing = await _context.Parties.FirstOrDefaultAsync(p => p.Id == id && p.CompanyId == companyId);
             if (existing == null) return NotFound(new ApiResponse<Party> { Success = false, Message = "Party not found or access denied." });
