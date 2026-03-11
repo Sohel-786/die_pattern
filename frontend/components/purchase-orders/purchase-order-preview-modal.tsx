@@ -7,7 +7,7 @@ import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import { PO, PoStatus, GstType } from "@/types";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { formatDateTime } from "@/lib/utils";
 
 interface PurchaseOrderPreviewModalProps {
   poId: number;
@@ -97,7 +97,7 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
               </div>
               <div className="flex flex-col gap-1 text-right">
                 <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Date of Issue</span>
-                <span className="font-bold text-secondary-900">{format(new Date(po.createdAt), "dd MMM yyyy")}</span>
+                <span className="font-bold text-secondary-900">{formatDateTime(po.createdAt)}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Work Priority</span>
@@ -105,7 +105,7 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
               </div>
               <div className="flex flex-col gap-1 text-right">
                 <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Expected Delivery</span>
-                <span className="font-bold text-secondary-900">{po.deliveryDate ? format(new Date(po.deliveryDate), "dd MMM yyyy") : "TBD"}</span>
+                <span className="font-bold text-secondary-900">{po.deliveryDate ? formatDateTime(po.deliveryDate) : "TBD"}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Supplier / Vendor</span>
@@ -206,7 +206,7 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                     <p className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1">Approved by</p>
                     <p className="text-sm font-semibold text-secondary-900">{po.approverName ?? "—"}</p>
                     {po.approvedAt && (
-                      <p className="text-xs text-secondary-500 mt-0.5">{format(new Date(po.approvedAt), "dd MMM yyyy HH:mm")}</p>
+                      <p className="text-xs text-secondary-500 mt-0.5">{formatDateTime(po.approvedAt)}</p>
                     )}
                   </div>
                 </div>

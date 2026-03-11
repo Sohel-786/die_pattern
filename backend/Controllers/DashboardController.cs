@@ -60,7 +60,14 @@ namespace net_backend.Controllers
             var itemsAtVendor = await itemsAtVendorQuery.CountAsync();
 
             var pendingPIQuery = _context.PurchaseIndents.Where(pi =>
-                pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+                pi.IsActive && (
+                    pi.Status == PurchaseIndentStatus.Pending ||
+                    (pi.Status == PurchaseIndentStatus.Approved &&
+                     pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
+                         poi => poi.PurchaseIndentItemId == i.Id &&
+                                poi.PurchaseOrder != null &&
+                                poi.PurchaseOrder.IsActive)))
+                ));
             
             if (locationId.HasValue && locationId.Value > 0)
             {
@@ -75,7 +82,16 @@ namespace net_backend.Controllers
 
             var pendingPOQuery = _context.PurchaseOrders.Where(po =>
                 po.LocationId != null && companyLocationIds.Contains(po.LocationId.Value) &&
-                po.Status == PoStatus.Pending && po.IsActive);
+                po.IsActive && 
+                (po.Status == PoStatus.Pending || 
+                 (po.Status == PoStatus.Approved && 
+                  po.Items.Any(i => !_context.InwardLines.Any(il => 
+                      il.SourceType == InwardSourceType.PO && 
+                      il.SourceRefId == po.Id && 
+                      il.ItemId == i.PurchaseIndentItem.ItemId && 
+                      il.Inward != null && il.Inward.IsActive))
+                 )
+                ));
             
             if (locationId.HasValue && locationId.Value > 0)
                 pendingPOQuery = pendingPOQuery.Where(po => po.LocationId == locationId.Value);
@@ -243,14 +259,43 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? createdDateFrom,
             [FromQuery] string? createdDateTo,
-            [FromQuery] string? itemIds)
+            [FromQuery] string? itemIds,
+            [FromQuery] string? status)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
             var query = _context.PurchaseIndents
-                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+                .Where(pi => pi.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Pending);
+                }
+                else if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Approved &&
+                        pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
+                            poi => poi.PurchaseIndentItemId == i.Id &&
+                                   poi.PurchaseOrder != null &&
+                                   poi.PurchaseOrder.IsActive)));
+                }
+            }
+            else
+            {
+                query = query.Where(pi => 
+                    pi.Status == PurchaseIndentStatus.Pending ||
+                    (pi.Status == PurchaseIndentStatus.Approved &&
+                     pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
+                         poi => poi.PurchaseIndentItemId == i.Id &&
+                                poi.PurchaseOrder != null &&
+                                poi.PurchaseOrder.IsActive)))
+                );
+            }
+
 
             if (locationId.HasValue && locationId.Value > 0)
             {
@@ -362,15 +407,44 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? poDateFrom,
             [FromQuery] string? poDateTo,
-            [FromQuery] string? vendorIds)
+            [FromQuery] string? vendorIds,
+            [FromQuery] string? status)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
             var query = _context.PurchaseOrders
-                .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value)
-                    && po.Status == PoStatus.Pending && po.IsActive);
+                .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value) && po.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Pending);
+                }
+                else if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Approved &&
+                         po.Items.Any(i => !_context.InwardLines.Any(il =>
+                             il.SourceType == InwardSourceType.PO &&
+                             il.SourceRefId == po.Id &&
+                             il.ItemId == i.PurchaseIndentItem.ItemId &&
+                             il.Inward != null && il.Inward.IsActive)));
+                }
+            }
+            else
+            {
+                query = query.Where(po => 
+                    po.Status == PoStatus.Pending ||
+                    (po.Status == PoStatus.Approved &&
+                     po.Items.Any(i => !_context.InwardLines.Any(il =>
+                         il.SourceType == InwardSourceType.PO &&
+                         il.SourceRefId == po.Id &&
+                         il.ItemId == i.PurchaseIndentItem.ItemId &&
+                         il.Inward != null && il.Inward.IsActive)))
+                );
+            }
 
             if (locationId.HasValue && locationId.Value > 0)
                 query = query.Where(po => po.LocationId == locationId.Value);
@@ -380,6 +454,16 @@ namespace net_backend.Controllers
                 .Include(po => po.Creator)
                 .Include(po => po.Approver)
                 .Include(po => po.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.ItemType)
+                .Include(po => po.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.Material)
+                .Include(po => po.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.PurchaseIndent)
                 .AsQueryable();
 
             var searchTrim = (search ?? "").Trim();
@@ -405,18 +489,52 @@ namespace net_backend.Controllers
 
             var pos = await query.ToListAsync();
             var poIds = pos.Select(p => p.Id).ToList();
-            var poIdsWithInward = await _context.InwardLines
-                .Where(il => il.SourceType == InwardSourceType.PO && il.SourceRefId.HasValue && poIds.Contains(il.SourceRefId.Value) && il.Inward != null && il.Inward.IsActive)
-                .Select(il => il.SourceRefId!.Value)
-                .Distinct()
+            
+            // Pre-fetch Inward and QC details for all items in these POs
+            var inwardLines = await _context.InwardLines
+                .Include(l => l.Inward)
+                .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && poIds.Contains(l.SourceRefId.Value) && l.Inward != null && l.Inward.IsActive)
                 .ToListAsync();
-            var hasInwardSet = poIdsWithInward.ToHashSet();
+
+            var inwardLineIds = inwardLines.Select(l => l.Id).ToList();
+            var qcItems = await _context.QcItems
+                .Include(q => q.QcEntry)
+                .Where(q => inwardLineIds.Contains(q.InwardLineId) && q.QcEntry != null && q.QcEntry.IsActive)
+                .ToListAsync();
+
+            var hasInwardSet = inwardLines.Select(l => l.SourceRefId!.Value).Distinct().ToHashSet();
 
             var data = pos.Select(po =>
             {
-                var dto = new PODto();
+                var dto = new PODto { HasInward = hasInwardSet.Contains(po.Id) };
                 PurchaseOrdersController.MapToDto(po, dto);
-                dto.HasInward = hasInwardSet.Contains(po.Id);
+                
+                dto.Items = po.Items.Select(i => {
+                    var line = inwardLines.FirstOrDefault(l => l.SourceRefId == po.Id && l.ItemId == (i.PurchaseIndentItem != null ? i.PurchaseIndentItem.ItemId : 0));
+                    var qc = line != null ? qcItems.FirstOrDefault(q => q.InwardLineId == line.Id) : null;
+                    
+                    return new POItemDto
+                    {
+                        Id = i.Id,
+                        PurchaseIndentItemId = i.PurchaseIndentItemId,
+                        ItemId = i.PurchaseIndentItem?.ItemId ?? 0,
+                        MainPartName = i.PurchaseIndentItem?.Item?.MainPartName,
+                        CurrentName = i.PurchaseIndentItem?.Item?.CurrentName,
+                        ItemTypeName = i.PurchaseIndentItem?.Item?.ItemType?.Name,
+                        DrawingNo = i.PurchaseIndentItem?.Item?.DrawingNo,
+                        RevisionNo = i.PurchaseIndentItem?.Item?.RevisionNo,
+                        MaterialName = i.PurchaseIndentItem?.Item?.Material?.Name,
+                        PiNo = i.PurchaseIndentItem?.PurchaseIndent?.PiNo ?? "N/A",
+                        PiDate = i.PurchaseIndentItem?.PurchaseIndent?.CreatedAt,
+                        Rate = i.Rate,
+                        IsInwarded = line != null,
+                        InwardNo = line?.Inward?.InwardNo,
+                        InwardDate = line?.Inward?.InwardDate,
+                        QCNo = qc?.QcEntry?.QcNo,
+                        QCDate = qc?.QcEntry?.CreatedAt
+                    };
+                }).ToList();
+
                 return dto;
             }).ToList();
 
@@ -569,28 +687,56 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? createdDateFrom,
             [FromQuery] string? createdDateTo,
-            [FromQuery] string? itemIds)
+            [FromQuery] string? itemIds,
+            [FromQuery] string? status)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
+            // Same expanded filter as GetPendingPI
             var query = _context.PurchaseIndents
-                .Where(pi => pi.Status == PurchaseIndentStatus.Pending && pi.IsActive);
+                .Where(pi => pi.IsActive);
 
-            if (locationId.HasValue && locationId.Value > 0)
+            if (!string.IsNullOrWhiteSpace(status))
             {
-                query = query.Where(pi => pi.Items.Any(i => i.Item != null && i.Item.LocationId == locationId.Value));
+                if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Pending);
+                }
+                else if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Approved &&
+                        pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
+                            poi => poi.PurchaseIndentItemId == i.Id &&
+                                   poi.PurchaseOrder != null &&
+                                   poi.PurchaseOrder.IsActive)));
+                }
             }
             else
             {
-                query = query.Where(pi => pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)));
+                query = query.Where(pi => 
+                    pi.Status == PurchaseIndentStatus.Pending ||
+                    (pi.Status == PurchaseIndentStatus.Approved &&
+                     pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
+                         poi => poi.PurchaseIndentItemId == i.Id &&
+                                poi.PurchaseOrder != null &&
+                                poi.PurchaseOrder.IsActive)))
+                );
             }
+
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && i.Item.LocationId == locationId.Value));
+            else
+                query = query.Where(pi => pi.Items.Any(i => i.Item != null && allowedLocationIds.Contains(i.Item.LocationId ?? 0)));
 
             query = query.OrderByDescending(pi => pi.CreatedAt)
                 .Include(pi => pi.Creator)
-                .Include(pi => pi.Items).ThenInclude(i => i.Item).ThenInclude(it => it!.ItemType)
+                .Include(pi => pi.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.ItemType)
                 .AsQueryable();
+
             var searchTrim = (search ?? "").Trim();
             if (!string.IsNullOrEmpty(searchTrim))
             {
@@ -608,17 +754,37 @@ namespace net_backend.Controllers
                 .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
             if (itemIdList.Count > 0) query = query.Where(p => p.Items.Any(i => itemIdList.Contains(i.ItemId)));
 
-            var list = await query.Select(p => new
+            var piList = await query.ToListAsync();
+
+            // Build item-level rows — only items NOT in any active PO
+            var rows = new List<PendingPIRowDto>();
+            foreach (var pi in piList)
             {
-                p.Id,
-                p.PiNo,
-                p.Type,
-                p.Status,
-                p.Remarks,
-                p.CreatedAt,
-                CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : "Unknown",
-                ItemCount = p.Items.Count
-            }).ToListAsync();
+                var piStatus = pi.Status == PurchaseIndentStatus.Approved ? "PI Approved" : "Approval Pending";
+                foreach (var item in pi.Items)
+                {
+                    bool isInActivePO = _context.PurchaseOrderItems.Any(
+                        poi => poi.PurchaseIndentItemId == item.Id &&
+                               poi.PurchaseOrder != null &&
+                               poi.PurchaseOrder.IsActive);
+                    if (isInActivePO) continue; // skip items already in a PO
+
+                    rows.Add(new PendingPIRowDto
+                    {
+                        Id = pi.Id,
+                        PiNo = pi.PiNo,
+                        PiDate = pi.CreatedAt,
+                        PiStatus = piStatus,
+                        Type = pi.Type.ToString(),
+                        CreatorName = pi.Creator != null ? pi.Creator.FirstName + " " + pi.Creator.LastName : "Unknown",
+                        Remarks = pi.Remarks,
+                        MainPartName = item.Item?.MainPartName ?? "",
+                        CurrentName = item.Item?.CurrentName,
+                        DrawingNo = item.Item?.DrawingNo,
+                        ItemTypeName = item.Item?.ItemType?.Name
+                    });
+                }
+            }
 
             string locName = "All Locations";
             if (locationId.HasValue && locationId.Value > 0)
@@ -627,20 +793,8 @@ namespace net_backend.Controllers
                 if (loc != null) locName = loc.Name;
             }
 
-            var bytes = _excelService.GeneratePendingPIExcel(list.Select(x => new PendingPIRowDto
-            {
-                Id = x.Id,
-                PiNo = x.PiNo,
-                Type = x.Type.ToString(),
-                Status = x.Status.ToString(),
-                Remarks = x.Remarks,
-                CreatedAt = x.CreatedAt,
-                CreatorName = x.CreatorName,
-                ItemCount = x.ItemCount
-            }), locName);
-
+            var bytes = _excelService.GeneratePendingPIExcel(rows, locName);
             var fileName = $"Pending_PI_{locName.Replace(" ", "_")}_{DateTime.Now:ddMMyy_HHmm}.xlsx";
-            
             return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
@@ -650,52 +804,130 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? poDateFrom,
             [FromQuery] string? poDateTo,
-            [FromQuery] string? vendorIds)
+            [FromQuery] string? vendorIds,
+            [FromQuery] string? status)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
             var allowedLocationIds = allowed.Select(x => x.locationId).ToHashSet();
 
             var query = _context.PurchaseOrders
-                .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value)
-                    && po.Status == PoStatus.Pending && po.IsActive);
+                .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value) && po.IsActive);
 
-            if (locationId.HasValue && locationId.Value > 0)
-                query = query.Where(po => po.LocationId == locationId.Value);
-
-            query = query.OrderByDescending(po => po.CreatedAt)
-                .Include(po => po.Vendor)
-                .Include(po => po.Creator)
-                .AsQueryable();
-
-            var searchTrim = (search ?? "").Trim();
-            if (!string.IsNullOrEmpty(searchTrim))
+            if (!string.IsNullOrWhiteSpace(status))
             {
-                searchTrim = searchTrim.ToLowerInvariant();
-                query = query.Where(p =>
-                    p.PoNo.ToLower().Contains(searchTrim) ||
-                    (p.Vendor != null && p.Vendor.Name.ToLower().Contains(searchTrim)) ||
-                    (p.Remarks != null && p.Remarks.ToLower().Contains(searchTrim)) ||
-                    (p.Creator != null && (p.Creator.FirstName + " " + p.Creator.LastName).ToLower().Contains(searchTrim)));
+                if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Pending);
+                }
+                else if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Approved &&
+                         po.Items.Any(i => !_context.InwardLines.Any(il =>
+                             il.SourceType == InwardSourceType.PO &&
+                             il.SourceRefId == po.Id &&
+                             il.ItemId == i.PurchaseIndentItem.ItemId &&
+                             il.Inward != null && il.Inward.IsActive)));
+                }
             }
-            if (!string.IsNullOrWhiteSpace(poDateFrom) && DateTime.TryParse(poDateFrom, out var dateFrom))
-                query = query.Where(p => p.CreatedAt.Date >= dateFrom.Date);
-            if (!string.IsNullOrWhiteSpace(poDateTo) && DateTime.TryParse(poDateTo, out var dateTo))
-                query = query.Where(p => p.CreatedAt.Date <= dateTo.Date);
-            var vendorIdList = (vendorIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
-            if (vendorIdList.Count > 0) query = query.Where(p => vendorIdList.Contains(p.VendorId));
-
-            var list = await query.Select(p => new PendingPORowDto
+            else
             {
-                Id = p.Id,
-                PoNo = p.PoNo,
-                VendorName = p.Vendor != null ? p.Vendor.Name : null,
-                Status = p.Status.ToString(),
-                Remarks = p.Remarks,
-                CreatedAt = p.CreatedAt,
-                CreatorName = p.Creator != null ? p.Creator.FirstName + " " + p.Creator.LastName : null
-            }).ToListAsync();
+                query = query.Where(po => 
+                    po.Status == PoStatus.Pending ||
+                    (po.Status == PoStatus.Approved &&
+                     po.Items.Any(i => !_context.InwardLines.Any(il =>
+                         il.SourceType == InwardSourceType.PO &&
+                         il.SourceRefId == po.Id &&
+                         il.ItemId == i.PurchaseIndentItem.ItemId &&
+                         il.Inward != null && il.Inward.IsActive)))
+                );
+            }
+
+    if (locationId.HasValue && locationId.Value > 0)
+        query = query.Where(po => po.LocationId == locationId.Value);
+
+    query = query.OrderByDescending(po => po.CreatedAt)
+        .Include(po => po.Vendor)
+        .Include(po => po.Creator)
+        .Include(po => po.Items)
+            .ThenInclude(i => i.PurchaseIndentItem)
+                .ThenInclude(pii => pii!.Item)
+                    .ThenInclude(it => it!.ItemType)
+        .Include(po => po.Items)
+            .ThenInclude(i => i.PurchaseIndentItem)
+                .ThenInclude(pii => pii!.Item)
+                    .ThenInclude(it => it!.Material)
+        .Include(po => po.Items)
+            .ThenInclude(i => i.PurchaseIndentItem)
+                .ThenInclude(pii => pii!.PurchaseIndent)
+        .AsQueryable();
+
+    var searchTrim = (search ?? "").Trim();
+    if (!string.IsNullOrEmpty(searchTrim))
+    {
+        searchTrim = searchTrim.ToLowerInvariant();
+        query = query.Where(p =>
+            p.PoNo.ToLower().Contains(searchTrim) ||
+            (p.Vendor != null && p.Vendor.Name.ToLower().Contains(searchTrim)) ||
+            (p.Remarks != null && p.Remarks.ToLower().Contains(searchTrim)) ||
+            (p.Creator != null && (p.Creator.FirstName + " " + p.Creator.LastName).ToLower().Contains(searchTrim)));
+    }
+    if (!string.IsNullOrWhiteSpace(poDateFrom) && DateTime.TryParse(poDateFrom, out var dateFrom))
+        query = query.Where(p => p.CreatedAt.Date >= dateFrom.Date);
+    if (!string.IsNullOrWhiteSpace(poDateTo) && DateTime.TryParse(poDateTo, out var dateTo))
+        query = query.Where(p => p.CreatedAt.Date <= dateTo.Date);
+    var vendorIdList = (vendorIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(s => int.TryParse(s, out var id) ? id : 0).Where(id => id > 0).ToList();
+    if (vendorIdList.Count > 0) query = query.Where(p => vendorIdList.Contains(p.VendorId));
+    var poList = await query.ToListAsync();
+    var allPoIds = poList.Select(p => p.Id).ToList();
+    var allInwardLines = await _context.InwardLines
+        .Include(l => l.Inward)
+        .Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && allPoIds.Contains(l.SourceRefId.Value) && l.Inward != null && l.Inward.IsActive)
+        .ToListAsync();
+
+    var list = new List<PendingPORowDto>();
+    foreach (var po in poList)
+    {
+        var poStatus = po.Status == PoStatus.Approved ? "PO Approved" : "Approval Pending";
+        foreach (var item in po.Items)
+        {
+            if (item.PurchaseIndentItem == null) continue;
+
+            bool isInwarded = allInwardLines.Any(il =>
+                il.SourceRefId == po.Id &&
+                il.ItemId == item.PurchaseIndentItem.ItemId);
+            
+            if (isInwarded) continue;
+
+            var gstPercent = po.GstPercent ?? 18;
+            var taxAmount = (item.Rate * gstPercent) / 100;
+
+            list.Add(new PendingPORowDto
+            {
+                Id = po.Id,
+                PoNo = po.PoNo,
+                PoDate = po.CreatedAt,
+                PoStatus = poStatus,
+                VendorName = po.Vendor?.Name ?? "",
+                DeliveryDate = po.DeliveryDate,
+                Remarks = po.Remarks,
+                PiNo = item.PurchaseIndentItem.PurchaseIndent?.PiNo,
+                PiDate = item.PurchaseIndentItem.PurchaseIndent?.CreatedAt,
+                MainPartName = item.PurchaseIndentItem.Item?.MainPartName ?? "",
+                CurrentName = item.PurchaseIndentItem.Item?.CurrentName,
+                DrawingNo = item.PurchaseIndentItem.Item?.DrawingNo,
+                RevisionNo = item.PurchaseIndentItem.Item?.RevisionNo,
+                ItemTypeName = item.PurchaseIndentItem.Item?.ItemType?.Name,
+                MaterialName = item.PurchaseIndentItem.Item?.Material?.Name,
+                CreatorName = po.Creator != null ? po.Creator.FirstName + " " + po.Creator.LastName : "Unknown",
+                Rate = item.Rate,
+                GstPercent = gstPercent,
+                TaxAmount = taxAmount,
+                TotalAmount = item.Rate + taxAmount
+            });
+        }
+    }
 
             string locName = "All Locations";
             if (locationId.HasValue && locationId.Value > 0)

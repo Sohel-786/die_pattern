@@ -20,13 +20,12 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { format } from "date-fns";
 import { useCurrentUserPermissions, useCurrentCompany } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Role } from "@/types";
 import { useDebounce } from "@/hooks/use-debounce";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { JobWorkDialog } from "@/components/job-works/job-work-dialog";
 import { JobWorkFilters } from "@/components/filters/job-work-filters";
@@ -270,7 +269,7 @@ export default function JobWorksPage() {
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{jobWorks.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{jw.jobWorkNo}</td>
                                             <td className="px-4 py-3 text-secondary-700 text-sm">
-                                                {format(new Date(jw.createdAt), "dd MMM yyyy")}
+                                                {formatDateTime(jw.createdAt)}
                                             </td>
                                             <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
                                                 {jw.toPartyName ?? "—"}
@@ -608,7 +607,7 @@ function JobWorkPreviewModal({ jwId, onClose }: { jwId: number; onClose: () => v
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">Date</p>
-                                    <p className="font-bold text-secondary-900">{format(new Date(jw.createdAt), "dd MMM yyyy")}</p>
+                                    <p className="font-bold text-secondary-900">{formatDateTime(jw.createdAt)}</p>
                                 </div>
                             </div>
                         </div>

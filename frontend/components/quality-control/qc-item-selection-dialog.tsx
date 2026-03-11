@@ -5,9 +5,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, AlertCircle, CheckCircle2, Circle, Clock } from "lucide-react";
 import { PendingQC, InwardSourceType } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 
 interface QCItemSelectionDialogProps {
     isOpen: boolean;
@@ -160,7 +159,7 @@ export function QCItemSelectionDialog({
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold text-secondary-500 italic tabular-nums">
                                                     <Clock className="w-3 h-3 text-primary-400" />
-                                                    {format(new Date(item.inwardDate), 'dd-MMM-yy')}
+                                                    {formatDateTime(item.inwardDate)}
                                                 </div>
                                             </td>
                                         </tr>

@@ -17,7 +17,7 @@ import { SourceSelectionDialog } from "./source-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDateOnly } from "@/lib/utils";
 
 interface InwardDialogProps {
     open: boolean;
@@ -341,7 +341,7 @@ export function InwardDialog({
                                     <div className="mt-0.5">
                                         <Input
                                             readOnly
-                                            value={format(new Date(inwardDate + "T00:00:00"), "dd-MMM-yyyy")}
+                                            value={formatDateOnly(inwardDate)}
                                             className="h-9 w-full text-sm border-secondary-200 bg-secondary-50 font-semibold cursor-default"
                                         />
                                     </div>

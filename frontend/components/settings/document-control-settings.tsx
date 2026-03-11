@@ -12,6 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
 import { format, parseISO, isValid } from "date-fns";
 import { DatePicker } from "@/components/ui/date-picker";
+import { formatDate } from "@/lib/utils";
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.PurchaseIndent]: "Purchase Indent",
@@ -174,7 +175,7 @@ export function DocumentControlSettings() {
                   <td className="py-2.5 px-4 font-medium text-gray-900">{row.documentNo}</td>
                   <td className="py-2.5 px-4 text-gray-700">{row.revisionNo}</td>
                   <td className="py-2.5 px-4 text-gray-700">
-                    {row.revisionDate ? format(new Date(row.revisionDate), "dd-MMM-yyyy") : "-"}
+                    {row.revisionDate ? formatDate(row.revisionDate) : "-"}
                   </td>
                   <td className="py-2.5 px-4">
                     {row.isApplied ? (

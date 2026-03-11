@@ -25,11 +25,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { InwardDialog } from "@/components/inwards/inward-dialog";
 import { InwardFilters } from "@/components/filters/inward-filters";
@@ -203,7 +202,7 @@ export default function InwardsPage() {
                                             </td>
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{inwards.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">{format(new Date(i.inwardDate), "dd MMM yyyy")}</td>
+                                            <td className="px-4 py-3 text-secondary-700 text-sm">{formatDateTime(i.inwardDate)}</td>
                                             <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
                                                 {i.vendorName ?? "—"}
                                             </td>
@@ -317,7 +316,7 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{line.sourceRefDisplay || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
-                                                                                        {line.sourceDate ? format(new Date(line.sourceDate), "dd MMM yyyy") : "—"}
+                                                                                        {line.sourceDate ? formatDateTime(line.sourceDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
@@ -361,7 +360,7 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2 text-sm text-secondary-600 max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{line.qcNo || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
-                                                                                        {line.qcDate ? format(new Date(line.qcDate), "dd MMM yyyy") : "—"}
+                                                                                        {line.qcDate ? formatDateTime(line.qcDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
                                                                                         {line.qcNo ? (

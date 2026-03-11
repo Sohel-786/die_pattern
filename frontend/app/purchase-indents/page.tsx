@@ -27,12 +27,11 @@ import { Role } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { PIFilters } from "@/components/filters/pi-filters";
 import { defaultPIFilters, buildPIFilterParams, type PIFiltersState } from "@/lib/pi-filters";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export default function PurchaseIndentsPage() {
@@ -280,7 +279,7 @@ export default function PurchaseIndentsPage() {
                                         <TableRow
                                             key={pi.id}
                                             className={cn(
-                                                "border-b border-secondary-100 hover:bg-secondary-50 transition-all group font-sans whitespace-nowrap",
+                                                "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
                                                 !pi.isActive && "opacity-60 bg-secondary-50/30",
                                                 expandedPIId === pi.id && "bg-primary-50/30"
                                             )}
@@ -311,8 +310,9 @@ export default function PurchaseIndentsPage() {
                                                 <div className="font-bold text-secondary-900 uppercase tracking-tight">{pi.piNo}</div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="font-medium text-secondary-700 text-xs">{format(new Date(pi.createdAt), 'dd/MM/yyyy')}</div>
-                                                <div className="text-[10px] text-secondary-400 font-medium uppercase">{format(new Date(pi.createdAt), 'HH:mm')}</div>
+                                                <div className="text-secondary-700 text-sm">
+                                                    {formatDateTime(pi.createdAt)}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {getStatusBadge(pi.status)}
@@ -454,19 +454,22 @@ export default function PurchaseIndentsPage() {
                                                                         <Table>
                                                                             <TableHeader>
                                                                                 <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-24 text-center">SR.NO</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Item Description</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Type</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">PO No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">PO Date</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">Inward No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">Inward Date</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">QC No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">QC Date</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-right pr-6">Action</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                             <TableBody>
                                                                                 {(pi.items || []).map((item, iidx) => (
                                                                                     <TableRow key={item.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 transition-colors whitespace-nowrap">
-                                                                                        <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center w-12">
+                                                                                        <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">
                                                                                             {iidx + 1}
                                                                                         </TableCell>
                                                                                         <TableCell className="px-4 py-2">
@@ -484,32 +487,45 @@ export default function PurchaseIndentsPage() {
                                                                                                 {item.itemTypeName}
                                                                                             </span>
                                                                                         </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-indigo-600 text-[13px] tracking-tight">
-                                                                                            {item.poNo && item.poNo !== '-' ? (
-                                                                                                <span className="bg-indigo-50 px-2.5 py-1 rounded-md text-indigo-700 border border-indigo-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                        <TableCell className="px-4 py-2 text-center">
+                                                                                            {item.poNo && item.poNo !== "-" ? (
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold text-[11px]">
                                                                                                     {item.poNo}
                                                                                                 </span>
                                                                                             ) : (
-                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending PO</span>
+                                                                                                <span className="text-secondary-400 text-[11px] italic font-medium">Pending PO</span>
                                                                                             )}
                                                                                         </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-amber-600 text-[13px] tracking-tight">
+                                                                                        <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] text-center">
+                                                                                            {item.poId && item.poDate ? formatDateTime(item.poDate) : "—"}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center">
                                                                                             {item.inwardNo ? (
-                                                                                                <span className="bg-amber-50 px-2.5 py-1 rounded-md text-amber-700 border border-amber-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px]">
                                                                                                     {item.inwardNo}
                                                                                                 </span>
                                                                                             ) : (
-                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending Inward</span>
+                                                                                                <span className="text-secondary-400 text-[11px] italic font-medium">Not Inwarded</span>
                                                                                             )}
                                                                                         </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-center font-bold text-emerald-600 text-[13px] tracking-tight">
+                                                                                        <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] text-center">
+                                                                                            {item.inwardNo && item.inwardDate ? formatDateTime(item.inwardDate) : "—"}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center">
                                                                                             {item.qcNo ? (
-                                                                                                <span className="bg-emerald-50 px-2.5 py-1 rounded-md text-emerald-700 border border-emerald-100 uppercase text-[10px] font-black tracking-wider shadow-sm">
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 font-bold text-[11px]">
                                                                                                     {item.qcNo}
                                                                                                 </span>
+                                                                                            ) : item.inwardNo ? (
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 font-bold text-[11px]">
+                                                                                                    Pending QC
+                                                                                                </span>
                                                                                             ) : (
-                                                                                                <span className="text-secondary-300 font-medium italic text-[11px]">Pending QC</span>
+                                                                                                <span className="text-secondary-300 text-[11px]">—</span>
                                                                                             )}
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] text-center">
+                                                                                            {item.qcNo && item.qcDate ? formatDateTime(item.qcDate) : "—"}
                                                                                         </TableCell>
                                                                                         <TableCell className="px-4 py-2 text-right pr-6">
                                                                                             {item.poId ? (

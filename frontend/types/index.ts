@@ -359,8 +359,11 @@ export interface PurchaseIndentItem {
   piNo?: string;
   poNo?: string;
   poId?: number | null;
+  poDate?: string | null;
   inwardNo?: string;
+  inwardDate?: string | null;
   qcNo?: string;
+  qcDate?: string | null;
 }
 
 export interface PO {
@@ -406,7 +409,9 @@ export interface POItem {
   gstPercent?: number | null;
   lineAmount?: number; // same as rate (one unit per die/pattern)
   inwardNo?: string;
+  inwardDate?: string | null;
   qcNo?: string;
+  qcDate?: string | null;
   isInwarded?: boolean;
 }
 

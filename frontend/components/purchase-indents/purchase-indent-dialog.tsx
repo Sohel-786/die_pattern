@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Trash2, Save, Package, Loader2, Calendar, Plus, Printer, Eye
+    Trash2, Save, Package, Loader2, Plus, Printer, Eye
 } from "lucide-react";
 import api from "@/lib/api";
 import {
@@ -20,7 +20,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PiItemSelectionDialog } from "./pi-item-selection-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 interface PurchaseIndentDialogProps {
     open: boolean;
@@ -30,9 +30,10 @@ interface PurchaseIndentDialogProps {
     onOpenPreview?: (id: number) => void;
     /** When true, dialog becomes view-only (no Save/Update). */
     readOnly?: boolean;
+    onSuccess?: () => void;
 }
 
-export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview, readOnly }: PurchaseIndentDialogProps) {
+export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview, readOnly, onSuccess }: PurchaseIndentDialogProps) {
     const isEditing = !!indent;
     const isReadOnly = !!readOnly;
     const queryClient = useQueryClient();
@@ -107,6 +108,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+            if (onSuccess) onSuccess();
             toast.success(`Indent ${isEditing ? "updated" : "created"} successfully`);
             onOpenChange(false);
         },
@@ -187,8 +189,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         <div className="col-span-2">
                             <Label className="text-xs font-semibold text-secondary-600">PI Date</Label>
                             <div className="h-9 mt-0.5 px-3 flex items-center bg-secondary-50 border border-secondary-200 rounded-lg text-sm text-secondary-700">
-                                <Calendar className="w-4 h-4 mr-2 text-secondary-400 shrink-0" />
-                                {indent ? format(new Date(indent.createdAt), "dd-MMM-yyyy") : format(new Date(), "dd-MMM-yyyy")}
+                                {formatDate(indent?.createdAt ?? new Date())}
                             </div>
                         </div>
                         <div className="col-span-3">

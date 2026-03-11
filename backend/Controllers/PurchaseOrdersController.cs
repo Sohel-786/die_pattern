@@ -429,7 +429,8 @@ namespace net_backend.Controllers
                 .Select(l => new { 
                     l.SourceRefId, 
                     l.ItemId, 
-                    l.Inward!.InwardNo, 
+                    l.Inward!.InwardNo,
+                    InwardDate = (DateTime?)l.Inward!.InwardDate,
                     l.Id 
                 })
                 .ToListAsync();
@@ -442,6 +443,13 @@ namespace net_backend.Controllers
                 .ToListAsync())
                 .GroupBy(q => q.InwardLineId)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.QcEntry!.CreatedAt).First().QcEntry!.QcNo);
+
+            var qcDates = (await _context.QcItems
+                .Where(q => inwardLineIds.Contains(q.InwardLineId) && q.QcEntry!.IsActive)
+                .Include(q => q.QcEntry)
+                .ToListAsync())
+                .GroupBy(q => q.InwardLineId)
+                .ToDictionary(g => g.Key, g => (DateTime?)g.OrderByDescending(x => x.QcEntry!.CreatedAt).First().QcEntry!.CreatedAt);
 
             var inwardMap = inwardDetails
                 .GroupBy(x => $"{x.SourceRefId}_{x.ItemId}")
@@ -464,8 +472,12 @@ namespace net_backend.Controllers
                 dto.Items = p.Items.Select(i => {
                     var key = $"{p.Id}_{i.PurchaseIndentItem!.ItemId}";
                     var inv = inwardMap.ContainsKey(key) ? inwardMap[key] : null;
-                    var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id) 
-                        ? qcNumbers[inv.Id] : null;
+                    var qcNo = inv != null && qcNumbers.ContainsKey(inv.Id)
+                        ? qcNumbers[inv.Id]
+                        : null;
+                    var qcDate = inv != null && qcDates.ContainsKey(inv.Id)
+                        ? qcDates[inv.Id]
+                        : null;
 
                     return new POItemDto
                     {
@@ -485,7 +497,9 @@ namespace net_backend.Controllers
                         GstPercent = p.GstPercent,
                         IsInwarded = inv != null,
                         InwardNo = inv?.InwardNo,
-                        QCNo = qcNo
+                        InwardDate = inv?.InwardDate,
+                        QCNo = qcNo,
+                        QCDate = qcDate
                     };
                 }).ToList();
 

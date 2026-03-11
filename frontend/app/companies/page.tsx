@@ -16,6 +16,7 @@ import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { AccessDenied } from "@/components/ui/access-denied";
+import { formatDateTime } from "@/lib/utils";
 
 export default function CompaniesPage() {
   const { data: permissions } = useCurrentUserPermissions();
@@ -233,7 +234,7 @@ export default function CompaniesPage() {
                         <span className="font-mono text-xs font-bold text-secondary-900">{company.gstNo}</span>
                         {company.gstDate && (
                           <span className="text-[10px] text-secondary-500 font-medium">
-                            Reg: {new Date(company.gstDate).toLocaleDateString()}
+                            Reg: {formatDateTime(company.gstDate)}
                           </span>
                         )}
                       </div>

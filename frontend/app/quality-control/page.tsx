@@ -16,12 +16,11 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { format } from "date-fns";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Role } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { QualityControlDialog } from "@/components/quality-control/quality-control-dialog";
 import { QCReviewDialog } from "@/components/quality-control/qc-review-dialog";
@@ -220,7 +219,7 @@ export default function QualityControlPage() {
                                             </td>
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{qcs.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{q.qcNo}</td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">{format(new Date(q.createdAt), "dd MMM yyyy")}</td>
+                                            <td className="px-4 py-3 text-secondary-700 text-sm">{formatDateTime(q.createdAt)}</td>
                                             <td className="px-4 py-3 font-medium text-secondary-800 text-sm">{q.partyName ?? "—"}</td>
                                             <td className="px-4 py-3 text-secondary-700 text-sm">{getSourceTypeLabel(q.sourceType)}</td>
                                             <td className="px-4 py-3 text-center">
@@ -321,7 +320,7 @@ export default function QualityControlPage() {
                                                                                     <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{it.sourceRefDisplay || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
-                                                                                        {it.sourceDate ? format(new Date(it.sourceDate), "dd MMM yyyy") : "—"}
+                                                                                        {it.sourceDate ? formatDateTime(it.sourceDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
@@ -338,7 +337,7 @@ export default function QualityControlPage() {
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{it.inwardNo || "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
-                                                                                        {it.inwardDate ? format(new Date(it.inwardDate), "dd MMM yyyy") : "—"}
+                                                                                        {it.inwardDate ? formatDateTime(it.inwardDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center whitespace-nowrap">
                                                                                         {it.isApproved === true ? (

@@ -5,9 +5,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, AlertCircle, CheckCircle2, Circle } from "lucide-react";
 import { PurchaseIndent, PurchaseIndentStatus } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { useCallback } from "react";
 import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
 
@@ -165,7 +164,7 @@ export function PiSelectionDialog({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 text-sm font-bold text-secondary-700">{pi.creatorName}</td>
-                                            <td className="px-4 py-4 text-sm text-secondary-500">{format(new Date(pi.createdAt), 'dd MMM yyyy')}</td>
+                                            <td className="px-4 py-4 text-sm text-secondary-500">{formatDateTime(pi.createdAt)}</td>
                                             <td className="px-4 py-4">
                                                 <span className={cn(
                                                     "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",

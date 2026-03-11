@@ -41,8 +41,11 @@ namespace net_backend.DTOs
         public string? PoNo { get; set; }
         public int? PoId { get; set; }
         public bool IsInPO { get; set; }
+        public DateTime? PoDate { get; set; }
         public string? InwardNo { get; set; }
         public string? QCNo { get; set; }
+        public DateTime? InwardDate { get; set; }
+        public DateTime? QCDate { get; set; }
     }
 
     public class CreatePurchaseIndentDto
@@ -148,7 +151,9 @@ namespace net_backend.DTOs
         public decimal LineAmount => Math.Round(Rate, 2);
         public bool IsInwarded { get; set; }
         public string? InwardNo { get; set; }
+        public DateTime? InwardDate { get; set; }
         public string? QCNo { get; set; }
+        public DateTime? QCDate { get; set; }
     }
 
     /// <summary>Per-item input for PO creation/update. Each die/pattern has its own rate.</summary>

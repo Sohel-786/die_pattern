@@ -8,7 +8,7 @@ import { registerDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import { PurchaseIndentPrintData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/utils";
 import { toast } from "react-hot-toast";
 
 interface PurchaseIndentPreviewModalProps {
@@ -128,14 +128,14 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
                 <div className="doc-box">
                   <div><strong>Document No :</strong> {printData.documentNo || "-"}</div>
                   <div><strong>Rev. No :</strong> {printData.revisionNo || "-"}</div>
-                  <div><strong>Rev. Date :</strong> {printData.revisionDate ? format(new Date(printData.revisionDate), "dd.MM.yyyy") : "-"}</div>
+                  <div><strong>Rev. Date :</strong> {formatDate(printData.revisionDate)}</div>
                 </div>
               </div>
 
               {/* HEADER ROW 2: Indent No and Indent Date - space between */}
               <div className="header-row-2">
                 <span><strong>Indent No :</strong> {printData.indentNo}</span>
-                <span><strong>Indent Date :</strong> {printData.indentDate ? format(new Date(printData.indentDate), "dd-MM-yyyy") : "-"}</span>
+                <span><strong>Indent Date :</strong> {formatDate(printData.indentDate)}</span>
               </div>
 
               {/* TABLE - 5 columns, fixed height so footer stays at bottom */}
@@ -173,7 +173,7 @@ export function PurchaseIndentPreviewModal({ piId, onClose }: PurchaseIndentPrev
               {/* SIGNATURE SECTION - 5 equal sections across full width */}
               <div className="footer">
                 <div className="footer-cell">
-                  <div className="footer-value">{printData.reqDateOfDelivery ? format(new Date(printData.reqDateOfDelivery), "dd-MM-yyyy") : ""}</div>
+                  <div className="footer-value">{printData.reqDateOfDelivery ? formatDate(printData.reqDateOfDelivery) : ""}</div>
                   <div className="footer-line" />
                   <span className="footer-label">Req. Date of Delivery</span>
                 </div>

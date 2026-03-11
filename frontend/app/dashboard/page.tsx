@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import Link from "next/link";
@@ -32,8 +32,12 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  Minus,
+  Edit2,
   LayoutGrid,
   ClipboardList,
+  Ban,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,7 +54,11 @@ import type { MultiSelectSearchOption } from "@/components/ui/multi-select-searc
 import { DatePicker } from "@/components/ui/date-picker";
 import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
 import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
+import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 
 const filterLabelClass =
   "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
@@ -186,10 +194,19 @@ export default function DashboardPage() {
   const [pendingPOVendorIds, setPendingPOVendorIds] = useState<number[]>([]);
 
   const [approvalTarget, setApprovalTarget] = useState<
-    { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" } | { type: "po"; po: PO; action: "approve" | "reject" }
+    { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" | "revert" } | { type: "po"; po: PO; action: "approve" | "reject" | "revert" }
     | null>(null);
   const [previewPIId, setPreviewPIId] = useState<number | null>(null);
   const [previewPOId, setPreviewPOId] = useState<number | null>(null);
+  const [expandedPIId, setExpandedPIId] = useState<number | null>(null);
+  const [expandedPOId, setExpandedPOId] = useState<number | null>(null);
+  const [editPITarget, setEditPITarget] = useState<PurchaseIndent | null>(null);
+  const [editPIDialogOpen, setEditPIDialogOpen] = useState(false);
+  const [editPOTarget, setEditPOTarget] = useState<PO | null>(null);
+  const [editPODialogOpen, setEditPODialogOpen] = useState(false);
+  const [pendingPIStatus, setPendingPIStatus] = useState<string>("");
+  const [pendingPOStatus, setPendingPOStatus] = useState<string>("");
+  const router = useRouter();
 
   const debouncedLocationSearch = useDebouncedValue(locationSearch, 400);
   const debouncedVendorSearch = useDebouncedValue(vendorSearch, 400);
@@ -260,8 +277,9 @@ export default function DashboardPage() {
       createdDateFrom: pendingPIDateFrom || undefined,
       createdDateTo: pendingPIDateTo || undefined,
       itemIds: pendingPIItemIds.length ? pendingPIItemIds.join(",") : undefined,
+      status: pendingPIStatus || undefined,
     }),
-    [locationId, debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds]
+    [locationId, debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds, pendingPIStatus]
   );
 
   const { data: pendingPIList = [], isLoading: loadingPendingPI } = useQuery<PurchaseIndent[]>({
@@ -280,8 +298,9 @@ export default function DashboardPage() {
       poDateFrom: pendingPODateFrom || undefined,
       poDateTo: pendingPODateTo || undefined,
       vendorIds: pendingPOVendorIds.length ? pendingPOVendorIds.join(",") : undefined,
+      status: pendingPOStatus || undefined,
     }),
-    [locationId, debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds]
+    [locationId, debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds, pendingPOStatus]
   );
 
   const { data: pendingPOList = [], isLoading: loadingPendingPO } = useQuery<PO[]>({
@@ -360,6 +379,17 @@ export default function DashboardPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed"),
   });
 
+  const revertToPendingMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-indents/${id}/revert-to-pending`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-pi"] });
+      toast.success("Indent reverted to Pending");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Revert failed"),
+  });
+
   const approvePOMutation = useMutation({
     mutationFn: (id: number) => api.post(`/purchase-orders/${id}/approve`),
     onSuccess: () => {
@@ -380,6 +410,17 @@ export default function DashboardPage() {
       setApprovalTarget(null);
     },
     onError: (err: any) => toast.error(err.response?.data?.message || "Rejection failed"),
+  });
+
+  const revertToPendingPOMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/purchase-orders/${id}/revert-to-pending`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-po"] });
+      toast.success("Order reverted to Pending");
+      setApprovalTarget(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || "Revert failed"),
   });
 
   const handleExport = useCallback(
@@ -916,60 +957,185 @@ export default function DashboardPage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PI No</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Type</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
-                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                          <TableHead className="w-[40px] h-10 px-4" />
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PI No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Date</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Type</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingPIList.map((pi) => (
-                          <TableRow key={pi.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                            <TableCell className="px-4 py-3 font-medium text-text">{pi.piNo}</TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{pi.type}</TableCell>
-                            <TableCell className="px-4 py-3">
-                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
-                                {pi.status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600 text-sm">
-                              {format(new Date(pi.createdAt), "dd MMM yyyy, HH:mm")}
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-secondary-600">{pi.creatorName ?? "—"}</TableCell>
-                            <TableCell className="px-4 py-3 text-right pr-6">
-                              <div className="flex items-center justify-end gap-1">
-                                {permissions?.approvePI && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                        <MoreVertical className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
-                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "approve" })} className="flex items-center gap-2 py-2">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        Approve
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "reject" })} className="flex items-center gap-2 py-2">
-                                        <XCircle className="w-4 h-4 text-rose-600" />
-                                        Reject
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                        {pendingPIList.map((pi, idx) => (
+                          <Fragment key={pi.id}>
+                            <TableRow
+                              className={cn(
+                                "border-b border-secondary-100 transition-colors cursor-pointer group whitespace-nowrap",
+                                expandedPIId === pi.id ? "bg-primary-50/50" : "hover:bg-secondary-50/50"
+                              )}
+                              onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
+                            >
+                              <TableCell className="px-4 py-3 text-center">
+                                <motion.div
+                                  animate={{ rotate: expandedPIId === pi.id ? 90 : 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <ChevronRight className="w-4 h-4 text-secondary-400 group-hover:text-primary-500" />
+                                </motion.div>
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                {String(pendingPIList.length - pendingPIList.indexOf(pi)).padStart(2, '0')}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 font-bold text-primary-700 text-sm uppercase tracking-tight">
+                                {pi.piNo}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-600 font-medium text-xs">
+                                {formatDateTime(pi.createdAt)}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-center">
+                                {String(pi.status).toLowerCase() === "approved" || pi.status === PurchaseIndentStatus.Approved ? (
+                                  <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200 shadow-sm">
+                                    Approved
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm">
+                                    Pending Approval
+                                  </span>
                                 )}
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPIId(pi.id)} title="Preview">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Link href="/purchase-indents">
-                                  <Button variant="outline" size="sm" className="h-8 text-xs">
-                                    Open PI
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-600 text-sm font-medium">
+                                {String(pi.type ?? "—")}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-500 text-sm font-medium">
+                                {pi.creatorName ?? "—"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-right pr-6">
+                                <div className="flex items-center justify-end gap-1">
+                                  {permissions?.approvePI && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                        {String(pi.status).toLowerCase() !== "approved" ? (
+                                          <>
+                                            <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "approve" })} className="flex items-center gap-2 py-2">
+                                              <CheckCircle className="w-4 h-4 text-green-600" />
+                                              Approve
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "reject" })} className="flex items-center gap-2 py-2">
+                                              <XCircle className="w-4 h-4 text-rose-600" />
+                                              Reject
+                                            </DropdownMenuItem>
+                                          </>
+                                        ) : (
+                                          <DropdownMenuItem onClick={() => setApprovalTarget({ type: "pi", pi, action: "revert" })} className="flex items-center gap-2 py-2">
+                                            <Ban className="w-4 h-4 text-rose-500" />
+                                            Revert to Pending
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600" onClick={() => setPreviewPIId(pi.id)} title="Preview">
+                                    <Eye className="w-4 h-4" />
                                   </Button>
-                                </Link>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                                  {permissions?.editPI && pi.isActive && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                      onClick={() => { setEditPITarget(pi); setEditPIDialogOpen(true); }}
+                                      title="Edit PI"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                            <AnimatePresence>
+                              {expandedPIId === pi.id && (
+                                <TableRow key={`expand-${pi.id}`} className="hover:bg-transparent border-b border-secondary-100">
+                                  <td colSpan={8} className="p-0 border-none w-full">
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-secondary-50/10 w-full">
+                                      <div className="p-4 pt-0">
+                                        <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
+                                          <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                            <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">Indent Items</p>
+                                            <span className="text-[10px] font-medium text-secondary-400">Total: {pi.items?.length || 0} item(s)</span>
+                                          </div>
+                                          <div className="overflow-x-auto">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Item Description</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Type</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Drawing No</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">PO No</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Inward No</TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center pr-4">QC No</TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {(pi.items || []).map((item: any, iidx: number) => (
+                                                  <TableRow key={item.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 whitespace-nowrap">
+                                                    <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">{iidx + 1}</TableCell>
+                                                    <TableCell className="px-4 py-2">
+                                                      <div className="flex flex-col min-w-0">
+                                                        <span className="font-bold text-secondary-900 text-[13px] tracking-tight">{item.currentName}</span>
+                                                        <span className="text-[11px] text-secondary-500 font-medium">{item.mainPartName}</span>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-4 py-2">
+                                                      <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px] uppercase">{item.itemTypeName || "—"}</span>
+                                                    </TableCell>
+                                                    <TableCell className="px-4 py-2 text-center text-secondary-600 text-[12px]">{item.drawingNo || "—"}</TableCell>
+                                                    <TableCell className="px-4 py-2 text-center">
+                                                      {item.poNo && item.poNo !== "-" ? (
+                                                        <span className="bg-indigo-50 px-2.5 py-1 rounded-md text-indigo-700 border border-indigo-100 uppercase text-[10px] font-black tracking-wider">{item.poNo}</span>
+                                                      ) : (
+                                                        <span className="text-secondary-300 italic text-[11px]">Pending PO</span>
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell className="px-4 py-2 text-center">
+                                                      {item.inwardNo ? (
+                                                        <span className="bg-amber-50 px-2.5 py-1 rounded-md text-amber-700 border border-amber-100 uppercase text-[10px] font-black tracking-wider">{item.inwardNo}</span>
+                                                      ) : (
+                                                        <span className="text-secondary-300 italic text-[11px]">Pending Inward</span>
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell className="px-4 py-2 text-center pr-4">
+                                                      {item.qcNo ? (
+                                                        <span className="bg-emerald-50 px-2.5 py-1 rounded-md text-emerald-700 border border-emerald-100 uppercase text-[10px] font-black tracking-wider">{item.qcNo}</span>
+                                                      ) : (
+                                                        <span className="text-secondary-300 italic text-[11px]">Pending QC</span>
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                          {pi.remarks && (
+                                            <div className="mx-4 mb-4 mt-3 p-3 bg-secondary-50/50 rounded-xl border border-secondary-200/50 italic text-[12px] text-secondary-500">
+                                              <span className="font-black not-italic uppercase text-[10px] text-secondary-400 block mb-1 tracking-widest">Indent Remarks</span>
+                                              {pi.remarks}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  </td>
+                                </TableRow>
+                              )}
+                            </AnimatePresence>
+                          </Fragment>
                         ))}
                       </TableBody>
                     </Table>
@@ -984,160 +1150,400 @@ export default function DashboardPage() {
           )}
 
         {/* Pending PO Table */}
-        {expandedSection === "pending-po" && (
-          <div>
-            <Card className="shadow-lg border border-secondary-200">
-              <div className="border-b border-secondary-200 px-4 py-3">
-                <h2 className="text-xl font-bold text-text">Pending PO</h2>
-                <p className="text-sm text-secondary-500 mt-0.5">
-                  Purchase orders awaiting approval. Approve or reject from here.
-                </p>
-              </div>
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                  <div className="flex flex-col">
-                    <label className={filterLabelClass}>Search</label>
-                    <div className="relative flex items-center">
-                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
-                      <Input
-                        type="search"
-                        value={pendingPOSearch}
-                        onChange={(e) => setPendingPOSearch(e.target.value)}
-                        placeholder="PO No., vendor, remarks…"
-                        className={cn(inputClass, "pl-9")}
+        {
+          expandedSection === "pending-po" && (
+            <div>
+              <Card className="shadow-lg border border-secondary-200">
+                <div className="border-b border-secondary-200 px-4 py-3">
+                  <h2 className="text-xl font-bold text-text">Pending PO</h2>
+                  <p className="text-sm text-secondary-500 mt-0.5">
+                    Purchase orders awaiting approval. Approve or reject from here.
+                  </p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="flex flex-col">
+                      <label className={filterLabelClass}>Search</label>
+                      <div className="relative flex items-center">
+                        <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
+                        <Input
+                          type="search"
+                          value={pendingPOSearch}
+                          onChange={(e) => setPendingPOSearch(e.target.value)}
+                          placeholder="PO No., vendor, remarks…"
+                          className={cn(inputClass, "pl-9")}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={filterLabelClass}>PO Date From</label>
+                      <DatePicker
+                        value={pendingPODateFrom}
+                        onChange={(d) => setPendingPODateFrom(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="From"
+                        clearable
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className={filterLabelClass}>PO Date From</label>
-                    <DatePicker
-                      value={pendingPODateFrom}
-                      onChange={(d) => setPendingPODateFrom(d ? format(d, "yyyy-MM-dd") : "")}
-                      className="h-9 w-full border-secondary-200"
-                      placeholder="From"
-                      clearable
-                    />
-                  </div>
-                  <div>
-                    <label className={filterLabelClass}>PO Date To</label>
-                    <DatePicker
-                      value={pendingPODateTo}
-                      onChange={(d) => setPendingPODateTo(d ? format(d, "yyyy-MM-dd") : "")}
-                      className="h-9 w-full border-secondary-200"
-                      placeholder="To"
-                      clearable
-                    />
-                  </div>
-                  <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                    <label className={filterLabelClass}>Vendor</label>
-                    <MultiSelectSearch
-                      options={vendorOptions}
-                      value={pendingPOVendorIds as (number | string)[]}
-                      onChange={(v) => setPendingPOVendorIds(v as number[])}
-                      placeholder="Select vendor"
-                      searchPlaceholder="Search…"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
-                      <Download className="w-4 h-4 mr-2" />
-                      Export Excel
-                    </Button>
+                    <div>
+                      <label className={filterLabelClass}>PO Date To</label>
+                      <DatePicker
+                        value={pendingPODateTo}
+                        onChange={(d) => setPendingPODateTo(d ? format(d, "yyyy-MM-dd") : "")}
+                        className="h-9 w-full border-secondary-200"
+                        placeholder="To"
+                        clearable
+                      />
+                    </div>
+                    <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
+                      <label className={filterLabelClass}>Vendor</label>
+                      <MultiSelectSearch
+                        options={vendorOptions}
+                        value={pendingPOVendorIds as (number | string)[]}
+                        onChange={(v) => setPendingPOVendorIds(v as number[])}
+                        placeholder="Select vendor"
+                        searchPlaceholder="Search…"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Excel
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="border-t border-secondary-100 overflow-x-auto">
-                {loadingPendingPO ? (
-                  <div className="py-12 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
-                    <p className="mt-4 text-secondary-600">Loading...</p>
-                  </div>
-                ) : pendingPOList.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Status</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pendingPOList.map((po) => (
-                        <TableRow key={po.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
-                          <TableCell className="px-4 py-3 font-medium text-text">{po.poNo}</TableCell>
-                          <TableCell className="px-4 py-3 text-secondary-600">{po.vendorName ?? "—"}</TableCell>
-                          <TableCell className="px-4 py-3">
-                            <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200">
-                              {po.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-secondary-600 text-sm">
-                            {format(new Date(po.createdAt), "dd MMM yyyy, HH:mm")}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-secondary-600">{po.creatorName ?? "—"}</TableCell>
-                          <TableCell className="px-4 py-3 text-right pr-6">
-                            <div className="flex items-center justify-end gap-1">
-                              {permissions?.approvePO && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
-                                    <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "approve" })} className="flex items-center gap-2 py-2">
-                                      <CheckCircle className="w-4 h-4 text-green-600" />
-                                      Approve
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "reject" })} className="flex items-center gap-2 py-2">
-                                      <XCircle className="w-4 h-4 text-rose-600" />
-                                      Reject
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setPreviewPOId(po.id)} title="Preview">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Link href="/purchase-orders">
-                                <Button variant="outline" size="sm" className="h-8 text-xs">
-                                  Open PO
-                                </Button>
-                              </Link>
-                            </div>
-                          </TableCell>
+                <div className="border-t border-secondary-100 overflow-x-auto">
+                  {loadingPendingPO ? (
+                    <div className="py-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                      <p className="mt-4 text-secondary-600">Loading...</p>
+                    </div>
+                  ) : pendingPOList.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                          <TableHead className="w-[40px] h-10 px-4"></TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PO Date</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="py-12 text-center text-secondary-500">
-                    No pending POs match your filters.
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
+                      </TableHeader>
+                      <TableBody>
+                        {pendingPOList.map((po, idx) => (
+                          <Fragment key={po.id}>
+                            <TableRow
+                              className={cn(
+                                "border-b border-secondary-100 transition-colors cursor-pointer group whitespace-nowrap",
+                                expandedPOId === po.id ? "bg-primary-50/50" : "hover:bg-secondary-50/50"
+                              )}
+                              onClick={() => setExpandedPOId(expandedPOId === po.id ? null : po.id)}
+                            >
+                              <TableCell className="px-4 py-3">
+                                <motion.div
+                                  animate={{ rotate: expandedPOId === po.id ? 90 : 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <ChevronRight className="w-4 h-4 text-secondary-400 group-hover:text-primary-500" />
+                                </motion.div>
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                {String(pendingPOList.length - idx).padStart(2, '0')}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 font-bold text-primary-700 text-sm">
+                                {po.poNo}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-600 font-medium text-xs">
+                                {formatDateTime(po.createdAt)}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-700 font-semibold text-sm">
+                                {po.vendorName ?? "—"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-center">
+                                {String(po.status).toLowerCase() === "approved" || po.status === PoStatus.Approved ? (
+                                  <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200 shadow-sm">
+                                    Approved
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm">
+                                    Pending Approval
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-secondary-500 text-sm font-medium">
+                                {po.creatorName ?? "—"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-right pr-6">
+                                <div className="flex items-center justify-end gap-1">
+                                  {permissions?.approvePO && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="min-w-[12rem] py-1">
+                                        {(String(po.status).toLowerCase() !== "approved" && po.status !== PoStatus.Approved) ? (
+                                          <>
+                                            <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "approve" })} className="flex items-center gap-2 py-2">
+                                              <CheckCircle className="w-4 h-4 text-green-600" />
+                                              Approve
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "reject" })} className="flex items-center gap-2 py-2">
+                                              <XCircle className="w-4 h-4 text-rose-600" />
+                                              Reject
+                                            </DropdownMenuItem>
+                                          </>
+                                        ) : (
+                                          <DropdownMenuItem onClick={() => setApprovalTarget({ type: "po", po, action: "revert" })} className="flex items-center gap-2 py-2">
+                                            <Ban className="w-4 h-4 text-rose-500" />
+                                            Revert to Pending
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600" onClick={(e) => { e.stopPropagation(); setPreviewPOId(po.id); }} title="Preview">
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  {permissions?.editPO && po.isActive && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                      onClick={(e) => { e.stopPropagation(); setEditPOTarget(po); setEditPODialogOpen(true); }}
+                                      title="Edit PO"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+
+                            <AnimatePresence>
+                              {expandedPOId === po.id && (
+                                <TableRow className="hover:bg-transparent border-b border-secondary-100">
+                                  <td colSpan={8} className="p-0 border-none w-full">
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                                      className="overflow-hidden bg-secondary-50/10 w-full"
+                                    >
+                                      <div className="p-4 pt-0">
+                                        <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
+                                          <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                            <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                              Purchase Order Items
+                                            </p>
+                                            <span className="text-[10px] font-medium text-secondary-400">
+                                              Total Items: {po.items?.length || 0}
+                                            </span>
+                                          </div>
+                                          <div className="overflow-x-auto">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">
+                                                    SR.NO
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    PI NO.
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    PI DATE
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    ITEM DESCRIPTION
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    TYPE
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    DRAWING / REV
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    INWARD NO.
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    INWARD DATE
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">
+                                                    QC NO.
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    QC DATE
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                                    MATERIAL
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center whitespace-nowrap">
+                                                    GST %
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                                    UNIT RATE (₹)
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                                    TAX
+                                                  </TableHead>
+                                                  <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap pr-6">
+                                                    TOTAL
+                                                  </TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {po.items?.map((item, idx) => {
+                                                  const gstPct = po.gstPercent ?? 18;
+                                                  const tax = ((item.rate ?? 0) * gstPct) / 100;
+                                                  const total = (item.rate ?? 0) + tax;
+                                                  return (
+                                                    <TableRow
+                                                      key={item.id}
+                                                      className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 whitespace-nowrap"
+                                                    >
+                                                      <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">
+                                                        {idx + 1}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-700 font-semibold text-[13px]">
+                                                        {item.piNo ?? "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                        {item.piDate ? formatDateTime(item.piDate) : "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2">
+                                                        <div className="flex flex-col min-w-0">
+                                                          <span className="font-bold text-secondary-900 text-[13px] tracking-tight">
+                                                            {item.currentName ?? item.mainPartName ?? "—"}
+                                                          </span>
+                                                          {item.currentName && item.mainPartName && item.currentName !== item.mainPartName && (
+                                                            <span className="text-[11px] text-secondary-500 font-medium tracking-tight">
+                                                              {item.mainPartName}
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                                        {item.itemTypeName ?? "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2">
+                                                        <div className="flex flex-col min-w-0">
+                                                          <span className="font-bold text-secondary-800 text-[13px] tracking-tight">
+                                                            {item.drawingNo ?? "N/A"}
+                                                          </span>
+                                                          <span className="text-[11px] font-semibold text-secondary-400">
+                                                            {item.revisionNo ? `R${item.revisionNo}` : "R0"}
+                                                          </span>
+                                                        </div>
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2">
+                                                        {item.inwardNo ? (
+                                                          <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px]">
+                                                            {item.inwardNo}
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-secondary-400 text-[11px] italic font-medium">Not Inwarded</span>
+                                                        )}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                        {item.inwardNo && item.inwardDate ? formatDateTime(item.inwardDate) : "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-center">
+                                                        {item.qcNo ? (
+                                                          <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 font-bold text-[11px]">
+                                                            {item.qcNo}
+                                                          </span>
+                                                        ) : item.inwardNo ? (
+                                                          <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 font-bold text-[11px]">
+                                                            Pending QC
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-secondary-300 text-[11px]">—</span>
+                                                        )}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                        {item.qcNo && item.qcDate ? formatDateTime(item.qcDate) : "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                                        {item.materialName ?? "—"}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-center text-[13px] font-medium text-secondary-500 tabular-nums">
+                                                        {gstPct}%
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-right font-bold text-secondary-900 text-[13px] tabular-nums">
+                                                        {((item.rate ?? 0)).toLocaleString(
+                                                          undefined,
+                                                          { minimumFractionDigits: 2 }
+                                                        )}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-right text-secondary-500 text-[13px] font-medium tabular-nums">
+                                                        ₹{tax.toFixed(2)}
+                                                      </TableCell>
+                                                      <TableCell className="px-4 py-2 text-right font-black text-secondary-900 text-[13px] tabular-nums pr-6">
+                                                        ₹{total.toFixed(2)}
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  );
+                                                })}
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  </td>
+                                </TableRow>
+                              )}
+                            </AnimatePresence>
+                          </Fragment>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="py-12 text-center text-secondary-500">
+                      No pending POs match your filters.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )
+        }
 
         {/* Approve / Reject Dialog */}
         <Dialog
           isOpen={!!approvalTarget}
           onClose={() => setApprovalTarget(null)}
-          title={approvalTarget?.action === "approve" ? (approvalTarget.type === "pi" ? "Approve Purchase Indent" : "Approve Purchase Order") : (approvalTarget?.type === "pi" ? "Reject Purchase Indent" : "Reject Purchase Order")}
+          title={
+            approvalTarget?.action === "approve"
+              ? (approvalTarget.type === "pi" ? "Approve Purchase Indent" : "Approve Purchase Order")
+              : approvalTarget?.action === "reject"
+                ? (approvalTarget?.type === "pi" ? "Reject Purchase Indent" : "Reject Purchase Order")
+                : "Revert Purchase Indent"
+          }
           size="sm"
         >
           <div className="space-y-4 font-sans">
             <p className="text-secondary-600">
-              Are you sure you want to{" "}
-              <span className={approvalTarget?.action === "approve" ? "text-green-600 font-bold uppercase" : "text-rose-600 font-bold uppercase"}>
-                {approvalTarget?.action}
-              </span>{" "}
-              {approvalTarget?.type === "pi" ? `indent ${approvalTarget.pi.piNo}` : `order ${approvalTarget?.po.poNo}`}?
-              This action cannot be undone.
+              {approvalTarget?.action === "revert" ? (
+                <>
+                  Are you sure you want to revert {approvalTarget.type === "pi" ? "indent" : "order"} <span className="font-bold text-secondary-900">{approvalTarget.type === "pi" ? approvalTarget.pi.piNo : approvalTarget.po.poNo}</span> back to Pending? {approvalTarget.type === "pi" ? "No PO has been created from this indent." : "No inward has been recorded against this PO."} This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to{" "}
+                  <span className={approvalTarget?.action === "approve" ? "text-green-600 font-bold uppercase" : "text-rose-600 font-bold uppercase"}>
+                    {approvalTarget?.action}
+                  </span>{" "}
+                  {approvalTarget?.type === "pi" ? `indent ${approvalTarget.pi.piNo}` : `order ${approvalTarget?.po?.poNo}`}?
+                  This action cannot be undone.
+                </>
+              )}
             </p>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setApprovalTarget(null)} className="flex-1 font-bold">
@@ -1152,22 +1558,26 @@ export default function DashboardPage() {
                   if (!approvalTarget) return;
                   if (approvalTarget.type === "pi") {
                     if (approvalTarget.action === "approve") approvePIMutation.mutate(approvalTarget.pi.id);
-                    else rejectPIMutation.mutate(approvalTarget.pi.id);
+                    else if (approvalTarget.action === "reject") rejectPIMutation.mutate(approvalTarget.pi.id);
+                    else revertToPendingMutation.mutate(approvalTarget.pi.id);
                   } else {
                     if (approvalTarget.action === "approve") approvePOMutation.mutate(approvalTarget.po.id);
-                    else rejectPOMutation.mutate(approvalTarget.po.id);
+                    else if (approvalTarget.action === "reject") rejectPOMutation.mutate(approvalTarget.po.id);
+                    else revertToPendingPOMutation.mutate(approvalTarget.po.id);
                   }
                 }}
                 disabled={
                   approvePIMutation.isPending ||
                   rejectPIMutation.isPending ||
                   approvePOMutation.isPending ||
-                  rejectPOMutation.isPending
+                  rejectPOMutation.isPending ||
+                  revertToPendingMutation.isPending ||
+                  revertToPendingPOMutation.isPending
                 }
               >
-                {approvePIMutation.isPending || rejectPIMutation.isPending || approvePOMutation.isPending || rejectPOMutation.isPending
+                {approvePIMutation.isPending || rejectPIMutation.isPending || approvePOMutation.isPending || rejectPOMutation.isPending || revertToPendingMutation.isPending || revertToPendingPOMutation.isPending
                   ? "Processing..."
-                  : `Confirm ${approvalTarget?.action === "approve" ? "Approve" : "Reject"}`}
+                  : approvalTarget?.action === "revert" ? "Revert to Pending" : `Confirm ${approvalTarget?.action === "approve" ? "Approve" : "Reject"}`}
               </Button>
             </div>
           </div>
@@ -1183,7 +1593,42 @@ export default function DashboardPage() {
             <PurchaseOrderPreviewModal poId={previewPOId} onClose={() => setPreviewPOId(null)} />
           )
         }
-      </div>
-    </div>
+
+        {
+          editPIDialogOpen && (
+            <PurchaseIndentDialog
+              open={editPIDialogOpen}
+              onOpenChange={(isOpen) => {
+                setEditPIDialogOpen(isOpen);
+                if (!isOpen) {
+                  setEditPITarget(null);
+                }
+              }}
+              indent={editPITarget as PurchaseIndent}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-pi"] });
+              }}
+            />
+          )
+        }
+        {
+          editPODialogOpen && (
+            <PurchaseOrderDialog
+              open={editPODialogOpen}
+              onOpenChange={(isOpen) => {
+                setEditPODialogOpen(isOpen);
+                if (!isOpen) {
+                  setEditPOTarget(null);
+                }
+              }}
+              po={editPOTarget as PO}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "pending-po"] });
+              }}
+            />
+          )
+        }
+      </div >
+    </div >
   );
 }

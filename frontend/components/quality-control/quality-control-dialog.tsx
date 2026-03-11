@@ -13,8 +13,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QCItemSelectionDialog } from "./qc-item-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 export type SelectedQCItem = PendingQC & { included?: boolean };
 
@@ -271,7 +270,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                 <div className="col-span-2">
                                     <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">QC Date</Label>
                                     <Input
-                                        value={format(isEditing && qcDetail?.createdAt ? new Date(qcDetail.createdAt) : new Date(), "dd-MMM-yyyy")}
+                                        value={formatDate(isEditing && qcDetail?.createdAt ? qcDetail.createdAt : new Date())}
                                         readOnly
                                         className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-bold text-secondary-700 disabled:opacity-100"
                                     />

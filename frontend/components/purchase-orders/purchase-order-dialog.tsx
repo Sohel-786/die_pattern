@@ -27,7 +27,7 @@ import { QuotationListDialog } from "./quotation-list-dialog";
 import { toast } from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 export interface POGridItem {
   purchaseIndentItemId: number;
@@ -50,6 +50,7 @@ interface PurchaseOrderDialogProps {
   onPreviewRequest?: (poId: number) => void;
   /** When true, dialog becomes view-only (no Save/Update). */
   readOnly?: boolean;
+  onSuccess?: () => void;
 }
 
 export function PurchaseOrderDialog({
@@ -59,6 +60,7 @@ export function PurchaseOrderDialog({
   preSelectedPiItemIds = [],
   onPreviewRequest,
   readOnly,
+  onSuccess,
 }: PurchaseOrderDialogProps) {
   const isEditing = !!po?.id;
   const isReadOnly = !!readOnly || (isEditing && (po?.isActive === false || po?.status !== PoStatus.Pending));
@@ -260,6 +262,7 @@ export function PurchaseOrderDialog({
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
+      if (onSuccess) onSuccess();
       toast.success("PO saved");
       onOpenChange(false);
     },
@@ -271,6 +274,7 @@ export function PurchaseOrderDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
+      if (onSuccess) onSuccess();
       toast.success("PO updated");
       onOpenChange(false);
     },
@@ -528,7 +532,7 @@ export function PurchaseOrderDialog({
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">PO Date</Label>
-                  <Input value={format(new Date(), "dd-MMM-yyyy")} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm" />
+                  <Input value={formatDate(isEditing && poData?.createdAt ? poData.createdAt : new Date())} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm" />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>

@@ -11,6 +11,8 @@ namespace net_backend.Services
 {
     public class ExcelService : IExcelService
     {
+        private const string ExcelDateTimeFormat = "dd/mm/yyyy, hh:mm AM/PM";
+
         public byte[] GenerateExcel(IEnumerable<object> data, string sheetName = "Sheet1", string? titleRow = null)
         {
             using (var workbook = new XLWorkbook())
@@ -60,15 +62,20 @@ namespace net_backend.Services
                     for (int i = 0; i < properties.Count; i++)
                     {
                         var value = properties[i].GetValue(item);
-                        if (value == null) worksheet.Cell(rowIdx, i + 1).Value = "";
-                        else if (value is string s) worksheet.Cell(rowIdx, i + 1).Value = s;
-                        else if (value is bool b) worksheet.Cell(rowIdx, i + 1).Value = b;
-                        else if (value is int iVal) worksheet.Cell(rowIdx, i + 1).Value = iVal;
-                        else if (value is long lVal) worksheet.Cell(rowIdx, i + 1).Value = lVal;
-                        else if (value is decimal d) worksheet.Cell(rowIdx, i + 1).Value = (double)d;
-                        else if (value is double db) worksheet.Cell(rowIdx, i + 1).Value = db;
-                        else if (value is DateTime dt) worksheet.Cell(rowIdx, i + 1).Value = dt;
-                        else worksheet.Cell(rowIdx, i + 1).Value = value.ToString();
+                        var cell = worksheet.Cell(rowIdx, i + 1);
+                        if (value == null) cell.Value = "";
+                        else if (value is string s) cell.Value = s;
+                        else if (value is bool b) cell.Value = b;
+                        else if (value is int iVal) cell.Value = iVal;
+                        else if (value is long lVal) cell.Value = lVal;
+                        else if (value is decimal d) cell.Value = (double)d;
+                        else if (value is double db) cell.Value = db;
+                        else if (value is DateTime dt)
+                        {
+                            cell.Value = dt;
+                            cell.Style.DateFormat.Format = ExcelDateTimeFormat;
+                        }
+                        else cell.Value = value.ToString();
                     }
                     rowIdx++;
                 }
@@ -124,7 +131,7 @@ namespace net_backend.Services
                 foreach (var r in rowList)
                 {
                     worksheet.Cell(rowIdx, 1).Value = r.EventDate;
-                    worksheet.Cell(rowIdx, 1).Style.DateFormat.Format = "dd-MMM-yyyy HH:mm";
+                    worksheet.Cell(rowIdx, 1).Style.DateFormat.Format = ExcelDateTimeFormat;
                     worksheet.Cell(rowIdx, 2).Value = r.EventType ?? "";
                     worksheet.Cell(rowIdx, 3).Value = r.ReferenceNo ?? "";
                     worksheet.Cell(rowIdx, 4).Value = r.LocationName ?? "";
@@ -303,7 +310,7 @@ namespace net_backend.Services
                 }
 
                 // Add Generation Timestamp
-                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd/MM/yyyy, hh:mm tt}";
                 worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
@@ -370,7 +377,7 @@ namespace net_backend.Services
                 }
 
                 // Add Generation Timestamp
-                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd/MM/yyyy, hh:mm tt}";
                 worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
@@ -427,52 +434,91 @@ namespace net_backend.Services
                 {
                     worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
                     worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
-                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
-                    worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 13;
+                    worksheet.Range(rowIdx, 1, rowIdx, 9).Merge();
                     rowIdx++;
                 }
 
-                // Add Generation Timestamp
-                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                // Report title
+                worksheet.Cell(rowIdx, 1).Value = "Pending Purchase Indents — Items Without Active PO";
+                worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 11;
+                worksheet.Range(rowIdx, 1, rowIdx, 9).Merge();
+                rowIdx++;
+
+                // Generation timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd/MM/yyyy, hh:mm tt}";
                 worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
-                worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
+                worksheet.Range(rowIdx, 1, rowIdx, 9).Merge();
                 rowIdx++;
 
-                var headers = new[] { "PI No", "Type", "Status", "Remarks", "Created At", "Created By", "Item Count" };
+                // Header row
+                var headers = new[] { "Sr.", "PI No", "PI Date", "PI Status", "Type", "Item Description", "Drawing No", "Item Type", "Created By" };
                 for (int c = 0; c < headers.Length; c++)
                 {
                     var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1E3A5F");
+                    cell.Style.Font.FontColor = XLColor.White;
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 }
                 var headerRow = rowIdx;
                 rowIdx++;
 
+                int sr = 1;
                 foreach (var r in rowList)
                 {
-                    worksheet.Cell(rowIdx, 1).Value = r.PiNo ?? "";
-                    worksheet.Cell(rowIdx, 2).Value = r.Type ?? "";
-                    worksheet.Cell(rowIdx, 3).Value = r.Status ?? "";
-                    worksheet.Cell(rowIdx, 4).Value = r.Remarks ?? "";
-                    worksheet.Cell(rowIdx, 5).Value = r.CreatedAt;
-                    worksheet.Cell(rowIdx, 5).Style.DateFormat.Format = "dd-mmm-yyyy hh:mm";
-                    worksheet.Cell(rowIdx, 6).Value = r.CreatorName ?? "";
-                    worksheet.Cell(rowIdx, 7).Value = r.ItemCount;
+                    var itemDesc = !string.IsNullOrWhiteSpace(r.CurrentName) ? r.CurrentName : r.MainPartName;
+                    if (!string.IsNullOrWhiteSpace(r.MainPartName) && r.CurrentName != r.MainPartName)
+                        itemDesc = $"{r.CurrentName} ({r.MainPartName})";
+
+                    worksheet.Cell(rowIdx, 1).Value = sr++;
+                    worksheet.Cell(rowIdx, 2).Value = r.PiNo ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.PiDate;
+                    worksheet.Cell(rowIdx, 3).Style.DateFormat.Format = ExcelDateTimeFormat;
+                    worksheet.Cell(rowIdx, 4).Value = r.PiStatus ?? "";
+                    // Color-code PI Status cell
+                    if (r.PiStatus == "PI Approved")
+                        worksheet.Cell(rowIdx, 4).Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5");
+                    else
+                        worksheet.Cell(rowIdx, 4).Style.Fill.BackgroundColor = XLColor.FromHtml("#FEF3C7");
+                    worksheet.Cell(rowIdx, 5).Value = r.Type ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = itemDesc;
+                    worksheet.Cell(rowIdx, 7).Value = r.DrawingNo ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = r.ItemTypeName ?? "";
+                    worksheet.Cell(rowIdx, 9).Value = r.CreatorName ?? "";
+
+                    // Alternate row shading
+                    if (sr % 2 == 0)
+                    {
+                        for (int c = 1; c <= 9; c++)
+                        {
+                            var cell = worksheet.Cell(rowIdx, c);
+                            if (cell.Style.Fill.BackgroundColor == XLColor.NoColor)
+                                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F9FAFB");
+                        }
+                    }
                     rowIdx++;
                 }
-                worksheet.Column(1).Width = 18;
+
+                worksheet.Column(1).Width = 6;
                 worksheet.Column(2).Width = 14;
-                worksheet.Column(3).Width = 12;
-                worksheet.Column(4).Width = 28;
-                worksheet.Column(5).Width = 18;
-                worksheet.Column(6).Width = 22;
-                worksheet.Column(7).Width = 12;
+                worksheet.Column(3).Width = 22;
+                worksheet.Column(4).Width = 18;
+                worksheet.Column(5).Width = 14;
+                worksheet.Column(6).Width = 40;
+                worksheet.Column(7).Width = 18;
+                worksheet.Column(8).Width = 16;
+                worksheet.Column(9).Width = 22;
+
                 if (rowList.Count > 0)
                     worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
@@ -493,50 +539,120 @@ namespace net_backend.Services
                 {
                     worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
                     worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
-                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
-                    worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                    worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 13;
+                    worksheet.Range(rowIdx, 1, rowIdx, 17).Merge();
                     rowIdx++;
                 }
 
-                // Add Generation Timestamp
-                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd-MMM-yyyy HH:mm:ss}";
+                // Report title
+                worksheet.Cell(rowIdx, 1).Value = "Pending Purchase Orders — Items Without Active Inward";
+                worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
+                worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 11;
+                worksheet.Range(rowIdx, 1, rowIdx, 17).Merge();
+                rowIdx++;
+
+                // Generation timestamp
+                worksheet.Cell(rowIdx, 1).Value = $"Report Generated: {DateTime.Now:dd/MM/yyyy, hh:mm tt}";
                 worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
-                worksheet.Range(rowIdx, 1, rowIdx, 6).Merge();
+                worksheet.Range(rowIdx, 1, rowIdx, 17).Merge();
                 rowIdx++;
 
-                var headers = new[] { "PO No", "Vendor", "Status", "Remarks", "Created At", "Created By" };
+                // Header row
+                var headers = new[] { "Sr.", "PO No", "PO Date", "Vendor", "PO Status", "Delivery Date", "Created By", "Remarks", "PI No", "PI Date", "Item Description", "Type", "Drawing No", "Material", "Unit Rate (₹)", "Tax", "Total Amount" };
                 for (int c = 0; c < headers.Length; c++)
                 {
                     var cell = worksheet.Cell(rowIdx, c + 1);
                     cell.Value = headers[c];
                     cell.Style.Font.Bold = true;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1E3A5F");
+                    cell.Style.Font.FontColor = XLColor.White;
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                 }
                 var headerRow = rowIdx;
                 rowIdx++;
 
+                int sr = 1;
                 foreach (var r in rowList)
                 {
-                    worksheet.Cell(rowIdx, 1).Value = r.PoNo ?? "";
-                    worksheet.Cell(rowIdx, 2).Value = r.VendorName ?? "";
-                    worksheet.Cell(rowIdx, 3).Value = r.Status ?? "";
-                    worksheet.Cell(rowIdx, 4).Value = r.Remarks ?? "";
-                    worksheet.Cell(rowIdx, 5).Value = r.CreatedAt;
-                    worksheet.Cell(rowIdx, 5).Style.DateFormat.Format = "dd-mmm-yyyy hh:mm";
-                    worksheet.Cell(rowIdx, 6).Value = r.CreatorName ?? "";
+                    var itemDesc = !string.IsNullOrWhiteSpace(r.CurrentName) ? r.CurrentName : r.MainPartName;
+                    if (!string.IsNullOrWhiteSpace(r.MainPartName) && r.CurrentName != r.MainPartName)
+                        itemDesc = $"{r.CurrentName} ({r.MainPartName})";
+
+                    worksheet.Cell(rowIdx, 1).Value = sr++;
+                    worksheet.Cell(rowIdx, 2).Value = r.PoNo ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.PoDate;
+                    worksheet.Cell(rowIdx, 3).Style.DateFormat.Format = ExcelDateTimeFormat;
+                    worksheet.Cell(rowIdx, 4).Value = r.VendorName ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.PoStatus ?? "";
+
+                    // Color-code PO Status cell
+                    if (r.PoStatus == "PO Approved")
+                        worksheet.Cell(rowIdx, 5).Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5");
+                    else
+                        worksheet.Cell(rowIdx, 5).Style.Fill.BackgroundColor = XLColor.FromHtml("#FEF3C7");
+
+                    worksheet.Cell(rowIdx, 6).Value = r.DeliveryDate;
+                    worksheet.Cell(rowIdx, 6).Style.DateFormat.Format = ExcelDateTimeFormat;
+                    worksheet.Cell(rowIdx, 7).Value = r.CreatorName ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = r.Remarks ?? "";
+
+                    worksheet.Cell(rowIdx, 9).Value = r.PiNo ?? "";
+                    worksheet.Cell(rowIdx, 10).Value = r.PiDate;
+                    worksheet.Cell(rowIdx, 10).Style.DateFormat.Format = ExcelDateTimeFormat;
+
+                    worksheet.Cell(rowIdx, 11).Value = itemDesc;
+                    worksheet.Cell(rowIdx, 12).Value = r.ItemTypeName ?? "";
+
+                    var drawingRev = r.DrawingNo ?? "";
+                    if (!string.IsNullOrEmpty(r.RevisionNo)) drawingRev += $" / R{r.RevisionNo}";
+                    worksheet.Cell(rowIdx, 13).Value = drawingRev;
+
+                    worksheet.Cell(rowIdx, 14).Value = r.MaterialName ?? "";
+                    worksheet.Cell(rowIdx, 15).Value = (double)r.Rate;
+                    worksheet.Cell(rowIdx, 15).Style.NumberFormat.Format = "₹ #,##0.00";
+                    worksheet.Cell(rowIdx, 16).Value = (double)r.TaxAmount;
+                    worksheet.Cell(rowIdx, 16).Style.NumberFormat.Format = "₹ #,##0.00";
+                    worksheet.Cell(rowIdx, 17).Value = (double)r.TotalAmount;
+                    worksheet.Cell(rowIdx, 17).Style.NumberFormat.Format = "₹ #,##0.00";
+
+                    // Alternate row shading
+                    if (sr % 2 == 0)
+                    {
+                        for (int c = 1; c <= 17; c++)
+                        {
+                            var cell = worksheet.Cell(rowIdx, c);
+                            if (cell.Style.Fill.BackgroundColor == XLColor.NoColor)
+                                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F9FAFB");
+                        }
+                    }
                     rowIdx++;
                 }
-                worksheet.Column(1).Width = 18;
-                worksheet.Column(2).Width = 24;
-                worksheet.Column(3).Width = 12;
-                worksheet.Column(4).Width = 28;
+
+                worksheet.Column(1).Width = 6;
+                worksheet.Column(2).Width = 14;
+                worksheet.Column(3).Width = 22;
+                worksheet.Column(4).Width = 24;
                 worksheet.Column(5).Width = 18;
                 worksheet.Column(6).Width = 22;
+                worksheet.Column(7).Width = 22;
+                worksheet.Column(8).Width = 25;
+                worksheet.Column(9).Width = 14;
+                worksheet.Column(10).Width = 22;
+                worksheet.Column(11).Width = 40;
+                worksheet.Column(12).Width = 16;
+                worksheet.Column(13).Width = 18;
+                worksheet.Column(14).Width = 18;
+                worksheet.Column(15).Width = 16;
+                worksheet.Column(16).Width = 16;
+                worksheet.Column(17).Width = 16;
+
                 if (rowList.Count > 0)
                     worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
+
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);

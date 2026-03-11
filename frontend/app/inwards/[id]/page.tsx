@@ -7,10 +7,9 @@ import { Inward, InwardSourceType, InwardStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useRouter, useParams } from "next/navigation";
-import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 const SOURCE_LABELS: Record<InwardSourceType, string> = {
     [InwardSourceType.PO]: "Purchase Order",
@@ -91,7 +90,7 @@ export default function InwardDetailPage() {
                         </div>
                         <p className="text-[11px] font-bold text-secondary-400 uppercase tracking-widest mt-2 flex items-center gap-2">
                             <Calendar className="w-3 h-3 text-primary-500" />
-                            Received on {format(new Date(inward.inwardDate), "dd MMM yyyy")}
+                            Received on {formatDateTime(inward.inwardDate)}
                         </p>
                     </div>
                 </div>
@@ -278,7 +277,7 @@ export default function InwardDetailPage() {
                                         </div>
                                         <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">System Timestamp</span>
                                     </div>
-                                    <span className="text-[11px] font-black text-secondary-900 tabular-nums">{format(new Date(inward.createdAt || inward.inwardDate), "dd MMM yyyy, HH:mm:ss")}</span>
+                                    <span className="text-[11px] font-black text-secondary-900 tabular-nums">{formatDateTime(inward.createdAt || inward.inwardDate)}</span>
                                 </div>
                                 <div className="flex justify-between items-center group pt-2">
                                     <div className="flex items-center gap-3">

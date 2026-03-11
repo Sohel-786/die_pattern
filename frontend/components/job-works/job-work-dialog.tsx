@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    Trash2, Save, Package, Loader2, Calendar, Plus, Upload, Eye, X, Printer, FileText, ShieldCheck
+    Trash2, Save, Package, Loader2, Plus, Upload, Eye, X, Printer, FileText, ShieldCheck
 } from "lucide-react";
 import api from "@/lib/api";
 import { JobWorkAttachmentListDialog } from "./job-work-attachment-list-dialog";
@@ -16,8 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 interface JobWorkGridItem {
     itemId: number;
@@ -266,8 +265,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                             <div className="col-span-12 md:col-span-2">
                                 <Label className="text-xs font-semibold text-secondary-600">JW Date</Label>
                                 <div className="h-9 mt-1 px-3 flex items-center bg-secondary-50 border border-secondary-200 rounded-lg text-sm font-medium text-secondary-700">
-                                    <Calendar className="w-4 h-4 mr-2 text-secondary-400" />
-                                    {isEditing && jobWork?.createdAt ? format(new Date(jobWork.createdAt), "dd-MMM-yyyy") : format(new Date(), "dd-MMM-yyyy")}
+                                    {formatDate(isEditing && jobWork?.createdAt ? jobWork.createdAt : new Date())}
                                 </div>
                             </div>
                             <div className="col-span-12 md:col-span-4">

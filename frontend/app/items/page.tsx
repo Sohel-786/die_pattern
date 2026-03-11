@@ -28,6 +28,7 @@ import { useMasterExportImport } from "@/hooks/use-master-export-import";
 import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { AccessDenied } from "@/components/ui/access-denied";
+import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
 
@@ -341,7 +342,7 @@ export default function ItemsPage() {
                                         >
                                             <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{openingHistory.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-[11px]">
-                                                {new Date(entry.importedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                                                {formatDateTime(entry.importedAt)}
                                             </td>
                                             <td className="px-4 py-3 text-secondary-700 font-bold text-[11px]">{entry.originalFileName}</td>
                                             <td className="px-4 py-3 text-center font-bold text-secondary-700 text-[11px]">

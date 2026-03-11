@@ -19,7 +19,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { formatDateTime } from "@/lib/utils";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AccessDenied } from "@/components/ui/access-denied";
@@ -198,7 +198,7 @@ export default function TransfersPage() {
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{transfers.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{tr.transferNo}</td>
                                             <td className="px-4 py-3 text-secondary-700 text-sm">
-                                                {format(new Date(tr.transferDate), "dd MMM yyyy")}
+                                                {formatDateTime(tr.transferDate)}
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 <span className={cn(

@@ -146,6 +146,10 @@ namespace net_backend.Controllers
                             .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                             .Select(poi => poi.PurchaseOrderId)
                             .FirstOrDefault(),
+                        PoDate = _context.PurchaseOrderItems
+                            .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                            .Select(poi => (DateTime?)poi.PurchaseOrder!.CreatedAt)
+                            .FirstOrDefault(),
                         IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive),
                         InwardNo = (from il in _context.InwardLines
                                     join inv in _context.Inwards on il.InwardId equals inv.Id
@@ -161,7 +165,22 @@ namespace net_backend.Controllers
                                       _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
                                       qe.IsActive
                                 orderby qe.CreatedAt descending
-                                select qe.QcNo).FirstOrDefault()
+                                select qe.QcNo).FirstOrDefault(),
+                        InwardDate = (from il in _context.InwardLines
+                                      join inv in _context.Inwards on il.InwardId equals inv.Id
+                                      where il.SourceType == InwardSourceType.PO &&
+                                            _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                            inv.IsActive
+                                      orderby inv.CreatedAt descending
+                                      select (DateTime?)inv.InwardDate).FirstOrDefault(),
+                        QCDate = (from il in _context.InwardLines
+                                  join qi in _context.QcItems on il.Id equals qi.InwardLineId
+                                  join qe in _context.QcEntries on qi.QcEntryId equals qe.Id
+                                  where il.SourceType == InwardSourceType.PO &&
+                                        _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                        qe.IsActive
+                                  orderby qe.CreatedAt descending
+                                  select (DateTime?)qe.CreatedAt).FirstOrDefault()
                     }).ToList()
                 })
                 .ToListAsync();
@@ -625,6 +644,10 @@ namespace net_backend.Controllers
                         .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                         .Select(poi => poi.PurchaseOrderId)
                         .FirstOrDefault(),
+                    PoDate = _context.PurchaseOrderItems
+                        .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
+                        .Select(poi => (DateTime?)poi.PurchaseOrder!.CreatedAt)
+                        .FirstOrDefault(),
                     IsInPO = _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive),
                     InwardNo = (from il in _context.InwardLines
                                 join inv in _context.Inwards on il.InwardId equals inv.Id
@@ -640,7 +663,22 @@ namespace net_backend.Controllers
                                   _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
                                   qe.IsActive
                             orderby qe.CreatedAt descending
-                            select qe.QcNo).FirstOrDefault()
+                            select qe.QcNo).FirstOrDefault(),
+                    InwardDate = (from il in _context.InwardLines
+                                  join inv in _context.Inwards on il.InwardId equals inv.Id
+                                  where il.SourceType == InwardSourceType.PO &&
+                                        _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                        inv.IsActive
+                                  orderby inv.CreatedAt descending
+                                  select (DateTime?)inv.InwardDate).FirstOrDefault(),
+                    QCDate = (from il in _context.InwardLines
+                              join qi in _context.QcItems on il.Id equals qi.InwardLineId
+                              join qe in _context.QcEntries on qi.QcEntryId equals qe.Id
+                              where il.SourceType == InwardSourceType.PO &&
+                                    _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                    qe.IsActive
+                              orderby qe.CreatedAt descending
+                              select (DateTime?)qe.CreatedAt).FirstOrDefault()
                 }).ToList()
             };
             return Ok(new ApiResponse<PurchaseIndentDto> { Data = dto });

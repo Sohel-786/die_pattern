@@ -8,7 +8,7 @@ import { InwardSourceType } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { format } from "date-fns";
 
 interface SourceSelectionDialogProps {
@@ -188,11 +188,11 @@ export function SourceSelectionDialog({
                                     if (sourceType === InwardSourceType.PO) {
                                         refNo = item.poNo;
                                         party = item.vendorName;
-                                        dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
+                                        dateText = item.createdAt ? formatDateTime(item.createdAt) : "—";
                                     } else {
                                         refNo = item.jobWorkNo;
                                         party = item.toPartyName;
-                                        dateText = item.createdAt ? format(new Date(item.createdAt), 'dd MMM yyyy') : "—";
+                                        dateText = item.createdAt ? formatDateTime(item.createdAt) : "—";
                                     }
 
                                     return (

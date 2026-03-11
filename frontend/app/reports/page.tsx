@@ -29,6 +29,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import type { ItemLedgerRow } from "@/types";
+import { formatDateTime } from "@/lib/utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -447,7 +448,7 @@ function ReportsContent() {
                       {ledgerRows.map((row: ItemLedgerRow, idx: number) => (
                         <TableRow key={`${row.referenceNo}-${row.eventDate}-${idx}`} className="border-b border-gray-100 hover:bg-primary-50">
                           <TableCell className="text-center whitespace-nowrap text-gray-600">
-                            {row.eventDate ? format(new Date(row.eventDate), "dd-MMM-yyyy HH:mm") : "—"}
+                            {formatDateTime(row.eventDate)}
                           </TableCell>
                           <TableCell className="text-center font-medium">{row.eventType}</TableCell>
                           <TableCell className="text-center font-mono text-gray-700">{row.referenceNo}</TableCell>

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDateOnly } from "@/lib/utils";
 import { TransferItemSelectionDialog } from "./transfer-item-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { useLocationContext } from "@/contexts/location-context";
@@ -321,7 +321,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600">Transfer Date</Label>
-                                <Input readOnly value={format(new Date(transferDate + "T00:00:00"), "dd-MMM-yyyy")} className="h-8 mt-0.5 text-xs border-secondary-200 bg-secondary-50 font-semibold cursor-default" />
+                                <Input readOnly value={formatDateOnly(transferDate)} className="h-8 mt-0.5 text-xs border-secondary-200 bg-secondary-50 font-semibold cursor-default" />
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600">Out For <span className="text-rose-500">*</span></Label>

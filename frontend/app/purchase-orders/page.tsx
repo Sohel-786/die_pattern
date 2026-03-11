@@ -36,7 +36,6 @@ import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase
 import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { POFilters } from "@/components/filters/po-filters";
 import {
@@ -44,7 +43,7 @@ import {
   buildPOFilterParams,
   type POFiltersState,
 } from "@/lib/po-filters";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import type { Party } from "@/types";
 import type { Item } from "@/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -366,15 +365,13 @@ export default function PurchaseOrdersPage() {
                         {po.poNo}
                       </td>
                       <td className="px-4 py-3 text-secondary-700 text-sm">
-                        {format(new Date(po.createdAt), "dd MMM yyyy")}
+                        {formatDateTime(po.createdAt)}
                       </td>
                       <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
                         {po.vendorName ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-secondary-700 text-sm">
-                        {po.deliveryDate
-                          ? format(new Date(po.deliveryDate), "dd MMM yyyy")
-                          : "—"}
+                        {po.deliveryDate ? formatDateTime(po.deliveryDate) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {getStatusBadge(po.status)}
@@ -554,8 +551,14 @@ export default function PurchaseOrdersPage() {
                                           <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
                                             INWARD NO.
                                           </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            INWARD DATE
+                                          </TableHead>
                                           <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">
-                                            QC STATUS
+                                            QC NO.
+                                          </TableHead>
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                            QC DATE
                                           </TableHead>
                                           <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
                                             MATERIAL
@@ -592,7 +595,7 @@ export default function PurchaseOrdersPage() {
                                                 {i.piNo ?? "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
-                                                {i.piDate ? format(new Date(i.piDate), "dd MMM yyyy") : "—"}
+                                                {i.piDate ? formatDateTime(i.piDate) : "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col min-w-0">
@@ -626,6 +629,9 @@ export default function PurchaseOrdersPage() {
                                                   <span className="text-secondary-400 text-[11px] italic font-medium">Not Inwarded</span>
                                                 )}
                                               </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                {i.inwardNo && i.inwardDate ? formatDateTime(i.inwardDate) : "—"}
+                                              </TableCell>
                                               <TableCell className="px-4 py-2 text-center">
                                                 {i.qcNo ? (
                                                   <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 font-bold text-[11px]">
@@ -638,6 +644,9 @@ export default function PurchaseOrdersPage() {
                                                 ) : (
                                                   <span className="text-secondary-300 text-[11px]">—</span>
                                                 )}
+                                              </TableCell>
+                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                                {i.qcNo && i.qcDate ? formatDateTime(i.qcDate) : "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
                                                 {i.materialName ?? "—"}
