@@ -160,7 +160,7 @@ export default function InwardsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100">
-                                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
+                                <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
                                 <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
                                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD NO</TableHead>
                                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD DATE</TableHead>
@@ -182,24 +182,29 @@ export default function InwardsPage() {
                                 ))
                             ) : inwards.length > 0 ? (
                                 inwards.map((i, idx) => (
-                                    <Fragment key={i.id}>
-                                        <TableRow
-                                            className={cn(
-                                                "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
-                                                expandedInwardId === i.id && "bg-primary-50/30",
-                                                !i.isActive && "bg-secondary-50/50 opacity-75"
-                                            )}
-                                        >
-                                            <td className="px-4 py-3 text-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setExpandedInwardId(expandedInwardId === i.id ? null : i.id)}
-                                                    className="h-6 w-6 p-0 text-secondary-500 hover:bg-white border border-transparent hover:border-secondary-200 rounded"
-                                                >
-                                                    {expandedInwardId === i.id ? <Minus className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                                </Button>
-                                            </td>
+                                    <Fragment key={i.id}>                                        <TableRow
+                                             className={cn(
+                                                 "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                 expandedInwardId === i.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
+                                                 !i.isActive && "bg-secondary-50/50 opacity-75"
+                                             )}
+                                             onClick={() => setExpandedInwardId(expandedInwardId === i.id ? null : i.id)}
+                                         >
+                                             <TableCell className="p-0 w-14 min-w-[3.5rem] max-w-[3.5rem] text-center">
+                                                 <div className="flex items-center justify-center">
+                                                     <motion.div
+                                                         animate={{ rotate: expandedInwardId === i.id ? 90 : 0 }}
+                                                         transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                         style={{ originX: "50%", originY: "50%" }}
+                                                         className={cn(
+                                                             "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
+                                                             expandedInwardId === i.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-primary-100 group-hover:text-primary-600"
+                                                         )}
+                                                     >
+                                                         <ChevronRight className="w-5 h-5" />
+                                                     </motion.div>
+                                                 </div>
+                                             </TableCell>
                                             <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{inwards.length - idx}</td>
                                             <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</td>
                                             <td className="px-4 py-3 text-secondary-700 text-sm">{formatDateTime(i.inwardDate)}</td>
@@ -259,15 +264,16 @@ export default function InwardsPage() {
 
                                         <AnimatePresence>
                                             {expandedInwardId === i.id && (
-                                                <TableRow key={`expand-${i.id}`} className="bg-secondary-50/10 border-b border-secondary-100 border-t-0 p-0 hover:bg-secondary-50/10">
-                                                    <td colSpan={9} className="p-0 border-0 max-w-0">
+                                                <TableRow key={`expand-${i.id}`} className="hover:bg-transparent border-b border-secondary-100">
+                                                    <td colSpan={9} className="p-0 border-none max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
-                                                            className="overflow-hidden"
+                                                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                            className="overflow-hidden bg-secondary-50/10 w-full"
                                                         >
-                                                            <div className="px-6 py-4 bg-secondary-50/50 border-x border-secondary-100">
+                                                            <div className="px-4 pb-4 pt-4">
                                                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
                                                                     <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
                                                                         Items

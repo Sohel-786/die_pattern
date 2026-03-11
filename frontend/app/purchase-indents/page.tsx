@@ -238,7 +238,7 @@ export default function PurchaseIndentsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
+                                <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
                                 <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]">
                                     <input
                                         type="checkbox"
@@ -279,22 +279,27 @@ export default function PurchaseIndentsPage() {
                                         <TableRow
                                             key={pi.id}
                                             className={cn(
-                                                "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
+                                                "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
                                                 !pi.isActive && "opacity-60 bg-secondary-50/30",
-                                                expandedPIId === pi.id && "bg-primary-50/30"
+                                                expandedPIId === pi.id ? "bg-primary-50/60" : "hover:bg-primary-50/30"
                                             )}
+                                            onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
                                         >
-                                            <td className="px-4 py-3 text-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
-                                                    className="h-6 w-6 p-0 text-secondary-500"
-                                                    aria-label={expandedPIId === pi.id ? "Collapse row" : "Expand row"}
-                                                >
-                                                    {expandedPIId === pi.id ? <Minus className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                </Button>
-                                            </td>
+                                            <TableCell className="p-0 w-14 min-w-[3.5rem] max-w-[3.5rem] text-center">
+                                                <div className="flex items-center justify-center">
+                                                    <motion.div
+                                                        animate={{ rotate: expandedPIId === pi.id ? 90 : 0 }}
+                                                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                        style={{ originX: "50%", originY: "50%" }}
+                                                        className={cn(
+                                                            "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
+                                                            expandedPIId === pi.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-primary-100 group-hover:text-primary-600"
+                                                        )}
+                                                    >
+                                                        <ChevronRight className="w-5 h-5" />
+                                                    </motion.div>
+                                                </div>
+                                            </TableCell>
                                             <td className="px-4 py-3 text-center">
                                                 <input
                                                     type="checkbox"
@@ -432,15 +437,16 @@ export default function PurchaseIndentsPage() {
 
                                         <AnimatePresence>
                                             {expandedPIId === pi.id && (
-                                                <TableRow key={`expand-${pi.id}`} className="bg-secondary-50/50 border-b border-secondary-100">
-                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0 bg-secondary-50/30 max-w-0">
+                                                <TableRow key={`expand-${pi.id}`} className="hover:bg-transparent border-b border-secondary-100">
+                                                    <td colSpan={isAdmin ? 9 : 8} className="p-0 border-none max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
-                                                            className="overflow-hidden"
+                                                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                            className="overflow-hidden bg-secondary-50/10 w-full"
                                                         >
-                                                            <div className="p-4">
+                                                            <div className="px-4 pb-4 pt-4">
                                                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
                                                                     <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
                                                                         <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">

@@ -62,6 +62,7 @@ namespace net_backend.Controllers
             var pendingPIQuery = _context.PurchaseIndents.Where(pi =>
                 pi.IsActive && (
                     pi.Status == PurchaseIndentStatus.Pending ||
+                    pi.Status == PurchaseIndentStatus.Rejected ||
                     (pi.Status == PurchaseIndentStatus.Approved &&
                      pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
                          poi => poi.PurchaseIndentItemId == i.Id &&
@@ -84,11 +85,12 @@ namespace net_backend.Controllers
                 po.LocationId != null && companyLocationIds.Contains(po.LocationId.Value) &&
                 po.IsActive && 
                 (po.Status == PoStatus.Pending || 
+                 po.Status == PoStatus.Rejected ||
                  (po.Status == PoStatus.Approved && 
                   po.Items.Any(i => !_context.InwardLines.Any(il => 
                       il.SourceType == InwardSourceType.PO && 
                       il.SourceRefId == po.Id && 
-                      il.ItemId == i.PurchaseIndentItem.ItemId && 
+                      i.PurchaseIndentItem != null && il.ItemId == i.PurchaseIndentItem.ItemId && 
                       il.Inward != null && il.Inward.IsActive))
                  )
                 ));
@@ -269,7 +271,7 @@ namespace net_backend.Controllers
             var query = _context.PurchaseIndents
                 .Where(pi => pi.IsActive);
 
-            if (!string.IsNullOrWhiteSpace(status))
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 {
@@ -283,11 +285,17 @@ namespace net_backend.Controllers
                                    poi.PurchaseOrder != null &&
                                    poi.PurchaseOrder.IsActive)));
                 }
+                else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Rejected);
+                }
             }
             else
             {
+                // Default "All" view for the Pending section: Show what's actionable
                 query = query.Where(pi => 
                     pi.Status == PurchaseIndentStatus.Pending ||
+                    pi.Status == PurchaseIndentStatus.Rejected ||
                     (pi.Status == PurchaseIndentStatus.Approved &&
                      pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
                          poi => poi.PurchaseIndentItemId == i.Id &&
@@ -417,7 +425,7 @@ namespace net_backend.Controllers
             var query = _context.PurchaseOrders
                 .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value) && po.IsActive);
 
-            if (!string.IsNullOrWhiteSpace(status))
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 {
@@ -429,19 +437,24 @@ namespace net_backend.Controllers
                          po.Items.Any(i => !_context.InwardLines.Any(il =>
                              il.SourceType == InwardSourceType.PO &&
                              il.SourceRefId == po.Id &&
-                             il.ItemId == i.PurchaseIndentItem.ItemId &&
+                             i.PurchaseIndentItem != null && il.ItemId == i.PurchaseIndentItem.ItemId &&
                              il.Inward != null && il.Inward.IsActive)));
+                }
+                else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Rejected);
                 }
             }
             else
             {
                 query = query.Where(po => 
                     po.Status == PoStatus.Pending ||
+                    po.Status == PoStatus.Rejected ||
                     (po.Status == PoStatus.Approved &&
                      po.Items.Any(i => !_context.InwardLines.Any(il =>
                          il.SourceType == InwardSourceType.PO &&
                          il.SourceRefId == po.Id &&
-                         il.ItemId == i.PurchaseIndentItem.ItemId &&
+                         i.PurchaseIndentItem != null && il.ItemId == i.PurchaseIndentItem.ItemId &&
                          il.Inward != null && il.Inward.IsActive)))
                 );
             }
@@ -698,7 +711,7 @@ namespace net_backend.Controllers
             var query = _context.PurchaseIndents
                 .Where(pi => pi.IsActive);
 
-            if (!string.IsNullOrWhiteSpace(status))
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 {
@@ -712,11 +725,16 @@ namespace net_backend.Controllers
                                    poi.PurchaseOrder != null &&
                                    poi.PurchaseOrder.IsActive)));
                 }
+                else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(pi => pi.Status == PurchaseIndentStatus.Rejected);
+                }
             }
             else
             {
                 query = query.Where(pi => 
                     pi.Status == PurchaseIndentStatus.Pending ||
+                    pi.Status == PurchaseIndentStatus.Rejected ||
                     (pi.Status == PurchaseIndentStatus.Approved &&
                      pi.Items.Any(i => !_context.PurchaseOrderItems.Any(
                          poi => poi.PurchaseIndentItemId == i.Id &&
@@ -760,7 +778,11 @@ namespace net_backend.Controllers
             var rows = new List<PendingPIRowDto>();
             foreach (var pi in piList)
             {
-                var piStatus = pi.Status == PurchaseIndentStatus.Approved ? "PI Approved" : "Approval Pending";
+                var piStatus = pi.Status switch {
+                    PurchaseIndentStatus.Approved => "PI Approved",
+                    PurchaseIndentStatus.Rejected => "PI Rejected",
+                    _ => "Approval Pending"
+                };
                 foreach (var item in pi.Items)
                 {
                     bool isInActivePO = _context.PurchaseOrderItems.Any(
@@ -814,7 +836,7 @@ namespace net_backend.Controllers
             var query = _context.PurchaseOrders
                 .Where(po => po.LocationId != null && allowedLocationIds.Contains(po.LocationId.Value) && po.IsActive);
 
-            if (!string.IsNullOrWhiteSpace(status))
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
                 {
@@ -826,19 +848,24 @@ namespace net_backend.Controllers
                          po.Items.Any(i => !_context.InwardLines.Any(il =>
                              il.SourceType == InwardSourceType.PO &&
                              il.SourceRefId == po.Id &&
-                             il.ItemId == i.PurchaseIndentItem.ItemId &&
+                             i.PurchaseIndentItem != null && il.ItemId == i.PurchaseIndentItem.ItemId &&
                              il.Inward != null && il.Inward.IsActive)));
+                }
+                else if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(po => po.Status == PoStatus.Rejected);
                 }
             }
             else
             {
                 query = query.Where(po => 
                     po.Status == PoStatus.Pending ||
+                    po.Status == PoStatus.Rejected ||
                     (po.Status == PoStatus.Approved &&
                      po.Items.Any(i => !_context.InwardLines.Any(il =>
                          il.SourceType == InwardSourceType.PO &&
                          il.SourceRefId == po.Id &&
-                         il.ItemId == i.PurchaseIndentItem.ItemId &&
+                         i.PurchaseIndentItem != null && il.ItemId == i.PurchaseIndentItem.ItemId &&
                          il.Inward != null && il.Inward.IsActive)))
                 );
             }
@@ -889,7 +916,11 @@ namespace net_backend.Controllers
     var list = new List<PendingPORowDto>();
     foreach (var po in poList)
     {
-        var poStatus = po.Status == PoStatus.Approved ? "PO Approved" : "Approval Pending";
+        var poStatus = po.Status switch {
+            PoStatus.Approved => "PO Approved",
+            PoStatus.Rejected => "PO Rejected",
+            _ => "Approval Pending"
+        };
         foreach (var item in po.Items)
         {
             if (item.PurchaseIndentItem == null) continue;

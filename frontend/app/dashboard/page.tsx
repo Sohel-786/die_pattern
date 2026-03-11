@@ -727,7 +727,7 @@ export default function DashboardPage() {
                     </TableHeader>
                     <TableBody>
                       {locationWiseItems.map((row, idx) => (
-                        <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                        <TableRow key={row.id} className="border-b border-secondary-100 transition-all hover:bg-primary-50/30">
                           <TableCell className="px-4 py-3 text-center text-secondary-600">{locationWiseItems.length - idx}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.currentName ?? "—"}</TableCell>
@@ -854,7 +854,7 @@ export default function DashboardPage() {
                     </TableHeader>
                     <TableBody>
                       {itemsAtVendor.map((row, idx) => (
-                        <TableRow key={row.id} className="border-b border-secondary-100 hover:bg-primary-50/50">
+                        <TableRow key={row.id} className="border-b border-secondary-100 transition-all hover:bg-primary-50/30">
                           <TableCell className="px-4 py-3 text-center text-secondary-600">{itemsAtVendor.length - idx}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.vendorName ?? "—"}</TableCell>
                           <TableCell className="px-4 py-3 font-medium text-text">{row.mainPartName}</TableCell>
@@ -888,11 +888,21 @@ export default function DashboardPage() {
           expandedSection === "pending-pi" && (
             <div>
               <Card className="shadow-lg border border-secondary-200">
-                <div className="border-b border-secondary-200 px-4 py-3">
-                  <h2 className="text-xl font-bold text-text">Pending PI</h2>
-                  <p className="text-sm text-secondary-500 mt-0.5">
-                    Purchase indents awaiting approval. Approve or reject from here.
-                  </p>
+                <div className="border-b border-secondary-200 px-4 py-3 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-bold text-text">Pending PI</h2>
+                    <p className="text-sm text-secondary-500 mt-0.5">
+                      Purchase indents awaiting approval. Approve or reject from here.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => handleExport("pending-pi")} 
+                    disabled={loadingPendingPI} 
+                    className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Excel
+                  </Button>
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
@@ -939,11 +949,18 @@ export default function DashboardPage() {
                         searchPlaceholder="Search…"
                       />
                     </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => handleExport("pending-pi")} disabled={loadingPendingPI} className="shadow-sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Excel
-                      </Button>
+                    <div>
+                      <label className={filterLabelClass}>Status</label>
+                      <select
+                        value={pendingPIStatus || "All"}
+                        onChange={(e) => setPendingPIStatus(e.target.value)}
+                        className={selectClass}
+                      >
+                        <option value="All">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -957,7 +974,7 @@ export default function DashboardPage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="w-[40px] h-10 px-4" />
+                          <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-10 px-0 text-center"></TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PI No</TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Date</TableHead>
@@ -972,18 +989,26 @@ export default function DashboardPage() {
                           <Fragment key={pi.id}>
                             <TableRow
                               className={cn(
-                                "border-b border-secondary-100 transition-colors cursor-pointer group whitespace-nowrap",
-                                expandedPIId === pi.id ? "bg-primary-50/50" : "hover:bg-secondary-50/50"
+                                "border-b border-secondary-100 transition-all cursor-pointer group whitespace-nowrap",
+                                expandedPIId === pi.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
+                                !pi.isActive && "bg-secondary-50/50 opacity-75"
                               )}
                               onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
                             >
-                              <TableCell className="px-4 py-3 text-center">
-                                <motion.div
-                                  animate={{ rotate: expandedPIId === pi.id ? 90 : 0 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <ChevronRight className="w-4 h-4 text-secondary-400 group-hover:text-primary-500" />
-                                </motion.div>
+                              <TableCell className="p-0 w-14 min-w-[3.5rem] max-w-[3.5rem] text-center">
+                                <div className="flex items-center justify-center">
+                                  <motion.div
+                                    animate={{ rotate: expandedPIId === pi.id ? 90 : 0 }}
+                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                    style={{ originX: "50%", originY: "50%" }}
+                                    className={cn(
+                                      "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
+                                      expandedPIId === pi.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-secondary-100 group-hover:text-secondary-600"
+                                    )}
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </motion.div>
+                                </div>
                               </TableCell>
                               <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
                                 {String(pendingPIList.length - pendingPIList.indexOf(pi)).padStart(2, '0')}
@@ -998,6 +1023,10 @@ export default function DashboardPage() {
                                 {String(pi.status).toLowerCase() === "approved" || pi.status === PurchaseIndentStatus.Approved ? (
                                   <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200 shadow-sm">
                                     Approved
+                                  </span>
+                                ) : String(pi.status).toLowerCase() === "rejected" || pi.status === PurchaseIndentStatus.Rejected ? (
+                                  <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-rose-200 shadow-sm">
+                                    Rejected
                                   </span>
                                 ) : (
                                   <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm">
@@ -1061,9 +1090,9 @@ export default function DashboardPage() {
                             <AnimatePresence>
                               {expandedPIId === pi.id && (
                                 <TableRow key={`expand-${pi.id}`} className="hover:bg-transparent border-b border-secondary-100">
-                                  <td colSpan={8} className="p-0 border-none w-full">
+                                  <td colSpan={8} className="p-0 border-none max-w-0">
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-secondary-50/10 w-full">
-                                      <div className="p-4 pt-0">
+                                      <div className="px-4 pb-4 pt-4">
                                         <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
                                           <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
                                             <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">Indent Items</p>
@@ -1154,11 +1183,21 @@ export default function DashboardPage() {
           expandedSection === "pending-po" && (
             <div>
               <Card className="shadow-lg border border-secondary-200">
-                <div className="border-b border-secondary-200 px-4 py-3">
-                  <h2 className="text-xl font-bold text-text">Pending PO</h2>
-                  <p className="text-sm text-secondary-500 mt-0.5">
-                    Purchase orders awaiting approval. Approve or reject from here.
-                  </p>
+                <div className="border-b border-secondary-200 px-4 py-3 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-bold text-text">Pending PO</h2>
+                    <p className="text-sm text-secondary-500 mt-0.5">
+                      Purchase orders awaiting approval. Approve or reject from here.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => handleExport("pending-po")} 
+                    disabled={loadingPendingPO} 
+                    className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-10 px-6 rounded-lg shadow-sm transition-all"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Excel
+                  </Button>
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
@@ -1205,11 +1244,18 @@ export default function DashboardPage() {
                         searchPlaceholder="Search…"
                       />
                     </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => handleExport("pending-po")} disabled={loadingPendingPO} className="shadow-sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Excel
-                      </Button>
+                    <div>
+                      <label className={filterLabelClass}>Status</label>
+                      <select
+                        value={pendingPOStatus || "All"}
+                        onChange={(e) => setPendingPOStatus(e.target.value)}
+                        className={selectClass}
+                      >
+                        <option value="All">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -1223,7 +1269,7 @@ export default function DashboardPage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                          <TableHead className="w-[40px] h-10 px-4"></TableHead>
+                          <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-10 px-0 text-center"></TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
                           <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PO Date</TableHead>
@@ -1238,18 +1284,26 @@ export default function DashboardPage() {
                           <Fragment key={po.id}>
                             <TableRow
                               className={cn(
-                                "border-b border-secondary-100 transition-colors cursor-pointer group whitespace-nowrap",
-                                expandedPOId === po.id ? "bg-primary-50/50" : "hover:bg-secondary-50/50"
+                                "border-b border-secondary-100 transition-all cursor-pointer group whitespace-nowrap",
+                                expandedPOId === po.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
+                                !po.isActive && "bg-secondary-50/50 opacity-75"
                               )}
                               onClick={() => setExpandedPOId(expandedPOId === po.id ? null : po.id)}
                             >
-                              <TableCell className="px-4 py-3">
-                                <motion.div
-                                  animate={{ rotate: expandedPOId === po.id ? 90 : 0 }}
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <ChevronRight className="w-4 h-4 text-secondary-400 group-hover:text-primary-500" />
-                                </motion.div>
+                              <TableCell className="p-0 w-14 min-w-[3.5rem] max-w-[3.5rem] text-center">
+                                <div className="flex items-center justify-center">
+                                  <motion.div
+                                    animate={{ rotate: expandedPOId === po.id ? 90 : 0 }}
+                                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                                    style={{ originX: "50%", originY: "50%" }}
+                                    className={cn(
+                                      "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
+                                      expandedPOId === po.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-secondary-100 group-hover:text-secondary-600"
+                                    )}
+                                  >
+                                    <ChevronRight className="w-5 h-5" />
+                                  </motion.div>
+                                </div>
                               </TableCell>
                               <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
                                 {String(pendingPOList.length - idx).padStart(2, '0')}
@@ -1267,6 +1321,10 @@ export default function DashboardPage() {
                                 {String(po.status).toLowerCase() === "approved" || po.status === PoStatus.Approved ? (
                                   <span className="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200 shadow-sm">
                                     Approved
+                                  </span>
+                                ) : String(po.status).toLowerCase() === "rejected" || po.status === PoStatus.Rejected ? (
+                                  <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-rose-200 shadow-sm">
+                                    Rejected
                                   </span>
                                 ) : (
                                   <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm">
@@ -1328,7 +1386,7 @@ export default function DashboardPage() {
                             <AnimatePresence>
                               {expandedPOId === po.id && (
                                 <TableRow className="hover:bg-transparent border-b border-secondary-100">
-                                  <td colSpan={8} className="p-0 border-none w-full">
+                                  <td colSpan={8} className="p-0 border-none max-w-0">
                                     <motion.div
                                       initial={{ height: 0, opacity: 0 }}
                                       animate={{ height: "auto", opacity: 1 }}
@@ -1336,7 +1394,7 @@ export default function DashboardPage() {
                                       transition={{ duration: 0.3, ease: "easeInOut" }}
                                       className="overflow-hidden bg-secondary-50/10 w-full"
                                     >
-                                      <div className="p-4 pt-0">
+                                      <div className="px-4 pb-4 pt-4">
                                         <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
                                           <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
                                             <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">

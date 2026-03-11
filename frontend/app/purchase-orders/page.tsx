@@ -293,7 +293,7 @@ export default function PurchaseOrdersPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]"></TableHead>
+                <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
                 <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
                 <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
                   PO NO.
@@ -334,32 +334,28 @@ export default function PurchaseOrdersPage() {
                 orders.map((po) => (
                   <Fragment key={po.id}>
                     <TableRow
+                      key={po.id}
                       className={cn(
-                        "border-b border-secondary-100 hover:bg-secondary-50 transition-all font-sans whitespace-nowrap",
-                        expandedPOId === po.id && "bg-primary-50/30"
+                        "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
+                        expandedPOId === po.id ? "bg-primary-50/60" : "hover:bg-primary-50/30"
                       )}
+                      onClick={() => setExpandedPOId(expandedPOId === po.id ? null : po.id)}
                     >
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setExpandedPOId(
-                              expandedPOId === po.id ? null : po.id
-                            )
-                          }
-                          className="h-6 w-6 p-0 text-secondary-500"
-                          aria-label={
-                            expandedPOId === po.id ? "Collapse row" : "Expand row"
-                          }
-                        >
-                          {expandedPOId === po.id ? (
-                            <Minus className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </td>
+                      <TableCell className="p-0 w-14 min-w-[3.5rem] max-w-[3.5rem] text-center">
+                        <div className="flex items-center justify-center">
+                          <motion.div
+                            animate={{ rotate: expandedPOId === po.id ? 90 : 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            style={{ originX: "50%", originY: "50%" }}
+                            className={cn(
+                              "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
+                              expandedPOId === po.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-primary-100 group-hover:text-primary-600"
+                            )}
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </motion.div>
+                        </div>
+                      </TableCell>
                       <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{orders.length - orders.indexOf(po)}</td>
                       <td className="px-4 py-3 font-bold text-secondary-900 text-sm">
                         {po.poNo}
@@ -507,16 +503,17 @@ export default function PurchaseOrdersPage() {
                       {expandedPOId === po.id && (
                         <TableRow
                           key={`expand-${po.id}`}
-                          className="bg-secondary-50/50 border-b border-secondary-100"
+                          className="hover:bg-transparent border-b border-secondary-100"
                         >
-                          <td colSpan={11} className="p-0 bg-secondary-50/30 max-w-0">
+                          <td colSpan={11} className="p-0 border-none max-w-0">
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden"
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                              className="overflow-hidden bg-secondary-50/10 w-full"
                             >
-                              <div className="p-4">
+                              <div className="px-4 pb-4 pt-4">
                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
                                   <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
                                     <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
