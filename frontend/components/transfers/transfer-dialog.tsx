@@ -43,7 +43,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const lockStructure = isEditing && !!transfer?.isActive; // active transfer: don't allow changing parties/items
     const isReadOnly = isEditing ? !canEdit : false;
     const queryClient = useQueryClient();
-    const { selected } = useLocationContext();
+    const { selected, getAllPairs } = useLocationContext();
 
     const [fromPartyId, setFromPartyId] = useState<number | null>(0); // 0 = Current Location
     const [toPartyId, setToPartyId] = useState<number | null>(null);
@@ -137,10 +137,16 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
         return locations.find(l => l.id === selected.locationId);
     }, [locations, selected?.locationId]);
 
+    const currentLocationName = useMemo(() => {
+        if (!selected) return currentLocation?.name ?? null;
+        const name = getAllPairs().find(p => p.companyId === selected.companyId && p.locationId === selected.locationId)?.locationName;
+        return name ?? currentLocation?.name ?? null;
+    }, [selected, getAllPairs, currentLocation?.name]);
+
     const partyOptions = useMemo(() => [
-        { value: 0, label: currentLocation?.name || "Our Location" },
+        { value: 0, label: currentLocationName ?? "Our Location" },
         ...parties.map(p => ({ value: p.id, label: p.name }))
-    ], [parties, currentLocation]);
+    ], [parties, currentLocationName]);
 
     const fromOptions = useMemo(() => {
         return partyOptions.filter(o => o.value !== toPartyId);

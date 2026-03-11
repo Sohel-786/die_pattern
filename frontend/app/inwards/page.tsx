@@ -161,14 +161,14 @@ export default function InwardsPage() {
                         <TableHeader>
                             <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD DATE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">PARTY NAME</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">INWARD FROM</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">ACTIVE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">INWARD NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">INWARD DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PARTY NAME</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">INWARD FROM</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -205,27 +205,31 @@ export default function InwardsPage() {
                                                      </motion.div>
                                                  </div>
                                              </TableCell>
-                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{inwards.length - idx}</td>
-                                            <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">{formatDateTime(i.inwardDate)}</td>
-                                            <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                                            <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                                {String(inwards.length - idx).padStart(2, '0')}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</TableCell>
+                                            <TableCell className="px-4 py-3 text-secondary-700 text-sm">
+                                                {formatDateTime(i.inwardDate)}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
                                                 {i.vendorName ?? "—"}
-                                            </td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-secondary-500 font-medium text-xs">
                                                 {i.inwardFrom || "—"}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
                                                 <span className={cn(
-                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
+                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm",
                                                     i.isActive !== false ? "bg-green-50 text-green-700 border-green-200" : "bg-secondary-100 text-secondary-600 border-secondary-200"
                                                 )}>
                                                     {i.isActive !== false ? "Active" : "Inactive"}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
                                                 {i.creatorName ?? "System"}
-                                            </td>
-                                            <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <Button
                                                         variant="ghost"
@@ -237,7 +241,7 @@ export default function InwardsPage() {
                                                         className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
                                                         title="Edit Inward"
                                                     >
-                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                        <Edit2 className="w-4 h-4" />
                                                     </Button>
                                                     {isAdmin && (
                                                         <Button
@@ -255,11 +259,11 @@ export default function InwardsPage() {
                                                             )}
                                                             title={i.isActive ? (i.hasActiveQC ? "Cannot deactivate - active QC entry exists" : "Deactivate") : "Activate"}
                                                         >
-                                                            {i.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                            {i.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                                         </Button>
                                                     )}
                                                 </div>
-                                            </td>
+                                            </TableCell>
                                         </TableRow>
 
                                         <AnimatePresence>
@@ -275,116 +279,127 @@ export default function InwardsPage() {
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
                                                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
-                                                                        Items
-                                                                    </p>
-                                                                    <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow className="bg-secondary-50 border-b border-secondary-100">
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                                                                    {i.inwardFrom?.includes("Purchase Order") ? "PO NO."
-                                                                                        : i.inwardFrom?.includes("Job Work") ? "JOBWORK NO."
-                                                                                            : i.inwardFrom?.includes("Outward") ? "OUTWARD NO."
-                                                                                                : "SOURCE NO."}
-                                                                                </TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">
-                                                                                    {i.inwardFrom?.includes("Purchase Order") ? "PO DATE"
-                                                                                        : i.inwardFrom?.includes("Job Work") ? "JW DATE"
-                                                                                            : "DATE"}
-                                                                                </TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
-                                                                                {i.inwardFrom?.includes("Purchase Order") ? (
-                                                                                    <>
-                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">PO REF RATE</TableHead>
-                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">INW RATE</TableHead>
-                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">GST%</TableHead>
-                                                                                    </>
-                                                                                ) : (
-                                                                                    <>
-                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">JW RATE</TableHead>
-                                                                                        <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">JW GST%</TableHead>
-                                                                                    </>
-                                                                                )}
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">TOTAL AMOUNT</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap semi-w-40">DRAWING NO. / REV</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">LINE REMARKS</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC NO.</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC DATE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center w-24">QC STATUS</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
+                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                            Inward Items
+                                                                        </p>
+                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                            Total: {i.lines?.length || 0} item(s)
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="overflow-x-auto">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white text-nowrap">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">
+                                                                                        {i.inwardFrom?.includes("Purchase Order") ? "PO NO."
+                                                                                            : i.inwardFrom?.includes("Job Work") ? "JOBWORK NO."
+                                                                                                : i.inwardFrom?.includes("Outward") ? "OUTWARD NO."
+                                                                                                    : "SOURCE NO."}
+                                                                                    </TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">
+                                                                                        {i.inwardFrom?.includes("Purchase Order") ? "PO DATE"
+                                                                                            : i.inwardFrom?.includes("Job Work") ? "JW DATE"
+                                                                                                : "DATE"}
+                                                                                    </TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">ITEM DESCRIPTION</TableHead>
+                                                                                    {i.inwardFrom?.includes("Purchase Order") ? (
+                                                                                        <>
+                                                                                            <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">PO REF RATE</TableHead>
+                                                                                            <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">INW RATE</TableHead>
+                                                                                            <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">GST%</TableHead>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <>
+                                                                                            <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">JW RATE</TableHead>
+                                                                                            <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">JW GST%</TableHead>
+                                                                                        </>
+                                                                                    )}
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">TOTAL AMOUNT</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">TYPE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-40">DRAWING NO / REV</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">MATERIAL</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">LINE REMARKS</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC DATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center w-24 pr-6">QC STATUS</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
                                                                         <TableBody>
                                                                             {i.lines?.map((line, lidx) => (
-                                                                                <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
-                                                                                    <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm whitespace-nowrap">{line.sourceRefDisplay || "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 text-nowrap">
+                                                                                    <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">{lidx + 1}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-primary-700 font-bold text-[13px]">{line.sourceRefDisplay || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-500 font-medium text-[11px]">
                                                                                         {line.sourceDate ? formatDateTime(line.sourceDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
-                                                                                            <span className="font-semibold text-secondary-900 text-sm">{line.itemName ?? "—"}</span>
-                                                                                            <span className="text-xs text-secondary-500">{line.mainPartName ?? "—"}</span>
+                                                                                            <span className="font-bold text-secondary-900 text-[13px] tracking-tight">{line.itemName ?? "—"}</span>
+                                                                                            <span className="text-[11px] text-secondary-500 font-medium">{line.mainPartName ?? "—"}</span>
                                                                                         </div>
                                                                                     </TableCell>
                                                                                     {i.inwardFrom?.includes("Purchase Order") ? (
                                                                                         <>
-                                                                                            <TableCell className="px-4 py-2 text-secondary-500 text-[10px] text-right">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-400 text-[10px] text-right font-medium">
                                                                                                 {line.sourceType === InwardSourceType.PO ? `₹${line.sourceRate?.toLocaleString() ?? "0"} @ ${line.sourceGstPercent ?? "0"}%` : "—"}
                                                                                             </TableCell>
-                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-[13px] text-right">
                                                                                                 {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
                                                                                             </TableCell>
-                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-[12px] text-center font-medium">
                                                                                                 {line.gstPercent ? `${line.gstPercent}%` : "—"}
                                                                                             </TableCell>
                                                                                         </>
                                                                                     ) : (
                                                                                         <>
-                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-[13px] text-right">
                                                                                                 {line.rate ? `₹${line.rate.toLocaleString()}` : "—"}
                                                                                             </TableCell>
-                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-[12px] text-center font-medium">
                                                                                                 {line.gstPercent ? `${line.gstPercent}%` : "—"}
                                                                                             </TableCell>
                                                                                         </>
                                                                                     )}
-                                                                                    <TableCell className="px-4 py-2 text-secondary-900 font-black text-sm text-right">
+                                                                                    <TableCell className="px-4 py-2 text-secondary-900 font-black text-[13px] text-right">
                                                                                         ₹{((line.rate || 0) + ((line.rate || 0) * (line.gstPercent || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                                                     </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.itemTypeName ?? "—"}</TableCell>
                                                                                     <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col min-w-0">
-                                                                                            <span className="font-medium text-secondary-800 text-sm truncate">{line.drawingNo ?? "N/A"}</span>
-                                                                                            <span className="text-xs text-secondary-500">R{line.revisionNo ?? "0"}</span>
+                                                                                        <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px] uppercase">
+                                                                                            {line.itemTypeName || "—"}
+                                                                                        </span>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="px-4 py-2">
+                                                                                        <div className="flex flex-col items-center min-w-0">
+                                                                                            <span className="font-medium text-secondary-800 text-[13px]">{line.drawingNo || "N/A"}</span>
+                                                                                            <span className="text-[10px] text-secondary-400 font-medium">REV: {line.revisionNo ?? "0"}</span>
                                                                                         </div>
                                                                                     </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{line.materialName ?? "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-sm text-secondary-600 max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">{line.qcNo || "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[11px] whitespace-nowrap">
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-[12px]">{line.materialName ?? "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-[12px] text-secondary-500 italic max-w-xs truncate">{line.remarks ?? "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-indigo-700 font-bold text-[12px]">{line.qcNo || "—"}</TableCell>
+                                                                                    <TableCell className="px-4 py-2 text-secondary-500 text-[11px]">
                                                                                         {line.qcDate ? formatDateTime(line.qcDate) : "—"}
                                                                                     </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-center whitespace-nowrap">
+                                                                                    <TableCell className="px-4 py-2 text-center pr-6">
                                                                                         {line.qcNo ? (
                                                                                             line.isQCApproved ? (
-                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-200">Approved</span>
+                                                                                                <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200">Approved</span>
                                                                                             ) : line.isQCPending ? (
-                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">Pending QC</span>
+                                                                                                <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-amber-50 text-amber-700 border-amber-200">Pending</span>
                                                                                             ) : (
-                                                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
+                                                                                                <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
                                                                                             )
                                                                                         ) : (
-                                                                                            <span className="text-secondary-400">—</span>
+                                                                                            <span className="text-secondary-300">—</span>
                                                                                         )}
                                                                                     </TableCell>
                                                                                 </TableRow>
                                                                             ))}
                                                                         </TableBody>
-                                                                    </Table>
+                                                                        </Table>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>

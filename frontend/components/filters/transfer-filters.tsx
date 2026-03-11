@@ -26,6 +26,8 @@ export interface TransferFiltersProps {
     creatorOptions: MultiSelectSearchOption[];
     onClear: () => void;
     isAdmin: boolean;
+    /** Display name for current location (value 0) in From/To party filters. Shown instead of "Our Location". */
+    currentLocationName?: string | null;
     className?: string;
 }
 
@@ -37,6 +39,7 @@ export function TransferFilters({
     creatorOptions,
     onClear,
     isAdmin,
+    currentLocationName,
     className,
 }: TransferFiltersProps) {
     const hasActive = hasActiveTransferFilters(filters);
@@ -45,8 +48,11 @@ export function TransferFilters({
         onFiltersChange({ ...filters, ...patch });
     };
 
-    // Include "Our Location" as an option in party list
-    const partyOptionsWithLocation = [{ label: "Our Location", value: 0 }, ...partyOptions];
+    // Current location (value 0) shown with actual name when available
+    const partyOptionsWithLocation = [
+        { label: currentLocationName ?? "Our Location", value: 0 },
+        ...partyOptions,
+    ];
 
     return (
         <Card

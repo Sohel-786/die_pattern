@@ -225,16 +225,16 @@ export default function JobWorksPage() {
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100">
+                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100 font-sans">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">JOBWORK NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">DATE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">PARTY NAME</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">STATUS</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">ACTIVE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12 border-r border-primary-200/50">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">JOBWORK NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PARTY NAME</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">STATUS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -272,28 +272,30 @@ export default function JobWorksPage() {
                                                     </motion.div>
                                                 </div>
                                             </TableCell>
-                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{jobWorks.length - idx}</td>
-                                            <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{jw.jobWorkNo}</td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">
+                                            <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                                {String(jobWorks.length - idx).padStart(2, '0')}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-secondary-900 text-sm">{jw.jobWorkNo}</TableCell>
+                                            <TableCell className="px-4 py-3 text-secondary-700 text-sm">
                                                 {formatDateTime(jw.createdAt)}
-                                            </td>
-                                            <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
                                                 {jw.toPartyName ?? "—"}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
                                                 {getStatusBadge(jw)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
                                                 <span className={cn(
-                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
+                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm",
                                                     jw.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-secondary-100 text-secondary-600 border-secondary-200"
                                                 )}>
                                                     {jw.isActive ? "Active" : "Inactive"}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
                                                 {jw.creatorName ?? "System"}
-                                            </td>
+                                            </TableCell>
                                             <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <Button
@@ -364,107 +366,100 @@ export default function JobWorksPage() {
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
                                                                 <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
-                                                                        Job Work Items
-                                                                    </p>
-                                                                    <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow className="bg-secondary-50 border-b border-secondary-100">
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">UNIT RATE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">GST%</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-right">TOTAL</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap text-center">INWARD NO.</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">QC NO.</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider text-center w-24">QC STATUS</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            {jw.items?.map((item, lidx) => {
-                                                                                const rate = item.rate ?? 0;
-                                                                                const gst = item.gstPercent ?? 0;
-                                                                                const total = rate + (rate * gst / 100);
-                                                                                return (
-                                                                                    <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
-                                                                                        <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
-                                                                                        <TableCell className="px-4 py-2">
-                                                                                            <div className="flex flex-col min-w-0">
-                                                                                                <span className="font-semibold text-secondary-900 text-sm">{item.itemName ?? "—"}</span>
-                                                                                                <span className="text-xs text-secondary-500">{item.mainPartName ?? "—"}</span>
-                                                                                            </div>
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-700 text-sm">{item.itemTypeName ?? "—"}</TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-700 text-sm">{item.materialName ?? "—"}</TableCell>
-                                                                                        <TableCell className="px-4 py-2">
-                                                                                            <div className="flex flex-col min-w-0">
-                                                                                                <span className="font-medium text-secondary-800 text-sm truncate">{item.drawingNo ?? "N/A"}</span>
-                                                                                                <span className="text-xs text-secondary-500">R{item.revisionNo ?? "0"}</span>
-                                                                                            </div>
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-900 font-medium text-sm text-right">
-                                                                                            ₹{rate.toLocaleString()}
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-700 text-sm text-center">
-                                                                                            {gst}%
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-900 font-bold text-sm text-right">
-                                                                                            ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm text-center">
-                                                                                            {item.inwardNo ? (
-                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[10px]">
-                                                                                                    {item.inwardNo}
+                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                            Job Work Items
+                                                                        </p>
+                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                            Total: {jw.items?.length || 0} item(s)
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="overflow-x-auto">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white text-nowrap">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">ITEM DESCRIPTION</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">TYPE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">MATERIAL</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-40 text-center">DWG NO / REV</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">UNIT RATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">GST%</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">TOTAL AMOUNT</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">INWARD NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center pr-6">QC STATUS</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {jw.items?.map((item, lidx) => {
+                                                                                    const rate = item.rate ?? 0;
+                                                                                    const gst = item.gstPercent ?? 0;
+                                                                                    const total = rate + (rate * gst / 100);
+                                                                                    return (
+                                                                                        <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 text-nowrap font-sans">
+                                                                                            <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">{lidx + 1}</TableCell>
+                                                                                            <TableCell className="px-4 py-2">
+                                                                                                <div className="flex flex-col min-w-0">
+                                                                                                    <span className="font-bold text-secondary-900 text-[13px] tracking-tight">{item.itemName ?? "—"}</span>
+                                                                                                    <span className="text-[11px] text-secondary-500 font-medium">{item.mainPartName ?? "—"}</span>
+                                                                                                </div>
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2">
+                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px] uppercase">
+                                                                                                    {item.itemTypeName || "—"}
                                                                                                 </span>
-                                                                                            ) : "—"}
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-secondary-700 font-medium text-sm">
-                                                                                            {item.qcNo ? (
-                                                                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold text-[10px]">
-                                                                                                    {item.qcNo}
-                                                                                                </span>
-                                                                                            ) : "—"}
-                                                                                        </TableCell>
-                                                                                        <TableCell className="px-4 py-2 text-center whitespace-nowrap">
-                                                                                            {item.qcNo ? (() => {
-                                                                                                // Use authoritative QC decision from QC item record (qi.IsApproved)
-                                                                                                const decision = item.qcDecision;
-
-                                                                                                if (decision === true) {
-                                                                                                    // Item was approved (item-level or entry-level)
-                                                                                                    return (
-                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                                                                                                            Approved
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                } else if (decision === false) {
-                                                                                                    // Item was rejected
-                                                                                                    return (
-                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-700 border-rose-200">
-                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-                                                                                                            Rejected
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                } else {
-                                                                                                    // QC entry exists but no item-level decision yet
-                                                                                                    return (
-                                                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
-                                                                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
-                                                                                                            Pending
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                }
-                                                                                            })() : "—"}
-                                                                                        </TableCell>
-                                                                                    </TableRow>
-                                                                                );
-                                                                            })}
-                                                                        </TableBody>
-                                                                    </Table>
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-600 text-[12px]">{item.materialName || "—"}</TableCell>
+                                                                                            <TableCell className="px-4 py-2">
+                                                                                                <div className="flex flex-col items-center min-w-0">
+                                                                                                    <span className="font-medium text-secondary-800 text-[13px]">{item.drawingNo ?? "N/A"}</span>
+                                                                                                    <span className="text-[10px] text-secondary-400 font-medium">REV: {item.revisionNo ?? "0"}</span>
+                                                                                                </div>
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-bold text-[13px] text-right">
+                                                                                                ₹{rate.toLocaleString()}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-700 text-[12px] text-center font-medium">
+                                                                                                {gst}%
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-900 font-black text-[13px] text-right">
+                                                                                                ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-center">
+                                                                                                {item.inwardNo ? (
+                                                                                                    <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                                                        {item.inwardNo}
+                                                                                                    </span>
+                                                                                                ) : <span className="text-secondary-300">—</span>}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-indigo-700 font-bold text-[12px]">
+                                                                                                {item.qcNo || <span className="text-secondary-300">—</span>}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-center pr-6">
+                                                                                                {item.qcNo ? (() => {
+                                                                                                    const decision = item.qcDecision;
+                                                                                                    if (decision === true) {
+                                                                                                        return (
+                                                                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200">Approved</span>
+                                                                                                        );
+                                                                                                    } else if (decision === false) {
+                                                                                                        return (
+                                                                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-rose-50 text-rose-700 border-rose-200">Rejected</span>
+                                                                                                        );
+                                                                                                    } else {
+                                                                                                        return (
+                                                                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm bg-amber-50 text-amber-700 border-amber-200">Pending</span>
+                                                                                                        );
+                                                                                                    }
+                                                                                                })() : <span className="text-secondary-300">—</span>}
+                                                                                            </TableCell>
+                                                                                        </TableRow>
+                                                                                    );
+                                                                                })}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
@@ -501,7 +496,7 @@ export default function JobWorksPage() {
                 readOnly={!!selectedJobWork && !permissions?.editMovement}
             />
 
-            {previewJwId && (
+            {previewJwId !== null && (
                 <JobWorkPreviewModal
                     jwId={previewJwId}
                     onClose={() => setPreviewJwId(null)}

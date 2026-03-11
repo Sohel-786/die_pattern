@@ -30,11 +30,17 @@ import { initialTransferFilters, TransferFiltersState, buildTransferFilterParams
 import { toast } from "react-hot-toast";
 import { TransferDialog } from "@/components/transfers/transfer-dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useLocationContext } from "@/contexts/location-context";
 
 export default function TransfersPage() {
     const { data: permissions } = useCurrentUserPermissions();
     const { user: currentUser } = useCurrentUser();
     const queryClient = useQueryClient();
+    const { selected, getAllPairs } = useLocationContext();
+    const currentLocationName = useMemo(() => {
+        if (!selected) return null;
+        return getAllPairs().find(p => p.companyId === selected.companyId && p.locationId === selected.locationId)?.locationName ?? null;
+    }, [selected, getAllPairs]);
 
     const [filters, setFilters] = useState<TransferFiltersState>(initialTransferFilters);
     const [expandedTransferId, setExpandedTransferId] = useState<number | null>(null);
@@ -146,6 +152,7 @@ export default function TransfersPage() {
                 creatorOptions={creatorOptions}
                 itemOptions={itemOptions}
                 isAdmin={isAdmin}
+                currentLocationName={currentLocationName ?? undefined}
                 className="shrink-0 mb-6"
             />
 
@@ -154,16 +161,16 @@ export default function TransfersPage() {
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100">
+                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100 font-sans">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">TRANSFER NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">DATE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">FROM SOURCE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">TO DESTINATION</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">ACTIVE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12 border-r border-primary-200/50">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">TRANSFER NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">FROM</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">TO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -201,40 +208,31 @@ export default function TransfersPage() {
                                                     </motion.div>
                                                 </div>
                                             </TableCell>
-                                            <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{transfers.length - idx}</td>
-                                            <td className="px-4 py-3 font-bold text-secondary-900 text-sm">{tr.transferNo}</td>
-                                            <td className="px-4 py-3 text-secondary-700 text-sm">
+                                            <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                                {String(transfers.length - idx).padStart(2, '0')}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-secondary-900 text-sm">{tr.transferNo}</TableCell>
+                                            <TableCell className="px-4 py-3 text-secondary-700 text-sm">
                                                 {formatDateTime(tr.transferDate)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                                                {tr.fromPartyName || currentLocationName || "Our Location"}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                                                {tr.toPartyName || currentLocationName || "Our Location"}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
                                                 <span className={cn(
-                                                    "inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-tight",
-                                                    tr.fromPartyId ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-primary-50 text-primary-700 border border-primary-100"
-                                                )}>
-                                                    {tr.fromPartyName || "Our Location"}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm flex items-center gap-2">
-                                                <ArrowRight className="w-3 h-3 text-secondary-400" />
-                                                <span className={cn(
-                                                    "inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-tight",
-                                                    tr.toPartyId ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-primary-50 text-primary-700 border border-primary-100"
-                                                )}>
-                                                    {tr.toPartyName || "Our Location"}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={cn(
-                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
-                                                    tr.isActive !== false ? "bg-green-50 text-green-700 border-green-200" : "bg-secondary-100 text-secondary-600 border-secondary-200"
+                                                    "inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                                                    tr.isActive !== false ? "bg-green-50 text-green-700 border-green-200 shadow-sm" : "bg-secondary-100 text-secondary-600 border-secondary-200"
                                                 )}>
                                                     {tr.isActive !== false ? "Active" : "Inactive"}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-secondary-600 text-sm">
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
                                                 {tr.creatorName ?? "System"}
-                                            </td>
-                                            <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     <Button
                                                         variant="ghost"
@@ -246,7 +244,7 @@ export default function TransfersPage() {
                                                         className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
                                                         title="Edit Transfer"
                                                     >
-                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                        <Edit2 className="w-4 h-4" />
                                                     </Button>
                                                     {permissions?.editTransfer && currentUser?.role === Role.ADMIN && (
                                                         <Button
@@ -263,11 +261,11 @@ export default function TransfersPage() {
                                                             )}
                                                             title={tr.isActive ? "Deactivate" : "Activate"}
                                                         >
-                                                            {tr.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                            {tr.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                                         </Button>
                                                     )}
                                                 </div>
-                                            </td>
+                                            </TableCell>
                                         </TableRow>
 
                                         <AnimatePresence>
@@ -282,44 +280,55 @@ export default function TransfersPage() {
                                                             className="overflow-hidden bg-secondary-50/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wider px-4 py-2 border-b border-secondary-100">
-                                                                        Transferred Items
-                                                                    </p>
-                                                                    <Table>
-                                                                        <TableHeader>
-                                                                            <TableRow className="bg-secondary-50 border-b border-secondary-100">
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">ITEM DESCRIPTION</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">TYPE</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">MATERIAL</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">DRAWING NO. / REV</TableHead>
-                                                                                <TableHead className="h-9 px-4 text-[10px] font-bold uppercase text-secondary-600 tracking-wider whitespace-nowrap">REMARKS</TableHead>
-                                                                            </TableRow>
-                                                                        </TableHeader>
-                                                                        <TableBody>
-                                                                            {tr.items?.map((item, lidx) => (
-                                                                                <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/30">
-                                                                                    <TableCell className="px-4 py-2 text-secondary-500 font-medium text-sm text-center">{lidx + 1}</TableCell>
-                                                                                    <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col min-w-0">
-                                                                                            <span className="font-semibold text-secondary-900 text-sm">{item.currentName ?? "—"}</span>
-                                                                                            <span className="text-xs text-secondary-500">{item.mainPartName ?? "—"}</span>
-                                                                                        </div>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{item.itemTypeName ?? "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-700 text-sm">{item.materialName ?? "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2">
-                                                                                        <div className="flex flex-col min-w-0">
-                                                                                            <span className="font-medium text-secondary-800 text-sm truncate">{item.drawingNo ?? "N/A"}</span>
-                                                                                            <span className="text-xs text-secondary-500">R{item.revisionNo ?? "0"}</span>
-                                                                                        </div>
-                                                                                    </TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-600 text-sm italic">{item.remarks || "—"}</TableCell>
+                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
+                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                            Transferred Items
+                                                                        </p>
+                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                            Total: {tr.items?.length || 0} item(s)
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="overflow-x-auto">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Item Description</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Type</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Material</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Drawing No / Rev</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right pr-6">Remarks</TableHead>
                                                                                 </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {tr.items?.map((item, lidx) => (
+                                                                                    <TableRow key={lidx} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 whitespace-nowrap">
+                                                                                        <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">{lidx + 1}</TableCell>
+                                                                                        <TableCell className="px-4 py-2">
+                                                                                            <div className="flex flex-col min-w-0">
+                                                                                                <span className="font-bold text-secondary-900 text-[13px] tracking-tight">{item.currentName || "—"}</span>
+                                                                                                <span className="text-[11px] text-secondary-500 font-medium">{item.mainPartName || "—"}</span>
+                                                                                            </div>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2">
+                                                                                            <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px] uppercase">
+                                                                                                {item.itemTypeName || "—"}
+                                                                                            </span>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-center text-secondary-600 text-[12px]">{item.materialName || "—"}</TableCell>
+                                                                                        <TableCell className="px-4 py-2">
+                                                                                            <div className="flex flex-col items-center min-w-0">
+                                                                                                <span className="font-medium text-secondary-800 text-[12px]">{item.drawingNo || "N/A"}</span>
+                                                                                                <span className="text-[10px] text-secondary-400 font-medium">REV: {item.revisionNo ?? "0"}</span>
+                                                                                            </div>
+                                                                                        </TableCell>
+                                                                                        <TableCell className="px-4 py-2 text-right pr-6 text-secondary-500 text-[12px] italic">{item.remarks || "—"}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </motion.div>
