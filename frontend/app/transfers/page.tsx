@@ -57,7 +57,8 @@ export default function TransfersPage() {
     );
 
     const { data: transferData, isLoading } = useQuery<{ list: Transfer[]; totalCount: number }>({
-        queryKey: ["transfers", queryParams.toString()],
+        // Include org context in cache key so switching location refetches without reload.
+        queryKey: ["transfers", selected?.companyId ?? null, selected?.locationId ?? null, queryParams.toString()],
         queryFn: async () => {
             const res = await api.get("/transfers?" + queryParams.toString());
             return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };

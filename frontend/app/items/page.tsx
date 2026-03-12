@@ -673,13 +673,13 @@ export default function ItemsPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        {isAdmin && canManage && (
+                                                        {canManage && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={() => handleEdit(item)}
                                                                 className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                                title="Edit Asset (admin only)"
+                                                                title={canEdit ? "Edit Asset" : "View Asset"}
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </Button>

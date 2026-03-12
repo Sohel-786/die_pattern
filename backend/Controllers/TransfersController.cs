@@ -716,9 +716,8 @@ namespace net_backend.Controllers
 
         private async Task<string> GenerateTransferNo()
         {
-            var today = DateTime.Now;
-            var prefix = $"TRF-{today:yyyyMMdd}-";
-            
+            const string prefix = "TRF-";
+
             var lastTransfer = await _context.Transfers
                 .Where(t => t.TransferNo.StartsWith(prefix))
                 .OrderByDescending(t => t.TransferNo)
@@ -728,7 +727,8 @@ namespace net_backend.Controllers
             if (lastTransfer != null)
             {
                 var parts = lastTransfer.TransferNo.Split('-');
-                if (parts.Length == 3 && int.TryParse(parts[2], out int lastNum))
+                // Format: TRF-0001 (2 parts) or legacy TRF-yyyyMMdd-0001 (3 parts)
+                if (parts.Length >= 2 && int.TryParse(parts[^1], out int lastNum))
                 {
                     nextNum = lastNum + 1;
                 }

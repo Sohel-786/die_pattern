@@ -581,15 +581,15 @@ export default function SettingsPage() {
     ) || [];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto min-h-[calc(100vh-4rem)]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
         {/* Header with section tabs */}
-        <div className="border-b border-secondary-200 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="border-b border-secondary-200 pb-6 mb-2">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary-100 rounded-xl shrink-0">
                 <Settings className="w-8 h-8 text-primary-600" />
@@ -601,7 +601,7 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <nav className="flex gap-1 p-1 bg-secondary-100 rounded-lg w-fit">
+            <nav className="flex gap-1 p-1 bg-secondary-100 rounded-lg w-fit flex-nowrap overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -610,9 +610,9 @@ export default function SettingsPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${isActive
-                      ? "bg-white text-primary-600 shadow-sm"
-                      : "text-secondary-700 hover:text-black"
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${isActive
+                      ? "bg-white text-primary-600 shadow-sm ring-1 ring-secondary-200"
+                      : "text-secondary-600 hover:text-primary-600 hover:bg-white/50"
                       }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
