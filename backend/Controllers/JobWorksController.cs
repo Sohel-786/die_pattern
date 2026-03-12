@@ -99,7 +99,9 @@ namespace net_backend.Controllers
             [FromQuery] List<int>? itemIds,
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
-            [FromQuery] bool? isActive)
+            [FromQuery] bool? isActive,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewMovement")) return Forbidden();
             var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
@@ -157,8 +159,11 @@ namespace net_backend.Controllers
                 );
             }
 
-            var list = await query.OrderByDescending(j => j.CreatedAt).ToListAsync();
-            
+            var ordered = query.OrderByDescending(j => j.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered.Skip(skip).Take(take).ToListAsync();
+
             var jobWorkIds = list.Select(j => j.Id).ToList();
             var inwardLines = await _context.InwardLines
                 .Include(l => l.Inward)
@@ -172,7 +177,7 @@ namespace net_backend.Controllers
                 .ToListAsync();
 
             var data = list.Select(jw => MapToDto(jw, inwardLines, qcItems)).ToList();
-            return Ok(new ApiResponse<IEnumerable<JobWorkDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<JobWorkDto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpGet("{id}")]

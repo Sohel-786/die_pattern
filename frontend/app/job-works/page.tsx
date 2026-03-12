@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Role } from "@/types";
 import { useDebounce } from "@/hooks/use-debounce";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { cn, formatDateTime } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { JobWorkDialog } from "@/components/job-works/job-work-dialog";
@@ -93,14 +94,16 @@ export default function JobWorksPage() {
         [filters, debouncedSearch]
     );
 
-    const { data: jobWorks = [], isLoading } = useQuery<JobWork[]>({
+    const { data: jwData, isLoading } = useQuery<{ list: JobWork[]; totalCount: number }>({
         queryKey: ["job-works", queryParams.toString()],
         queryFn: async () => {
             const res = await api.get("/job-works?" + queryParams.toString());
-            return res.data.data ?? [];
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
         enabled: !!permissions?.viewMovement
     });
+    const jobWorks = jwData?.list ?? [];
+    const totalCount = jwData?.totalCount ?? 0;
 
     const { data: parties = [] } = useQuery<Party[]>({
         queryKey: ["parties"],
@@ -139,7 +142,7 @@ export default function JobWorksPage() {
         [itemsList]);
 
     const resetFilters = useCallback(() => {
-        setFilters(initialJobWorkFilters);
+        setFilters((prev) => ({ ...initialJobWorkFilters, pageSize: prev.pageSize, page: 1 }));
     }, []);
 
     const toggleActiveMutation = useMutation({
@@ -484,6 +487,7 @@ export default function JobWorksPage() {
                         </TableBody>
                     </Table>
                 </div>
+                <TablePagination page={filters.page} pageSize={filters.pageSize} totalCount={totalCount} onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))} />
             </Card>
 
             <JobWorkDialog

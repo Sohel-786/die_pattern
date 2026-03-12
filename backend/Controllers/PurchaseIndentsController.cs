@@ -54,7 +54,9 @@ namespace net_backend.Controllers
             [FromQuery] DateTime? createdDateTo,
             [FromQuery] List<int>? itemIds,
             [FromQuery] List<int>? creatorIds,
-            [FromQuery] bool? isActive)
+            [FromQuery] bool? isActive,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewPI")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -103,10 +105,13 @@ namespace net_backend.Controllers
             if (createdDateTo.HasValue)
                 query = query.Where(p => p.CreatedAt.Date <= createdDateTo.Value.Date);
 
-
+            var totalCount = await query.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
 
             var data = await query
                 .OrderByDescending(p => p.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .Select(p => new PurchaseIndentDto
                 {
                     Id = p.Id,
@@ -185,7 +190,7 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<PurchaseIndentDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<PurchaseIndentDto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpPost]

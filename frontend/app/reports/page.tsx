@@ -232,8 +232,8 @@ function ReportsContent() {
               Choose an item type (optional), then select an item. The table below shows the full history for that item.
             </p>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-4">
-            <div className="min-w-0 flex-1 sm:min-w-[200px] max-w-[280px]">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[280px_320px_160px_160px_120px_auto] gap-4 items-end">
+            <div className="min-w-0">
               <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Item Type</Label>
               <select
                 className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
@@ -254,7 +254,7 @@ function ReportsContent() {
                 ))}
               </select>
             </div>
-            <div className="min-w-0 flex-1 sm:min-w-[220px] max-w-[320px]">
+            <div className="min-w-0">
               <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Item *</Label>
               <SearchableSelect
                 id="ledger-item"
@@ -273,6 +273,69 @@ function ReportsContent() {
                 searchPlaceholder="Search item..."
                 aria-label="Item"
               />
+            </div>
+            <div className="min-w-0 flex flex-col">
+              <Label className="text-sm font-medium text-gray-700 mb-1.5">Date from</Label>
+              <DatePicker
+                value={ledgerDateFrom || undefined}
+                onChange={(date) => {
+                  setLedgerDateFrom(date ? format(date, "yyyy-MM-dd") : "");
+                  resetPagination();
+                }}
+                placeholder="From"
+                clearable
+                className="h-10 rounded-lg border-gray-300"
+              />
+            </div>
+            <div className="min-w-0 flex flex-col">
+              <Label className="text-sm font-medium text-gray-700 mb-1.5">Date to</Label>
+              <DatePicker
+                value={ledgerDateTo || undefined}
+                onChange={(date) => {
+                  setLedgerDateTo(date ? format(date, "yyyy-MM-dd") : "");
+                  resetPagination();
+                }}
+                placeholder="To"
+                clearable
+                className="h-10 rounded-lg border-gray-300"
+              />
+            </div>
+            <div className="min-w-0 flex flex-col">
+              <Label htmlFor="report-row-count" className="text-sm font-medium text-gray-700 mb-1.5">
+                Rows per page
+              </Label>
+              <select
+                id="report-row-count"
+                value={ledgerLimit}
+                onChange={(e) => {
+                  const v = Number(e.target.value) as RowCount;
+                  if (ROW_COUNT_OPTIONS.includes(v)) {
+                    setLedgerLimit(v);
+                    setLedgerPage(1);
+                  }
+                }}
+                className="flex h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-w-[80px]"
+              >
+                {ROW_COUNT_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-start lg:justify-end">
+              <Button
+                onClick={handleExportExcel}
+                disabled={isExporting || loadingLedger || ledgerItemId == null || ledgerTotal === 0}
+                className="shadow-md gap-2 h-10"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Export Excel
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -314,77 +377,9 @@ function ReportsContent() {
           </CardContent>
         </Card>
 
-        {/* Date range & rows per page & Export */}
-        <Card className="shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="min-w-0 flex flex-col">
-                <Label className="text-sm font-medium text-gray-700 mb-1.5">Date from</Label>
-                <DatePicker
-                  value={ledgerDateFrom || undefined}
-                  onChange={(date) => {
-                    setLedgerDateFrom(date ? format(date, "yyyy-MM-dd") : "");
-                    resetPagination();
-                  }}
-                  placeholder="From"
-                  clearable
-                  className="h-10 rounded-lg border-gray-300"
-                />
-              </div>
-              <div className="min-w-0 flex flex-col">
-                <Label className="text-sm font-medium text-gray-700 mb-1.5">Date to</Label>
-                <DatePicker
-                  value={ledgerDateTo || undefined}
-                  onChange={(date) => {
-                    setLedgerDateTo(date ? format(date, "yyyy-MM-dd") : "");
-                    resetPagination();
-                  }}
-                  placeholder="To"
-                  clearable
-                  className="h-10 rounded-lg border-gray-300"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <Label htmlFor="report-row-count" className="text-sm font-medium text-gray-700">
-                  Rows per page
-                </Label>
-                <select
-                  id="report-row-count"
-                  value={ledgerLimit}
-                  onChange={(e) => {
-                    const v = Number(e.target.value) as RowCount;
-                    if (ROW_COUNT_OPTIONS.includes(v)) {
-                      setLedgerLimit(v);
-                      setLedgerPage(1);
-                    }
-                  }}
-                  className="flex h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-w-[80px]"
-                >
-                  {ROW_COUNT_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                onClick={handleExportExcel}
-                disabled={isExporting || loadingLedger || ledgerItemId == null || ledgerTotal === 0}
-                className="shadow-md gap-2"
-              >
-                {isExporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                Export Excel
-              </Button>
-            </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Report is scoped to your location. Use date range and search (party name, reference no., etc.) as needed. Export uses the same criteria.
-          </p>
-          </CardContent>
-        </Card>
+        <p className="text-xs text-gray-500 -mt-2">
+          Report is scoped to your location. Use date range and search (party name, reference no., etc.) as needed. Export uses the same criteria.
+        </p>
 
         {/* Ledger item summary */}
         {ledgerItem && (

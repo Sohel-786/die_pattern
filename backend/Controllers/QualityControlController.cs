@@ -104,7 +104,9 @@ namespace net_backend.Controllers
             [FromQuery] bool? isActive,
             [FromQuery] string? search,
             [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate)
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewQC")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -158,7 +160,10 @@ namespace net_backend.Controllers
                     (q.Remarks != null && q.Remarks.ToLower().Contains(term)));
             }
 
-            var list = await query.OrderByDescending(q => q.CreatedAt).ToListAsync();
+            var ordered = query.OrderByDescending(q => q.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered.Skip(skip).Take(take).ToListAsync();
 
             // Fetch Source Numbers for Professional Display
             var poIds = list.SelectMany(q => q.Items).Where(i => i.InwardLine?.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue).Select(i => i.InwardLine!.SourceRefId!.Value).Distinct().ToList();
@@ -167,7 +172,7 @@ namespace net_backend.Controllers
             var jwDict = await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id);
 
             var data = list.Select(q => MapToDto(q, poDict, jwDict)).ToList();
-            return Ok(new ApiResponse<IEnumerable<QCDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<QCDto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpGet("{id}")]

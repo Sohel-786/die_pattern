@@ -33,6 +33,7 @@ import { PIFilters } from "@/components/filters/pi-filters";
 import { defaultPIFilters, buildPIFilterParams, type PIFiltersState } from "@/lib/pi-filters";
 import { cn, formatDateTime } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function PurchaseIndentsPage() {
     const { data: permissions } = useCurrentUserPermissions();
@@ -60,13 +61,15 @@ export default function PurchaseIndentsPage() {
     );
     const queryKey = useMemo(() => ["purchase-indents", filterParams.toString()], [filterParams]);
 
-    const { data: indents = [], isLoading } = useQuery<PurchaseIndent[]>({
+    const { data: piData, isLoading } = useQuery<{ list: PurchaseIndent[]; totalCount: number }>({
         queryKey,
         queryFn: async () => {
-            const res = await api.get("/purchase-indents", { params: filterParams });
-            return res.data.data ?? [];
+            const res = await api.get("/purchase-indents?" + filterParams.toString());
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
     });
+    const indents = piData?.list ?? [];
+    const totalCount = piData?.totalCount ?? 0;
 
     const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
         queryKey: ["items-for-filter"],
@@ -148,7 +151,9 @@ export default function PurchaseIndentsPage() {
         }
     };
 
-    const resetFilters = useCallback(() => setFilters(defaultPIFilters), []);
+    const resetFilters = useCallback(() => {
+        setFilters((prev) => ({ ...defaultPIFilters, pageSize: prev.pageSize, page: 1 }));
+    }, []);
 
     const handleCreatePO = () => {
         if (selectedPIIds.length === 0) return;
@@ -579,6 +584,7 @@ export default function PurchaseIndentsPage() {
                         </TableBody>
                     </Table>
                 </div>
+                <TablePagination page={filters.page} pageSize={filters.pageSize} totalCount={totalCount} onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))} />
             </Card>
 
             <PurchaseIndentDialog

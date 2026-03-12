@@ -216,7 +216,12 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll([FromQuery] bool includeSelf = true)
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetAll(
+            [FromQuery] bool includeSelf = true,
+            [FromQuery] string? search = null,
+            [FromQuery] bool? isActive = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasAllPermissions("ViewMaster", "ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
@@ -224,22 +229,32 @@ namespace net_backend.Controllers
 
             if (!includeSelf)
             {
-                // Filter out self-parties
                 query = query.Where(p => p.LinkedCompanyId == null);
             }
             else
             {
-                // PROTECTIVE RULE: If it's a system-synced party, it MUST belong to the current company.
-                // This hides legacy cross-company links (e.g., Aira showing in Suzik's list).
                 query = query.Where(p => p.LinkedCompanyId == null || p.LinkedCompanyId == companyId);
             }
 
-            var parties = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties });
+            if (isActive.HasValue)
+                query = query.Where(p => p.IsActive == isActive.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(p =>
+                    (p.Name != null && p.Name.ToLower().Contains(s)) ||
+                    (p.Email != null && p.Email.ToLower().Contains(s)) ||
+                    (p.PhoneNumber != null && p.PhoneNumber.ToLower().Contains(s)));
+            }
+
+            var totalCount = await query.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var parties = await query.OrderByDescending(p => p.CreatedAt).Skip(skip).Take(take).ToListAsync();
+            return Ok(new ApiResponse<IEnumerable<Party>> { Data = parties, TotalCount = totalCount });
         }
 
         [HttpGet("active")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive([FromQuery] bool includeSelf = false)
+        public async Task<ActionResult<ApiResponse<IEnumerable<Party>>>> GetActive([FromQuery] bool includeSelf = true)
         {
             if (!await HasAllPermissions("ViewMaster", "ManageParty")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();

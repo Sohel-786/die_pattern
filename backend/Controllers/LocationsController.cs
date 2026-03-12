@@ -176,11 +176,30 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetAll(
+            [FromQuery] string? search,
+            [FromQuery] bool? isActive,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasAllPermissions("ViewMaster", "ManageLocation")) return Forbidden();
-            var locations = await _context.Locations
-                .Include(l => l.Company)
+            var query = _context.Locations.Include(l => l.Company).AsQueryable();
+            if (isActive.HasValue)
+                query = query.Where(l => l.IsActive == isActive.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(l =>
+                    (l.Name != null && l.Name.ToLower().Contains(s)) ||
+                    (l.Address != null && l.Address.ToLower().Contains(s)) ||
+                    (l.Company != null && l.Company.Name != null && l.Company.Name.ToLower().Contains(s)));
+            }
+            var totalCount = await query.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var locations = await query
+                .OrderByDescending(l => l.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .Select(l => new {
                     l.Id,
                     l.Name,
@@ -190,9 +209,8 @@ namespace net_backend.Controllers
                     l.IsActive,
                     l.CreatedAt
                 })
-                .OrderByDescending(l => l.CreatedAt)
                 .ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<object>> { Data = locations });
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = locations, TotalCount = totalCount });
         }
 
         [HttpGet("active")]

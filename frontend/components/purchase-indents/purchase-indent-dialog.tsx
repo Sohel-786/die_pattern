@@ -10,6 +10,7 @@ import {
     PurchaseIndent,
     PurchaseIndentType,
     PurchaseIndentStatus,
+    ItemWithStatus,
 } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
     const isReadOnly = !!readOnly;
     const queryClient = useQueryClient();
     const [initialItemIds, setInitialItemIds] = useState<number[]>([]);
-    const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
+    const [selectedItemsState, setSelectedItemsState] = useState<any[]>([]);
     const [remarks, setRemarks] = useState("");
     const [type, setType] = useState<PurchaseIndentType>(PurchaseIndentType.New);
     const [reqDateOfDelivery, setReqDateOfDelivery] = useState<string>("");
@@ -48,16 +49,20 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
 
     useEffect(() => {
         if (indent && open) {
-            const ids = indent.items.map(i => i.itemId);
-            setSelectedItemIds(ids);
-            setInitialItemIds(ids);
+            setSelectedItemsState(indent.items.map(i => ({
+                id: i.itemId,
+                currentName: i.currentName,
+                mainPartName: i.mainPartName,
+                itemTypeName: i.itemTypeName
+            })));
+            setInitialItemIds(indent.items.map(i => i.itemId));
             setRemarks(indent.remarks || "");
             setType(indent.type);
             setReqDateOfDelivery(indent.reqDateOfDelivery ? format(new Date(indent.reqDateOfDelivery), "yyyy-MM-dd") : "");
             setMtcReq(indent.mtcReq ?? false);
             setNextPiCode(indent.piNo);
         } else if (open) {
-            setSelectedItemIds([]);
+            setSelectedItemsState([]);
             setInitialItemIds([]);
             setRemarks("");
             setType(PurchaseIndentType.New);
@@ -99,7 +104,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             if (isEditing) {
                 // If dialog is in read-only mode (approved PI), only allow removing unused items.
                 if (isReadOnly && indent) {
-                    const removedItemIds = initialItemIds.filter(id => !selectedItemIds.includes(id));
+                    const removedItemIds = initialItemIds.filter(id => !selectedItemsState.some(si => si.id === id));
                     return api.put(`/purchase-indents/${indent.id}/remove-unused-items`, { itemIds: removedItemIds });
                 }
                 return api.put(`/purchase-indents/${indent!.id}`, data);
@@ -116,7 +121,8 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             toast.error(err.response?.data?.message || "Operation failed")
     });
 
-    const selectedItems = items.filter(i => selectedItemIds.includes(i.id));
+    const selectedItemIds = useMemo(() => selectedItemsState.map(i => i.id), [selectedItemsState]);
+    const selectedItems = selectedItemsState;
 
     const itemIdsInPo = useMemo(
         () => new Set((indent?.items ?? []).filter((i) => i.isInPO).map((i) => i.itemId)),
@@ -128,12 +134,23 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             toast.error("This item is in an active PO and cannot be removed from the indent.");
             return;
         }
-        setSelectedItemIds(prev => prev.filter(x => x !== id));
+        setSelectedItemsState(prev => prev.filter(x => x.id !== id));
     };
 
-    const addItemsFromSelection = (ids: number[]) => {
-        if (ids.length === 0) return;
-        setSelectedItemIds(prev => [...new Set([...prev, ...ids])]);
+    const addItemsFromSelection = (newItems: ItemWithStatus[]) => {
+        if (newItems.length === 0) return;
+        setSelectedItemsState(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const itemsToAdd = newItems
+                .filter(ni => !existingIds.has(ni.itemId))
+                .map(ni => ({
+                    id: ni.itemId,
+                    currentName: ni.currentName,
+                    mainPartName: ni.mainPartName,
+                    itemTypeName: ni.itemTypeName
+                }));
+            return [...prev, ...itemsToAdd];
+        });
     };
 
     const handleSubmit = () => {
@@ -375,7 +392,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         {(!isReadOnly || (isReadOnly && initialItemIds.some(id => !selectedItemIds.includes(id)))) && (
                             <Button
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending || selectedItemIds.length === 0}
+                                disabled={mutation.isPending || selectedItemsState.length === 0}
                                 className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                                 title={
                                     isEditing && indent?.isActive === false

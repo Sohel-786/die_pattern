@@ -265,11 +265,30 @@ namespace net_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<IEnumerable<CompanyDto>>>> GetAll(
+            [FromQuery] string? search,
+            [FromQuery] bool? isActive,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasAllPermissions("ViewMaster", "ManageCompany")) return Forbidden();
-            var companies = await _context.Companies
+            var query = _context.Companies.AsQueryable();
+            if (isActive.HasValue)
+                query = query.Where(c => c.IsActive == isActive.Value);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(c =>
+                    (c.Name != null && c.Name.ToLower().Contains(s)) ||
+                    (c.GstNo != null && c.GstNo.ToLower().Contains(s)) ||
+                    (c.Address != null && c.Address.ToLower().Contains(s)));
+            }
+            var totalCount = await query.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var companies = await query
                 .OrderByDescending(c => c.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .Select(c => new CompanyDto
                 {
                     Id = c.Id,
@@ -290,7 +309,7 @@ namespace net_backend.Controllers
                     UpdatedAt = c.UpdatedAt
                 })
                 .ToListAsync();
-            return Ok(new ApiResponse<IEnumerable<CompanyDto>> { Data = companies });
+            return Ok(new ApiResponse<IEnumerable<CompanyDto>> { Data = companies, TotalCount = totalCount });
         }
 
         [HttpGet("active")]
@@ -615,16 +634,10 @@ namespace net_backend.Controllers
                 if (selfParty != null) _context.Parties.Remove(selfParty);
             }
 
-            // 2. Strict Isolation Cleanup (Critical Rule: System parties only visible in their own company)
-            // Delete any party entries where this company is the linked source but it's NOT in the company itself.
-            var legacyCrossLinks = await _context.Parties
-                .Where(p => p.LinkedCompanyId == partyCompany.Id && p.CompanyId != partyCompany.Id)
-                .ToListAsync();
-
-            if (legacyCrossLinks.Any())
-            {
-                _context.Parties.RemoveRange(legacyCrossLinks);
-            }
+            // 2. Cross-Company Visibility Check: (RELAXED)
+            // Previously, there was a rule that system parties are only visible in their own company.
+            // We've removed this deletion logic to allow inter-company transactions if needed.
+            // (Previous code deleted parties where p.LinkedCompanyId == partyCompany.Id && p.CompanyId != partyCompany.Id)
             
             await _context.SaveChangesAsync();
         }

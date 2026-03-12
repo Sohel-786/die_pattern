@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<ItemProcessState, string> = {
@@ -39,7 +40,7 @@ interface PiItemSelectionDialogProps {
   open: boolean;
   onClose: () => void;
   selectedItemIds: number[];
-  onAddItems: (itemIds: number[]) => void;
+  onAddItems: (items: ItemWithStatus[]) => void;
   excludePiId?: number | null;
 }
 
@@ -51,14 +52,12 @@ export function PiItemSelectionDialog({
   excludePiId,
 }: PiItemSelectionDialogProps) {
   const [search, setSearch] = useState("");
-  /** Item IDs the user has selected in this dialog to be added to the PI (pending commit). */
-  const [pendingIds, setPendingIds] = useState<number[]>([]);
+  const [pendingItemsState, setPendingItemsState] = useState<ItemWithStatus[]>([]);
 
-  // Reset state when dialog closes so next open starts fresh (no stale selection or search)
   useEffect(() => {
     if (!open) {
       setSearch("");
-      setPendingIds([]);
+      setPendingItemsState([]);
     }
   }, [open]);
 
@@ -74,7 +73,7 @@ export function PiItemSelectionDialog({
   });
 
   const selectedSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
-  const pendingSet = useMemo(() => new Set(pendingIds), [pendingIds]);
+  const pendingSet = useMemo(() => new Set(pendingItemsState.map(i => i.itemId)), [pendingItemsState]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return itemsWithStatus;
@@ -91,37 +90,29 @@ export function PiItemSelectionDialog({
     [filtered, selectedSet]
   );
 
-  /** Pending items in display order (same order as pendingIds). */
-  const pendingItems = useMemo(
-    () =>
-      pendingIds
-        .map((id) => itemsWithStatus.find((i) => i.itemId === id))
-        .filter((i): i is ItemWithStatus => i != null),
-    [pendingIds, itemsWithStatus]
-  );
+  const pendingItems = pendingItemsState;
 
   const addToPending = (item: ItemWithStatus) => {
     if (item.status !== "NotInStock" || selectedSet.has(item.itemId) || pendingSet.has(item.itemId)) return;
-    setPendingIds((prev) => [...prev, item.itemId]);
+    setPendingItemsState((prev) => [...prev, item]);
   };
 
   const removeFromPending = (itemId: number) => {
-    setPendingIds((prev) => prev.filter((id) => id !== itemId));
+    setPendingItemsState((prev) => prev.filter((i) => i.itemId !== itemId));
   };
 
   const clearPending = () => {
-    setPendingIds([]);
+    setPendingItemsState([]);
   };
 
   const commitAddToPI = () => {
-    if (pendingIds.length === 0) return;
-    onAddItems(pendingIds);
-    setPendingIds([]);
+    if (pendingItemsState.length === 0) return;
+    onAddItems(pendingItemsState);
+    setPendingItemsState([]);
+    toast.success(`${pendingItemsState.length} item(s) added to PI`);
   };
 
   const handleDone = () => {
-    setSearch("");
-    setPendingIds([]);
     onClose();
   };
 
@@ -136,7 +127,7 @@ export function PiItemSelectionDialog({
     >
       <div className="flex flex-col flex-1 min-h-0 p-6 gap-4">
         <p className="text-sm text-secondary-600">
-          Click an item below to add it to the selection. Items appear in <span className="font-semibold text-slate-700">Selected for PI</span>. Use <span className="font-semibold text-primary-600">Add to PI</span> to confirm.
+          Click an item below to add it to the Purchase Indent. Items marked with a check are already selected.
         </p>
 
         {/* Selected for PI – pending section */}
@@ -320,8 +311,8 @@ export function PiItemSelectionDialog({
         {/* Footer */}
         <div className="flex items-center justify-between gap-4 pt-3 border-t border-secondary-200 shrink-0">
           <div className="text-sm text-secondary-600">
-            {pendingItems.length > 0 && (
-              <span className="font-medium text-primary-700">{pendingItems.length} item(s) in selection</span>
+            {pendingItemsState.length > 0 && (
+              <span className="font-medium text-primary-700">{pendingItemsState.length} item(s) in selection</span>
             )}
             {selectedItemIds.length > 0 && (
               <span className="ml-2 text-secondary-500">{selectedItemIds.length} already in PI</span>
@@ -329,17 +320,18 @@ export function PiItemSelectionDialog({
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={handleDone} className="font-semibold h-9 px-4">
-              Done
+              Close
             </Button>
-            <Button
-              type="button"
-              onClick={commitAddToPI}
-              disabled={pendingIds.length === 0}
-              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 h-9 px-4"
-            >
-              <Plus className="w-4 h-4" />
-              Add {pendingIds.length > 0 ? `${pendingIds.length} ` : ""}item(s) to PI
-            </Button>
+            {pendingItemsState.length > 0 && (
+              <Button
+                type="button"
+                onClick={commitAddToPI}
+                className="bg-primary-600 hover:bg-primary-700 text-white font-bold h-9 px-6 shadow-sm flex gap-2 items-center"
+              >
+                <Plus className="w-4 h-4" />
+                Add to PI
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import type { QCFiltersState } from "@/lib/qc-filters";
 import { hasActiveQCFilters } from "@/lib/qc-filters";
 import { InwardSourceType } from "@/types";
 import { QcStatus } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -43,7 +44,8 @@ export function QCFilters({
 }: QCFiltersProps) {
     const hasActive = hasActiveQCFilters(filters);
     const update = (patch: Partial<QCFiltersState>) => {
-        onFiltersChange({ ...filters, ...patch });
+        const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+        onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
     };
 
     return (
@@ -70,6 +72,10 @@ export function QCFilters({
                                 />
                             </div>
                         </div>
+                        <PageSizeSelect
+                            value={filters.pageSize}
+                            onChange={(pageSize) => update({ pageSize, page: 1 })}
+                        />
                         {hasActive && (
                             <div className="flex items-end pb-0.5 shrink-0">
                                 <Button
@@ -135,7 +141,7 @@ export function QCFilters({
                         </div>
                     </div>
 
-                    {/* Row 3: Creator, Active Status, Date Range */}
+                    {/* Row 3: Rows per page, Creator, Active Status, Date Range */}
                     <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
                         <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>Created By</label>

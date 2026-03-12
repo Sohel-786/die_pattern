@@ -1,4 +1,5 @@
 import { InwardSourceType } from "@/types";
+import { appendPaginationParams } from "@/lib/pagination";
 
 export interface InwardFiltersState {
     search: string;
@@ -10,6 +11,8 @@ export interface InwardFiltersState {
     isActive: boolean | null;
     dateFrom: string;
     dateTo: string;
+    page: number;
+    pageSize: number;
 }
 
 export const initialInwardFilters: InwardFiltersState = {
@@ -22,6 +25,8 @@ export const initialInwardFilters: InwardFiltersState = {
     isActive: null,
     dateFrom: "",
     dateTo: "",
+    page: 1,
+    pageSize: 25,
 };
 
 export function hasActiveInwardFilters(f: InwardFiltersState) {
@@ -51,5 +56,6 @@ export function buildInwardFilterParams(f: InwardFiltersState): URLSearchParams 
     f.creatorIds.forEach(id => params.append("creatorIds", String(id)));
     f.itemIds.forEach(id => params.append("itemIds", String(id)));
 
+    appendPaginationParams(params, f.page, f.pageSize);
     return params;
 }

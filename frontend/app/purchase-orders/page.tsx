@@ -44,6 +44,7 @@ import {
   type POFiltersState,
 } from "@/lib/po-filters";
 import { cn, formatDateTime } from "@/lib/utils";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { Party } from "@/types";
 import type { Item } from "@/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -88,13 +89,15 @@ export default function PurchaseOrdersPage() {
     [filterParams]
   );
 
-  const { data: orders = [], isLoading } = useQuery<PO[]>({
+  const { data: poData, isLoading } = useQuery<{ list: PO[]; totalCount: number }>({
     queryKey: ["purchase-orders", filterParams.toString()],
     queryFn: async () => {
       const res = await api.get("/purchase-orders?" + filterParams.toString());
-      return res.data.data;
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
   });
+  const orders = poData?.list ?? [];
+  const totalCount = poData?.totalCount ?? 0;
 
   const { data: vendors = [] } = useQuery<Party[]>({
     queryKey: ["parties", "active"],
@@ -214,7 +217,7 @@ export default function PurchaseOrdersPage() {
   });
 
   const resetFilters = useCallback(() => {
-    setFilters(defaultPOFilters);
+    setFilters((prev) => ({ ...defaultPOFilters, pageSize: prev.pageSize, page: 1 }));
   }, []);
 
   const getStatusBadge = (status: PoStatus) => {
@@ -691,6 +694,12 @@ export default function PurchaseOrdersPage() {
             </TableBody>
           </Table>
         </div>
+        <TablePagination
+          page={filters.page}
+          pageSize={filters.pageSize}
+          totalCount={totalCount}
+          onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+        />
       </Card>
 
       {previewPOId != null && (

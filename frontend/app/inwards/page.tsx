@@ -35,6 +35,7 @@ import { InwardFilters } from "@/components/filters/inward-filters";
 import { initialInwardFilters, InwardFiltersState, buildInwardFilterParams } from "@/lib/inward-filters";
 import { toast } from "react-hot-toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function InwardsPage() {
     const { data: permissions } = useCurrentUserPermissions();
@@ -56,14 +57,16 @@ export default function InwardsPage() {
         [filters, debouncedSearch, debouncedSourceNo]
     );
 
-    const { data: inwards = [], isLoading } = useQuery<Inward[]>({
+    const { data: inwardData, isLoading } = useQuery<{ list: Inward[]; totalCount: number }>({
         queryKey: ["inwards", queryParams.toString()],
         queryFn: async () => {
             const res = await api.get("/inwards?" + queryParams.toString());
-            return res.data.data ?? [];
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
         enabled: !!permissions?.viewInward
     });
+    const inwards = inwardData?.list ?? [];
+    const totalCount = inwardData?.totalCount ?? 0;
 
     const { data: parties = [] } = useQuery<Party[]>({
         queryKey: ["parties"],
@@ -114,7 +117,7 @@ export default function InwardsPage() {
     });
 
     const resetFilters = useCallback(() => {
-        setFilters(initialInwardFilters);
+        setFilters((prev) => ({ ...initialInwardFilters, pageSize: prev.pageSize, page: 1 }));
     }, []);
 
     if (permissions && !permissions.viewInward) {
@@ -424,6 +427,7 @@ export default function InwardsPage() {
                         </TableBody>
                     </Table>
                 </div>
+                <TablePagination page={filters.page} pageSize={filters.pageSize} totalCount={totalCount} onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))} />
             </Card>
 
             <InwardDialog

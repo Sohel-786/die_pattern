@@ -29,6 +29,7 @@ import { TransferFilters } from "@/components/filters/transfer-filters";
 import { initialTransferFilters, TransferFiltersState, buildTransferFilterParams } from "@/lib/transfer-filters";
 import { toast } from "react-hot-toast";
 import { TransferDialog } from "@/components/transfers/transfer-dialog";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useLocationContext } from "@/contexts/location-context";
 
@@ -55,14 +56,16 @@ export default function TransfersPage() {
         [filters, debouncedSearch]
     );
 
-    const { data: transfers = [], isLoading } = useQuery<Transfer[]>({
+    const { data: transferData, isLoading } = useQuery<{ list: Transfer[]; totalCount: number }>({
         queryKey: ["transfers", queryParams.toString()],
         queryFn: async () => {
             const res = await api.get("/transfers?" + queryParams.toString());
-            return res.data.data ?? [];
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
         enabled: !!permissions?.viewTransfer
     });
+    const transfers = transferData?.list ?? [];
+    const totalCount = transferData?.totalCount ?? 0;
 
     const toggleActiveMutation = useMutation({
         mutationFn: async ({ id, active }: { id: number; active: boolean }) =>
@@ -114,7 +117,7 @@ export default function TransfersPage() {
     const isAdmin = currentUser?.role === Role.ADMIN;
 
     const resetFilters = useCallback(() => {
-        setFilters(initialTransferFilters);
+        setFilters((prev) => ({ ...initialTransferFilters, pageSize: prev.pageSize, page: 1 }));
     }, []);
 
     if (permissions && !permissions.viewTransfer) {
@@ -353,6 +356,12 @@ export default function TransfersPage() {
                         </TableBody>
                     </Table>
                 </div>
+                <TablePagination
+                    page={filters.page}
+                    pageSize={filters.pageSize}
+                    totalCount={totalCount}
+                    onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+                />
             </Card>
 
             <TransferDialog

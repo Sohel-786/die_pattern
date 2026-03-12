@@ -1,5 +1,6 @@
 import { InwardSourceType } from "@/types";
 import { QcStatus } from "@/types";
+import { appendPaginationParams } from "@/lib/pagination";
 
 export interface QCFiltersState {
     search: string;
@@ -11,6 +12,8 @@ export interface QCFiltersState {
     isActive: boolean | null;
     dateFrom: string;
     dateTo: string;
+    page: number;
+    pageSize: number;
 }
 
 export const initialQCFilters: QCFiltersState = {
@@ -23,6 +26,8 @@ export const initialQCFilters: QCFiltersState = {
     isActive: null,
     dateFrom: "",
     dateTo: "",
+    page: 1,
+    pageSize: 25,
 };
 
 export function hasActiveQCFilters(f: QCFiltersState) {
@@ -50,5 +55,6 @@ export function buildQCFilterParams(f: QCFiltersState): URLSearchParams {
     if (f.isActive !== null) params.set("isActive", String(f.isActive));
     if (f.dateFrom) params.set("startDate", f.dateFrom);
     if (f.dateTo) params.set("endDate", f.dateTo);
+    appendPaginationParams(params, f.page, f.pageSize);
     return params;
 }

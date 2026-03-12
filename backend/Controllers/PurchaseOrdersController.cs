@@ -348,7 +348,9 @@ namespace net_backend.Controllers
             [FromQuery] List<int>? creatorIds,
             [FromQuery] decimal? rateMin,
             [FromQuery] decimal? rateMax,
-            [FromQuery] bool? isActive)
+            [FromQuery] bool? isActive,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewPO")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -419,8 +421,11 @@ namespace net_backend.Controllers
             else if (isActive.HasValue)
                 query = query.Where(p => p.IsActive == isActive.Value);
 
-            var list = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
-            
+            var ordered = query.OrderByDescending(p => p.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered.Skip(skip).Take(take).ToListAsync();
+
             // Fetch inward details for these POs
             var poIds = list.Select(p => p.Id).ToList();
             var inwardDetails = await _context.InwardLines
@@ -509,7 +514,7 @@ namespace net_backend.Controllers
                 return dto;
             }).ToList();
 
-            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<PODto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpPost]

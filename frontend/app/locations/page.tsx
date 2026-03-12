@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/api"
 import { Location } from "@/types"
@@ -16,6 +16,12 @@ import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal"
 import { Dialog } from "@/components/ui/dialog"
 import { useCurrentUserPermissions } from "@/hooks/use-settings"
 import { AccessDenied } from "@/components/ui/access-denied"
+import { PageSizeSelect } from "@/components/ui/page-size-select"
+import { TablePagination } from "@/components/ui/table-pagination"
+import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination"
+import { X } from "lucide-react"
+
+const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 
 export default function LocationsPage() {
   const { data: permissions } = useCurrentUserPermissions();
@@ -33,6 +39,8 @@ export default function LocationsPage() {
   const [selectedItem, setSelectedItem] = useState<Location | null>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [dialogKey, setDialogKey] = useState(0);
   const [inactiveTarget, setInactiveTarget] = useState<Location | null>(null);
 
@@ -48,13 +56,25 @@ export default function LocationsPage() {
     validationData,
   } = useMasterExportImport("locations", ["locations"]);
 
-  const { data: locations = [], isLoading } = useQuery<Location[]>({
-    queryKey: ["locations"],
+  useEffect(() => {
+    setPage(1);
+  }, [search, activeFilter]);
+
+  const hasActiveFilters = search.trim() !== "" || activeFilter !== "all";
+
+  const { data: locationsData, isLoading } = useQuery<{ list: Location[]; totalCount: number }>({
+    queryKey: ["locations", search, activeFilter, page, pageSize],
     queryFn: async () => {
-      const res = await api.get("/locations");
-      return res.data?.data ?? [];
+      const params: Record<string, unknown> = { page, pageSize };
+      if (search.trim()) params.search = search.trim();
+      if (activeFilter === "active") params.isActive = true;
+      if (activeFilter === "inactive") params.isActive = false;
+      const res = await api.get("/locations", { params });
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
   });
+  const locations = locationsData?.list ?? [];
+  const totalCount = locationsData?.totalCount ?? 0;
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post("/locations", data),
@@ -108,18 +128,6 @@ export default function LocationsPage() {
     }
   };
 
-  const filteredLocations = locations.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(search.toLowerCase()) ||
-      (l.company?.name || (l as any).companyName || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.address || "").toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = activeFilter === "all"
-      ? true
-      : activeFilter === "active"
-        ? l.isActive
-        : !l.isActive;
-    return matchesSearch && matchesFilter;
-  });
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
@@ -152,27 +160,50 @@ export default function LocationsPage() {
       </div>
 
       <Card className="shadow-sm border-secondary-200 bg-white mb-6">
-        <div className="p-4 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-            <Input
-              placeholder="Search by location or company..."
-              className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className="p-4 flex flex-col sm:flex-row sm:items-end gap-4 flex-wrap">
+          <div className="flex flex-col flex-1 min-w-0">
+            <label className={filterLabelClass}>Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+              <Input
+                placeholder="Search by location or company..."
+                className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-secondary-700">Status</span>
-            <select
-              value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value as any)}
-              className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 transition-all appearance-none cursor-pointer pr-8"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active Only</option>
-              <option value="inactive">Inactive Only</option>
-            </select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col">
+              <label className={filterLabelClass}>Status</label>
+              <select
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value as any)}
+                className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 transition-all appearance-none cursor-pointer pr-8"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+              </select>
+            </div>
+            <div className="w-20 shrink-0 max-w-[5.5rem]">
+              <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); setPage(1); }} />
+            </div>
+            {hasActiveFilters && (
+              <div className="flex flex-col justify-end">
+                <span className={`${filterLabelClass} invisible`}>Clear</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setSearch(""); setActiveFilter("all"); setPage(1); }}
+                  className="h-10 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  Clear Filter
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -180,7 +211,7 @@ export default function LocationsPage() {
       <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
         <div className="px-6 py-4 border-b border-secondary-100">
           <h3 className="text-lg font-bold text-secondary-900">
-            All Locations ({filteredLocations.length})
+            All Locations ({totalCount})
           </h3>
         </div>
         <div className="table-container">
@@ -204,13 +235,13 @@ export default function LocationsPage() {
                     ))}
                   </tr>
                 ))
-              ) : filteredLocations.length > 0 ? (
-                filteredLocations.map((location, idx) => (
+              ) : locations.length > 0 ? (
+                locations.map((location, idx) => (
                   <tr
                     key={location.id}
                     className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group"
                   >
-                    <td className="px-4 py-3 text-secondary-500 font-medium text-center">{filteredLocations.length - idx}</td>
+                    <td className="px-4 py-3 text-secondary-500 font-medium text-center">{totalCount - (page - 1) * pageSize - idx}</td>
                     <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight">
                       {location.name}
                     </td>
@@ -267,6 +298,14 @@ export default function LocationsPage() {
               )}
             </tbody>
           </table>
+          {totalCount > PAGINATION_VISIBLE_THRESHOLD && (
+            <TablePagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       </Card>
 

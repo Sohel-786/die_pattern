@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Party } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit2, Ban, CheckCircle } from "lucide-react";
+import { Plus, Search, Edit2, Ban, CheckCircle, X } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import { toast } from "react-hot-toast";
 import { PartyDialog } from "@/components/masters/party-dialog";
@@ -18,6 +18,10 @@ import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
+const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 
 export default function PartiesPage() {
     const { data: permissions } = useCurrentUserPermissions();
@@ -37,6 +41,8 @@ export default function PartiesPage() {
     const [selectedItem, setSelectedItem] = useState<Party | null>(null);
     const [search, setSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<Party | null>(null);
 
@@ -52,13 +58,25 @@ export default function PartiesPage() {
         validationData,
     } = useMasterExportImport("parties", ["parties"]);
 
-    const { data: parties = [], isLoading } = useQuery<Party[]>({
-        queryKey: ["parties"],
+    useEffect(() => {
+        setPage(1);
+    }, [search, activeFilter]);
+
+    const hasActiveFilters = search.trim() !== "" || activeFilter !== "all";
+
+    const { data: partiesData, isLoading } = useQuery<{ list: Party[]; totalCount: number }>({
+        queryKey: ["parties", search, activeFilter, page, pageSize],
         queryFn: async () => {
-            const res = await api.get("/parties");
-            return res.data?.data ?? [];
+            const params: Record<string, unknown> = { page, pageSize };
+            if (search.trim()) params.search = search.trim();
+            if (activeFilter === "active") params.isActive = true;
+            if (activeFilter === "inactive") params.isActive = false;
+            const res = await api.get("/parties", { params });
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
     });
+    const parties = partiesData?.list ?? [];
+    const totalCount = partiesData?.totalCount ?? 0;
 
     const createMutation = useMutation({
         mutationFn: (data: any) => api.post("/parties", data),
@@ -110,18 +128,6 @@ export default function PartiesPage() {
         }
     };
 
-    const filteredParties = parties.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-            (p.email || "").toLowerCase().includes(search.toLowerCase()) ||
-            (p.phoneNumber || "").toLowerCase().includes(search.toLowerCase());
-        const matchesFilter = activeFilter === "all"
-            ? true
-            : activeFilter === "active"
-                ? p.isActive
-                : !p.isActive;
-        return matchesSearch && matchesFilter;
-    });
-
     return (
         <div className="p-6 space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
@@ -154,34 +160,57 @@ export default function PartiesPage() {
             </div>
 
             <Card className="shadow-sm border-secondary-200 bg-white mb-6">
-                <div className="p-4 flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                        <Input
-                            placeholder="Search by name, email or phone..."
-                            className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                <div className="p-4 flex flex-col sm:flex-row sm:items-end gap-4 flex-wrap">
+                    <div className="flex flex-col flex-1 min-w-0">
+                        <label className={filterLabelClass}>Search</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <Input
+                                placeholder="Search by name, email or phone..."
+                                className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-secondary-700">Filter</span>
-                        <select
-                            value={activeFilter}
-                            onChange={(e) => setActiveFilter(e.target.value as any)}
-                            className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
-                        >
-                            <option value="all">All Records</option>
-                            <option value="active">Active Only</option>
-                            <option value="inactive">Inactive Only</option>
-                        </select>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex flex-col">
+                            <label className={filterLabelClass}>Status</label>
+                            <select
+                                value={activeFilter}
+                                onChange={(e) => setActiveFilter(e.target.value as any)}
+                                className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
+                            >
+                                <option value="all">All Records</option>
+                                <option value="active">Active Only</option>
+                                <option value="inactive">Inactive Only</option>
+                            </select>
+                        </div>
+                        <div className="w-20 shrink-0 max-w-[5.5rem]">
+                            <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); setPage(1); }} />
+                        </div>
+                        {hasActiveFilters && (
+                            <div className="flex flex-col justify-end">
+                                <span className={`${filterLabelClass} invisible`}>Clear</span>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => { setSearch(""); setActiveFilter("all"); setPage(1); }}
+                                    className="h-10 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                                >
+                                    <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                                    Clear Filter
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </Card>
 
             <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
                 <div className="px-6 py-4 border-b border-secondary-100 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-secondary-900">Registered Parties ({filteredParties.length})</h3>
+                    <h3 className="text-lg font-bold text-secondary-900">Registered Parties ({totalCount})</h3>
                 </div>
                 <div className="table-container">
                     <table className="w-full text-left text-sm whitespace-nowrap">
@@ -205,13 +234,13 @@ export default function PartiesPage() {
                                         ))}
                                     </tr>
                                 ))
-                            ) : filteredParties.length > 0 ? (
-                                filteredParties.map((party, idx) => (
+                            ) : parties.length > 0 ? (
+                                parties.map((party, idx) => (
                                     <tr
                                         key={party.id}
                                         className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
                                     >
-                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{filteredParties.length - idx}</td>
+                                        <td className="px-4 py-3 text-secondary-500 font-medium text-center">{totalCount - (page - 1) * pageSize - idx}</td>
                                         <td className="px-4 py-3">
                                             <div className="font-bold text-secondary-900 uppercase tracking-tight">{party.name}</div>
                                         </td>
@@ -273,6 +302,14 @@ export default function PartiesPage() {
                             )}
                         </tbody>
                     </table>
+                    {totalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                        <TablePagination
+                            page={page}
+                            pageSize={pageSize}
+                            totalCount={totalCount}
+                            onPageChange={setPage}
+                        />
+                    )}
                 </div>
             </Card>
 

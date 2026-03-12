@@ -1,3 +1,5 @@
+import { appendPaginationParams } from "@/lib/pagination";
+
 /**
  * PI list filter state and API param builder.
  */
@@ -9,6 +11,8 @@ export interface PIFiltersState {
   itemIds: number[];
   creatorIds: number[];
   isActive: boolean | null;
+  page: number;
+  pageSize: number;
 }
 
 export const defaultPIFilters: PIFiltersState = {
@@ -19,6 +23,8 @@ export const defaultPIFilters: PIFiltersState = {
   itemIds: [],
   creatorIds: [],
   isActive: null,
+  page: 1,
+  pageSize: 25,
 };
 
 export function buildPIFilterParams(f: PIFiltersState): URLSearchParams {
@@ -31,6 +37,7 @@ export function buildPIFilterParams(f: PIFiltersState): URLSearchParams {
   if (f.isActive !== null) params.set("isActive", String(f.isActive));
   f.itemIds.forEach(id => params.append("itemIds", String(id)));
   f.creatorIds.forEach(id => params.append("creatorIds", String(id)));
+  appendPaginationParams(params, f.page, f.pageSize);
   return params;
 }
 

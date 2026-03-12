@@ -1,3 +1,5 @@
+import { appendPaginationParams } from "@/lib/pagination";
+
 export interface TransferFiltersState {
     search: string;
     fromPartyIds: number[];
@@ -7,6 +9,8 @@ export interface TransferFiltersState {
     dateFrom: string;
     dateTo: string;
     isActive: boolean | null;
+    page: number;
+    pageSize: number;
 }
 
 export const initialTransferFilters: TransferFiltersState = {
@@ -18,6 +22,8 @@ export const initialTransferFilters: TransferFiltersState = {
     dateFrom: "",
     dateTo: "",
     isActive: null,
+    page: 1,
+    pageSize: 25,
 };
 
 export function hasActiveTransferFilters(f: TransferFiltersState) {
@@ -45,5 +51,6 @@ export function buildTransferFilterParams(f: TransferFiltersState): URLSearchPar
     f.itemIds.forEach(id => params.append("itemIds", String(id)));
     f.creatorIds.forEach(id => params.append("creatorIds", String(id)));
 
+    appendPaginationParams(params, f.page, f.pageSize);
     return params;
 }

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, Search, Edit2, Ban, CheckCircle,
-    Download, History
+    Download, History, X
 } from "lucide-react";
 import { ExportImportButtons } from "@/components/ui/export-import-buttons";
 import api from "@/lib/api";
@@ -20,7 +20,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
 import { toast } from "react-hot-toast";
 import { ItemDialog } from "@/components/masters/item-dialog";
 import { ItemChangeDialog } from "@/components/masters/item-change-dialog";
@@ -31,6 +34,8 @@ import { AccessDenied } from "@/components/ui/access-denied";
 import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Role } from "@/types";
+
+const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 
 const getProcessColor = (process?: string) => {
     switch (process?.toLowerCase()) {
@@ -89,12 +94,18 @@ export default function ItemsPage() {
     const [materialFilter, setMaterialFilter] = useState<string>("all");
     const [ownerFilter, setOwnerFilter] = useState<string>("all");
     const [processFilter, setProcessFilter] = useState<string>("all");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
     const [dialogKey, setDialogKey] = useState(0);
     const [inactiveTarget, setInactiveTarget] = useState<Item | null>(null);
     const [viewImportedForEntry, setViewImportedForEntry] = useState<OpeningHistoryEntry | null>(null);
 
     const queryClient = useQueryClient();
     const debouncedSearch = useDebouncedValue(search, 400);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter, processFilter]);
 
     const {
         handleExport,
@@ -121,11 +132,11 @@ export default function ItemsPage() {
         enabled: tabState === "openingHistory",
     });
 
-    const { data: items = [], isLoading } = useQuery<Item[]>({
-        queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter, processFilter],
+    const { data: itemsData, isLoading } = useQuery<{ list: Item[]; totalCount: number }>({
+        queryKey: ["items", debouncedSearch, activeFilter, tabState, statusFilter, materialFilter, ownerFilter, processFilter, page, pageSize],
         enabled: tabState !== "openingHistory",
         queryFn: async () => {
-            const params: any = {};
+            const params: Record<string, unknown> = { page, pageSize };
             if (debouncedSearch) params.search = debouncedSearch;
             if (activeFilter === "active") params.isActive = true;
             if (activeFilter === "inactive") params.isActive = false;
@@ -141,9 +152,11 @@ export default function ItemsPage() {
             if (processFilter !== "all") params.currentProcessId = Number(processFilter);
 
             const res = await api.get("/items", { params });
-            return res.data.data;
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
     });
+    const items = itemsData?.list ?? [];
+    const totalCount = itemsData?.totalCount ?? 0;
 
     const createMutation = useMutation({
         mutationFn: (data: any) => api.post("/items", data),
@@ -228,8 +241,6 @@ export default function ItemsPage() {
         }
     };
 
-    // We use the server-filtered items directly
-    const filteredItems = items;
 
     const hasActiveFilters =
         search.trim() !== "" ||
@@ -490,27 +501,50 @@ export default function ItemsPage() {
                 <>
                     <Card className="shadow-sm border-secondary-200 bg-white mb-6">
                         <div className="p-4 flex flex-col gap-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                    <Input
-                                        placeholder="Search by name, part, or drawing..."
-                                        className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                    />
+                            <div className="flex flex-col sm:flex-row sm:items-end gap-4 flex-wrap">
+                                <div className="flex flex-col flex-1 min-w-0">
+                                    <label className={filterLabelClass}>Search</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                                        <Input
+                                            placeholder="Search by name, part, or drawing..."
+                                            className="pl-9 h-10 border-secondary-200 focus:ring-primary-500 text-sm font-medium"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-secondary-700">Filter</span>
-                                    <select
-                                        value={activeFilter}
-                                        onChange={(e) => setActiveFilter(e.target.value as any)}
-                                        className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
-                                    >
-                                        <option value="all">All Records</option>
-                                        <option value="active">Active Only</option>
-                                        <option value="inactive">Inactive Only</option>
-                                    </select>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="flex flex-col">
+                                        <label className={filterLabelClass}>Status</label>
+                                        <select
+                                            value={activeFilter}
+                                            onChange={(e) => setActiveFilter(e.target.value as any)}
+                                            className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
+                                        >
+                                            <option value="all">All Records</option>
+                                            <option value="active">Active Only</option>
+                                            <option value="inactive">Inactive Only</option>
+                                        </select>
+                                    </div>
+                                    <div className="w-20 shrink-0 max-w-[5.5rem]">
+                                        <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); setPage(1); }} />
+                                    </div>
+                                    {hasActiveFilters && (
+                                        <div className="flex flex-col justify-end">
+                                            <span className={`${filterLabelClass} invisible`}>Clear</span>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => { handleResetFilters(); setPage(1); }}
+                                                className="h-10 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                                            >
+                                                <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                                                Clear Filter
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -568,7 +602,7 @@ export default function ItemsPage() {
                     <Card className="shadow-sm border-secondary-200 overflow-hidden bg-white">
                         <div className="px-6 py-4 border-b border-secondary-100 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-secondary-900">
-                                {tabState === 'all' ? 'All Assets' : tabState === 'Die' ? 'Dies Repository' : 'Patterns Repository'} ({filteredItems.length})
+                                {tabState === 'all' ? 'All Assets' : tabState === 'Die' ? 'Dies Repository' : 'Patterns Repository'} ({totalCount})
                             </h3>
                         </div>
                         <div className="table-container overflow-x-auto">
@@ -598,13 +632,13 @@ export default function ItemsPage() {
                                                 ))}
                                             </tr>
                                         ))
-                                    ) : filteredItems.length > 0 ? (
-                                        filteredItems.map((item, idx) => (
+                                    ) : items.length > 0 ? (
+                                        items.map((item, idx) => (
                                             <tr
                                                 key={item.id}
                                                 className="border-b border-secondary-100 hover:bg-primary-50/30 transition-colors group font-sans"
                                             >
-                                                <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{filteredItems.length - idx}</td>
+                                                <td className="px-4 py-3 text-secondary-500 font-bold text-center text-[11px]">{totalCount - (page - 1) * pageSize - idx}</td>
                                                 <td className="px-4 py-3 font-bold text-secondary-900 uppercase tracking-tight text-[11px]">{item.mainPartName}</td>
                                                 <td className="px-4 py-3 text-secondary-700 uppercase font-bold text-[11px]">{item.currentName || "—"}</td>
                                                 <td className="px-4 py-3 text-center">
@@ -683,6 +717,14 @@ export default function ItemsPage() {
                                     )}
                                 </tbody>
                             </table>
+                            {totalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                                <TablePagination
+                                    page={page}
+                                    pageSize={pageSize}
+                                    totalCount={totalCount}
+                                    onPageChange={setPage}
+                                />
+                            )}
                         </div>
                     </Card>
                 </>

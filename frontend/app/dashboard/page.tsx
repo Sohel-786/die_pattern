@@ -38,6 +38,7 @@ import {
   LayoutGrid,
   ClipboardList,
   Ban,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -59,6 +60,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
 import { PurchaseOrderDialog } from "@/components/purchase-orders/purchase-order-dialog";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
 
 const filterLabelClass =
   "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
@@ -66,6 +70,17 @@ const inputClass =
   "h-9 rounded-lg border border-secondary-200 bg-white px-3 text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
 const selectClass =
   "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
+
+function hasAnyActive(values: Array<unknown>): boolean {
+  return values.some((v) => {
+    if (v == null) return false;
+    if (typeof v === "string") return v.trim() !== "";
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "number") return v !== 0;
+    if (typeof v === "boolean") return v;
+    return true;
+  });
+}
 
 const getProcessColor = (process?: string) => {
   const p = process?.replace(/\s+/g, "").toLowerCase() || "";
@@ -224,6 +239,9 @@ export default function DashboardPage() {
   // No automatic selection - let user see "All Locations" by default if they prefer
   // or they can pick one.
 
+  const [dashboardPage, setDashboardPage] = useState(1);
+  const [dashboardPageSize, setDashboardPageSize] = useState(25);
+
   const locationWiseParams = useMemo(
     () => ({
       locationId: locationId === "" ? undefined : locationId,
@@ -232,23 +250,27 @@ export default function DashboardPage() {
       statusId: locationStatusId === "" ? undefined : locationStatusId,
       currentProcessId: locationProcessId === "" ? undefined : locationProcessId,
       itemIds: locationItemIds.length ? locationItemIds.join(",") : undefined,
+      page: dashboardPage,
+      pageSize: dashboardPageSize,
     }),
-    [locationId, debouncedLocationSearch, locationItemTypeId, locationStatusId, locationProcessId, locationItemIds]
+    [locationId, debouncedLocationSearch, locationItemTypeId, locationStatusId, locationProcessId, locationItemIds, dashboardPage, dashboardPageSize]
   );
 
-  const { data: locationWiseItems = [], isLoading: loadingLocationWise } = useQuery<
-    LocationWiseItemRow[]
+  const { data: locationWiseData, isLoading: loadingLocationWise } = useQuery<
+    { list: LocationWiseItemRow[]; totalCount: number }
   >({
     queryKey: ["dashboard", "location-wise-items", locationWiseParams],
     queryFn: async () => {
-      if (typeof locationWiseParams.locationId !== "number") return [];
+      if (typeof locationWiseParams.locationId !== "number") return { list: [], totalCount: 0 };
       const res = await api.get("/dashboard/location-wise-items", {
         params: locationWiseParams,
       });
-      return res.data?.data ?? [];
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
     enabled: expandedSection === "location" && typeof locationWiseParams.locationId === "number",
   });
+  const locationWiseItems = locationWiseData?.list ?? [];
+  const locationWiseTotalCount = locationWiseData?.totalCount ?? 0;
 
   const atVendorParams = useMemo(
     () => ({
@@ -257,18 +279,22 @@ export default function DashboardPage() {
       vendorIds: vendorIds.length ? vendorIds.join(",") : undefined,
       itemIds: atVendorItemIds.length ? atVendorItemIds.join(",") : undefined,
       itemTypeId: atVendorItemTypeId === "" ? undefined : atVendorItemTypeId,
+      page: dashboardPage,
+      pageSize: dashboardPageSize,
     }),
-    [locationId, debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId]
+    [locationId, debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId, dashboardPage, dashboardPageSize]
   );
 
-  const { data: itemsAtVendor = [], isLoading: loadingAtVendor } = useQuery<ItemAtVendorRow[]>({
+  const { data: atVendorData, isLoading: loadingAtVendor } = useQuery<{ list: ItemAtVendorRow[]; totalCount: number }>({
     queryKey: ["dashboard", "items-at-vendor", atVendorParams],
     queryFn: async () => {
       const res = await api.get("/dashboard/items-at-vendor", { params: atVendorParams });
-      return res.data?.data ?? [];
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
     enabled: expandedSection === "at-vendor",
   });
+  const itemsAtVendor = atVendorData?.list ?? [];
+  const atVendorTotalCount = atVendorData?.totalCount ?? 0;
 
   const pendingPIParams = useMemo(
     () => ({
@@ -278,18 +304,22 @@ export default function DashboardPage() {
       createdDateTo: pendingPIDateTo || undefined,
       itemIds: pendingPIItemIds.length ? pendingPIItemIds.join(",") : undefined,
       status: pendingPIStatus || undefined,
+      page: dashboardPage,
+      pageSize: dashboardPageSize,
     }),
-    [locationId, debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds, pendingPIStatus]
+    [locationId, debouncedPendingPISearch, pendingPIDateFrom, pendingPIDateTo, pendingPIItemIds, pendingPIStatus, dashboardPage, dashboardPageSize]
   );
 
-  const { data: pendingPIList = [], isLoading: loadingPendingPI } = useQuery<PurchaseIndent[]>({
+  const { data: pendingPIData, isLoading: loadingPendingPI } = useQuery<{ list: PurchaseIndent[]; totalCount: number }>({
     queryKey: ["dashboard", "pending-pi", pendingPIParams],
     queryFn: async () => {
       const res = await api.get("/dashboard/pending-pi", { params: pendingPIParams });
-      return res.data?.data ?? [];
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
     enabled: expandedSection === "pending-pi",
   });
+  const pendingPIList = pendingPIData?.list ?? [];
+  const pendingPITotalCount = pendingPIData?.totalCount ?? 0;
 
   const pendingPOParams = useMemo(
     () => ({
@@ -299,18 +329,47 @@ export default function DashboardPage() {
       poDateTo: pendingPODateTo || undefined,
       vendorIds: pendingPOVendorIds.length ? pendingPOVendorIds.join(",") : undefined,
       status: pendingPOStatus || undefined,
+      page: dashboardPage,
+      pageSize: dashboardPageSize,
     }),
-    [locationId, debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds, pendingPOStatus]
+    [locationId, debouncedPendingPOSearch, pendingPODateFrom, pendingPODateTo, pendingPOVendorIds, pendingPOStatus, dashboardPage, dashboardPageSize]
   );
 
-  const { data: pendingPOList = [], isLoading: loadingPendingPO } = useQuery<PO[]>({
+  const { data: pendingPOData, isLoading: loadingPendingPO } = useQuery<{ list: PO[]; totalCount: number }>({
     queryKey: ["dashboard", "pending-po", pendingPOParams],
     queryFn: async () => {
       const res = await api.get("/dashboard/pending-po", { params: pendingPOParams });
-      return res.data?.data ?? [];
+      return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
     },
     enabled: expandedSection === "pending-po",
   });
+  const pendingPOList = pendingPOData?.list ?? [];
+  const pendingPOTotalCount = pendingPOData?.totalCount ?? 0;
+
+  useEffect(() => {
+    setDashboardPage(1);
+  }, [
+    locationId,
+    debouncedLocationSearch,
+    locationItemTypeId,
+    locationStatusId,
+    locationProcessId,
+    locationItemIds,
+    debouncedVendorSearch,
+    vendorIds,
+    atVendorItemIds,
+    atVendorItemTypeId,
+    debouncedPendingPISearch,
+    pendingPIDateFrom,
+    pendingPIDateTo,
+    pendingPIItemIds,
+    pendingPIStatus,
+    debouncedPendingPOSearch,
+    pendingPODateFrom,
+    pendingPODateTo,
+    pendingPOVendorIds,
+    pendingPOStatus,
+  ]);
 
   const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
     queryKey: ["items-for-filter"],
@@ -626,7 +685,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_5.5rem_auto] gap-4 items-end">
                   <div className="flex flex-col">
                     <label className={filterLabelClass}>Search</label>
                     <div className="relative flex items-center">
@@ -689,6 +748,33 @@ export default function DashboardPage() {
                       ))}
                     </select>
                   </div>
+                  <div className="w-20 shrink-0 max-w-[5.5rem]">
+                    <PageSizeSelect
+                      value={dashboardPageSize}
+                      onChange={(v) => { setDashboardPageSize(v); setDashboardPage(1); }}
+                    />
+                  </div>
+                  {hasAnyActive([locationSearch, locationItemTypeId, locationStatusId, locationProcessId, locationItemIds]) && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocationSearch("");
+                          setLocationItemTypeId("");
+                          setLocationStatusId("");
+                          setLocationProcessId("");
+                          setLocationItemIds([]);
+                          setDashboardPage(1);
+                        }}
+                        className="h-9 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Clear Filter
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-end">
                   <Button
@@ -712,6 +798,7 @@ export default function DashboardPage() {
                     <p className="mt-4 text-secondary-600">Loading...</p>
                   </div>
                 ) : locationWiseItems.length > 0 ? (
+                  <>
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
@@ -757,6 +844,15 @@ export default function DashboardPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  {locationWiseTotalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                    <TablePagination
+                      page={dashboardPage}
+                      pageSize={dashboardPageSize}
+                      totalCount={locationWiseTotalCount}
+                      onPageChange={setDashboardPage}
+                    />
+                  )}
+                  </>
                 ) : (
                   <div className="py-12 text-center text-secondary-500">
                     No items at this location match your filters.
@@ -778,7 +874,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_5.5rem_auto_auto] gap-4 items-end">
                   <div className="flex flex-col">
                     <label className={filterLabelClass}>Search</label>
                     <div className="relative flex items-center">
@@ -825,6 +921,30 @@ export default function DashboardPage() {
                       ))}
                     </select>
                   </div>
+                  <div className="w-20 shrink-0 max-w-[5.5rem]">
+                    <PageSizeSelect
+                      value={dashboardPageSize}
+                      onChange={(v) => { setDashboardPageSize(v); setDashboardPage(1); }}
+                    />
+                  </div>
+                  {hasAnyActive([vendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId]) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setVendorSearch("");
+                        setVendorIds([]);
+                        setAtVendorItemIds([]);
+                        setAtVendorItemTypeId("");
+                        setDashboardPage(1);
+                      }}
+                      className="h-9 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                      Clear Filter
+                    </Button>
+                  )}
                   <div className="flex justify-end">
                     <Button onClick={() => handleExport("at-vendor")} disabled={loadingAtVendor} className="shadow-sm">
                       <Download className="w-4 h-4 mr-2" />
@@ -840,6 +960,7 @@ export default function DashboardPage() {
                     <p className="mt-4 text-secondary-600">Loading...</p>
                   </div>
                 ) : itemsAtVendor.length > 0 ? (
+                  <>
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
@@ -873,6 +994,15 @@ export default function DashboardPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  {atVendorTotalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                    <TablePagination
+                      page={dashboardPage}
+                      pageSize={dashboardPageSize}
+                      totalCount={atVendorTotalCount}
+                      onPageChange={setDashboardPage}
+                    />
+                  )}
+                  </>
                 ) : (
                   <div className="py-12 text-center text-secondary-500">
                     No patterns at vendor match your filters.
@@ -905,7 +1035,7 @@ export default function DashboardPage() {
                   </Button>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_5.5rem_auto] gap-4 items-end">
                     <div className="flex flex-col">
                       <label className={filterLabelClass}>Search</label>
                       <div className="relative flex items-center">
@@ -962,6 +1092,37 @@ export default function DashboardPage() {
                         <option value="Rejected">Rejected</option>
                       </select>
                     </div>
+                    <div className="w-20 shrink-0 max-w-[5.5rem]">
+                      <PageSizeSelect
+                        value={dashboardPageSize}
+                        onChange={(v) => { setDashboardPageSize(v); setDashboardPage(1); }}
+                      />
+                    </div>
+                    {hasAnyActive([
+                      pendingPISearch,
+                      pendingPIDateFrom,
+                      pendingPIDateTo,
+                      pendingPIItemIds,
+                      pendingPIStatus && pendingPIStatus !== "All" ? pendingPIStatus : "",
+                    ]) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPendingPISearch("");
+                          setPendingPIDateFrom("");
+                          setPendingPIDateTo("");
+                          setPendingPIItemIds([]);
+                          setPendingPIStatus("All");
+                          setDashboardPage(1);
+                        }}
+                        className="h-9 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Clear Filter
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="border-t border-secondary-100 overflow-x-auto">
@@ -971,6 +1132,7 @@ export default function DashboardPage() {
                       <p className="mt-4 text-secondary-600">Loading...</p>
                     </div>
                   ) : pendingPIList.length > 0 ? (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
@@ -1168,6 +1330,15 @@ export default function DashboardPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    {pendingPITotalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                      <TablePagination
+                        page={dashboardPage}
+                        pageSize={dashboardPageSize}
+                        totalCount={pendingPITotalCount}
+                        onPageChange={setDashboardPage}
+                      />
+                    )}
+                    </>
                   ) : (
                     <div className="py-12 text-center text-secondary-500">
                       No pending PIs match your filters.
@@ -1200,7 +1371,7 @@ export default function DashboardPage() {
                   </Button>
                 </div>
                 <div className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_5.5rem_auto] gap-4 items-end">
                     <div className="flex flex-col">
                       <label className={filterLabelClass}>Search</label>
                       <div className="relative flex items-center">
@@ -1257,6 +1428,37 @@ export default function DashboardPage() {
                         <option value="Rejected">Rejected</option>
                       </select>
                     </div>
+                    <div className="w-20 shrink-0 max-w-[5.5rem]">
+                      <PageSizeSelect
+                        value={dashboardPageSize}
+                        onChange={(v) => { setDashboardPageSize(v); setDashboardPage(1); }}
+                      />
+                    </div>
+                    {hasAnyActive([
+                      pendingPOSearch,
+                      pendingPODateFrom,
+                      pendingPODateTo,
+                      pendingPOVendorIds,
+                      pendingPOStatus && pendingPOStatus !== "All" ? pendingPOStatus : "",
+                    ]) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPendingPOSearch("");
+                          setPendingPODateFrom("");
+                          setPendingPODateTo("");
+                          setPendingPOVendorIds([]);
+                          setPendingPOStatus("All");
+                          setDashboardPage(1);
+                        }}
+                        className="h-9 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Clear Filter
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="border-t border-secondary-100 overflow-x-auto">
@@ -1266,6 +1468,7 @@ export default function DashboardPage() {
                       <p className="mt-4 text-secondary-600">Loading...</p>
                     </div>
                   ) : pendingPOList.length > 0 ? (
+                    <>
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
@@ -1562,6 +1765,15 @@ export default function DashboardPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    {pendingPOTotalCount > PAGINATION_VISIBLE_THRESHOLD && (
+                      <TablePagination
+                        page={dashboardPage}
+                        pageSize={dashboardPageSize}
+                        totalCount={pendingPOTotalCount}
+                        onPageChange={setDashboardPage}
+                      />
+                    )}
+                    </>
                   ) : (
                     <div className="py-12 text-center text-secondary-500">
                       No pending POs match your filters.

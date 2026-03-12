@@ -117,7 +117,9 @@ namespace net_backend.Controllers
             [FromQuery] bool? isActive,
             [FromQuery] string? search,
             [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate)
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewInward")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -191,8 +193,11 @@ namespace net_backend.Controllers
             if (!isActive.HasValue && !await IsAdmin())
                 query = query.Where(i => i.IsActive);
 
-            var list = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
-            
+            var ordered = query.OrderByDescending(i => i.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered.Skip(skip).Take(take).ToListAsync();
+
             // Pre-fetch source numbers for display
             var poIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
             var jwIds = list.SelectMany(i => i.Lines).Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
@@ -221,7 +226,7 @@ namespace net_backend.Controllers
             var activeQcLineIds = qcInfo.Where(q => q.IsActive).Select(q => q.InwardLineId).ToHashSet();
 
             var data = list.Select(i => MapToDto(i, pos, jws, null, qcs, poRates, activeQcLineIds)).ToList();
-            return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<InwardDto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpPatch("{id}/active")]

@@ -85,7 +85,9 @@ namespace net_backend.Controllers
             [FromQuery] int? materialId,
             [FromQuery] int? ownerTypeId,
             [FromQuery] int? statusId,
-            [FromQuery] int? currentProcessId)
+            [FromQuery] int? currentProcessId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasAllPermissions("ViewMaster", "ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -128,8 +130,10 @@ namespace net_backend.Controllers
                     (p.DrawingNo != null && p.DrawingNo.ToLower().Contains(s)));
             }
 
-            // Materialize first so we can use switch expressions and service methods in-memory
-            var items = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
+            var ordered = query.OrderByDescending(p => p.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var items = await ordered.Skip(skip).Take(take).ToListAsync();
             var data = items.Select(p => new ItemDto
             {
                 Id = p.Id,
@@ -158,7 +162,7 @@ namespace net_backend.Controllers
                 IsActive = p.IsActive
             }).ToList();
 
-            return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data });
+            return Ok(new ApiResponse<IEnumerable<ItemDto>> { Data = data, TotalCount = totalCount });
         }
 
         [HttpGet("active")]

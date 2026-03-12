@@ -5,6 +5,8 @@ namespace net_backend.DTOs
         public bool Success { get; set; } = true;
         public T? Data { get; set; }
         public string? Message { get; set; }
+        /// <summary>When set, indicates server-side pagination total record count (so client can show pagination UI).</summary>
+        public int? TotalCount { get; set; }
     }
 
     public class CompanyDto

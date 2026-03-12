@@ -47,7 +47,9 @@ namespace net_backend.Controllers
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
             [FromQuery] bool? isActive,
-            [FromQuery] string? search)
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewTransfer")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
@@ -126,7 +128,10 @@ namespace net_backend.Controllers
                 );
             }
 
-            var list = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
+            var ordered = query.OrderByDescending(t => t.CreatedAt);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered.Skip(skip).Take(take).ToListAsync();
             var location = await _context.Locations.FindAsync(locationId);
             var locationName = location?.Name ?? "Our Location";
 
@@ -162,7 +167,7 @@ namespace net_backend.Controllers
                 AttachmentUrls = string.IsNullOrEmpty(t.AttachmentUrlsJson) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(t.AttachmentUrlsJson) ?? new List<string>()
             });
 
-            return Ok(new ApiResponse<IEnumerable<TransferDto>> { Data = result });
+            return Ok(new ApiResponse<IEnumerable<TransferDto>> { Data = result, TotalCount = totalCount });
         }
 
         [HttpGet("{id}")]

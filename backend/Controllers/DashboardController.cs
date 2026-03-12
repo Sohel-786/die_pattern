@@ -123,7 +123,9 @@ namespace net_backend.Controllers
             [FromQuery] int? itemTypeId,
             [FromQuery] int? statusId,
             [FromQuery] int? currentProcessId,
-            [FromQuery] string? itemIds)
+            [FromQuery] string? itemIds,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var companyId = await GetCurrentCompanyIdAsync();
@@ -172,8 +174,12 @@ namespace net_backend.Controllers
             if (itemIdList.Count > 0)
                 query = query.Where(p => itemIdList.Contains(p.Id));
 
-            var list = await query
-                .OrderByDescending(p => p.Id)
+            var ordered = query.OrderByDescending(p => p.Id);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered
+                .Skip(skip)
+                .Take(take)
                 .Select(p => new LocationWiseItemRowDto
                 {
                     Id = p.Id,
@@ -188,7 +194,7 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<object> { Data = list });
+            return Ok(new ApiResponse<object> { Data = list, TotalCount = totalCount });
         }
 
         /// <summary>Items at vendor (InJobwork or AtVendor) with optional filters.</summary>
@@ -198,7 +204,9 @@ namespace net_backend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? vendorIds,
             [FromQuery] string? itemIds,
-            [FromQuery] int? itemTypeId)
+            [FromQuery] int? itemTypeId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
@@ -237,8 +245,12 @@ namespace net_backend.Controllers
             if (itemTypeId.HasValue && itemTypeId.Value > 0)
                 query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
 
-            var list = await query
-                .OrderByDescending(p => p.Id)
+            var ordered = query.OrderByDescending(p => p.Id);
+            var totalCount = await ordered.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await ordered
+                .Skip(skip)
+                .Take(take)
                 .Select(p => new ItemAtVendorRowDto
                 {
                     Id = p.Id,
@@ -251,7 +263,7 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<object> { Data = list });
+            return Ok(new ApiResponse<object> { Data = list, TotalCount = totalCount });
         }
 
         /// <summary>Pending PIs (not approved) for current company locations. Full DTO for table and actions.</summary>
@@ -262,7 +274,9 @@ namespace net_backend.Controllers
             [FromQuery] string? createdDateFrom,
             [FromQuery] string? createdDateTo,
             [FromQuery] string? itemIds,
-            [FromQuery] string? status)
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
@@ -345,7 +359,9 @@ namespace net_backend.Controllers
             if (itemIdList.Count > 0)
                 query = query.Where(p => p.Items.Any(i => itemIdList.Contains(i.ItemId)));
 
-            var list = await query.ToListAsync();
+            var totalCount = await query.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var list = await query.Skip(skip).Take(take).ToListAsync();
 
             var data = list.Select(p => new PurchaseIndentDto
             {
@@ -405,7 +421,7 @@ namespace net_backend.Controllers
                 }).ToList()
             }).ToList();
 
-            return Ok(new ApiResponse<object> { Data = data });
+            return Ok(new ApiResponse<object> { Data = data, TotalCount = totalCount });
         }
 
         /// <summary>Pending POs for current company locations. Full DTO for table and actions.</summary>
@@ -416,7 +432,9 @@ namespace net_backend.Controllers
             [FromQuery] string? poDateFrom,
             [FromQuery] string? poDateTo,
             [FromQuery] string? vendorIds,
-            [FromQuery] string? status)
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25)
         {
             if (!await HasPermission("ViewDashboard")) return Forbidden();
             var allowed = await GetAllowedLocationIdsAsync();
@@ -500,7 +518,9 @@ namespace net_backend.Controllers
             if (vendorIdList.Count > 0)
                 query = query.Where(p => vendorIdList.Contains(p.VendorId));
 
-            var pos = await query.ToListAsync();
+            var totalCount = await query.CountAsync();
+            var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page, pageSize);
+            var pos = await query.Skip(skip).Take(take).ToListAsync();
             var poIds = pos.Select(p => p.Id).ToList();
             
             // Pre-fetch Inward and QC details for all items in these POs
@@ -551,7 +571,7 @@ namespace net_backend.Controllers
                 return dto;
             }).ToList();
 
-            return Ok(new ApiResponse<object> { Data = data });
+            return Ok(new ApiResponse<object> { Data = data, TotalCount = totalCount });
         }
 
         // ---------- Export endpoints (same filters as list; export filtered data only) ----------

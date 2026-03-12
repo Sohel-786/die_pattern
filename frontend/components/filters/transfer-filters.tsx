@@ -11,6 +11,7 @@ import type { TransferFiltersState } from "@/lib/transfer-filters";
 import { Role } from "@/types";
 
 import { hasActiveTransferFilters } from "@/lib/transfer-filters";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -45,7 +46,8 @@ export function TransferFilters({
     const hasActive = hasActiveTransferFilters(filters);
 
     const update = (patch: Partial<TransferFiltersState>) => {
-        onFiltersChange({ ...filters, ...patch });
+        const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+        onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
     };
 
     // Current location (value 0) shown with actual name when available
@@ -78,6 +80,10 @@ export function TransferFilters({
                                 />
                             </div>
                         </div>
+                        <PageSizeSelect
+                            value={filters.pageSize}
+                            onChange={(pageSize) => update({ pageSize, page: 1 })}
+                        />
                         {hasActive && (
                             <div className="flex items-end pb-0.5 shrink-0">
                                 <Button
@@ -125,7 +131,7 @@ export function TransferFilters({
                         </div>
                     </div>
 
-                    {/* Row 3: Creator, Active, Dates */}
+                    {/* Row 3: Rows per page, Creator, Active, Dates */}
                     <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
                         <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                             <label className={filterLabelClass}>Created By</label>

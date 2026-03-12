@@ -28,6 +28,7 @@ import { QCFilters } from "@/components/filters/qc-filters";
 import { initialQCFilters, buildQCFilterParams, QCFiltersState } from "@/lib/qc-filters";
 import { toast } from "react-hot-toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 export default function QualityControlPage() {
     const { data: permissions } = useCurrentUserPermissions();
@@ -50,14 +51,16 @@ export default function QualityControlPage() {
         [filters, debouncedSearch]
     );
 
-    const { data: qcs = [], isLoading } = useQuery<QC[]>({
+    const { data: qcData, isLoading } = useQuery<{ list: QC[]; totalCount: number }>({
         queryKey: ["quality-control", queryParams.toString()],
         queryFn: async () => {
             const res = await api.get("/quality-control?" + queryParams.toString());
-            return res.data.data ?? [];
+            return { list: res.data?.data ?? [], totalCount: res.data?.totalCount ?? 0 };
         },
         enabled: !!permissions?.viewQC,
     });
+    const qcs = qcData?.list ?? [];
+    const totalCount = qcData?.totalCount ?? 0;
 
     const { data: parties = [] } = useQuery<{ id: number; name: string }[]>({
         queryKey: ["parties", "active"],
@@ -116,7 +119,9 @@ export default function QualityControlPage() {
         onError: (err: any) => toast.error(err.response?.data?.message || "Activate failed"),
     });
 
-    const resetFilters = useCallback(() => setFilters(initialQCFilters), []);
+    const resetFilters = useCallback(() => {
+        setFilters((prev) => ({ ...initialQCFilters, pageSize: prev.pageSize, page: 1 }));
+    }, []);
 
     /** Normalize sourceType from API (number or string) to display label. */
     const getSourceTypeLabel = (sourceType: InwardSourceType | string | number): string => {
@@ -400,6 +405,7 @@ export default function QualityControlPage() {
                         </TableBody>
                     </Table>
                 </div>
+                <TablePagination page={filters.page} pageSize={filters.pageSize} totalCount={totalCount} onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))} />
             </Card>
 
             <QualityControlDialog

@@ -305,7 +305,7 @@ namespace net_backend.Services
                     worksheet.Cell(rowIdx, 1).Value = $"Location: {locationName}";
                     worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
                     worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 12;
-                    worksheet.Range(rowIdx, 1, rowIdx, 8).Merge();
+                    worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
                     rowIdx++;
                 }
 
@@ -314,10 +314,10 @@ namespace net_backend.Services
                 worksheet.Cell(rowIdx, 1).Style.Font.Italic = true;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 10;
                 worksheet.Cell(rowIdx, 1).Style.Font.FontColor = XLColor.Gray;
-                worksheet.Range(rowIdx, 1, rowIdx, 8).Merge();
+                worksheet.Range(rowIdx, 1, rowIdx, 7).Merge();
                 rowIdx++;
 
-                var headers = new[] { "Location", "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition", "Process", "Active Status" };
+                var headers = new[] { "Main Part Name", "Current Name", "Drawing No", "Item Type", "Condition", "Process", "Active Status" };
                 for (int c = 0; c < headers.Length; c++)
                 {
                     var cell = worksheet.Cell(rowIdx, c + 1);
@@ -331,24 +331,22 @@ namespace net_backend.Services
 
                 foreach (var r in rowList)
                 {
-                    worksheet.Cell(rowIdx, 1).Value = r.LocationName ?? "";
-                    worksheet.Cell(rowIdx, 2).Value = r.MainPartName ?? "";
-                    worksheet.Cell(rowIdx, 3).Value = r.CurrentName ?? "";
-                    worksheet.Cell(rowIdx, 4).Value = r.DrawingNo ?? "";
-                    worksheet.Cell(rowIdx, 5).Value = r.ItemTypeName ?? "";
-                    worksheet.Cell(rowIdx, 6).Value = r.StatusName ?? "";
-                    worksheet.Cell(rowIdx, 7).Value = r.CurrentProcess ?? "";
-                    worksheet.Cell(rowIdx, 8).Value = r.IsActive ? "Active" : "Inactive";
+                    worksheet.Cell(rowIdx, 1).Value = r.MainPartName ?? "";
+                    worksheet.Cell(rowIdx, 2).Value = r.CurrentName ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.DrawingNo ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.ItemTypeName ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.StatusName ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = r.CurrentProcess ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = r.IsActive ? "Active" : "Inactive";
                     rowIdx++;
                 }
-                worksheet.Column(1).Width = 22;
-                worksheet.Column(2).Width = 28;
-                worksheet.Column(3).Width = 24;
-                worksheet.Column(4).Width = 16;
+                worksheet.Column(1).Width = 28;
+                worksheet.Column(2).Width = 24;
+                worksheet.Column(3).Width = 16;
+                worksheet.Column(4).Width = 14;
                 worksheet.Column(5).Width = 14;
-                worksheet.Column(6).Width = 14;
-                worksheet.Column(7).Width = 16;
-                worksheet.Column(8).Width = 12;
+                worksheet.Column(6).Width = 16;
+                worksheet.Column(7).Width = 12;
                 if (rowList.Count > 0)
                     worksheet.Range(headerRow, 1, rowIdx - 1, headers.Length).SetAutoFilter();
                 using (var stream = new MemoryStream())

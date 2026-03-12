@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { JobWorkFiltersState } from "@/lib/job-work-filters";
 import { hasActiveJobWorkFilters } from "@/lib/job-work-filters";
 import { JobWorkStatus } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -48,7 +49,8 @@ export function JobWorkFilters({
 }: JobWorkFiltersProps) {
     const hasActive = hasActiveJobWorkFilters(filters);
     const update = (patch: Partial<JobWorkFiltersState>) => {
-        onFiltersChange({ ...filters, ...patch });
+        const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+        onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
     };
 
     return (
@@ -75,6 +77,10 @@ export function JobWorkFilters({
                                 />
                             </div>
                         </div>
+                        <PageSizeSelect
+                            value={filters.pageSize}
+                            onChange={(pageSize) => update({ pageSize, page: 1 })}
+                        />
                         {hasActive && (
                             <div className="flex items-end pb-0.5 shrink-0">
                                 <Button
@@ -141,7 +147,7 @@ export function JobWorkFilters({
                         </div>
                     </div>
 
-                    {/* Row 3: Active Status, Date Range */}
+                    {/* Row 3: Rows per page, Active Status, Date Range */}
                     <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Entry Status</label>

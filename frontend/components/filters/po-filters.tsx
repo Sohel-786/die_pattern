@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { POFiltersState } from "@/lib/po-filters";
 import { hasActivePOFilters } from "@/lib/po-filters";
 import { PoStatus } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -42,7 +43,8 @@ export function POFilters({
 }: POFiltersProps) {
   const hasActive = hasActivePOFilters(filters);
   const update = (patch: Partial<POFiltersState>) => {
-    onFiltersChange({ ...filters, ...patch });
+    const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+    onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
   };
 
   return (
@@ -73,6 +75,10 @@ export function POFilters({
                 />
               </div>
             </div>
+            <PageSizeSelect
+              value={filters.pageSize}
+              onChange={(pageSize) => update({ pageSize, page: 1 })}
+            />
             {hasActive && (
               <div className="flex items-end pb-0.5 shrink-0">
                 <Button
@@ -141,7 +147,7 @@ export function POFilters({
             </div>
           </div>
 
-          {/* Row 3: Purchase Type, Entry Status, Purchase Order Date Wise — equal width columns */}
+          {/* Row 3: Rows per page, Purchase Type, Entry Status, PO Date Range */}
           <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Purchase Type</label>
@@ -176,7 +182,7 @@ export function POFilters({
                 </div>
               )}
             </div>
-            <div className="col-span-2 min-w-0">
+            <div className="min-w-0 col-span-2">
               <label className={filterLabelClass}>PO Date Range</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">

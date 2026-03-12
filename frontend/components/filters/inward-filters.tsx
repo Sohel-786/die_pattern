@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { InwardFiltersState } from "@/lib/inward-filters";
 import { hasActiveInwardFilters } from "@/lib/inward-filters";
 import { InwardSourceType } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -42,7 +43,8 @@ export function InwardFilters({
 }: InwardFiltersProps) {
     const hasActive = hasActiveInwardFilters(filters);
     const update = (patch: Partial<InwardFiltersState>) => {
-        onFiltersChange({ ...filters, ...patch });
+        const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+        onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
     };
 
     return (
@@ -69,6 +71,10 @@ export function InwardFilters({
                                 />
                             </div>
                         </div>
+                        <PageSizeSelect
+                            value={filters.pageSize}
+                            onChange={(pageSize) => update({ pageSize, page: 1 })}
+                        />
                         {hasActive && (
                             <div className="flex items-end pb-0.5 shrink-0">
                                 <Button
@@ -130,7 +136,7 @@ export function InwardFilters({
                         </div>
                     </div>
 
-                    {/* Row 3: Status, Creator + Date Range */}
+                    {/* Row 3: Rows per page, Status, Creator + Date Range */}
                     <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Entry Status</label>

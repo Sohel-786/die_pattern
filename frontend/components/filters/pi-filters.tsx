@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { PIFiltersState } from "@/lib/pi-filters";
 import { hasActivePIFilters } from "@/lib/pi-filters";
 import { PurchaseIndentStatus } from "@/types";
+import { PageSizeSelect } from "@/components/ui/page-size-select";
 
 /** Shared with PO filter for consistent enterprise UX. */
 const filterLabelClass =
@@ -46,7 +47,8 @@ export function PIFilters({
 }: PIFiltersProps) {
   const hasActive = hasActivePIFilters(filters);
   const update = (patch: Partial<PIFiltersState>) => {
-    onFiltersChange({ ...filters, ...patch });
+    const isPaginationOnly = Object.keys(patch).every((k) => k === "page" || k === "pageSize");
+    onFiltersChange({ ...filters, ...patch, ...(isPaginationOnly ? {} : { page: 1 }) });
   };
 
   return (
@@ -77,6 +79,10 @@ export function PIFilters({
                 />
               </div>
             </div>
+            <PageSizeSelect
+              value={filters.pageSize}
+              onChange={(pageSize) => update({ pageSize, page: 1 })}
+            />
             {hasActive && (
               <div className="flex items-end pb-0.5 shrink-0">
                 <Button
@@ -134,8 +140,8 @@ export function PIFilters({
             </div>
           </div>
 
-          {/* Row 3: Active Status, Date Range */}
-          <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
+          {/* Row 3: Rows per page, Entry Status, Date Range */}
+          <div className="grid grid-cols-3 gap-4 px-4 pb-3 pt-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Entry Status</label>
               {isAdmin ? (
@@ -154,7 +160,7 @@ export function PIFilters({
                 </div>
               )}
             </div>
-            <div className="col-span-3 min-w-0 flex gap-2">
+            <div className="col-span-2 min-w-0 flex gap-2">
               <div className="flex-1">
                 <label className={filterLabelClass}>From Date</label>
                 <DatePicker

@@ -1,6 +1,9 @@
+import { appendPaginationParams } from "@/lib/pagination";
+
 /**
  * PO list filter state and API param builder.
  * Only includes keys when a filter is active.
+ * page/pageSize are for pagination (not filters).
  */
 export interface POFiltersState {
   search: string;
@@ -16,6 +19,8 @@ export interface POFiltersState {
   rateMin: number | null;
   rateMax: number | null;
   isActive: boolean | null;
+  page: number;
+  pageSize: number;
 }
 
 export const defaultPOFilters: POFiltersState = {
@@ -32,6 +37,8 @@ export const defaultPOFilters: POFiltersState = {
   rateMin: null,
   rateMax: null,
   isActive: null,
+  page: 1,
+  pageSize: 25,
 };
 
 export function buildPOFilterParams(f: POFiltersState): URLSearchParams {
@@ -52,6 +59,7 @@ export function buildPOFilterParams(f: POFiltersState): URLSearchParams {
   (f.creatorIds || []).forEach(id => params.append("creatorIds", String(id)));
   (f.itemIds || []).forEach(id => params.append("itemIds", String(id)));
 
+  appendPaginationParams(params, f.page, f.pageSize);
   return params;
 }
 
