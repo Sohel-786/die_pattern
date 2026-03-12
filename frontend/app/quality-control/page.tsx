@@ -256,7 +256,7 @@ export default function QualityControlPage() {
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </Button>
                                                     )}
-                                                    {q.status === QcStatus.Pending && q.isActive !== false && (
+                                                    {permissions?.viewQC && (
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -265,7 +265,7 @@ export default function QualityControlPage() {
                                                                 setDialogOpen(true);
                                                             }}
                                                             className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
-                                                            title="Edit QC"
+                                                            title={permissions?.editQC && q.status === QcStatus.Pending && q.isActive !== false ? "Edit QC" : "View QC (incl. attachments)"}
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
                                                         </Button>

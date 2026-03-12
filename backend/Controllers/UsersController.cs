@@ -89,6 +89,14 @@ namespace net_backend.Controllers
                 LocationId = request.LocationId,
                 CreatedAt = DateTime.Now
             });
+
+            // Grant default View + Add permissions for non-admin users (Master, Core Ops, Transfer, Purchasing, Reports)
+            if (role != Role.ADMIN)
+            {
+                var defaultPermission = DefaultNonAdminPermissions.Create(user.Id);
+                _context.UserPermissions.Add(defaultPermission);
+            }
+
             await _context.SaveChangesAsync();
 
             return StatusCode(201, new ApiResponse<User> { Data = user });
@@ -169,9 +177,17 @@ namespace net_backend.Controllers
             var permission = await _context.UserPermissions.FirstOrDefaultAsync(p => p.UserId == id);
             if (permission == null)
             {
-                // Create default if not exists
-                permission = new UserPermission { UserId = id };
-                _context.UserPermissions.Add(permission);
+                var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                if (user != null && user.Role != Role.ADMIN)
+                {
+                    permission = DefaultNonAdminPermissions.Create(id);
+                    _context.UserPermissions.Add(permission);
+                }
+                else
+                {
+                    permission = new UserPermission { UserId = id };
+                    _context.UserPermissions.Add(permission);
+                }
                 await _context.SaveChangesAsync();
             }
             return Ok(new ApiResponse<UserPermission> { Data = permission });
