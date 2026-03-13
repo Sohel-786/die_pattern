@@ -45,6 +45,8 @@ interface InwardLineDraft {
     sourceGstPercent?: number | null;
     isQCPending?: boolean;
     hasActiveQC?: boolean;
+    originalDisplayName?: string | null;
+    newDisplayNameFromJobWork?: string | null;
 }
 
 export function InwardDialog({
@@ -160,7 +162,9 @@ export function InwardDialog({
                 sourceGstPercent: l.sourceGstPercent,
                 isQCPending: l.isQCPending,
                 hasActiveQC: l.hasActiveQC,
-                included: true
+                included: true,
+                originalDisplayName: l.originalDisplayName,
+                newDisplayNameFromJobWork: l.newDisplayNameFromJobWork
             })));
             if (inward.lines && inward.lines.length > 0) {
                 setSelectedSourceType(inward.lines[0].sourceType);
@@ -515,6 +519,11 @@ export function InwardDialog({
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0">
                                                                     <span className="font-semibold text-secondary-900 truncate">{line.itemName}</span>
+                                                                    {line.newDisplayNameFromJobWork ? (
+                                                                        <span className="text-[11px] text-primary-600 font-medium mt-0.5">
+                                                                            Old: {line.originalDisplayName ?? line.itemName} → New: {line.newDisplayNameFromJobWork} <span className="text-primary-500/90">(after QC approve)</span>
+                                                                        </span>
+                                                                    ) : null}
                                                                     <span className="text-xs text-secondary-500 truncate">{line.mainPartName}</span>
                                                                 </div>
                                                             </td>

@@ -251,7 +251,7 @@ namespace net_backend.Controllers
             {
                 InwardLineId = m.Id,
                 ItemId = m.ItemId,
-                ItemName = m.Item?.CurrentName,
+                ItemName = m.ItemNameSnapshot ?? m.Item?.CurrentName,
                 MainPartName = m.Item?.MainPartName,
                 ItemTypeName = m.ItemTypeName ?? m.Item?.ItemType?.Name,
                 DrawingNo = m.DrawingNo ?? m.Item?.DrawingNo,
@@ -266,7 +266,9 @@ namespace net_backend.Controllers
                 VendorName = m.Inward?.Vendor?.Name,
                 IsQCPending = m.IsQCPending,
                 IsQCApproved = m.IsQCApproved,
-                InwardDate = m.Inward?.InwardDate ?? DateTime.Now
+                InwardDate = m.Inward?.InwardDate ?? DateTime.Now,
+                OriginalDisplayName = m.ItemNameSnapshot ?? m.Item?.CurrentName,
+                NewDisplayNameFromJobWork = m.NewItemNameFromJobWork
             }).ToList();
 
             return Ok(new ApiResponse<IEnumerable<PendingQCDto>> { Data = data });
@@ -426,6 +428,59 @@ namespace net_backend.Controllers
                             item.CurrentLocationId = entry.LocationId;
                             item.CurrentPartyId = null;
                             item.UpdatedAt = DateTime.Now;
+
+                            // Resolve proposed new display name: from inward line snapshot, or fallback to Job Work item when line was created before versioning
+                            string? proposedNewName = !string.IsNullOrWhiteSpace(line.NewItemNameFromJobWork) ? line.NewItemNameFromJobWork.Trim() : null;
+                            if (string.IsNullOrEmpty(proposedNewName) && line.SourceType == InwardSourceType.JobWork && line.SourceRefId.HasValue)
+                            {
+                                var jwi = await _context.JobWorkItems.AsNoTracking()
+                                    .FirstOrDefaultAsync(j => j.JobWorkId == line.SourceRefId.Value && j.ItemId == item.Id && j.WillChangeName && !string.IsNullOrWhiteSpace(j.ProposedNewName));
+                                if (jwi != null)
+                                {
+                                    proposedNewName = jwi.ProposedNewName!.Trim();
+                                    // Backfill inward line so future reads are consistent
+                                    line.NewItemNameFromJobWork = proposedNewName;
+                                    if (string.IsNullOrEmpty(line.ItemNameSnapshot))
+                                        line.ItemNameSnapshot = item.CurrentName;
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(proposedNewName))
+                            {
+                                var newName = proposedNewName;
+                                if (item.CurrentName?.Trim().ToLower() != newName.ToLower())
+                                {
+                                    if (await _context.Items.AnyAsync(i => i.LocationId == entry.LocationId && i.Id != item.Id && (i.CurrentName.ToLower() == newName.ToLower() || i.MainPartName.ToLower() == newName.ToLower())))
+                                        throw new InvalidOperationException($"Display name '{newName}' is already used by another item. Cannot apply name change from Job Work.");
+                                    var oldName = item.CurrentName ?? "";
+                                    item.CurrentName = newName;
+                                    item.UpdatedAt = DateTime.Now;
+                                    int? jwId = line.SourceType == InwardSourceType.JobWork ? line.SourceRefId : null;
+                                    int? jwItemId = null;
+                                    if (jwId.HasValue)
+                                    {
+                                        var jwi = await _context.JobWorkItems.FirstOrDefaultAsync(j => j.JobWorkId == jwId.Value && j.ItemId == item.Id);
+                                        if (jwi != null) jwItemId = jwi.Id;
+                                    }
+                                    _context.ItemChangeLogs.Add(new ItemChangeLog
+                                    {
+                                        ItemId = item.Id,
+                                        OldName = oldName,
+                                        NewName = newName,
+                                        OldRevision = item.RevisionNo ?? "",
+                                        NewRevision = item.RevisionNo ?? "",
+                                        ChangeType = "JobWork",
+                                        Source = "JobWork",
+                                        JobWorkId = jwId,
+                                        JobWorkItemId = jwItemId,
+                                        InwardId = line.InwardId,
+                                        InwardLineId = line.Id,
+                                        QcEntryId = entry.Id,
+                                        CreatedBy = CurrentUserId,
+                                        CreatedAt = DateTime.Now
+                                    });
+                                }
+                            }
                         }
                     }
                     else
@@ -674,7 +729,7 @@ namespace net_backend.Controllers
                     InwardLineId = i.InwardLineId,
                     ItemId = i.InwardLine!.ItemId,
                     MainPartName = i.InwardLine.Item?.MainPartName,
-                    CurrentName = i.InwardLine.Item?.CurrentName,
+                    CurrentName = i.InwardLine.ItemNameSnapshot ?? i.InwardLine.Item?.CurrentName,
                     ItemTypeName = i.InwardLine.ItemTypeName ?? i.InwardLine.Item?.ItemType?.Name,
                     DrawingNo = i.InwardLine.DrawingNo,
                     RevisionNo = i.InwardLine.RevisionNo,
@@ -689,7 +744,9 @@ namespace net_backend.Controllers
                                : (i.InwardLine.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue && jwDict != null && jwDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? jwDict[i.InwardLine.SourceRefId.Value].CreatedAt
                                : null,
                     IsApproved = i.IsApproved,
-                    Remarks = i.Remarks
+                    Remarks = i.Remarks,
+                    OriginalDisplayName = i.InwardLine.ItemNameSnapshot ?? i.InwardLine.Item?.CurrentName,
+                    NewDisplayNameFromJobWork = i.InwardLine.NewItemNameFromJobWork
                 }).ToList()
             };
         }

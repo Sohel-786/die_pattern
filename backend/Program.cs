@@ -29,6 +29,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICodeGeneratorService, CodeGeneratorService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<IItemStateService, ItemStateService>();
+builder.Services.AddScoped<IItemSnapshotBackfillService, ItemSnapshotBackfillService>();
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -118,6 +119,11 @@ using (var scope = app.Services.CreateScope())
         
         // 2. Handle Data: Seed initial/required data
         DbInitializer.Initialize(context);
+        
+        // 3. Backfill null item name snapshots for traceability (old records created before snapshot columns)
+        var backfill = services.GetRequiredService<net_backend.Services.IItemSnapshotBackfillService>();
+        backfill.BackfillNullSnapshotsAsync().GetAwaiter().GetResult();
+        logger.LogInformation("Item name snapshot backfill completed.");
         
         logger.LogInformation("Database initialized successfully (migrations and seeding).");
     }

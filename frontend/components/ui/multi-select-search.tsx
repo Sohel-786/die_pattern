@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "./input";
@@ -39,8 +40,10 @@ export function MultiSelectSearch({
 }: MultiSelectSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = React.useMemo(() => {
     if (!searchTerm.trim()) return options;
@@ -55,11 +58,34 @@ export function MultiSelectSearch({
     }
   }, [isOpen]);
 
+  const updateDropdownRect = React.useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setDropdownRect({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 200) });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isOpen) updateDropdownRect();
+    else setDropdownRect(null);
+  }, [isOpen, updateDropdownRect]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleScrollOrResize = () => updateDropdownRect();
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [isOpen, updateDropdownRect]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsOpen(false);
@@ -102,12 +128,12 @@ export function MultiSelectSearch({
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((o) => !o)}
         className={cn(
-          "flex h-10 w-full min-h-10 items-center justify-between rounded-lg border border-secondary-300 bg-white px-3 py-2 text-left text-sm ring-offset-white",
+          "flex h-auto min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-secondary-300 bg-white px-3 py-2 text-left text-sm ring-offset-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >
-        <span className={value.length ? "text-text truncate" : "text-secondary-500"}>
+        <span className={cn("min-w-0 flex-1 break-words text-left", value.length ? "text-text" : "text-secondary-500")}>
           {displayText}
         </span>
         <svg
@@ -120,56 +146,68 @@ export function MultiSelectSearch({
         </svg>
       </button>
 
-      {isOpen && (
-        <div className="absolute left-0 z-50 mt-1 w-full min-w-[200px] max-w-[min(100vw-2rem,320px)] rounded-lg border border-secondary-200 bg-white shadow-lg">
-          <div className="border-b border-secondary-200 p-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-              <Input
-                ref={searchInputRef}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="h-9 pl-8 border-secondary-200 text-sm"
-              />
+      {isOpen &&
+        dropdownRect &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed z-[9999] max-h-[min(70vh,320px)] min-w-[200px] max-w-[min(100vw-2rem,420px)] rounded-lg border border-secondary-200 bg-white shadow-lg"
+            style={{
+              top: dropdownRect.top,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+            }}
+          >
+            <div className="border-b border-secondary-200 p-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="h-9 pl-8 border-secondary-200 text-sm"
+                />
+              </div>
             </div>
-          </div>
-          <ul className="max-h-60 overflow-auto py-1" role="listbox">
-            {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-secondary-500">No matches</li>
-            ) : (
-              filteredOptions.map((opt) => {
-                const selected = value.includes(opt.value);
-                return (
-                  <li
-                    key={opt.value}
-                    role="option"
-                    aria-selected={selected}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-text hover:bg-secondary-50",
-                      selected && "bg-primary-50 text-primary-800",
-                    )}
-                    onClick={() => toggle(opt.value)}
-                  >
-                    <span
+            <ul className="max-h-60 overflow-auto py-1" role="listbox">
+              {filteredOptions.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-secondary-500">No matches</li>
+              ) : (
+                filteredOptions.map((opt) => {
+                  const selected = value.includes(opt.value);
+                  return (
+                    <li
+                      key={String(opt.value)}
+                      role="option"
+                      aria-selected={selected}
                       className={cn(
-                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                        selected
-                          ? "border-primary-500 bg-primary-500 text-white"
-                          : "border-secondary-300 bg-white",
+                        "flex cursor-pointer items-start gap-2 px-3 py-2 text-sm text-text hover:bg-secondary-50",
+                        selected && "bg-primary-50 text-primary-800",
                       )}
+                      onClick={() => toggle(opt.value)}
                     >
-                      {selected ? <Check className="h-3 w-3" /> : null}
-                    </span>
-                    <span className="truncate">{opt.label}</span>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
-      )}
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                          selected
+                            ? "border-primary-500 bg-primary-500 text-white"
+                            : "border-secondary-300 bg-white",
+                        )}
+                      >
+                        {selected ? <Check className="h-3 w-3" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1 break-words text-left">{opt.label}</span>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

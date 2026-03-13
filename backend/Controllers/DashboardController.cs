@@ -389,11 +389,11 @@ namespace net_backend.Controllers
                     PiNo = p.PiNo,
                     ItemId = i.ItemId,
                     MainPartName = i.Item!.MainPartName,
-                    CurrentName = i.Item.CurrentName,
-                    ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
-                    DrawingNo = i.Item.DrawingNo,
-                    RevisionNo = i.Item.RevisionNo,
-                    MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
+                    CurrentName = i.ItemNameSnapshot ?? (i.Item != null ? i.Item!.CurrentName : null),
+                    ItemTypeName = i.Item?.ItemType?.Name ?? "N/A",
+                    DrawingNo = i.Item?.DrawingNo,
+                    RevisionNo = i.Item?.RevisionNo,
+                    MaterialName = i.Item?.Material?.Name ?? "N/A",
                     PoNo = _context.PurchaseOrderItems
                         .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                         .Select(poi => poi.PurchaseOrder!.PoNo)
@@ -552,7 +552,7 @@ namespace net_backend.Controllers
                         PurchaseIndentItemId = i.PurchaseIndentItemId,
                         ItemId = i.PurchaseIndentItem?.ItemId ?? 0,
                         MainPartName = i.PurchaseIndentItem?.Item?.MainPartName,
-                        CurrentName = i.PurchaseIndentItem?.Item?.CurrentName,
+                        CurrentName = i.PurchaseIndentItem?.ItemNameSnapshot ?? i.PurchaseIndentItem?.Item?.CurrentName,
                         ItemTypeName = i.PurchaseIndentItem?.Item?.ItemType?.Name,
                         DrawingNo = i.PurchaseIndentItem?.Item?.DrawingNo,
                         RevisionNo = i.PurchaseIndentItem?.Item?.RevisionNo,
@@ -821,7 +821,7 @@ namespace net_backend.Controllers
                         CreatorName = pi.Creator != null ? pi.Creator.FirstName + " " + pi.Creator.LastName : "Unknown",
                         Remarks = pi.Remarks,
                         MainPartName = item.Item?.MainPartName ?? "",
-                        CurrentName = item.Item?.CurrentName,
+                        CurrentName = item.ItemNameSnapshot ?? (item.Item != null ? item.Item.CurrentName : null),
                         DrawingNo = item.Item?.DrawingNo,
                         ItemTypeName = item.Item?.ItemType?.Name
                     });
@@ -966,7 +966,7 @@ namespace net_backend.Controllers
                 PiNo = item.PurchaseIndentItem.PurchaseIndent?.PiNo,
                 PiDate = item.PurchaseIndentItem.PurchaseIndent?.CreatedAt,
                 MainPartName = item.PurchaseIndentItem.Item?.MainPartName ?? "",
-                CurrentName = item.PurchaseIndentItem.Item?.CurrentName,
+                CurrentName = item.PurchaseIndentItem.ItemNameSnapshot ?? (item.PurchaseIndentItem.Item != null ? item.PurchaseIndentItem.Item.CurrentName : null),
                 DrawingNo = item.PurchaseIndentItem.Item?.DrawingNo,
                 RevisionNo = item.PurchaseIndentItem.Item?.RevisionNo,
                 ItemTypeName = item.PurchaseIndentItem.Item?.ItemType?.Name,

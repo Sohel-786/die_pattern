@@ -340,6 +340,9 @@ export default function InwardsPage() {
                                                                                     <TableCell className="px-4 py-2">
                                                                                         <div className="flex flex-col min-w-0">
                                                                                             <span className="font-bold text-secondary-900 text-[13px] tracking-tight">{line.itemName ?? "—"}</span>
+                                                                                            {line.newDisplayNameFromJobWork ? (
+                                                                                                <span className="text-[11px] text-primary-600 font-medium mt-0.5">→ New after QC: {line.newDisplayNameFromJobWork}</span>
+                                                                                            ) : null}
                                                                                             <span className="text-[11px] text-secondary-500 font-medium">{line.mainPartName ?? "—"}</span>
                                                                                         </div>
                                                                                     </TableCell>

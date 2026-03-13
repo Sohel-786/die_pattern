@@ -270,7 +270,9 @@ namespace net_backend.Models
         public int Id { get; set; }
         public int PurchaseIndentId { get; set; }
         public int ItemId { get; set; }
-        
+        /// <summary>Display name at time of indent (preserved so old PI/PO show correct name after item rename).</summary>
+        public string? ItemNameSnapshot { get; set; }
+
         [ForeignKey("PurchaseIndentId")]
         public virtual PurchaseIndent? PurchaseIndent { get; set; }
         [ForeignKey("ItemId")]
@@ -363,6 +365,12 @@ namespace net_backend.Models
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
+        /// <summary>When true, display name will change after QC approval; ProposedNewName must be set.</summary>
+        public bool WillChangeName { get; set; }
+        /// <summary>New display name to apply after QC approval (validated for uniqueness at JW create/update).</summary>
+        public string? ProposedNewName { get; set; }
+        /// <summary>Display name at time item was sent in job work (for traceability).</summary>
+        public string? OriginalNameSnapshot { get; set; }
 
         [ForeignKey("JobWorkId")]
         public virtual JobWork? JobWork { get; set; }
@@ -415,6 +423,10 @@ namespace net_backend.Models
         public bool IsQCApproved { get; set; } = false;
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
+        /// <summary>Display name at time of inward (preserved for transaction history).</summary>
+        public string? ItemNameSnapshot { get; set; }
+        /// <summary>If from Job Work with display-name change: new name to apply after QC approval.</summary>
+        public string? NewItemNameFromJobWork { get; set; }
 
         [ForeignKey("InwardId")]
         public virtual Inward? Inward { get; set; }
@@ -479,8 +491,16 @@ namespace net_backend.Models
         public string NewName { get; set; } = string.Empty;
         public string OldRevision { get; set; } = string.Empty;
         public string NewRevision { get; set; } = string.Empty;
-        public string ChangeType { get; set; } = string.Empty; // Modification / Repair
+        public string ChangeType { get; set; } = string.Empty; // Modification / Repair / JobWork / Revert
         public string? Remarks { get; set; }
+        /// <summary>Source of change: AdminChange, JobWork, ManualRevert.</summary>
+        public string? Source { get; set; }
+        public int? JobWorkId { get; set; }
+        public int? JobWorkItemId { get; set; }
+        public int? InwardId { get; set; }
+        public int? InwardLineId { get; set; }
+        public int? QcEntryId { get; set; }
+        public int? RevertedFromLogId { get; set; }
         public int CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
@@ -673,6 +693,8 @@ namespace net_backend.Models
         public int TransferId { get; set; }
         public int ItemId { get; set; }
         public string? Remarks { get; set; }
+        /// <summary>Display name at time of transfer (preserved for transaction history).</summary>
+        public string? ItemNameSnapshot { get; set; }
 
         [ForeignKey("TransferId")]
         public virtual Transfer? Transfer { get; set; }

@@ -106,7 +106,7 @@ export function SourceSelectionDialog({
                 }));
                 allItems = [...allItems, ...items];
             } else if (sourceType === InwardSourceType.JobWork) {
-                // JobWork pending returns flattened items
+                // JobWork pending returns flattened items (include display name versioning for inward display)
                 const items = (source.items || []).map((i: any) => ({
                     itemId: i.itemId,
                     itemName: i.itemName,
@@ -120,7 +120,9 @@ export function SourceSelectionDialog({
                     sourceRate: i.rate,
                     sourceGstPercent: i.gstPercent,
                     rate: i.rate,
-                    gstPercent: i.gstPercent
+                    gstPercent: i.gstPercent,
+                    originalDisplayName: i.originalNameSnapshot ?? i.itemName,
+                    newDisplayNameFromJobWork: i.willChangeName && i.proposedNewName ? i.proposedNewName : undefined
                 }));
                 allItems = [...allItems, ...items];
             }

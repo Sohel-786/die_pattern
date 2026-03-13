@@ -3,19 +3,20 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Item, HolderType } from "@/types";
+import { Item, HolderType, ItemNameHistoryEntry } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useEffect } from "react";
-import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck, PackageX } from "lucide-react";
+import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck, PackageX, History, RotateCcw } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import * as React from "react";
+import { toast } from "react-hot-toast";
 
 const itemSchema = z.object({
     mainPartName: z.string().min(1, "Main Part Name is required"),
@@ -49,6 +50,7 @@ interface ItemDialogProps {
 
 export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [], readOnly }: ItemDialogProps) {
     const isReadOnly = !!readOnly;
+    const queryClient = useQueryClient();
     const {
         register,
         handleSubmit,
@@ -96,6 +98,23 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
     const { data: owners = [] } = useQuery({ queryKey: ["owner-types", "active"], queryFn: async () => (await api.get("/masters/owner-types/active")).data.data });
     const { data: locations = [] } = useQuery({ queryKey: ["locations", "active"], queryFn: async () => (await api.get("/locations/active")).data.data });
     const { data: parties = [] } = useQuery({ queryKey: ["parties", "active"], queryFn: async () => (await api.get("/parties/active")).data.data });
+
+    const { data: nameHistory = [], refetch: refetchNameHistory } = useQuery<ItemNameHistoryEntry[]>({
+        queryKey: ["items", item?.id, "name-history"],
+        queryFn: async () => (await api.get(`/items/${item!.id}/name-history`)).data?.data ?? [],
+        enabled: !!(item?.id && isOpen),
+    });
+
+    const revertMutation = useMutation({
+        mutationFn: async (changeLogId: number) => api.post(`/items/${item!.id}/revert-name`, { changeLogId }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["items"] });
+            refetchNameHistory();
+            toast.success("Display name reverted.");
+            onClose();
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.message ?? "Revert failed."),
+    });
 
     useEffect(() => {
         if (item && isOpen) {
@@ -370,6 +389,62 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             </div>
                             <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
                         </label>
+                    </div>
+                )}
+
+                {/* Display name history - edit/view mode only */}
+                {!!item && nameHistory.length >= 0 && (
+                    <div className="space-y-3 pt-4 border-t border-secondary-100">
+                        <div className="flex items-center gap-2 pb-2">
+                            <History className="w-4 h-4 text-primary-600" />
+                            <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Display name history</h4>
+                        </div>
+                        {nameHistory.length === 0 ? (
+                            <p className="text-xs text-secondary-500 italic">No display name changes recorded.</p>
+                        ) : (
+                            <div className="rounded-lg border border-secondary-200 overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <thead className="bg-secondary-50 border-b border-secondary-200">
+                                        <tr>
+                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Date</th>
+                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">From → To</th>
+                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Source</th>
+                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Reference</th>
+                                            {!isReadOnly && <th className="text-right py-2 px-3 font-semibold text-secondary-600 w-20">Action</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-secondary-100">
+                                        {nameHistory.map((h) => (
+                                            <tr key={h.id} className="hover:bg-secondary-50/50">
+                                                <td className="py-2 px-3 text-secondary-700">{new Date(h.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</td>
+                                                <td className="py-2 px-3 font-medium">{h.oldName} → {h.newName}</td>
+                                                <td className="py-2 px-3 text-secondary-600">{h.source ?? h.changeType ?? "—"}</td>
+                                                <td className="py-2 px-3 text-secondary-600">{[h.jobWorkNo, h.inwardNo, h.qcNo].filter(Boolean).join(" / ") || "—"}</td>
+                                                {!isReadOnly && (
+                                                    <td className="py-2 px-3 text-right">
+                                                        {h.canRevert ? (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 text-primary-600 hover:bg-primary-50"
+                                                                onClick={() => revertMutation.mutate(h.id)}
+                                                                disabled={revertMutation.isPending}
+                                                            >
+                                                                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                                                                Revert
+                                                            </Button>
+                                                        ) : (
+                                                            <span className="text-[10px] text-secondary-400">—</span>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
                 </fieldset>

@@ -79,10 +79,13 @@ namespace net_backend.Controllers
                         Items = g.Select(i => new JobWorkItemDto { 
                             Id = i.Id, 
                             ItemId = i.ItemId, 
-                            ItemName = i.Item?.CurrentName, 
+                            ItemName = i.OriginalNameSnapshot ?? i.Item?.CurrentName, 
                             MainPartName = i.Item?.MainPartName,
                             Rate = i.Rate,
-                            GstPercent = i.GstPercent
+                            GstPercent = i.GstPercent,
+                            WillChangeName = i.WillChangeName,
+                            ProposedNewName = i.ProposedNewName,
+                            OriginalNameSnapshot = i.OriginalNameSnapshot ?? i.Item?.CurrentName
                         }).ToList()
                     };
                 }).ToList();
@@ -246,6 +249,14 @@ namespace net_backend.Controllers
                     var stateDisplay = _itemState.GetStateDisplay(state);
                     return BadRequest(new ApiResponse<JobWork> { Success = false, Message = $"Item must be In Stock to send for Job Work. Current state: {stateDisplay}. One item can only be in one process at a time." });
                 }
+                if (itemDto.WillChangeName)
+                {
+                    var proposed = (itemDto.ProposedNewName ?? "").Trim();
+                    if (string.IsNullOrEmpty(proposed))
+                        return BadRequest(new ApiResponse<JobWork> { Success = false, Message = "When 'Will change display name' is selected, New Display Name is required." });
+                    if (await _context.Items.AnyAsync(i => i.LocationId == locationId && i.Id != itemDto.ItemId && (i.CurrentName.ToLower() == proposed.ToLower() || i.MainPartName.ToLower() == proposed.ToLower())))
+                        return BadRequest(new ApiResponse<JobWork> { Success = false, Message = $"Display name '{proposed}' is already used by another item in this location. Choose a unique name." });
+                }
             }
 
             var nextCode = await _codeGenerator.GenerateCode("JW", locationId);
@@ -290,16 +301,18 @@ namespace net_backend.Controllers
 
             foreach (var itemDto in dto.Items)
             {
+                var item = await _context.Items.FindAsync(itemDto.ItemId);
                 jw.Items.Add(new JobWorkItem
                 {
                     ItemId = itemDto.ItemId,
                     Rate = itemDto.Rate,
                     GstPercent = itemDto.GstPercent,
-                    Remarks = itemDto.Remarks
+                    Remarks = itemDto.Remarks,
+                    WillChangeName = itemDto.WillChangeName,
+                    ProposedNewName = itemDto.WillChangeName ? (itemDto.ProposedNewName ?? "").Trim() : null,
+                    OriginalNameSnapshot = item?.CurrentName
                 });
 
-                // Update Item State
-                var item = await _context.Items.FindAsync(itemDto.ItemId);
                 if (item != null)
                 {
                     item.CurrentProcess = ItemProcessState.InJobwork;
@@ -404,7 +417,7 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "One or more items already have an active Inward and cannot be removed." });
             }
             
-            // 1b. Validate: modified inwarded items cannot have Rate, GST, or Remarks changed
+            // 1b. Validate: modified inwarded items cannot have Rate, GST, Remarks, or display-name change fields changed
             foreach (var newItem in dto.Items)
             {
                 var existingItem = oldItems.FirstOrDefault(oi => oi.ItemId == newItem.ItemId);
@@ -412,6 +425,16 @@ namespace net_backend.Controllers
                 {
                     if (existingItem.Rate != newItem.Rate || existingItem.GstPercent != newItem.GstPercent || existingItem.Remarks != newItem.Remarks)
                         return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Cannot update Rate, GST, or Remarks of item '{newItem.ItemId}' because its inward is already done." });
+                    if (existingItem.WillChangeName != newItem.WillChangeName || (existingItem.ProposedNewName ?? "") != (newItem.ProposedNewName ?? "").Trim())
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = "Cannot change 'Will change display name' or 'New Display Name' for items that are already inwarded." });
+                }
+                if (!inwardedSet.Contains(newItem.ItemId) && newItem.WillChangeName)
+                {
+                    var proposed = (newItem.ProposedNewName ?? "").Trim();
+                    if (string.IsNullOrEmpty(proposed))
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = "When 'Will change display name' is selected, New Display Name is required." });
+                    if (await _context.Items.AnyAsync(i => i.LocationId == locationId && i.Id != newItem.ItemId && (i.CurrentName.ToLower() == proposed.ToLower() || i.MainPartName.ToLower() == proposed.ToLower())))
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Display name '{proposed}' is already used by another item in this location. Choose a unique name." });
                 }
             }
 
@@ -428,11 +451,19 @@ namespace net_backend.Controllers
                 }
             }
 
-            // 3. Handle Item additions: check if InStock, then move to InJobwork
+            // 3. Handle Item additions: check if InStock, then move to InJobwork; validate display-name change for new items
             var addedItemIds = newItemIds.Except(oldItemIds).ToList();
-            foreach (var aId in addedItemIds)
+            foreach (var itemDto in dto.Items.Where(x => addedItemIds.Contains(x.ItemId)))
             {
-                var item = await _context.Items.FindAsync(aId);
+                if (itemDto.WillChangeName)
+                {
+                    var proposed = (itemDto.ProposedNewName ?? "").Trim();
+                    if (string.IsNullOrEmpty(proposed))
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = "When 'Will change display name' is selected, New Display Name is required." });
+                    if (await _context.Items.AnyAsync(i => i.LocationId == locationId && i.Id != itemDto.ItemId && (i.CurrentName.ToLower() == proposed.ToLower() || i.MainPartName.ToLower() == proposed.ToLower())))
+                        return BadRequest(new ApiResponse<bool> { Success = false, Message = $"Display name '{proposed}' is already used by another item in this location. Choose a unique name." });
+                }
+                var item = await _context.Items.FindAsync(itemDto.ItemId);
                 if (item != null)
                 {
                     if (item.CurrentProcess != ItemProcessState.InStock)
@@ -461,16 +492,23 @@ namespace net_backend.Controllers
             _context.JobWorkItems.RemoveRange(jw.Items);
             foreach (var itemDto in dto.Items)
             {
-                // Protect inwarded item fields from change
                 var isItemInwarded = inwardedSet.Contains(itemDto.ItemId);
                 var existingItem = oldItems.FirstOrDefault(oi => oi.ItemId == itemDto.ItemId);
+                var item = await _context.Items.FindAsync(itemDto.ItemId);
+
+                bool willChange = (isItemInwarded && existingItem != null) ? existingItem.WillChangeName : itemDto.WillChangeName;
+                string? proposedNew = (isItemInwarded && existingItem != null) ? existingItem.ProposedNewName : (itemDto.WillChangeName ? (itemDto.ProposedNewName ?? "").Trim() : null);
+                string? originalSnap = (existingItem != null && !string.IsNullOrEmpty(existingItem.OriginalNameSnapshot)) ? existingItem.OriginalNameSnapshot : item?.CurrentName;
 
                 jw.Items.Add(new JobWorkItem
                 {
                     ItemId = itemDto.ItemId,
                     Rate = (isItemInwarded && existingItem != null) ? existingItem.Rate : itemDto.Rate,
                     GstPercent = (isItemInwarded && existingItem != null) ? existingItem.GstPercent : itemDto.GstPercent,
-                    Remarks = (isItemInwarded && existingItem != null) ? existingItem.Remarks : itemDto.Remarks
+                    Remarks = (isItemInwarded && existingItem != null) ? existingItem.Remarks : itemDto.Remarks,
+                    WillChangeName = willChange,
+                    ProposedNewName = proposedNew,
+                    OriginalNameSnapshot = originalSnap
                 });
             }
 
@@ -676,7 +714,7 @@ namespace net_backend.Controllers
                     {
                         Id = i.Id,
                         ItemId = i.ItemId,
-                        ItemName = i.Item?.CurrentName,
+                        ItemName = i.OriginalNameSnapshot ?? i.Item?.CurrentName,
                         MainPartName = i.Item?.MainPartName,
                         ItemTypeName = i.Item?.ItemType?.Name,
                         MaterialName = i.Item?.Material?.Name,
@@ -685,6 +723,9 @@ namespace net_backend.Controllers
                         Rate = i.Rate,
                         GstPercent = i.GstPercent,
                         Remarks = i.Remarks,
+                        WillChangeName = i.WillChangeName,
+                        ProposedNewName = i.ProposedNewName,
+                        OriginalNameSnapshot = i.OriginalNameSnapshot,
                         InwardNo = line?.Inward?.InwardNo,
                         QCNo = qc?.QcEntry?.QcNo,
                         IsQCPending = line?.IsQCPending ?? false,

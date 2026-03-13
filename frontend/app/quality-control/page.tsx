@@ -95,9 +95,19 @@ export default function QualityControlPage() {
         },
     });
 
-    const itemOptions = useMemo(() =>
-        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`, value: i.id })),
-        [itemsList]);
+    const itemOptions = useMemo(() => {
+        const opts: { label: string; value: number | string }[] = [];
+        itemsList.forEach((i: any) => {
+            const main = i.mainPartName ? ` – ${i.mainPartName}` : "";
+            opts.push({ label: (i.currentName || "").trim() + main || `Item ${i.id}`, value: i.id });
+            (i.previousNames || []).forEach((oldName: string, idx: number) => {
+                const name = (oldName || "").trim();
+                if (name && name !== (i.currentName || "").trim())
+                    opts.push({ label: `${name} (previous)${main}`, value: `${i.id}_prev_${idx}` });
+            });
+        });
+        return opts;
+    }, [itemsList]);
 
     const setInactiveMutation = useMutation({
         mutationFn: (id: number) => api.patch(`/quality-control/${id}/inactive`),

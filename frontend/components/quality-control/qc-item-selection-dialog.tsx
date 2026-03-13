@@ -139,8 +139,13 @@ export function QCItemSelectionDialog({
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex flex-col">
+                                                <div className="flex flex-col gap-0.5">
                                                     <span className="text-xs font-bold text-secondary-900 uppercase italic tracking-tight">{item.itemName}</span>
+                                                    {item.newDisplayNameFromJobWork ? (
+                                                        <span className="text-[10px] text-primary-600 font-medium">
+                                                            Old → New: {item.newDisplayNameFromJobWork} <span className="text-primary-500/90">(on QC approve)</span>
+                                                        </span>
+                                                    ) : null}
                                                     <span className="text-[10px] font-medium text-secondary-500 uppercase">{item.mainPartName || "—"}</span>
                                                 </div>
                                             </td>

@@ -157,7 +157,7 @@ namespace net_backend.Controllers
                     Id = i.Id,
                     ItemId = i.ItemId,
                     MainPartName = i.Item?.MainPartName,
-                    CurrentName = i.Item?.CurrentName,
+                    CurrentName = i.ItemNameSnapshot ?? i.Item?.CurrentName,
                     ItemTypeName = i.Item?.ItemType?.Name,
                     MaterialName = i.Item?.Material?.Name,
                     DrawingNo = i.Item?.DrawingNo,
@@ -215,7 +215,7 @@ namespace net_backend.Controllers
                     Id = i.Id,
                     ItemId = i.ItemId,
                     MainPartName = i.Item?.MainPartName,
-                    CurrentName = i.Item?.CurrentName,
+                    CurrentName = i.ItemNameSnapshot ?? i.Item?.CurrentName,
                     ItemTypeName = i.Item?.ItemType?.Name,
                     MaterialName = i.Item?.Material?.Name,
                     DrawingNo = i.Item?.DrawingNo,
@@ -277,7 +277,7 @@ namespace net_backend.Controllers
                 };
 
                 _context.Transfers.Add(transfer);
-                await _context.SaveChangesAsync();
+                await SaveTransferWithRetryOnDuplicateNoAsync(transfer);
 
                 foreach (var itemDto in dto.Items)
                 {
@@ -299,12 +299,12 @@ namespace net_backend.Controllers
                             throw new Exception($"Item '{item.MainPartName}' is not currently in stock at this location. Current state: {item.CurrentProcess}. One item can only be in one process at a time.");
                     }
 
-                    // Record Transfer Item
                     var tItem = new TransferItem
                     {
                         TransferId = transfer.Id,
                         ItemId = item.Id,
-                        Remarks = itemDto.Remarks
+                        Remarks = itemDto.Remarks,
+                        ItemNameSnapshot = item.CurrentName
                     };
                     _context.TransferItems.Add(tItem);
 
@@ -371,6 +371,26 @@ namespace net_backend.Controllers
                 await transaction.RollbackAsync();
                 return BadRequest(new ApiResponse<Transfer> { Success = false, Message = ex.Message });
             }
+        }
+
+        private async Task SaveTransferWithRetryOnDuplicateNoAsync(Transfer transfer)
+        {
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (IsDuplicateTransferNo(ex))
+            {
+                transfer.TransferNo = await GenerateTransferNo();
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private static bool IsDuplicateTransferNo(DbUpdateException ex)
+        {
+            return ex.InnerException is Microsoft.Data.SqlClient.SqlException sql &&
+                   sql.Number == 2601 &&
+                   sql.Message.Contains("IX_transfers_TransferNo", StringComparison.OrdinalIgnoreCase);
         }
 
         [HttpPut("{id}")]
@@ -474,11 +494,13 @@ namespace net_backend.Controllers
 
                     foreach (var itemDto in dto.Items)
                     {
+                        var item = await _context.Items.FindAsync(itemDto.ItemId);
                         _context.TransferItems.Add(new TransferItem
                         {
                             TransferId = transfer.Id,
                             ItemId = itemDto.ItemId,
-                            Remarks = itemDto.Remarks
+                            Remarks = itemDto.Remarks,
+                            ItemNameSnapshot = item?.CurrentName
                         });
                     }
                 }
@@ -717,24 +739,20 @@ namespace net_backend.Controllers
         private async Task<string> GenerateTransferNo()
         {
             const string prefix = "TRF-";
-
-            var lastTransfer = await _context.Transfers
+            var allNumbers = await _context.Transfers
                 .Where(t => t.TransferNo.StartsWith(prefix))
-                .OrderByDescending(t => t.TransferNo)
-                .FirstOrDefaultAsync();
+                .Select(t => t.TransferNo)
+                .ToListAsync();
 
-            int nextNum = 1;
-            if (lastTransfer != null)
+            int maxNum = 0;
+            foreach (var no in allNumbers)
             {
-                var parts = lastTransfer.TransferNo.Split('-');
-                // Format: TRF-0001 (2 parts) or legacy TRF-yyyyMMdd-0001 (3 parts)
-                if (parts.Length >= 2 && int.TryParse(parts[^1], out int lastNum))
-                {
-                    nextNum = lastNum + 1;
-                }
+                var parts = no.Split('-');
+                if (parts.Length >= 2 && int.TryParse(parts[^1], out int n) && n > maxNum)
+                    maxNum = n;
             }
 
-            return prefix + nextNum.ToString("D4");
+            return prefix + (maxNum + 1).ToString("D4");
         }
 
         [HttpPost("upload-attachment")]

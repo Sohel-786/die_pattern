@@ -29,6 +29,8 @@ interface JobWorkGridItem {
     rate?: number;
     gstPercent?: number;
     remarks?: string;
+    willChangeName?: boolean;
+    proposedNewName?: string;
     isInwarded?: boolean;
 }
 
@@ -87,6 +89,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 rate: i.rate ?? undefined,
                 gstPercent: i.gstPercent ?? undefined,
                 remarks: i.remarks,
+                willChangeName: i.willChangeName ?? false,
+                proposedNewName: i.proposedNewName ?? "",
                 isInwarded: i.isInwarded
             })));
         } else {
@@ -172,7 +176,9 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 revisionNo: si.revisionNo,
                 rate: 0,
                 gstPercent: 18,
-                remarks: ""
+                remarks: "",
+                willChangeName: false,
+                proposedNewName: ""
             }));
         setItems(prev => [...prev, ...newItems]);
     };
@@ -187,6 +193,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
         if (toPartyId === 0) return toast.error("Please select a Party");
         if (!description.trim()) return toast.error("Please enter a purpose/description");
         if (items.length === 0) return toast.error("Please add at least one item");
+        const invalidNameChange = items.find(i => i.willChangeName && !(i.proposedNewName ?? "").trim());
+        if (invalidNameChange) return toast.error("When 'Will change display name' is selected, New Display Name is required.");
 
         setUploading(true);
         try {
@@ -221,7 +229,9 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                     itemId: i.itemId,
                     rate: i.rate,
                     gstPercent: i.gstPercent,
-                    remarks: i.remarks
+                    remarks: i.remarks,
+                    willChangeName: !!i.willChangeName,
+                    proposedNewName: i.willChangeName && i.proposedNewName?.trim() ? i.proposedNewName.trim() : undefined
                 }))
             };
 
@@ -360,6 +370,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                 <th className="text-left py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-64">Item Description</th>
                                                 <th className="text-left py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-40">Type / Material</th>
                                                 <th className="text-left py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-40">Drawing / Rev</th>
+                                                <th className="text-center py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-28">Change display name?</th>
+                                                <th className="text-left py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-44">New display name</th>
                                                 <th className="text-right py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-32">Unit Rate (₹)</th>
                                                 <th className="text-center py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-32">GST %</th>
                                                 <th className="text-right py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-32">Total (₹)</th>
@@ -370,7 +382,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                         <tbody className="divide-y divide-secondary-100">
                                             {items.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={9} className="py-20 text-center">
+                                                    <td colSpan={11} className="py-20 text-center">
                                                         <div className="flex flex-col items-center gap-2 opacity-30">
                                                             <Package className="w-12 h-12" />
                                                             <p className="font-bold uppercase tracking-widest text-[10px]">No items added yet</p>
@@ -406,6 +418,28 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                     <span className="text-xs font-bold text-secondary-800">{item.drawingNo || "N/A"}</span>
                                                                     <span className="text-[11px] text-secondary-500 font-medium">Rev: {item.revisionNo || "0"}</span>
                                                                 </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-4 text-center">
+                                                                <label className={cn("inline-flex items-center gap-1.5 text-xs font-medium", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!item.willChangeName}
+                                                                        onChange={(e) => updateItem(item.itemId, "willChangeName", e.target.checked)}
+                                                                        disabled={isReadOnly || isLocked}
+                                                                        className="rounded border-secondary-300"
+                                                                    />
+                                                                    Yes
+                                                                </label>
+                                                                {isLocked && <p className="text-[10px] text-secondary-400 mt-0.5">Locked</p>}
+                                                            </td>
+                                                            <td className="py-2.5 px-4">
+                                                                <Input
+                                                                    value={item.willChangeName ? (item.proposedNewName ?? "") : ""}
+                                                                    onChange={(e) => updateItem(item.itemId, "proposedNewName", e.target.value)}
+                                                                    disabled={isReadOnly || isLocked || !item.willChangeName}
+                                                                    placeholder={item.willChangeName ? "Enter new display name" : "—"}
+                                                                    className={cn("h-8 text-xs border-secondary-200 bg-secondary-50/30 w-full", (!item.willChangeName || isReadOnly || isLocked) && "opacity-60")}
+                                                                />
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <Input

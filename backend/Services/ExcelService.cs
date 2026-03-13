@@ -111,11 +111,11 @@ namespace net_backend.Services
                     worksheet.Cell(rowIdx, 1).Value = titleRow;
                     worksheet.Cell(rowIdx, 1).Style.Font.Bold = true;
                     worksheet.Cell(rowIdx, 1).Style.Font.FontSize = 14;
-                    worksheet.Range(rowIdx, 1, rowIdx, 9).Merge();
+                    worksheet.Range(rowIdx, 1, rowIdx, 10).Merge();
                     rowIdx++;
                 }
 
-                var headers = new[] { "Event Date", "Event Type", "Reference No", "Location", "Party", "From – To", "Description", "Prepared By", "Authorized By" };
+                var headers = new[] { "Event Date", "Event Type", "Item name (at event)", "Reference No", "Location", "Party", "From – To", "Description", "Prepared By", "Authorized By" };
                 for (int c = 0; c < headers.Length; c++)
                 {
                     var cell = worksheet.Cell(rowIdx, c + 1);
@@ -133,29 +133,31 @@ namespace net_backend.Services
                     worksheet.Cell(rowIdx, 1).Value = r.EventDate;
                     worksheet.Cell(rowIdx, 1).Style.DateFormat.Format = ExcelDateTimeFormat;
                     worksheet.Cell(rowIdx, 2).Value = r.EventType ?? "";
-                    worksheet.Cell(rowIdx, 3).Value = r.ReferenceNo ?? "";
-                    worksheet.Cell(rowIdx, 4).Value = r.LocationName ?? "";
-                    worksheet.Cell(rowIdx, 5).Value = r.PartyName ?? "";
-                    worksheet.Cell(rowIdx, 6).Value = r.FromToDisplay ?? "";
-                    worksheet.Cell(rowIdx, 7).Value = r.Description ?? "";
-                    worksheet.Cell(rowIdx, 8).Value = r.PreparedBy ?? "";
-                    worksheet.Cell(rowIdx, 9).Value = r.AuthorizedBy ?? "";
+                    worksheet.Cell(rowIdx, 3).Value = r.ItemNameAtEvent ?? "";
+                    worksheet.Cell(rowIdx, 4).Value = r.ReferenceNo ?? "";
+                    worksheet.Cell(rowIdx, 5).Value = r.LocationName ?? "";
+                    worksheet.Cell(rowIdx, 6).Value = r.PartyName ?? "";
+                    worksheet.Cell(rowIdx, 7).Value = r.FromToDisplay ?? "";
+                    worksheet.Cell(rowIdx, 8).Value = r.Description ?? "";
+                    worksheet.Cell(rowIdx, 9).Value = r.PreparedBy ?? "";
+                    worksheet.Cell(rowIdx, 10).Value = r.AuthorizedBy ?? "";
                     rowIdx++;
                 }
 
                 // Professional column widths (min width to fit header + typical content)
                 worksheet.Column(1).Width = 18;  // Event Date
                 worksheet.Column(2).Width = 14;  // Event Type
-                worksheet.Column(3).Width = 16;  // Reference No
-                worksheet.Column(4).Width = 22;  // Location
-                worksheet.Column(5).Width = 22;  // Party
-                worksheet.Column(6).Width = 28;  // From – To
-                worksheet.Column(7).Width = 30;  // Description
-                worksheet.Column(8).Width = 22;  // Prepared By
-                worksheet.Column(9).Width = 22;  // Authorized By
+                worksheet.Column(3).Width = 32;  // Item name (at event)
+                worksheet.Column(4).Width = 16;  // Reference No
+                worksheet.Column(5).Width = 22;  // Location
+                worksheet.Column(6).Width = 22;  // Party
+                worksheet.Column(7).Width = 28;  // From – To
+                worksheet.Column(8).Width = 30;  // Description
+                worksheet.Column(9).Width = 22;  // Prepared By
+                worksheet.Column(10).Width = 22;  // Authorized By
 
                 if (rowList.Any())
-                    worksheet.Range(headerRow, 1, rowIdx - 1, 9).SetAutoFilter();
+                    worksheet.Range(headerRow, 1, rowIdx - 1, 10).SetAutoFilter();
 
                 using (var stream = new MemoryStream())
                 {

@@ -138,11 +138,11 @@ namespace net_backend.Controllers
                         PiNo = p.PiNo,
                         ItemId = i.ItemId,
                         MainPartName = i.Item!.MainPartName,
-                        CurrentName = i.Item.CurrentName,
-                        ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
-                        DrawingNo = i.Item.DrawingNo,
-                        RevisionNo = i.Item.RevisionNo,
-                        MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
+                        CurrentName = i.ItemNameSnapshot ?? (i.Item != null ? i.Item!.CurrentName : null),
+                        ItemTypeName = (i.Item != null && i.Item.ItemType != null ? i.Item.ItemType.Name : null) ?? "N/A",
+                        DrawingNo = i.Item != null ? i.Item.DrawingNo : null,
+                        RevisionNo = i.Item != null ? i.Item.RevisionNo : null,
+                        MaterialName = (i.Item != null && i.Item.Material != null ? i.Item.Material.Name : null) ?? "N/A",
                         PoNo = _context.PurchaseOrderItems
                             .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                             .Select(poi => poi.PurchaseOrder!.PoNo)
@@ -235,9 +235,10 @@ namespace net_backend.Controllers
                 UpdatedAt = DateTime.Now
             };
 
+            var itemsDict = await _context.Items.Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.CurrentName);
             foreach (var itemId in itemIds)
             {
-                pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
+                pi.Items.Add(new PurchaseIndentItem { ItemId = itemId, ItemNameSnapshot = itemsDict.GetValueOrDefault(itemId) });
             }
 
             _context.PurchaseIndents.Add(pi);
@@ -312,10 +313,11 @@ namespace net_backend.Controllers
             var removedItemIds = existingItemIds.Except(newItemIdsSet).ToList();
             var addedItemIds = newItemIdsSet.Except(existingItemIds).ToList();
 
+            var itemsDict = await _context.Items.Where(i => itemIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.CurrentName);
             _context.PurchaseIndentItems.RemoveRange(pi.Items);
             foreach (var itemId in itemIds)
             {
-                pi.Items.Add(new PurchaseIndentItem { ItemId = itemId });
+                pi.Items.Add(new PurchaseIndentItem { ItemId = itemId, ItemNameSnapshot = itemsDict.GetValueOrDefault(itemId) });
             }
 
             // Revert removed items to NotInStock if not in any other active PI
@@ -636,11 +638,11 @@ namespace net_backend.Controllers
                     PiNo = pi.PiNo,
                     ItemId = i.ItemId,
                     MainPartName = i.Item!.MainPartName,
-                    CurrentName = i.Item.CurrentName,
-                    ItemTypeName = i.Item.ItemType != null ? i.Item.ItemType.Name : "N/A",
-                    DrawingNo = i.Item.DrawingNo,
-                    RevisionNo = i.Item.RevisionNo,
-                    MaterialName = i.Item.Material != null ? i.Item.Material.Name : "N/A",
+                    CurrentName = i.ItemNameSnapshot ?? (i.Item != null ? i.Item!.CurrentName : null),
+                    ItemTypeName = (i.Item != null && i.Item.ItemType != null ? i.Item.ItemType.Name : null) ?? "N/A",
+                    DrawingNo = i.Item != null ? i.Item.DrawingNo : null,
+                    RevisionNo = i.Item != null ? i.Item.RevisionNo : null,
+                    MaterialName = (i.Item != null && i.Item.Material != null ? i.Item.Material.Name : null) ?? "N/A",
                     PoNo = _context.PurchaseOrderItems
                         .Where(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive)
                         .Select(poi => poi.PurchaseOrder!.PoNo)
@@ -721,7 +723,7 @@ namespace net_backend.Controllers
                 .Select(i => new PurchaseIndentPrintRowDto
                 {
                     SrNo = ++srNo,
-                    ItemDescription = i.Item?.CurrentName ?? i.Item?.MainPartName ?? "-",
+                    ItemDescription = i.ItemNameSnapshot ?? (i.Item != null ? i.Item.CurrentName : null) ?? (i.Item != null ? i.Item.MainPartName : null) ?? "-",
                     ItemType = i.Item?.ItemType?.Name ?? "N/A",
                     ItemMaterial = i.Item?.Material?.Name ?? "N/A",
                     DrgNo = i.Item?.DrawingNo ?? "-"
@@ -821,11 +823,11 @@ namespace net_backend.Controllers
                     PiNo = pii.PurchaseIndent != null ? pii.PurchaseIndent.PiNo : null,
                     ItemId = pii.ItemId,
                     MainPartName = pii.Item!.MainPartName,
-                    CurrentName = pii.Item.CurrentName,
-                    ItemTypeName = pii.Item.ItemType != null ? pii.Item.ItemType.Name : "N/A",
-                    DrawingNo = pii.Item.DrawingNo,
-                    RevisionNo = pii.Item.RevisionNo,
-                    MaterialName = pii.Item.Material != null ? pii.Item.Material.Name : "N/A"
+                    CurrentName = pii.ItemNameSnapshot ?? (pii.Item != null ? pii.Item!.CurrentName : null),
+                    ItemTypeName = (pii.Item != null && pii.Item.ItemType != null ? pii.Item.ItemType.Name : null) ?? "N/A",
+                    DrawingNo = pii.Item != null ? pii.Item.DrawingNo : null,
+                    RevisionNo = pii.Item != null ? pii.Item.RevisionNo : null,
+                    MaterialName = (pii.Item != null && pii.Item.Material != null ? pii.Item.Material.Name : null) ?? "N/A"
                 })
                 .ToListAsync();
 

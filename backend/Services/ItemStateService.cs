@@ -132,5 +132,18 @@ namespace net_backend.Services
 
             return (false, string.Empty);
         }
+
+        public async Task<bool> HasAnyTransactionAfterDateAsync(int itemId, DateTime from)
+        {
+            if (await _context.TransferItems.AnyAsync(ti => ti.ItemId == itemId && ti.Transfer != null && ti.Transfer.CreatedAt > from))
+                return true;
+            if (await _context.InwardLines.AnyAsync(l => l.ItemId == itemId && l.Inward != null && l.Inward.CreatedAt > from))
+                return true;
+            if (await _context.JobWorkItems.AnyAsync(j => j.ItemId == itemId && j.JobWork != null && j.JobWork.CreatedAt > from))
+                return true;
+            if (await _context.QcItems.AnyAsync(qi => qi.InwardLine != null && qi.InwardLine.ItemId == itemId && qi.QcEntry != null && qi.QcEntry.CreatedAt > from))
+                return true;
+            return false;
+        }
     }
 }

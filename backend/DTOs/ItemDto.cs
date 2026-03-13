@@ -75,4 +75,24 @@ namespace net_backend.DTOs
         public string ChangeType { get; set; } = string.Empty; // Modification / Repair
         public string? Remarks { get; set; }
     }
+
+    public class ItemNameHistoryEntryDto
+    {
+        public int Id { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string OldName { get; set; } = string.Empty;
+        public string NewName { get; set; } = string.Empty;
+        public string ChangeType { get; set; } = string.Empty;
+        public string? Source { get; set; }
+        public string? JobWorkNo { get; set; }
+        public string? InwardNo { get; set; }
+        public string? QcNo { get; set; }
+        public string? CreatedByName { get; set; }
+        public bool CanRevert { get; set; }
+    }
+
+    public class RevertNameRequestDto
+    {
+        public int ChangeLogId { get; set; }
+    }
 }

@@ -430,6 +430,7 @@ function ReportsContent() {
                       <TableRow className="border-b border-primary-200 bg-primary-100">
                         <TableHead className="text-center whitespace-nowrap min-w-[130px] font-semibold text-primary-900">Event Date</TableHead>
                         <TableHead className="text-center whitespace-nowrap min-w-[100px] font-semibold text-primary-900">Event Type</TableHead>
+                        <TableHead className="text-center min-w-[200px] font-semibold text-primary-900">Item name (at event)</TableHead>
                         <TableHead className="text-center whitespace-nowrap min-w-[100px] font-semibold text-primary-900">Reference No</TableHead>
                         <TableHead className="text-center min-w-[120px] font-semibold text-primary-900">Location</TableHead>
                         <TableHead className="text-center min-w-[120px] font-semibold text-primary-900">Party</TableHead>
@@ -446,6 +447,9 @@ function ReportsContent() {
                             {formatDateTime(row.eventDate)}
                           </TableCell>
                           <TableCell className="text-center font-medium">{row.eventType}</TableCell>
+                          <TableCell className="text-center text-gray-700" title="Display name at time of event">
+                            {row.itemNameAtEvent ?? "—"}
+                          </TableCell>
                           <TableCell className="text-center font-mono text-gray-700">{row.referenceNo}</TableCell>
                           <TableCell className="text-center text-gray-600">{row.locationName ?? "—"}</TableCell>
                           <TableCell className="text-center text-gray-600">{row.partyName ?? "—"}</TableCell>

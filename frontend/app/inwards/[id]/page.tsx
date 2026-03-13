@@ -193,11 +193,14 @@ export default function InwardDetailPage() {
                                     {(inward.lines || []).map((line, idx) => (
                                         <tr key={line.id} className="hover:bg-primary-50/20 transition-all group">
                                             <td className="py-5 px-8 font-black text-secondary-300 group-hover:text-primary-600 transition-colors tabular-nums">{String(idx + 1).padStart(2, '0')}</td>
-                                            <td className="py-5 px-8">
+                                                <td className="py-5 px-8">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-secondary-900 group-hover:text-primary-700 transition-colors text-base tracking-tight leading-none">
                                                         {line.itemName || line.mainPartName || "No Name"}
                                                     </span>
+                                                    {line.newDisplayNameFromJobWork ? (
+                                                        <span className="text-xs font-bold text-primary-600 mt-1">Old name → New after QC: {line.newDisplayNameFromJobWork}</span>
+                                                    ) : null}
                                                     <span className="text-[11px] font-bold text-secondary-400 uppercase mt-1.5 tracking-tighter tabular-nums">{line.mainPartName || "—"}</span>
                                                 </div>
                                             </td>

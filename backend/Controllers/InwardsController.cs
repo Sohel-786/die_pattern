@@ -419,11 +419,19 @@ namespace net_backend.Controllers
                 .Where(i => itemIds.Contains(i.Id))
                 .ToDictionaryAsync(i => i.Id);
 
+            var jwIds = dto.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var jwItemsByRefAndItem = new Dictionary<(int jwId, int itemId), (string? proposedNewName, bool willChange)>();
+            if (jwIds.Any())
+            {
+                var jwItems = await _context.JobWorkItems.Where(j => jwIds.Contains(j.JobWorkId)).ToListAsync();
+                foreach (var ji in jwItems)
+                    jwItemsByRefAndItem[(ji.JobWorkId, ji.ItemId)] = (ji.ProposedNewName, ji.WillChangeName);
+            }
+
             foreach (var l in dto.Lines)
             {
                 if (l.Quantity < 1) continue;
                 
-                // Validate source for each line if provided
                 if (l.SourceRefId.HasValue) {
                    try { 
                        var vid = await ValidateInwardLineAsync(locationId, l.SourceType, l.SourceRefId.Value, l.ItemId, null); 
@@ -433,6 +441,11 @@ namespace net_backend.Controllers
                 }
 
                 var item = items.ContainsKey(l.ItemId) ? items[l.ItemId] : null;
+                string? itemNameSnapshot = item?.CurrentName;
+                string? newNameFromJobWork = null;
+                if (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jwItemsByRefAndItem.TryGetValue((l.SourceRefId.Value, l.ItemId), out var jwInfo) && jwInfo.willChange && !string.IsNullOrEmpty(jwInfo.proposedNewName))
+                    newNameFromJobWork = jwInfo.proposedNewName;
+
                 inward.Lines.Add(new InwardLine { 
                     ItemId = l.ItemId, 
                     ItemTypeName = item?.ItemType?.Name,
@@ -446,7 +459,9 @@ namespace net_backend.Controllers
                     Rate = l.Rate,
                     GstPercent = l.GstPercent,
                     IsQCPending = true,
-                    IsQCApproved = false
+                    IsQCApproved = false,
+                    ItemNameSnapshot = itemNameSnapshot,
+                    NewItemNameFromJobWork = newNameFromJobWork
                 });
             }
 
@@ -497,11 +512,15 @@ namespace net_backend.Controllers
                 .Where(i => itemIds.Contains(i.Id))
                 .ToDictionaryAsync(i => i.Id);
 
-            // Simple approach: remove lines and recreate (which will recreate movements if we are not careful)
-            // But if Movement already exists and we remove the line, what happens?
-            // For now, let's just update the header. If items changed, they should recreate.
-            // Actually, I'll clear lines and movements linked to this inward and recreate.
-            
+            var jwIds = dto.Lines.Where(l => l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue).Select(l => l.SourceRefId!.Value).Distinct().ToList();
+            var jwItemsByRefAndItem = new Dictionary<(int jwId, int itemId), (string? proposedNewName, bool willChange)>();
+            if (jwIds.Any())
+            {
+                var jwItems = await _context.JobWorkItems.Where(j => jwIds.Contains(j.JobWorkId)).ToListAsync();
+                foreach (var ji in jwItems)
+                    jwItemsByRefAndItem[(ji.JobWorkId, ji.ItemId)] = (ji.ProposedNewName, ji.WillChangeName);
+            }
+
             _context.InwardLines.RemoveRange(inward.Lines);
             
             foreach (var l in dto.Lines)
@@ -517,6 +536,11 @@ namespace net_backend.Controllers
                 }
 
                 var item = items.ContainsKey(l.ItemId) ? items[l.ItemId] : null;
+                string? itemNameSnapshot = item?.CurrentName;
+                string? newNameFromJobWork = null;
+                if (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jwItemsByRefAndItem.TryGetValue((l.SourceRefId.Value, l.ItemId), out var jwInfo) && jwInfo.willChange && !string.IsNullOrEmpty(jwInfo.proposedNewName))
+                    newNameFromJobWork = jwInfo.proposedNewName;
+
                 inward.Lines.Add(new InwardLine { 
                     ItemId = l.ItemId, 
                     ItemTypeName = item?.ItemType?.Name,
@@ -528,7 +552,9 @@ namespace net_backend.Controllers
                     SourceRefId = l.SourceRefId,
                     Remarks = l.Remarks,
                     Rate = l.Rate,
-                    GstPercent = l.GstPercent
+                    GstPercent = l.GstPercent,
+                    ItemNameSnapshot = itemNameSnapshot,
+                    NewItemNameFromJobWork = newNameFromJobWork
                 });
             }
 
@@ -690,7 +716,7 @@ namespace net_backend.Controllers
                     Id = l.Id,
                     InwardId = l.InwardId,
                     ItemId = l.ItemId,
-                    ItemName = l.Item?.CurrentName ?? "—",
+                    ItemName = l.ItemNameSnapshot ?? l.Item?.CurrentName ?? "—",
                     MainPartName = l.Item?.MainPartName ?? "—",
                     ItemTypeName = l.ItemTypeName ?? l.Item?.ItemType?.Name,
                     MaterialName = l.MaterialName ?? l.Item?.Material?.Name,
@@ -718,7 +744,9 @@ namespace net_backend.Controllers
                                    : null,
                     SourceDate = (l.SourceType == InwardSourceType.PO && l.SourceRefId.HasValue && pos != null && pos.ContainsKey(l.SourceRefId.Value)) ? pos[l.SourceRefId.Value].CreatedAt
                                : (l.SourceType == InwardSourceType.JobWork && l.SourceRefId.HasValue && jws != null && jws.ContainsKey(l.SourceRefId.Value)) ? jws[l.SourceRefId.Value].CreatedAt
-                               : null
+                               : null,
+                    OriginalDisplayName = l.ItemNameSnapshot ?? l.Item?.CurrentName,
+                    NewDisplayNameFromJobWork = l.NewItemNameFromJobWork
                 }).ToList()
             };
             return dto;

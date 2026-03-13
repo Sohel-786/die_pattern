@@ -12,10 +12,12 @@ namespace net_backend.Controllers
     public class ReportsController : BaseController
     {
         private readonly IExcelService _excelService;
+        private readonly IItemSnapshotBackfillService _snapshotService;
 
-        public ReportsController(ApplicationDbContext context, IExcelService excelService) : base(context)
+        public ReportsController(ApplicationDbContext context, IExcelService excelService, IItemSnapshotBackfillService snapshotService) : base(context)
         {
             _excelService = excelService;
+            _snapshotService = snapshotService;
         }
 
         /// <summary>Paginated Purchase Indent report. Requires ViewReports.</summary>
@@ -170,6 +172,7 @@ namespace net_backend.Controllers
                 var term = search.Trim().ToLowerInvariant();
                 rows = rows.Where(r =>
                     (r.ReferenceNo != null && r.ReferenceNo.ToLowerInvariant().Contains(term)) ||
+                    (r.ItemNameAtEvent != null && r.ItemNameAtEvent.ToLowerInvariant().Contains(term)) ||
                     (r.LocationName != null && r.LocationName.ToLowerInvariant().Contains(term)) ||
                     (r.PartyName != null && r.PartyName.ToLowerInvariant().Contains(term)) ||
                     (r.FromToDisplay != null && r.FromToDisplay.ToLowerInvariant().Contains(term)) ||
@@ -325,6 +328,7 @@ namespace net_backend.Controllers
                 var term = search.Trim().ToLowerInvariant();
                 rows = rows.Where(r =>
                     (r.ReferenceNo != null && r.ReferenceNo.ToLowerInvariant().Contains(term)) ||
+                    (r.ItemNameAtEvent != null && r.ItemNameAtEvent.ToLowerInvariant().Contains(term)) ||
                     (r.LocationName != null && r.LocationName.ToLowerInvariant().Contains(term)) ||
                     (r.PartyName != null && r.PartyName.ToLowerInvariant().Contains(term)) ||
                     (r.FromToDisplay != null && r.FromToDisplay.ToLowerInvariant().Contains(term)) ||
@@ -352,6 +356,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = pii.PurchaseIndent!.CreatedAt,
                     EventType = "PI Indented",
+                    ItemNameAtEvent = pii.ItemNameSnapshot,
                     ReferenceNo = pii.PurchaseIndent.PiNo,
                     LocationName = null,
                     PartyName = null,
@@ -373,6 +378,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = poi.PurchaseOrder!.CreatedAt,
                     EventType = "PO Created",
+                    ItemNameAtEvent = poi.PurchaseIndentItem!.ItemNameSnapshot,
                     ReferenceNo = poi.PurchaseOrder.PoNo,
                     LocationName = null,
                     PartyName = null,
@@ -394,6 +400,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = il.Inward!.CreatedAt,
                     EventType = "Inward",
+                    ItemNameAtEvent = il.ItemNameSnapshot,
                     ReferenceNo = il.Inward.InwardNo,
                     LocationName = il.Inward.Location != null ? il.Inward.Location.Name : null,
                     PartyName = il.Inward.Vendor != null ? il.Inward.Vendor.Name : null,
@@ -416,6 +423,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = qi.QcEntry!.ApprovedAt ?? qi.QcEntry.CreatedAt,
                     EventType = "QC",
+                    ItemNameAtEvent = qi.InwardLine!.ItemNameSnapshot,
                     ReferenceNo = qi.QcEntry.QcNo,
                     LocationName = qi.QcEntry.Location != null ? qi.QcEntry.Location.Name : null,
                     PartyName = qi.QcEntry.Party != null ? qi.QcEntry.Party.Name : null,
@@ -437,6 +445,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = jwi.JobWork!.CreatedAt,
                     EventType = "Job Work",
+                    ItemNameAtEvent = jwi.OriginalNameSnapshot,
                     ReferenceNo = jwi.JobWork.JobWorkNo,
                     LocationName = jwi.JobWork.Location != null ? jwi.JobWork.Location.Name : null,
                     PartyName = jwi.JobWork.ToParty != null ? jwi.JobWork.ToParty.Name : null,
@@ -466,6 +475,7 @@ namespace net_backend.Controllers
                 {
                     EventDate = t.CreatedAt,
                     EventType = "Transfer",
+                    ItemNameAtEvent = ti.ItemNameSnapshot,
                     ReferenceNo = t.TransferNo,
                     LocationName = t.Location != null ? t.Location.Name : null,
                     PartyName = null,
@@ -474,6 +484,12 @@ namespace net_backend.Controllers
                     PreparedBy = t.Creator != null ? t.Creator.FirstName + " " + t.Creator.LastName : null,
                     AuthorizedBy = null
                 });
+            }
+
+            // Production fallback: resolve display name at event time when snapshot is null (e.g. old records before backfill)
+            foreach (var row in rows.Where(r => string.IsNullOrEmpty(r.ItemNameAtEvent)))
+            {
+                row.ItemNameAtEvent = await _snapshotService.GetDisplayNameAtTimeAsync(itemId, row.EventDate);
             }
 
             return rows;

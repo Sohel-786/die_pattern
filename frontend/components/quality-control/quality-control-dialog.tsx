@@ -88,6 +88,8 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                     isQCApproved: false,
                     inwardDate: new Date().toISOString(),
                     included: true,
+                    originalDisplayName: it.originalDisplayName,
+                    newDisplayNameFromJobWork: it.newDisplayNameFromJobWork,
                 }))
             );
             setAttachmentUrls((qcDetail.attachmentUrls as string[]) || []);
@@ -457,8 +459,13 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-3">
-                                                                <div className="flex flex-col min-w-0">
+                                                                <div className="flex flex-col min-w-0 gap-0.5">
                                                                     <span className="font-bold text-secondary-900 text-sm truncate uppercase italic tracking-tight">{item.itemName}</span>
+                                                                    {item.newDisplayNameFromJobWork ? (
+                                                                        <span className="text-[11px] text-primary-600 font-medium">
+                                                                            Old: {item.originalDisplayName ?? item.itemName} → New: {item.newDisplayNameFromJobWork} <span className="text-primary-500/90">(applied on approve)</span>
+                                                                        </span>
+                                                                    ) : null}
                                                                     <span className="text-[10px] font-bold text-secondary-500 truncate uppercase">{item.mainPartName || ""}</span>
                                                                 </div>
                                                             </td>

@@ -262,6 +262,20 @@ export interface Item {
   isActive: boolean;
 }
 
+export interface ItemNameHistoryEntry {
+  id: number;
+  createdAt: string;
+  oldName: string;
+  newName: string;
+  changeType: string;
+  source?: string | null;
+  jobWorkNo?: string | null;
+  inwardNo?: string | null;
+  qcNo?: string | null;
+  createdByName?: string | null;
+  canRevert: boolean;
+}
+
 /** One successfully imported item in opening history (for traceability). */
 export interface ImportedItemSummary {
   row: number;
@@ -504,6 +518,10 @@ export interface InwardLine {
   isQCPending: boolean;
   isQCApproved: boolean;
   sourceDate?: string | null;
+  /** Display name at time of inward (for reference when newDisplayNameFromJobWork is set). */
+  originalDisplayName?: string | null;
+  /** If from Job Work with display-name change: new name to apply after QC approval. */
+  newDisplayNameFromJobWork?: string | null;
 }
 
 export enum QcStatus {
@@ -548,6 +566,8 @@ export interface QCItem {
   sourceRefDisplay?: string;
   inwardDate?: string | null;
   sourceDate?: string | null;
+  originalDisplayName?: string | null;
+  newDisplayNameFromJobWork?: string | null;
 }
 
 export interface PendingQC {
@@ -567,6 +587,8 @@ export interface PendingQC {
   isQCPending: boolean;
   isQCApproved: boolean;
   inwardDate: string;
+  originalDisplayName?: string | null;
+  newDisplayNameFromJobWork?: string | null;
 }
 
 export interface CreateInwardDto {
@@ -599,6 +621,9 @@ export interface JobWorkItem {
   rate?: number | null;
   gstPercent?: number | null;
   remarks?: string;
+  willChangeName?: boolean;
+  proposedNewName?: string | null;
+  originalNameSnapshot?: string | null;
   inwardNo?: string | null;
   qcNo?: string | null;
   isQCPending?: boolean;
@@ -635,6 +660,8 @@ export interface CreateJobWorkDto {
     rate?: number | null;
     gstPercent?: number | null;
     remarks?: string;
+    willChangeName?: boolean;
+    proposedNewName?: string | null;
   }[];
 }
 
@@ -739,6 +766,8 @@ export interface InwardReportRow {
 export interface ItemLedgerRow {
   eventDate: string;
   eventType: string;
+  /** Item display name as it was at the time of this event (snapshot). */
+  itemNameAtEvent?: string | null;
   referenceNo: string;
   locationName?: string | null;
   partyName?: string | null;

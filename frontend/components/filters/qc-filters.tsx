@@ -134,7 +134,7 @@ export function QCFilters({
                             <MultiSelectSearch
                                 options={itemOptions}
                                 value={filters.itemIds}
-                                onChange={(v) => update({ itemIds: v as number[] })}
+                                onChange={(v) => update({ itemIds: v as (number | string)[] })}
                                 placeholder="Select items"
                                 searchPlaceholder="Search…"
                             />

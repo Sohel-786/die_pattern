@@ -200,6 +200,7 @@ namespace net_backend.DTOs
     {
         public int InwardLineId { get; set; }
         public int ItemId { get; set; }
+        /// <summary>Display name at inward time (ItemNameSnapshot or current item name).</summary>
         public string? ItemName { get; set; }
         public string? MainPartName { get; set; }
         public string? ItemTypeName { get; set; }
@@ -214,6 +215,10 @@ namespace net_backend.DTOs
         public bool IsQCPending { get; set; }
         public bool IsQCApproved { get; set; }
         public DateTime InwardDate { get; set; }
+        /// <summary>Original display name at inward (for versioning).</summary>
+        public string? OriginalDisplayName { get; set; }
+        /// <summary>New display name from Job Work; applied to Item Master on QC approve.</summary>
+        public string? NewDisplayNameFromJobWork { get; set; }
     }
 
     public class QCDto
@@ -254,6 +259,8 @@ namespace net_backend.DTOs
         public string? Remarks { get; set; }
         public DateTime? InwardDate { get; set; }
         public DateTime? SourceDate { get; set; }
+        public string? OriginalDisplayName { get; set; }
+        public string? NewDisplayNameFromJobWork { get; set; }
     }
 
     public class CreateQCDto
@@ -331,6 +338,10 @@ namespace net_backend.DTOs
         public decimal? SourceRate { get; set; }
         public decimal? SourceGstPercent { get; set; }
         public DateTime? SourceDate { get; set; }
+        /// <summary>Display name at time of inward (for reference when NewDisplayNameFromJobWork is set).</summary>
+        public string? OriginalDisplayName { get; set; }
+        /// <summary>If from Job Work with display-name change: new name to apply after QC approval.</summary>
+        public string? NewDisplayNameFromJobWork { get; set; }
     }
 
     public class CreateInwardDto
@@ -366,6 +377,9 @@ namespace net_backend.DTOs
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
+        public bool WillChangeName { get; set; }
+        public string? ProposedNewName { get; set; }
+        public string? OriginalNameSnapshot { get; set; }
         public string? InwardNo { get; set; }
         public string? QCNo { get; set; }
         public bool IsQCPending { get; set; }
@@ -403,6 +417,8 @@ namespace net_backend.DTOs
         public decimal? Rate { get; set; }
         public decimal? GstPercent { get; set; }
         public string? Remarks { get; set; }
+        public bool WillChangeName { get; set; }
+        public string? ProposedNewName { get; set; }
     }
 
     public class CreateJobWorkDto
@@ -515,6 +531,8 @@ namespace net_backend.DTOs
     {
         public DateTime EventDate { get; set; }
         public string EventType { get; set; } = string.Empty;
+        /// <summary>Item display name as it was at the time of this event (snapshot).</summary>
+        public string? ItemNameAtEvent { get; set; }
         public string ReferenceNo { get; set; } = string.Empty;
         public string? LocationName { get; set; }
         /// <summary>Party name for Inward/QC/Job Work; null for PI/PO; for Transfer use FromToDisplay.</summary>

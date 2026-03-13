@@ -27,5 +27,8 @@ namespace net_backend.Services
         /// </summary>
         /// <returns>(True, Message) if a descendant exists, (False, "")- otherwise.</returns>
         Task<(bool, string)> CheckForDescendantTransactionsAsync(int itemId, DateTime transactionCreatedAt, int transactionId, string transactionType);
+
+        /// <summary>Returns true if the item has any transfer, inward, job work, or QC usage created after the given date. Used to allow revert only when the current name has not been used in a later transaction.</summary>
+        Task<bool> HasAnyTransactionAfterDateAsync(int itemId, DateTime from);
     }
 }

@@ -86,7 +86,7 @@ namespace net_backend.Controllers
                 .Select(q => new
                 {
                     q.Id,
-                    ItemName = q.InwardLine!.Item!.CurrentName,
+                    ItemName = q.InwardLine!.ItemNameSnapshot ?? q.InwardLine!.Item!.CurrentName,
                     IsApproved = q.IsApproved == true,
                     q.Remarks,
                     CheckedBy = q.QcEntry!.Creator!.FirstName + " " + q.QcEntry.Creator.LastName,

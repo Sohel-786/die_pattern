@@ -74,7 +74,27 @@ namespace net_backend.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(new ApiResponse<IEnumerable<object>> { Data = items });
+            var itemIds = items.Select(p => p.Id).ToList();
+            var previousNamesByItem = await _context.ItemChangeLogs
+                .AsNoTracking()
+                .Where(l => itemIds.Contains(l.ItemId))
+                .Select(l => new { l.ItemId, l.OldName })
+                .ToListAsync();
+            var previousNamesDict = previousNamesByItem
+                .GroupBy(x => x.ItemId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.OldName).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList());
+
+            var result = items.Select(p => new
+            {
+                p.Id,
+                p.MainPartName,
+                p.CurrentName,
+                p.ItemTypeId,
+                p.ItemTypeName,
+                PreviousNames = previousNamesDict.TryGetValue(p.Id, out var names) ? names : new List<string>()
+            }).ToList();
+
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = result });
         }
 
         [HttpGet]
@@ -265,7 +285,6 @@ namespace net_backend.Controllers
             var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == dto.ItemId && i.LocationId == locationId);
             if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
 
-            // Store history
             var log = new ItemChangeLog
             {
                 ItemId = item.Id,
@@ -275,6 +294,7 @@ namespace net_backend.Controllers
                 NewRevision = dto.NewRevision,
                 ChangeType = dto.ChangeType,
                 Remarks = dto.Remarks,
+                Source = "AdminChange",
                 CreatedBy = CurrentUserId,
                 CreatedAt = DateTime.Now
             };
@@ -288,6 +308,176 @@ namespace net_backend.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new ApiResponse<Item> { Data = item, Message = "Change process completed successfully" });
+        }
+
+        [HttpGet("{id}/name-history")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ItemNameHistoryEntryDto>>>> GetNameHistory(int id)
+        {
+            if (!await HasPermission("ViewItem")) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
+            if (item == null) return NotFound(new ApiResponse<IEnumerable<ItemNameHistoryEntryDto>> { Success = false, Message = "Item not found" });
+
+            var logs = await _context.ItemChangeLogs
+                .AsNoTracking()
+                .Where(l => l.ItemId == id)
+                .OrderByDescending(l => l.CreatedAt)
+                .Select(l => new { l.Id, l.CreatedAt, l.OldName, l.NewName, l.ChangeType, l.Source, l.JobWorkId, l.InwardId, l.QcEntryId, l.CreatedBy })
+                .ToListAsync();
+
+            var jwIds = logs.Where(l => l.JobWorkId.HasValue).Select(l => l.JobWorkId!.Value).Distinct().ToList();
+            var inwardIds = logs.Where(l => l.InwardId.HasValue).Select(l => l.InwardId!.Value).Distinct().ToList();
+            var qcIds = logs.Where(l => l.QcEntryId.HasValue).Select(l => l.QcEntryId!.Value).Distinct().ToList();
+            var userIds = logs.Select(l => l.CreatedBy).Distinct().ToList();
+
+            var jwDict = jwIds.Any() ? await _context.JobWorks.Where(j => jwIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, j => j.JobWorkNo) : new Dictionary<int, string>();
+            var inwardDict = inwardIds.Any() ? await _context.Inwards.Where(i => inwardIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.InwardNo) : new Dictionary<int, string>();
+            var qcDict = qcIds.Any() ? await _context.QcEntries.Where(q => qcIds.Contains(q.Id)).ToDictionaryAsync(q => q.Id, q => q.QcNo) : new Dictionary<int, string>();
+            var userDict = userIds.Any() ? await _context.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FirstName + " " + u.LastName) : new Dictionary<int, string>();
+
+            var result = new List<ItemNameHistoryEntryDto>();
+            foreach (var l in logs)
+            {
+                var canRevert = l.NewName == item.CurrentName && !await _itemState.HasAnyTransactionAfterDateAsync(id, l.CreatedAt);
+                result.Add(new ItemNameHistoryEntryDto
+                {
+                    Id = l.Id,
+                    CreatedAt = l.CreatedAt,
+                    OldName = l.OldName,
+                    NewName = l.NewName,
+                    ChangeType = l.ChangeType,
+                    Source = l.Source,
+                    JobWorkNo = l.JobWorkId.HasValue && jwDict.ContainsKey(l.JobWorkId.Value) ? jwDict[l.JobWorkId.Value] : null,
+                    InwardNo = l.InwardId.HasValue && inwardDict.ContainsKey(l.InwardId.Value) ? inwardDict[l.InwardId.Value] : null,
+                    QcNo = l.QcEntryId.HasValue && qcDict.ContainsKey(l.QcEntryId.Value) ? qcDict[l.QcEntryId.Value] : null,
+                    CreatedByName = userDict.ContainsKey(l.CreatedBy) ? userDict[l.CreatedBy] : null,
+                    CanRevert = canRevert
+                });
+            }
+
+            return Ok(new ApiResponse<IEnumerable<ItemNameHistoryEntryDto>> { Data = result });
+        }
+
+        /// <summary>
+        /// Apply a display name change from an already-approved QC (Job Work) when it was not applied at approval time.
+        /// Use this once to fix items that were QC-approved before the name-change logic was in place.
+        /// </summary>
+        [HttpPost("{id}/apply-pending-name-change")]
+        public async Task<ActionResult<ApiResponse<Item>>> ApplyPendingNameChange(int id)
+        {
+            if (!await IsAdmin()) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
+            if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
+
+            var approvedQcItems = await _context.QcItems
+                .Include(qi => qi.InwardLine).Include(qi => qi.QcEntry)
+                .Where(qi => qi.InwardLine != null && qi.InwardLine.ItemId == id
+                    && qi.QcEntry != null && qi.QcEntry.LocationId == locationId
+                    && qi.QcEntry.Status == QcStatus.Approved && qi.IsApproved == true
+                    && qi.InwardLine.SourceType == InwardSourceType.JobWork && qi.InwardLine.SourceRefId != null)
+                .OrderByDescending(qi => qi.QcEntry!.ApprovedAt ?? qi.QcEntry.CreatedAt)
+                .ToListAsync();
+
+            string? proposedNewName = null;
+            InwardLine? chosenLine = null;
+            QualityControlEntry? chosenEntry = null;
+            int? jwId = null;
+            int? jwItemId = null;
+
+            foreach (var qi in approvedQcItems)
+            {
+                var line = qi.InwardLine!;
+                proposedNewName = !string.IsNullOrWhiteSpace(line.NewItemNameFromJobWork) ? line.NewItemNameFromJobWork.Trim() : null;
+                if (string.IsNullOrEmpty(proposedNewName))
+                {
+                    var jwi = await _context.JobWorkItems.AsNoTracking()
+                        .FirstOrDefaultAsync(j => j.JobWorkId == line.SourceRefId!.Value && j.ItemId == id && j.WillChangeName && !string.IsNullOrWhiteSpace(j.ProposedNewName));
+                    if (jwi != null) proposedNewName = jwi.ProposedNewName!.Trim();
+                }
+                if (!string.IsNullOrEmpty(proposedNewName) && (item.CurrentName?.Trim().ToLower() != proposedNewName.ToLower()))
+                {
+                    chosenLine = line;
+                    chosenEntry = qi.QcEntry!;
+                    jwId = line.SourceRefId;
+                    if (jwId.HasValue)
+                    {
+                        var jwi = await _context.JobWorkItems.FirstOrDefaultAsync(j => j.JobWorkId == jwId.Value && j.ItemId == id);
+                        if (jwi != null) jwItemId = jwi.Id;
+                    }
+                    break;
+                }
+            }
+
+            if (chosenLine == null || chosenEntry == null || string.IsNullOrEmpty(proposedNewName))
+                return NotFound(new ApiResponse<Item> { Success = false, Message = "No pending display name change found for this item from an approved QC (Job Work)." });
+
+            if (await _context.Items.AnyAsync(i => i.LocationId == locationId && i.Id != id && (i.CurrentName.ToLower() == proposedNewName.ToLower() || i.MainPartName.ToLower() == proposedNewName.ToLower())))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = $"Display name '{proposedNewName}' is already used by another item." });
+
+            var oldName = item.CurrentName ?? "";
+            item.CurrentName = proposedNewName;
+            item.UpdatedAt = DateTime.Now;
+
+            _context.ItemChangeLogs.Add(new ItemChangeLog
+            {
+                ItemId = item.Id,
+                OldName = oldName,
+                NewName = proposedNewName,
+                OldRevision = item.RevisionNo ?? "",
+                NewRevision = item.RevisionNo ?? "",
+                ChangeType = "JobWork",
+                Source = "JobWork",
+                JobWorkId = jwId,
+                JobWorkItemId = jwItemId,
+                InwardId = chosenLine.InwardId,
+                InwardLineId = chosenLine.Id,
+                QcEntryId = chosenEntry.Id,
+                CreatedBy = CurrentUserId,
+                CreatedAt = DateTime.Now
+            });
+
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<Item> { Data = item, Message = "Display name applied from approved QC (Job Work)." });
+        }
+
+        [HttpPost("{id}/revert-name")]
+        public async Task<ActionResult<ApiResponse<Item>>> RevertName(int id, [FromBody] RevertNameRequestDto dto)
+        {
+            if (!await IsAdmin()) return Forbidden();
+            var locationId = await GetCurrentLocationIdAsync();
+            var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
+            if (item == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Item not found" });
+
+            var log = await _context.ItemChangeLogs.FirstOrDefaultAsync(l => l.Id == dto.ChangeLogId && l.ItemId == id);
+            if (log == null) return NotFound(new ApiResponse<Item> { Success = false, Message = "Change log entry not found for this item." });
+
+            if (item.CurrentName != log.NewName)
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Revert is only allowed for the current display name. This log entry is not the current version." });
+
+            if (await _itemState.HasAnyTransactionAfterDateAsync(id, log.CreatedAt))
+                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Cannot revert: the item has been used in a transfer, inward, job work, or QC entry after this change. Revert is only allowed when the current name has not been used in any later transaction." });
+
+            var oldCurrent = item.CurrentName ?? "";
+            item.CurrentName = log.OldName;
+            item.UpdatedAt = DateTime.Now;
+
+            _context.ItemChangeLogs.Add(new ItemChangeLog
+            {
+                ItemId = item.Id,
+                OldName = oldCurrent,
+                NewName = log.OldName,
+                OldRevision = item.RevisionNo ?? "",
+                NewRevision = item.RevisionNo ?? "",
+                ChangeType = "Revert",
+                Source = "ManualRevert",
+                RevertedFromLogId = log.Id,
+                CreatedBy = CurrentUserId,
+                CreatedAt = DateTime.Now
+            });
+
+            await _context.SaveChangesAsync();
+            return Ok(new ApiResponse<Item> { Data = item, Message = "Display name reverted successfully." });
         }
 
         [HttpPut("{id}")]
