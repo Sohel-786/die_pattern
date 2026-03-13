@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import Link from "next/link";
 import api from "@/lib/api";
-import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PO, PoStatus } from "@/types";
+import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PO, PoStatus, RecentItemChangeRow } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ import {
   ClipboardList,
   Ban,
   X,
+  History,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -134,7 +135,7 @@ const getConditionColor = (condition?: string) => {
   }
 };
 
-type ExpandedSection = "location" | "at-vendor" | "pending-pi" | "pending-po" | null;
+type ExpandedSection = "location" | "at-vendor" | "pending-pi" | "pending-po" | "recent-changes" | null;
 
 interface LocationWiseItemRow {
   id: number;
@@ -208,6 +209,11 @@ export default function DashboardPage() {
   const [pendingPODateTo, setPendingPODateTo] = useState("");
   const [pendingPOVendorIds, setPendingPOVendorIds] = useState<number[]>([]);
 
+  // Recent changes filters
+  const [recentSearch, setRecentSearch] = useState("");
+  const [recentDateFrom, setRecentDateFrom] = useState("");
+  const [recentDateTo, setRecentDateTo] = useState("");
+
   const [approvalTarget, setApprovalTarget] = useState<
     { type: "pi"; pi: PurchaseIndent; action: "approve" | "reject" | "revert" } | { type: "po"; po: PO; action: "approve" | "reject" | "revert" }
     | null>(null);
@@ -227,6 +233,7 @@ export default function DashboardPage() {
   const debouncedVendorSearch = useDebouncedValue(vendorSearch, 400);
   const debouncedPendingPISearch = useDebouncedValue(pendingPISearch, 400);
   const debouncedPendingPOSearch = useDebouncedValue(pendingPOSearch, 400);
+  const debouncedRecentSearch = useDebouncedValue(recentSearch, 400);
 
   const { data: metrics, isLoading: loadingMetrics } = useQuery<DashboardMetrics>({
     queryKey: ["dashboard-metrics", locationId],
@@ -284,6 +291,31 @@ export default function DashboardPage() {
     }),
     [locationId, debouncedVendorSearch, vendorIds, atVendorItemIds, atVendorItemTypeId, dashboardPage, dashboardPageSize]
   );
+
+  const recentChangesParams = useMemo(
+    () => ({
+      locationId: locationId === "" ? undefined : locationId,
+      search: debouncedRecentSearch || undefined,
+      dateFrom: recentDateFrom || undefined,
+      dateTo: recentDateTo || undefined,
+    }),
+    [locationId, debouncedRecentSearch, recentDateFrom, recentDateTo]
+  );
+
+  const { data: recentChangesData, isLoading: loadingRecentChanges } = useQuery<{
+    data: RecentItemChangeRow[];
+    total: number;
+    page: number;
+    limit: number;
+  }>({
+    queryKey: ["dashboard", "recent-item-changes", recentChangesParams],
+    queryFn: async () => {
+      const res = await api.get("/dashboard/recent-item-changes", {
+        params: { ...recentChangesParams, page: 1, limit: 50 },
+      });
+      return res.data.data;
+    },
+  });
 
   const { data: atVendorData, isLoading: loadingAtVendor } = useQuery<{ list: ItemAtVendorRow[]; totalCount: number }>({
     queryKey: ["dashboard", "items-at-vendor", atVendorParams],
@@ -483,7 +515,7 @@ export default function DashboardPage() {
   });
 
   const handleExport = useCallback(
-    async (section: "location" | "at-vendor" | "pending-pi" | "pending-po") => {
+    async (section: "location" | "at-vendor" | "pending-pi" | "pending-po" | "recent-changes") => {
       try {
         let url = "";
         const params =
@@ -493,7 +525,9 @@ export default function DashboardPage() {
               ? atVendorParams
               : section === "pending-pi"
                 ? pendingPIParams
-                : pendingPOParams;
+                : section === "pending-po"
+                  ? pendingPOParams
+                  : recentChangesParams;
         if (section === "location" && (typeof locationWiseParams.locationId !== "number")) {
           toast.error("Select a location first.");
           return;
@@ -505,7 +539,9 @@ export default function DashboardPage() {
               ? "/dashboard/export/items-at-vendor"
               : section === "pending-pi"
                 ? "/dashboard/export/pending-pi"
-                : "/dashboard/export/pending-po";
+                : section === "pending-po"
+                  ? "/dashboard/export/pending-po"
+                  : "/dashboard/export/recent-item-changes";
         const response = await api.get(endpoint, { responseType: "blob", params });
 
         // Extract filename from Content-Disposition header
@@ -540,6 +576,7 @@ export default function DashboardPage() {
       atVendorParams,
       pendingPIParams,
       pendingPOParams,
+      recentChangesParams,
     ]
   );
 
@@ -587,6 +624,16 @@ export default function DashboardPage() {
       shadowColor: "shadow-emerald-500/20",
       iconColor: "text-emerald-600",
       section: "pending-po" as const,
+    },
+    {
+      title: "Recent Name Changes",
+      value: recentChangesData?.total ?? 0,
+      icon: History,
+      gradient: "from-indigo-500 to-indigo-600",
+      baseBg: "bg-indigo-50/40",
+      shadowColor: "shadow-indigo-500/20",
+      iconColor: "text-indigo-600",
+      section: "recent-changes" as const,
     },
   ];
 
@@ -856,6 +903,165 @@ export default function DashboardPage() {
                 ) : (
                   <div className="py-12 text-center text-secondary-500">
                     No items at this location match your filters.
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Recent Item Name Changes */}
+        {expandedSection === "recent-changes" && (
+          <div>
+            <Card className="shadow-lg border border-secondary-200">
+              <div className="border-b border-secondary-200 px-4 py-3 flex flex-col gap-1">
+                <h2 className="text-xl font-bold text-text">Recent Item Name Changes</h2>
+                <p className="text-sm text-secondary-500">
+                  Latest display name changes with traceability to Job Work, Inward, and QC entries.
+                </p>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 items-end">
+                  <div className="flex flex-col">
+                    <label className={filterLabelClass}>Search</label>
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={recentSearch}
+                        onChange={(e) => setRecentSearch(e.target.value)}
+                        placeholder="Item, JW/Inward/QC no…"
+                        className={cn(inputClass, "pl-9")}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>From date</label>
+                    <DatePicker
+                      value={recentDateFrom || undefined}
+                      onChange={(date) => setRecentDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
+                    />
+                  </div>
+                  <div>
+                    <label className={filterLabelClass}>To date</label>
+                    <DatePicker
+                      value={recentDateTo || undefined}
+                      onChange={(date) => setRecentDateTo(date ? format(date, "yyyy-MM-dd") : "")}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    {hasAnyActive([recentSearch, recentDateFrom, recentDateTo]) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRecentSearch("");
+                          setRecentDateFrom("");
+                          setRecentDateTo("");
+                        }}
+                        className="h-9 px-4 text-xs font-medium rounded-lg whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Clear
+                      </Button>
+                    )}
+                    <Button onClick={() => handleExport("recent-changes")} className="shadow-sm h-9 px-4 text-xs">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Excel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-secondary-100 overflow-x-auto">
+                {loadingRecentChanges ? (
+                  <div className="py-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto" />
+                    <p className="mt-4 text-secondary-600">Loading recent changes...</p>
+                  </div>
+                ) : (recentChangesData?.data?.length ?? 0) > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider whitespace-nowrap">
+                          Change Date/Time
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          Item
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          Old Name
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          New Name
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          Job Work
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          Inward
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          QC
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentChangesData?.data?.map((row, idx) => (
+                        <TableRow key={`${row.itemId}-${row.changedAt}-${idx}`} className="border-b border-secondary-100 hover:bg-primary-50/30">
+                          <TableCell className="px-4 py-3 text-secondary-700 whitespace-nowrap">
+                            {formatDateTime(row.changedAt)}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-700">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-text">{row.mainPartName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600">{row.oldName}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-900 font-semibold">{row.newName}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 whitespace-nowrap">
+                            {row.jobWorkNo ? (
+                              <>
+                                <span className="font-mono text-xs">{row.jobWorkNo}</span>
+                                {row.jobWorkDate && (
+                                  <div className="text-[11px] text-secondary-500">{formatDateTime(row.jobWorkDate)}</div>
+                                )}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 whitespace-nowrap">
+                            {row.inwardNo ? (
+                              <>
+                                <span className="font-mono text-xs">{row.inwardNo}</span>
+                                {row.inwardDate && (
+                                  <div className="text-[11px] text-secondary-500">{formatDateTime(row.inwardDate)}</div>
+                                )}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 whitespace-nowrap">
+                            {row.qcNo ? (
+                              <>
+                                <span className="font-mono text-xs">{row.qcNo}</span>
+                                {row.qcDate && (
+                                  <div className="text-[11px] text-secondary-500">{formatDateTime(row.qcDate)}</div>
+                                )}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-12 text-center text-secondary-500">
+                    No recent name changes match your filters.
                   </div>
                 )}
               </div>

@@ -197,6 +197,159 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<object> { Data = list, TotalCount = totalCount });
         }
 
+        /// <summary>Recent item display-name changes (version control), scoped to items in allowed locations.</summary>
+        [HttpGet("recent-item-changes")]
+        public async Task<ActionResult<ApiResponse<object>>> GetRecentItemChanges(
+            [FromQuery] int? locationId,
+            [FromQuery] string? search = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 50)
+        {
+            if (!await HasPermission("ViewDashboard")) return Forbidden();
+            var rows = await BuildRecentItemChangeRowsAsync(locationId, search, dateFrom, dateTo);
+
+            var total = rows.Count;
+            var paged = rows
+                .OrderByDescending(r => r.ChangedAt)
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToList();
+
+            return Ok(new ApiResponse<object>
+            {
+                Data = new
+                {
+                    data = paged,
+                    total,
+                    page,
+                    limit
+                }
+            });
+        }
+
+        /// <summary>Export recent item display-name changes to Excel.</summary>
+        [HttpGet("export/recent-item-changes")]
+        public async Task<IActionResult> ExportRecentItemChanges(
+            [FromQuery] int? locationId,
+            [FromQuery] string? search = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null)
+        {
+            if (!await HasPermission("ViewDashboard")) return Forbidden();
+            var rows = await BuildRecentItemChangeRowsAsync(locationId, search, dateFrom, dateTo);
+
+            // Export: omit internal ItemId column for business users
+            var exportRows = rows.Select(r => new
+            {
+                r.ChangedAt,
+                r.MainPartName,
+                r.OldName,
+                r.NewName,
+                r.ChangeType,
+                r.Source,
+                r.JobWorkNo,
+                r.JobWorkDate,
+                r.InwardNo,
+                r.InwardDate,
+                r.QcNo,
+                r.QcDate
+            }).ToList();
+
+            string locLabel = "All Locations";
+            if (locationId.HasValue && locationId.Value > 0)
+            {
+                var locName = await _context.Locations.Where(l => l.Id == locationId.Value).Select(l => l.Name).FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(locName)) locLabel = locName;
+            }
+
+            var bytes = _excelService.GenerateExcel(exportRows, "RecentChanges", "Recent Item Name Changes - " + locLabel);
+            var fileName = "Recent_Item_Changes_" + DateTime.Now.ToString("yyyyMMdd_HHmm") + ".xlsx";
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        /// <summary>Builds recent item display-name change rows, filtered by search and date, scoped to allowed locations.</summary>
+        private async Task<List<RecentItemChangeRowDto>> BuildRecentItemChangeRowsAsync(int? locationId, string? search, string? dateFrom, string? dateTo)
+        {
+            var (companyId, _) = await GetCurrentLocationAndCompanyAsync();
+            var allowed = await GetAllowedLocationIdsAsync();
+            var allowedLocationIds = allowed.Where(x => x.companyId == companyId).Select(x => x.locationId).ToHashSet();
+
+            var query = _context.ItemChangeLogs
+                .Include(l => l.Item)
+                .Where(l => l.Item != null && allowedLocationIds.Contains(l.Item.LocationId ?? 0));
+
+            // Location-wise filter (like other dashboard reports)
+            if (locationId.HasValue && locationId.Value > 0)
+                query = query.Where(l => l.Item != null && l.Item.LocationId == locationId.Value);
+
+            if (!string.IsNullOrWhiteSpace(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+                query = query.Where(l => l.CreatedAt >= fromDate);
+            if (!string.IsNullOrWhiteSpace(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+                query = query.Where(l => l.CreatedAt <= toDate.AddDays(1));
+
+            var logs = await query
+                .OrderByDescending(l => l.CreatedAt)
+                .ToListAsync();
+
+            var jobWorkIds = logs.Select(l => l.JobWorkId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+            var inwardIds = logs.Select(l => l.InwardId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+            var qcIds = logs.Select(l => l.QcEntryId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+
+            var jobWorks = await _context.JobWorks
+                .Where(j => jobWorkIds.Contains(j.Id))
+                .ToDictionaryAsync(j => j.Id, j => new { j.JobWorkNo, j.CreatedAt });
+
+            var inwards = await _context.Inwards
+                .Where(i => inwardIds.Contains(i.Id))
+                .ToDictionaryAsync(i => i.Id, i => new { i.InwardNo, i.InwardDate, i.CreatedAt });
+
+            var qcs = await _context.QcEntries
+                .Where(q => qcIds.Contains(q.Id))
+                .ToDictionaryAsync(q => q.Id, q => new { q.QcNo, q.ApprovedAt, q.CreatedAt });
+
+            var rows = logs.Select(l =>
+            {
+                jobWorks.TryGetValue(l.JobWorkId ?? 0, out var jw);
+                inwards.TryGetValue(l.InwardId ?? 0, out var inv);
+                qcs.TryGetValue(l.QcEntryId ?? 0, out var qc);
+
+                return new RecentItemChangeRowDto
+                {
+                    ChangedAt = l.CreatedAt,
+                    ItemId = l.ItemId,
+                    MainPartName = l.Item != null ? l.Item.MainPartName : string.Empty,
+                    OldName = l.OldName,
+                    NewName = l.NewName,
+                    ChangeType = l.ChangeType,
+                    Source = l.Source,
+                    JobWorkNo = jw?.JobWorkNo,
+                    JobWorkDate = jw?.CreatedAt,
+                    InwardNo = inv?.InwardNo,
+                    // Use CreatedAt for accurate entry date/time (InwardDate can be user-entered date-only)
+                    InwardDate = inv?.CreatedAt,
+                    QcNo = qc?.QcNo,
+                    QcDate = qc?.ApprovedAt ?? qc?.CreatedAt
+                };
+            }).ToList();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLowerInvariant();
+                rows = rows.Where(r =>
+                    (r.MainPartName != null && r.MainPartName.ToLowerInvariant().Contains(term)) ||
+                    (r.OldName != null && r.OldName.ToLowerInvariant().Contains(term)) ||
+                    (r.NewName != null && r.NewName.ToLowerInvariant().Contains(term)) ||
+                    (r.JobWorkNo != null && r.JobWorkNo.ToLowerInvariant().Contains(term)) ||
+                    (r.InwardNo != null && r.InwardNo.ToLowerInvariant().Contains(term)) ||
+                    (r.QcNo != null && r.QcNo.ToLowerInvariant().Contains(term))
+                ).ToList();
+            }
+
+            return rows;
+        }
+
         /// <summary>Items at vendor (InJobwork or AtVendor) with optional filters.</summary>
         [HttpGet("items-at-vendor")]
         public async Task<ActionResult<ApiResponse<object>>> GetItemsAtVendor(

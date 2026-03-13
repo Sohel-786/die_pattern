@@ -40,7 +40,16 @@ namespace net_backend.Services
                 // Get properties for headers
                 var firstItem = data.First();
                 var properties = firstItem.GetType().GetProperties()
-                    .Where(p => p.PropertyType.IsPrimitive || p.PropertyType == typeof(string) || p.PropertyType == typeof(decimal) || p.PropertyType == typeof(double) || p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(int) || p.PropertyType == typeof(int?) || p.PropertyType == typeof(bool) || p.PropertyType.IsEnum)
+                    .Where(p =>
+                        p.PropertyType.IsPrimitive ||
+                        p.PropertyType == typeof(string) ||
+                        p.PropertyType == typeof(decimal) || p.PropertyType == typeof(decimal?) ||
+                        p.PropertyType == typeof(double) || p.PropertyType == typeof(double?) ||
+                        p.PropertyType == typeof(DateTime) || p.PropertyType == typeof(DateTime?) ||
+                        p.PropertyType == typeof(int) || p.PropertyType == typeof(int?) ||
+                        p.PropertyType == typeof(long) || p.PropertyType == typeof(long?) ||
+                        p.PropertyType == typeof(bool) || p.PropertyType == typeof(bool?) ||
+                        p.PropertyType.IsEnum)
                     .ToList();
 
                 // Write Headers

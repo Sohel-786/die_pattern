@@ -778,6 +778,23 @@ export interface ItemLedgerRow {
   authorizedBy?: string | null;
 }
 
+/** One row in Recent Item Changes (dashboard). */
+export interface RecentItemChangeRow {
+  changedAt: string;
+  itemId: number;
+  mainPartName: string;
+  oldName: string;
+  newName: string;
+  changeType?: string | null;
+  source?: string | null;
+  jobWorkNo?: string | null;
+  jobWorkDate?: string | null;
+  inwardNo?: string | null;
+  inwardDate?: string | null;
+  qcNo?: string | null;
+  qcDate?: string | null;
+}
+
 export interface AppSettings {
   id: number;
   softwareName?: string | null;
