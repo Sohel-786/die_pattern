@@ -428,15 +428,13 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary-100 bg-white">
-                                        {items.length === 0 ? (
-                                            <tr>
+                                        {items.length === 0 ? (<tr>
                                                 <td colSpan={6} className="py-8 text-center text-secondary-500 text-xs">
                                                     No items. Select source/destination and click &quot;Add Items for Transfer&quot; to begin.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            items.map((item, idx) => (
-                                                <tr key={item.itemId} className="hover:bg-primary-50/30 transition-colors">
+                                            items.map((item, idx) => (<tr key={item.itemId} className="hover:bg-primary-50/30 transition-colors">
                                                     <td className="py-2 px-2 text-center text-secondary-500 font-medium text-xs">{idx + 1}</td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col min-w-0">

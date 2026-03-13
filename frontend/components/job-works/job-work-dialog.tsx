@@ -380,8 +380,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100">
-                                            {items.length === 0 ? (
-                                                <tr>
+                                            {items.length === 0 ? (<tr>
                                                     <td colSpan={11} className="py-20 text-center">
                                                         <div className="flex flex-col items-center gap-2 opacity-30">
                                                             <Package className="w-12 h-12" />
@@ -396,8 +395,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                     const total = rate + (rate * gst / 100);
                                                     const isLocked = item.isInwarded;
 
-                                                    return (
-                                                        <tr key={item.itemId} className={cn("hover:bg-primary-50/20 group transition-colors", isLocked && "bg-secondary-50/50")}>
+                                                        return (<tr key={item.itemId} className={cn("hover:bg-primary-50/20 group transition-colors", isLocked && "bg-secondary-50/50")}>
                                                             <td className="py-2.5 px-4 text-center text-xs font-bold text-secondary-400">
                                                                 {isLocked ? <ShieldCheck className="w-3.5 h-3.5 text-primary-500 mx-auto" /> : idx + 1}
                                                             </td>

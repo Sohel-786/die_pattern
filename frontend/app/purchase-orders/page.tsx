@@ -335,8 +335,7 @@ export default function PurchaseOrdersPage() {
                 ))
               ) : orders.length > 0 ? (
                 orders.map((po) => (
-                  <Fragment key={po.id}>
-                    <TableRow
+                  <Fragment key={po.id}><TableRow
                       key={po.id}
                       className={cn(
                         "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
@@ -678,11 +677,10 @@ export default function PurchaseOrdersPage() {
                           </td>
                         </TableRow>
                       )}
-                    </AnimatePresence>
-                  </Fragment>
+                    </AnimatePresence></Fragment>
                 ))
               ) : (
-                <TableRow>
+                <TableRow key="empty">
                   <td
                     colSpan={10}
                     className="py-16 text-center text-secondary-400 italic font-medium"

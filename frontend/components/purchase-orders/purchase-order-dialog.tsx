@@ -676,8 +676,7 @@ export function PurchaseOrderDialog({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-secondary-100 bg-white">
-                      {items.length === 0 ? (
-                        <tr>
+                      {items.length === 0 ? (<tr key="empty">
                           <td colSpan={11} className="py-12 text-center text-secondary-500 text-sm">
                             No items. Click &quot;Add PI&quot; to add approved purchase indents.
                           </td>
@@ -688,8 +687,7 @@ export function PurchaseOrderDialog({
                           const tax = ((i.rate ?? 0) * (i.gstPercent ?? 0)) / 100;
                           const total = (i.rate ?? 0) + tax;
                           const included = i.included !== false;
-                          return (
-                            <tr key={i.purchaseIndentItemId} className={cn("hover:bg-primary-50/30", !included && "opacity-60 bg-secondary-50/50")}>
+                          return (<tr key={i.purchaseIndentItemId} className={cn("hover:bg-primary-50/30", !included && "opacity-60 bg-secondary-50/50")}>
                               <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{items.indexOf(i) + 1}</td>
                               <td className="py-2.5 px-3 align-middle">
                                 <input

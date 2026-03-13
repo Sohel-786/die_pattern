@@ -131,8 +131,7 @@ export function TransferItemSelectionDialog({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pendingItems.map((item, idx) => (
-                                        <TableRow
+                                    {pendingItems.map((item, idx) => (<TableRow
                                             key={item.id}
                                             className="border-b border-primary-50 last:border-0 hover:bg-primary-50/30 transition-colors"
                                         >
@@ -202,8 +201,7 @@ export function TransferItemSelectionDialog({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filtered.length === 0 ? (
-                                        <TableRow>
+                                    {filtered.length === 0 ? (<TableRow key="empty">
                                             <TableCell colSpan={4} className="py-24 text-center">
                                                 <div className="flex flex-col items-center gap-2 grayscale opacity-40">
                                                     <Package className="w-10 h-10" />
@@ -214,8 +212,7 @@ export function TransferItemSelectionDialog({
                                     ) : (
                                         filtered.map((item) => {
                                             const inPending = pendingSet.has(item.id);
-                                            return (
-                                                <TableRow
+                                            return (<TableRow
                                                     key={item.id}
                                                     className={cn(
                                                         "border-b border-secondary-50 last:border-0 transition-all cursor-pointer group",

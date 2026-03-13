@@ -192,8 +192,7 @@ export function QCReviewDialog({ open, onOpenChange, qc, canApprove }: QCReviewD
                                         const isPending = !isApproved && !isRejected;
                                         const isMutating = approveItemMutation.isPending && approveItemMutation.variables?.qcItemId === it.id;
 
-                                        return (
-                                            <tr
+                                        return (<tr
                                                 key={it.id}
                                                 className={cn(
                                                     "transition-all duration-200",

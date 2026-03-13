@@ -108,8 +108,7 @@ export function QCItemSelectionDialog({
                                 {filteredItems.map((item) => {
                                     const isSelected = tempSelectedIds.includes(item.inwardLineId);
 
-                                    return (
-                                        <tr
+                                    return (<tr
                                             key={item.inwardLineId}
                                             onClick={() => toggleSelection(item)}
                                             className={cn(

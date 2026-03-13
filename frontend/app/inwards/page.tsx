@@ -185,7 +185,7 @@ export default function InwardsPage() {
                                 ))
                             ) : inwards.length > 0 ? (
                                 inwards.map((i, idx) => (
-                                    <Fragment key={i.id}>                                        <TableRow
+                                    <Fragment key={i.id}><TableRow
                                              className={cn(
                                                  "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
                                                  expandedInwardId === i.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
@@ -412,8 +412,7 @@ export default function InwardsPage() {
                                                     </td>
                                                 </TableRow>
                                             )}
-                                        </AnimatePresence>
-                                    </Fragment>
+                                        </AnimatePresence></Fragment>
                                 ))
                             ) : (
                                 <TableRow key="empty">

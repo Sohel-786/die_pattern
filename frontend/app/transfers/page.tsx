@@ -188,8 +188,7 @@ export default function TransfersPage() {
                                 ))
                             ) : transfers.length > 0 ? (
                                 transfers.map((tr, idx) => (
-                                    <Fragment key={tr.id}>
-                                        <TableRow
+                                    <Fragment key={tr.id}><TableRow
                                             className={cn(
                                                 "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
                                                 expandedTransferId === tr.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
@@ -339,11 +338,10 @@ export default function TransfersPage() {
                                                     </td>
                                                 </TableRow>
                                             )}
-                                        </AnimatePresence>
-                                    </Fragment>
+                                        </AnimatePresence></Fragment>
                                 ))
                             ) : (
-                                <TableRow>
+                                <TableRow key="empty">
                                     <td colSpan={9} className="py-24 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-12 h-12 bg-secondary-50 rounded-2xl flex items-center justify-center text-secondary-200">

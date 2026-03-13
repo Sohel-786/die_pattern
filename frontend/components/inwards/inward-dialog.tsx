@@ -490,8 +490,7 @@ export function InwardDialog({
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100 bg-white">
-                                            {lines.length === 0 ? (
-                                                <tr key="no-items">
+                                            {lines.length === 0 ? (<tr key="no-items">
                                                     <td colSpan={5} className="py-12 text-center text-secondary-500 text-sm">
                                                         No items. Select a vendor and click "{getImportButtonText()}" to begin.
                                                     </td>
@@ -500,8 +499,7 @@ export function InwardDialog({
                                                 lines.map((line, idx) => {
                                                     const included = line.included !== false;
                                                     const isQCLocked = line.isQCPending === false || line.hasActiveQC === true;
-                                                    return (
-                                                        <tr key={idx} className={cn("hover:bg-primary-50/30 transition-colors", !included && "opacity-60 bg-secondary-50/50")}>
+                                                        return (<tr key={idx} className={cn("hover:bg-primary-50/30 transition-colors", !included && "opacity-60 bg-secondary-50/50")}>
                                                             <td className="py-2.5 px-3 text-center align-middle">
                                                                 <input
                                                                     type="checkbox"

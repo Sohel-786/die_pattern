@@ -297,8 +297,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-secondary-100 bg-white">
-                                    {selectedItems.length === 0 ? (
-                                        <tr key="no-items">
+                                    {selectedItems.length === 0 ? (<tr key="no-items">
                                             <td colSpan={4} className="py-12 text-center text-secondary-500 text-sm">
                                                 No items. Click &quot;Add Die / Pattern&quot; to add items.
                                             </td>
@@ -306,8 +305,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                     ) : (
                                         selectedItems.map((item, idx) => {
                                             const inPo = itemIdsInPo.has(item.id);
-                                            return (
-                                                <tr
+                                            return (<tr
                                                     key={item.id}
                                                     className={cn("hover:bg-primary-50/30", inPo && "opacity-70 bg-secondary-50/50")}
                                                 >

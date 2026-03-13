@@ -415,8 +415,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100 bg-white">
-                                            {selectedItems.length === 0 ? (
-                                                <tr>
+                                            {selectedItems.length === 0 ? (<tr>
                                                     <td colSpan={8} className="py-12 text-center text-secondary-500 text-sm">
                                                         No items selected. Click &quot;{getAddButtonText()}&quot; to begin.
                                                     </td>
@@ -424,8 +423,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                             ) : (
                                                 selectedItems.map((item, idx) => {
                                                     const isIncluded = item.included !== false;
-                                                    return (
-                                                        <tr
+                                                        return (<tr
                                                             key={item.inwardLineId}
                                                             className={cn(
                                                                 "transition-all duration-200",

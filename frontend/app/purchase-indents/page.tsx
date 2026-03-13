@@ -280,8 +280,7 @@ export default function PurchaseIndentsPage() {
                                 ))
                             ) : indents.length > 0 ? (
                                 indents.map((pi, idx) => (
-                                    <Fragment key={pi.id}>
-                                        <TableRow
+                                    <Fragment key={pi.id}><TableRow
                                             key={pi.id}
                                             className={cn(
                                                 "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
@@ -571,8 +570,7 @@ export default function PurchaseIndentsPage() {
                                                     </td>
                                                 </TableRow>
                                             )}
-                                        </AnimatePresence>
-                                    </Fragment>
+                                        </AnimatePresence></Fragment>
                                 ))
                             ) : (
                                 <TableRow key="empty">
