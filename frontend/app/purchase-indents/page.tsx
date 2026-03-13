@@ -575,7 +575,7 @@ export default function PurchaseIndentsPage() {
                                     </Fragment>
                                 ))
                             ) : (
-                                <TableRow>
+                                <TableRow key="empty">
                                     <td colSpan={isAdmin ? 9 : 8} className="py-16 text-center text-secondary-400 italic font-medium">
                                         No indents found matching parameters.
                                     </td>

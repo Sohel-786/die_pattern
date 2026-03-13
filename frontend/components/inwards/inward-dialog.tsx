@@ -491,7 +491,7 @@ export function InwardDialog({
                                         </thead>
                                         <tbody className="divide-y divide-secondary-100 bg-white">
                                             {lines.length === 0 ? (
-                                                <tr>
+                                                <tr key="no-items">
                                                     <td colSpan={5} className="py-12 text-center text-secondary-500 text-sm">
                                                         No items. Select a vendor and click "{getImportButtonText()}" to begin.
                                                     </td>

@@ -416,7 +416,7 @@ export default function InwardsPage() {
                                     </Fragment>
                                 ))
                             ) : (
-                                <TableRow>
+                                <TableRow key="empty">
                                     <td colSpan={9} className="py-24 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-12 h-12 bg-secondary-50 rounded-2xl flex items-center justify-center text-secondary-200">

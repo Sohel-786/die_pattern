@@ -298,7 +298,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                 </thead>
                                 <tbody className="divide-y divide-secondary-100 bg-white">
                                     {selectedItems.length === 0 ? (
-                                        <tr>
+                                        <tr key="no-items">
                                             <td colSpan={4} className="py-12 text-center text-secondary-500 text-sm">
                                                 No items. Click &quot;Add Die / Pattern&quot; to add items.
                                             </td>

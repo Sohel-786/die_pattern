@@ -162,7 +162,7 @@ export function PiItemSelectionDialog({
                 <TableBody>
                   {pendingItems.map((item, idx) => (
                     <TableRow
-                      key={item.itemId}
+                      key={`pending-${item.itemId}-${idx}`}
                       className="border-b border-primary-100/50 last:border-0 hover:bg-primary-50/50"
                     >
                       <TableCell className="text-center text-secondary-600 font-medium text-sm py-2">
@@ -225,19 +225,19 @@ export function PiItemSelectionDialog({
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow>
+                    <TableRow key="no-items">
                       <TableCell colSpan={5} className="py-12 text-center text-secondary-500">
                         No items found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((item) => {
+                    filtered.map((item, idx) => {
                       const canAdd = item.status === "NotInStock" && !selectedSet.has(item.itemId);
                       const alreadyInPI = selectedSet.has(item.itemId);
                       const inPending = pendingSet.has(item.itemId);
                       return (
                         <TableRow
-                          key={item.itemId}
+                          key={`available-${item.itemId}-${idx}`}
                           className={cn(
                             "border-b border-secondary-100 transition-colors",
                             !canAdd && "bg-secondary-50/50",
