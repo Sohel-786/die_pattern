@@ -21,6 +21,8 @@ interface DatePickerProps {
     disabled?: boolean
     clearable?: boolean
     disabledDays?: any // Can be Matcher | Matcher[]
+    fromYear?: number
+    toYear?: number
 }
 
 export function DatePicker({
@@ -31,6 +33,8 @@ export function DatePicker({
     disabled,
     clearable = false,
     disabledDays,
+    fromYear = 1900,
+    toYear = new Date().getFullYear() + 20,
 }: DatePickerProps) {
     const [open, setOpen] = React.useState(false);
 
@@ -82,6 +86,9 @@ export function DatePicker({
                     onSelect={handleSelect}
                     disabled={disabledDays}
                     initialFocus
+                    captionLayout="dropdown-buttons"
+                    fromYear={fromYear}
+                    toYear={toYear}
                 />
             </PopoverContent>
         </Popover>

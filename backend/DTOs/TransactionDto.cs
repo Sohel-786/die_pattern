@@ -90,6 +90,128 @@ namespace net_backend.DTOs
         public string DrgNo { get; set; } = string.Empty;
     }
 
+    /// <summary>Full data for Purchase Order print view (portrait format matching rptPurchaseOrder).</summary>
+    public class PurchaseOrderPrintDto
+    {
+        public string CompanyName { get; set; } = string.Empty;
+        public string CompanyAddress { get; set; } = string.Empty;
+        public string CompanyGstNo { get; set; } = string.Empty;
+        public string DocumentNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public DateTime? RevisionDate { get; set; }
+        public string VendorPartyCode { get; set; } = string.Empty;
+        public string VendorName { get; set; } = string.Empty;
+        public string VendorAddress { get; set; } = string.Empty;
+        public string VendorGstNo { get; set; } = string.Empty;
+        public string QuotationNo { get; set; } = string.Empty;
+        public DateTime? QuotationDate { get; set; }
+        public string PoNo { get; set; } = string.Empty;
+        public DateTime? PoDate { get; set; }
+        public string PiNo { get; set; } = string.Empty;
+        public DateTime? IndentDate { get; set; }
+        public string PurchaseType { get; set; } = string.Empty;
+        public string RefWoNo { get; set; } = string.Empty;
+        public DateTime? DeliveryDate { get; set; }
+        public bool MtcReq { get; set; }
+        public string MaterialSpecification { get; set; } = string.Empty;
+        public string PackingSpecification { get; set; } = string.Empty;
+        public string DeliveryLocation { get; set; } = string.Empty;
+        public string PreparedBy { get; set; } = string.Empty;
+        public string ReviewedBy { get; set; } = string.Empty;
+        public string AuthorisedBy { get; set; } = string.Empty;
+        public decimal GstPercent { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal GstAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public List<PurchaseOrderPrintRowDto> Rows { get; set; } = new();
+    }
+
+    public class PurchaseOrderPrintRowDto
+    {
+        public int SrNo { get; set; }
+        public string PartNo { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string DrawingNo { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal Rate { get; set; }
+        public decimal? NetWeight { get; set; }
+        public decimal Amount { get; set; }
+        public decimal SgstAmount { get; set; }
+        public decimal CgstAmount { get; set; }
+        public decimal Total { get; set; }
+    }
+
+    /// <summary>Full data for Job Work print view (portrait format).</summary>
+    public class JobWorkPrintDto
+    {
+        public string CompanyName { get; set; } = string.Empty;
+        public string CompanyAddress { get; set; } = string.Empty;
+        public string CompanyGstNo { get; set; } = string.Empty;
+        public string DocumentNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public DateTime? RevisionDate { get; set; }
+        public string JobWorkNo { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string ToPartyCode { get; set; } = string.Empty;
+        public string ToPartyName { get; set; } = string.Empty;
+        public string ToPartyAddress { get; set; } = string.Empty;
+        public string ToPartyGstNo { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
+        public string PreparedBy { get; set; } = string.Empty;
+        public List<JobWorkPrintRowDto> Rows { get; set; } = new();
+    }
+
+    public class JobWorkPrintRowDto
+    {
+        public int SrNo { get; set; }
+        public string PartNo { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string ItemTypeName { get; set; } = string.Empty;
+        public string MaterialName { get; set; } = string.Empty;
+        public string DrawingNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public decimal? Rate { get; set; }
+        public decimal? GstPercent { get; set; }
+        public string Remarks { get; set; } = string.Empty;
+        public bool WillChangeName { get; set; }
+        public string? ProposedNewName { get; set; }
+    }
+
+    /// <summary>Full data for Transfer Entry print view (portrait format).</summary>
+    public class TransferPrintDto
+    {
+        public string CompanyName { get; set; } = string.Empty;
+        public string CompanyAddress { get; set; } = string.Empty;
+        public string CompanyGstNo { get; set; } = string.Empty;
+        public string DocumentNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public DateTime? RevisionDate { get; set; }
+        public string TransferNo { get; set; } = string.Empty;
+        public DateTime TransferDate { get; set; }
+        public string FromPartyName { get; set; } = string.Empty;
+        public string ToPartyName { get; set; } = string.Empty;
+        public string OutFor { get; set; } = string.Empty;
+        public string ReasonDetails { get; set; } = string.Empty;
+        public string VehicleNo { get; set; } = string.Empty;
+        public string PersonName { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
+        public string PreparedBy { get; set; } = string.Empty;
+        public List<TransferPrintRowDto> Rows { get; set; } = new();
+    }
+
+    public class TransferPrintRowDto
+    {
+        public int SrNo { get; set; }
+        public string PartNo { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string ItemTypeName { get; set; } = string.Empty;
+        public string MaterialName { get; set; } = string.Empty;
+        public string DrawingNo { get; set; } = string.Empty;
+        public string RevisionNo { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
+    }
+
     /// <summary>Item with its current process state for PI item selection (only NotInStock can be added).</summary>
     public class ItemWithStatusDto
     {

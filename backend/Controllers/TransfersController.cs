@@ -228,6 +228,83 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<TransferDto> { Data = result });
         }
 
+        [HttpGet("{id}/print")]
+        public async Task<ActionResult<ApiResponse<TransferPrintDto>>> GetPrint(int id)
+        {
+            if (!await HasPermission("ViewTransfer")) return Forbidden();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var t = await _context.Transfers
+                .Include(x => x.FromParty)
+                .Include(x => x.ToParty)
+                .Include(x => x.Creator)
+                .Include(x => x.Location)
+                .Include(x => x.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.ItemType)
+                .Include(x => x.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.Material)
+                .FirstOrDefaultAsync(x => x.Id == id && x.LocationId == locationId);
+
+            if (t == null) return NotFound();
+            if (!t.IsActive && !await IsAdmin()) return NotFound();
+
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+            var locationName = location?.Name ?? "Our Location";
+
+            var companyName = company?.Name ?? "";
+            var companyAddress = string.Join(", ", new[] { company?.Address, company?.City, company?.State, company?.Pincode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var companyGst = company?.GstNo ?? "";
+
+            var docNo = "-";
+            var revNo = "-";
+            DateTime? revDate = null;
+            var appliedDoc = await _context.DocumentControls
+                .Where(d => d.DocumentType == DocumentType.TransferEntry && d.IsActive && d.IsApplied)
+                .FirstOrDefaultAsync();
+            if (appliedDoc != null) { docNo = appliedDoc.DocumentNo; revNo = appliedDoc.RevisionNo; revDate = appliedDoc.RevisionDate; }
+
+            var fromName = t.FromPartyId == null ? locationName : t.FromParty?.Name ?? "";
+            var toName = t.ToPartyId == null ? locationName : t.ToParty?.Name ?? "";
+
+            var srNo = 0;
+            var rows = t.Items.OrderBy(i => i.Id).Select(i => new TransferPrintRowDto
+            {
+                SrNo = ++srNo,
+                PartNo = i.Item?.MainPartName ?? "-",
+                ProductName = i.ItemNameSnapshot ?? i.Item?.CurrentName ?? i.Item?.MainPartName ?? "-",
+                ItemTypeName = i.Item?.ItemType?.Name ?? "-",
+                MaterialName = i.Item?.Material?.Name ?? "-",
+                DrawingNo = i.Item?.DrawingNo ?? "-",
+                RevisionNo = i.Item?.RevisionNo ?? "0",
+                Remarks = i.Remarks ?? ""
+            }).ToList();
+
+            var dto = new TransferPrintDto
+            {
+                CompanyName = companyName,
+                CompanyAddress = companyAddress,
+                CompanyGstNo = companyGst,
+                DocumentNo = docNo,
+                RevisionNo = revNo,
+                RevisionDate = revDate,
+                TransferNo = t.TransferNo,
+                TransferDate = t.TransferDate,
+                FromPartyName = fromName,
+                ToPartyName = toName,
+                OutFor = t.OutFor ?? "",
+                ReasonDetails = t.ReasonDetails ?? "",
+                VehicleNo = t.VehicleNo ?? "",
+                PersonName = t.PersonName ?? "",
+                Remarks = t.Remarks ?? "",
+                PreparedBy = t.Creator != null ? t.Creator.FirstName + " " + t.Creator.LastName : "",
+                Rows = rows
+            };
+
+            return Ok(new ApiResponse<TransferPrintDto> { Data = dto });
+        }
+
         [HttpPost]
         public async Task<ActionResult<ApiResponse<Transfer>>> Create([FromBody] CreateTransferDto dto)
         {

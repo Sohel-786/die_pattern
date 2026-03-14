@@ -217,6 +217,79 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<JobWorkDto> { Data = MapToDto(jw, inwardLines, qcItems) });
         }
 
+        [HttpGet("{id}/print")]
+        public async Task<ActionResult<ApiResponse<JobWorkPrintDto>>> GetPrint(int id)
+        {
+            if (!await HasPermission("ViewMovement")) return Forbidden();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var jw = await _context.JobWorks
+                .Include(j => j.ToParty)
+                .Include(j => j.Creator)
+                .Include(j => j.Location)
+                .Include(j => j.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.ItemType)
+                .Include(j => j.Items)
+                    .ThenInclude(i => i.Item)
+                        .ThenInclude(it => it!.Material)
+                .FirstOrDefaultAsync(j => j.Id == id && j.LocationId == locationId && j.Location!.CompanyId == companyId);
+
+            if (jw == null) return NotFound();
+            if (!jw.IsActive && !await IsAdmin()) return NotFound();
+
+            var company = await _context.Companies.FindAsync(companyId);
+            var companyName = company?.Name ?? "";
+            var companyAddress = string.Join(", ", new[] { company?.Address, company?.City, company?.State, company?.Pincode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var companyGst = company?.GstNo ?? "";
+
+            var docNo = "-";
+            var revNo = "-";
+            DateTime? revDate = null;
+            var appliedDoc = await _context.DocumentControls
+                .Where(d => d.DocumentType == DocumentType.JobWork && d.IsActive && d.IsApplied)
+                .FirstOrDefaultAsync();
+            if (appliedDoc != null) { docNo = appliedDoc.DocumentNo; revNo = appliedDoc.RevisionNo; revDate = appliedDoc.RevisionDate; }
+
+            var srNo = 0;
+            var rows = jw.Items.OrderBy(i => i.Id).Select(i => new JobWorkPrintRowDto
+            {
+                SrNo = ++srNo,
+                PartNo = i.Item?.MainPartName ?? "-",
+                ProductName = i.OriginalNameSnapshot ?? i.Item?.CurrentName ?? i.Item?.MainPartName ?? "-",
+                ItemTypeName = i.Item?.ItemType?.Name ?? "-",
+                MaterialName = i.Item?.Material?.Name ?? "-",
+                DrawingNo = i.Item?.DrawingNo ?? "-",
+                RevisionNo = i.Item?.RevisionNo ?? "0",
+                Rate = i.Rate,
+                GstPercent = i.GstPercent,
+                Remarks = i.Remarks ?? "",
+                WillChangeName = i.WillChangeName,
+                ProposedNewName = i.ProposedNewName
+            }).ToList();
+
+            var dto = new JobWorkPrintDto
+            {
+                CompanyName = companyName,
+                CompanyAddress = companyAddress,
+                CompanyGstNo = companyGst,
+                DocumentNo = docNo,
+                RevisionNo = revNo,
+                RevisionDate = revDate,
+                JobWorkNo = jw.JobWorkNo,
+                CreatedAt = jw.CreatedAt,
+                ToPartyCode = jw.ToParty?.PartyCode ?? "",
+                ToPartyName = jw.ToParty?.Name ?? "",
+                ToPartyAddress = jw.ToParty?.Address ?? "",
+                ToPartyGstNo = jw.ToParty?.GstNo ?? "",
+                Description = jw.Description ?? "",
+                Remarks = jw.Remarks ?? "",
+                PreparedBy = jw.Creator != null ? jw.Creator.FirstName + " " + jw.Creator.LastName : "",
+                Rows = rows
+            };
+
+            return Ok(new ApiResponse<JobWorkPrintDto> { Data = dto });
+        }
+
         [HttpPost]
         public async Task<ActionResult<ApiResponse<JobWork>>> Create([FromBody] CreateJobWorkDto dto)
         {

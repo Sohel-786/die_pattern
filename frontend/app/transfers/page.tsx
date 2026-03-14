@@ -29,6 +29,7 @@ import { TransferFilters } from "@/components/filters/transfer-filters";
 import { initialTransferFilters, TransferFiltersState, buildTransferFilterParams } from "@/lib/transfer-filters";
 import { toast } from "react-hot-toast";
 import { TransferDialog } from "@/components/transfers/transfer-dialog";
+import { TransferPreviewModal } from "@/components/transfers/transfer-preview-modal";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useLocationContext } from "@/contexts/location-context";
@@ -48,6 +49,7 @@ export default function TransfersPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
     const [inactiveTarget, setInactiveTarget] = useState<Transfer | null>(null);
+    const [previewTransferId, setPreviewTransferId] = useState<number | null>(null);
 
     const debouncedSearch = useDebounce(filters.search, 500);
 
@@ -240,6 +242,15 @@ export default function TransfersPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
+                                                        onClick={() => setPreviewTransferId(tr.id)}
+                                                        className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                                                        title="Preview / Print"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => {
                                                             setSelectedTransfer(tr);
                                                             setDialogOpen(true);
@@ -362,6 +373,13 @@ export default function TransfersPage() {
                     onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
                 />
             </Card>
+
+            {previewTransferId !== null && (
+                <TransferPreviewModal
+                    transferId={previewTransferId}
+                    onClose={() => setPreviewTransferId(null)}
+                />
+            )}
 
             <TransferDialog
                 open={dialogOpen}

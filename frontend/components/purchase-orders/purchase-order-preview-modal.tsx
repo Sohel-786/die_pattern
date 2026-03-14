@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { X, Printer } from "lucide-react";
-import { registerDialog, isTopDialog } from "@/lib/dialog-stack";
+import { registerDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
-import { PO, PoStatus, GstType } from "@/types";
+import type { PurchaseOrderPrintData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatDate } from "@/lib/utils";
 
 interface PurchaseOrderPreviewModalProps {
   poId: number;
@@ -15,11 +16,13 @@ interface PurchaseOrderPreviewModalProps {
 }
 
 export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPreviewModalProps) {
-  const { data: po, isLoading } = useQuery<PO>({
-    queryKey: ["purchase-order", poId],
+  const { data: printData, isLoading } = useQuery<PurchaseOrderPrintData>({
+    queryKey: ["purchase-order-print", poId],
     queryFn: async () => {
-      const res = await api.get(`/purchase-orders/${poId}`);
-      return res.data.data;
+      const res = await api.get(`/purchase-orders/${poId}/print`);
+      const d = res.data?.data;
+      if (!d) throw new Error("No data");
+      return d as PurchaseOrderPrintData;
     },
     enabled: !!poId,
   });
@@ -39,38 +42,26 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
     }
   }, [poId, handleClose]);
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isTopDialog(handleClose)) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [handleClose, onClose]);
-
   const handlePrint = () => {
     window.print();
   };
 
   if (!poId) return null;
 
-  return (
-    <div className="fixed inset-0 z-[1100] flex flex-col bg-white">
+  const content = (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col bg-white"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="po-preview-title"
+    >
       <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-secondary-200 bg-secondary-50 print:hidden">
-        <h2 className="text-lg font-bold text-secondary-900">Purchase Order – Preview</h2>
+        <h2 id="po-preview-title" className="text-lg font-bold text-secondary-900">Purchase Order – Preview</h2>
         <div className="flex items-center gap-2">
-          {po?.status === PoStatus.Approved && (
-            <Button onClick={handlePrint} className="bg-primary-600 hover:bg-primary-700 text-white font-semibold">
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-          )}
-          {po?.status !== PoStatus.Approved && (
-            <span className="text-xs text-amber-600 font-medium px-3 py-1.5 bg-amber-50 rounded-lg">
-              Print available only after approval
-            </span>
-          )}
+          <Button onClick={handlePrint} className="bg-primary-600 hover:bg-primary-700 text-white font-semibold">
+            <Printer className="w-4 h-4 mr-2" />
+            Print
+          </Button>
           <Button variant="outline" onClick={onClose} className="border-secondary-300">
             <X className="w-4 h-4 mr-2" />
             Close
@@ -78,140 +69,187 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 md:p-10 print:p-0">
+      <div className="flex-1 overflow-auto p-4 print:p-0 print:overflow-visible flex items-start justify-center min-h-0">
         {isLoading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex justify-center items-center min-h-[400px] w-full">
             <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : po ? (
-          <div id="po-document" className="max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none">
-            <div className="border-b-2 border-secondary-800 pb-4 mb-6">
-              <h1 className="text-2xl font-black text-secondary-900 uppercase tracking-tight">Purchase Order</h1>
-              <p className="text-sm font-semibold text-secondary-600 mt-1">{po.poNo}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Order No</span>
-                <span className="font-bold text-secondary-900">{po.poNo}</span>
-              </div>
-              <div className="flex flex-col gap-1 text-right">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Date of Issue</span>
-                <span className="font-bold text-secondary-900">{formatDateTime(po.createdAt)}</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Work Priority</span>
-                <span className="font-bold text-primary-600 uppercase italic">{po.purchaseType || "Regular"}</span>
-              </div>
-              <div className="flex flex-col gap-1 text-right">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Expected Delivery</span>
-                <span className="font-bold text-secondary-900">{po.deliveryDate ? formatDateTime(po.deliveryDate) : "TBD"}</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Supplier / Vendor</span>
-                <span className="font-bold text-secondary-900">{po.vendorName ?? "—"}</span>
-              </div>
-              <div className="flex flex-col gap-1 text-right">
-                <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">Quotation Ref No</span>
-                <span className="font-bold text-secondary-900 uppercase">{po.quotationNo || "N/A"}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6 mb-8 py-4 border-y border-secondary-100 italic">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">Taxable Value</span>
-                <span className="text-lg font-bold text-secondary-900 tracking-tight">₹ {po.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex flex-col text-center">
-                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">GST ({po.gstPercent}%)</span>
-                <span className="text-lg font-bold text-secondary-900 tracking-tight">₹ {po.gstAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex flex-col text-right">
-                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">PO Grand Total</span>
-                <span className="text-xl font-black text-primary-700 tracking-tighter">₹ {po.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-            {(po.quotationUrls?.length ?? 0) > 0 && (
-              <div className="mb-6 p-4 bg-secondary-50 rounded-lg border border-secondary-100">
-                <p className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-2">Quotation attachments</p>
-                <ul className="text-sm text-secondary-700 space-y-1">
-                  {po.quotationUrls!.map((url, i) => {
-                    const base = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || window.location.origin) : "";
-                    return (
-                      <li key={i}>
-                        <a href={url.startsWith("http") ? url : `${base}${url}`} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
-                          {url.split("/").pop() ?? url}
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-            <div className="border border-secondary-200 rounded-2xl overflow-hidden mb-8 shadow-sm">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-secondary-50 border-b border-secondary-200">
-                    <th className="text-left py-4 px-6 font-black text-secondary-500 uppercase tracking-widest w-12">#</th>
-                    <th className="text-left py-4 px-6 font-black text-secondary-500 uppercase tracking-widest">Nomenclature & Technical Specs</th>
-                    <th className="text-right py-4 px-4 font-black text-secondary-500 uppercase tracking-widest w-28">Rate (₹)</th>
-                    <th className="text-right py-4 px-6 font-black text-secondary-500 uppercase tracking-widest w-32">Amount (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-secondary-100">
-                  {po.items?.map((item: any, idx: number) => {
-                    const rate = item.rate ?? 0;
-                    return (
-                      <tr key={item.id} className="hover:bg-secondary-50/50 transition-colors">
-                        <td className="py-4 px-6 font-bold text-secondary-400">{idx + 1}</td>
-                        <td className="py-4 px-6">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-black text-secondary-900 uppercase">{item.currentName ?? "—"}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-secondary-500 uppercase tracking-tight">{item.mainPartName ?? "—"}</span>
-                              <span className="text-[10px] text-primary-600 font-black italic uppercase">{item.materialName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold text-secondary-400">
-                              <span className="uppercase">DWG: {item.drawingNo || "N/A"}</span>
-                              <span>•</span>
-                              <span className="uppercase">REV: {item.revisionNo || "0"}</span>
-                              <span>•</span>
-                              <span className="uppercase">PI Reference: {item.piNo || "—"}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-right font-bold text-secondary-600 tabular-nums">{rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td className="py-4 px-6 text-right font-black text-secondary-900 tabular-nums">
-                          {rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {po.remarks && (
-              <div className="mb-6 p-4 bg-secondary-50 rounded-lg border border-secondary-100">
-                <p className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1">Remarks</p>
-                <p className="text-sm text-secondary-800">{po.remarks}</p>
-              </div>
-            )}
-
-            {po.status === PoStatus.Approved && (po.approverName || po.approvedAt) && (
-              <div className="mt-8 pt-6 border-t-2 border-secondary-200">
-                <div className="flex justify-end">
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1">Approved by</p>
-                    <p className="text-sm font-semibold text-secondary-900">{po.approverName ?? "—"}</p>
-                    {po.approvedAt && (
-                      <p className="text-xs text-secondary-500 mt-0.5">{formatDateTime(po.approvedAt)}</p>
-                    )}
-                  </div>
+        ) : printData ? (
+          <div id="po-print-document" className="po-print-container">
+            <div className="po-page">
+              {/* Header: Company left, Doc box right */}
+              <div className="po-header-row">
+                <div className="po-header-left">
+                  <h1 className="po-company-name">{printData.companyName}</h1>
+                  <p className="po-company-address">{printData.companyAddress}</p>
+                  <p className="po-gst">GST NO : {printData.companyGstNo}</p>
+                </div>
+                <div className="po-doc-box">
+                  <div>Doc No. : {printData.documentNo}</div>
+                  <div>Rev. No. : {printData.revisionNo}</div>
+                  <div>Rev. Date : {printData.revisionDate ? formatDate(printData.revisionDate) : "-"}</div>
+                  <div>Page No. : Page 1 of 1</div>
                 </div>
               </div>
-            )}
+
+              <h2 className="po-title">PURCHASE ORDER</h2>
+
+              {/* TO block and order details side by side */}
+              <div className="po-to-order-row">
+                <div className="po-to-block">
+                  <p className="po-to-label">TO,</p>
+                  <p><strong>Party Code:</strong> {printData.vendorPartyCode || "-"}</p>
+                  <p className="po-vendor-name">{printData.vendorName}</p>
+                  <p className="po-vendor-address">{printData.vendorAddress}</p>
+                  <p><strong>GST NO</strong> {printData.vendorGstNo}</p>
+                  <p>Kind Attn.:</p>
+                  <p>Dear Sir,</p>
+                  <p className="po-message">We are pleased to place our order for following item according to the following terms &amp; conditions. We request you to mention our P.O. No. in your delivery challan or Invoice.</p>
+                </div>
+                <div className="po-order-details">
+                  <div><strong>Quot. No :</strong> {printData.quotationNo}</div>
+                  <div><strong>Date :</strong> {printData.quotationDate ? formatDateTime(printData.quotationDate) : "-"}</div>
+                  <div><strong>P.O. NO. :</strong> {printData.poNo}</div>
+                  <div><strong>Date :</strong> {printData.poDate ? formatDate(printData.poDate) : "-"}</div>
+                  <div><strong>P.I.No :</strong> {printData.piNo}</div>
+                  <div><strong>Indent Date :</strong> {printData.indentDate ? formatDate(printData.indentDate) : "-"}</div>
+                  <div><strong>Pur. Type :</strong> {printData.purchaseType}</div>
+                  <div><strong>Ref. Wo. No. :</strong> {printData.refWoNo || "-"}</div>
+                </div>
+              </div>
+
+              {/* Item table */}
+              <table className="po-items-table">
+                <thead>
+                  <tr>
+                    <th>Sr. No.</th>
+                    <th>Part No.</th>
+                    <th>Product Name with Size</th>
+                    <th>Drawing No.</th>
+                    <th>Qty</th>
+                    <th>Rate(INR)</th>
+                    <th>Net Weight</th>
+                    <th>Amount</th>
+                    <th>SGST (%)</th>
+                    <th>CGST (%)</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printData.rows.map((row) => (
+                    <tr key={row.srNo}>
+                      <td>{row.srNo}</td>
+                      <td>{row.partNo}</td>
+                      <td>{row.productName}</td>
+                      <td>{row.drawingNo}</td>
+                      <td style={{ textAlign: "right" }}>{row.quantity}</td>
+                      <td style={{ textAlign: "right" }}>{row.rate.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{row.netWeight != null ? row.netWeight.toFixed(3) : "—"}</td>
+                      <td style={{ textAlign: "right" }}>{row.amount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{row.sgstAmount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{row.cgstAmount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{row.total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Summary: totals aligned with item table columns */}
+              <div className="po-summary-wrap">
+                <span className="po-summary-gst">GST No.: {printData.companyGstNo}</span>
+                <table className="po-summary-table">
+                  <tbody>
+                    <tr>
+                      <td colSpan={4} className="po-summary-label">Total Qty: {printData.rows.reduce((s, r) => s + r.quantity, 0)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.quantity, 0)}</td>
+                      <td></td>
+                      <td style={{ textAlign: "right" }}>{printData.rows.reduce((s, r) => s + (r.netWeight ?? 0), 0).toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.subtotal.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.sgstAmount, 0).toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.cgstAmount, 0).toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.total, 0).toFixed(2)}</td>
+                    </tr>
+                    <tr className="po-tcs-row">
+                      <td colSpan={9}>TCS %</td>
+                      <td colSpan={2} style={{ textAlign: "right" }}>0.00</td>
+                    </tr>
+                    <tr className="po-final-row">
+                      <td colSpan={10} style={{ fontWeight: "bold" }}>Final Amount</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.totalAmount.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Terms section */}
+              <div className="po-terms-section">
+                <div className="po-terms-grid">
+                  <div>
+                    <strong>Material Specification</strong>
+                    <p>{printData.materialSpecification}</p>
+                  </div>
+                  <div>
+                    <strong>Inspection Instruction (where applicable)</strong>
+                    <table className="po-inspection-table">
+                      <thead>
+                        <tr>
+                          <th>Visual</th>
+                          <th>Dimensional</th>
+                          <th>Chemical &amp; Physical</th>
+                          <th>Instruction No.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>W-P-21-01 R.3</td>
+                          <td>W-P-21-03 R.0</td>
+                          <td>Q-004 R.5</td>
+                          <td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div>
+                    <strong>Test Certificate (MTC):</strong> Required
+                    <span className="ml-2">{printData.mtcReq ? "YES" : "NO"}</span>
+                  </div>
+                  <div>
+                    <strong>Document Attachment:</strong>
+                    <p>A Copy of Test Certificate Required with Material Delivery Otherwise Material will be Rejected.</p>
+                  </div>
+                </div>
+                <div className="po-delivery-row">
+                  <div><strong>Packing Specification:</strong> {printData.packingSpecification}</div>
+                  <div><strong>Delivery Location:</strong> {printData.deliveryLocation}</div>
+                  <div><strong>Delivery Date:</strong> {printData.deliveryDate ? formatDateTime(printData.deliveryDate) : "-"}</div>
+                </div>
+                <div><strong>Narration:</strong></div>
+              </div>
+
+              {/* Signatures */}
+              <div className="po-signatures">
+                <div className="po-sig-cell">
+                  <div className="po-sig-line" />
+                  <span>Prepared By</span>
+                  <span className="po-sig-name">{printData.preparedBy}</span>
+                </div>
+                <div className="po-sig-cell">
+                  <div className="po-sig-line" />
+                  <span>Reviewed By</span>
+                  <span className="po-sig-name">{printData.reviewedBy}</span>
+                </div>
+                <div className="po-sig-cell">
+                  <div className="po-sig-line" />
+                  <span>Authorised By</span>
+                  <span className="po-sig-name">{printData.authorisedBy}</span>
+                </div>
+                <div className="po-sig-cell">
+                  <div className="po-sig-line" />
+                  <span>Accepted By</span>
+                  <span className="po-sig-name">Sign Of Supplier</span>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="text-center py-12 text-secondary-500">Could not load purchase order.</div>
@@ -220,12 +258,165 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
 
       <style dangerouslySetInnerHTML={{
         __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #po-document, #po-document * { visibility: visible !important; }
-          #po-document { position: absolute !important; left: 0; top: 0; width: 100% !important; }
-        }
-      `}} />
+          @media print {
+            @page { size: A4 portrait; margin: 8mm; }
+            html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; min-height: 297mm !important; }
+            body * { visibility: hidden !important; }
+            #po-print-document, #po-print-document * { visibility: visible !important; }
+            #po-print-document {
+              position: absolute !important; left: 0 !important; top: 0 !important;
+              width: 210mm !important; min-height: 297mm !important; margin: 0 !important; padding: 0 !important;
+              background: #fff !important; box-sizing: border-box !important;
+            }
+            #po-print-document .po-print-container {
+              width: 100% !important; max-width: none !important; margin: 0 !important;
+            }
+            #po-print-document .po-page {
+              width: 100% !important; box-sizing: border-box !important;
+            }
+          }
+          .po-print-container {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #000;
+            max-width: 210mm;
+            margin: 0 auto;
+            background: #fff;
+          }
+          .po-page {
+            padding: 12px 14px;
+            border: 1px solid #000;
+            box-sizing: border-box;
+          }
+          .po-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #000;
+          }
+          .po-header-left {
+            flex: 1;
+          }
+          .po-company-name {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+          }
+          .po-company-address { margin: 2px 0; font-size: 10px; }
+          .po-gst { margin: 0; font-size: 10px; }
+          .po-doc-box {
+            border: 1px solid #000;
+            padding: 6px 10px;
+            font-size: 11px;
+            min-width: 120px;
+          }
+          .po-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .po-to-order-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 12px;
+          }
+          .po-to-block {
+            flex: 1;
+            font-size: 10px;
+          }
+          .po-to-label { font-weight: bold; margin: 0 0 4px 0; }
+          .po-vendor-name { font-weight: bold; margin: 4px 0; }
+          .po-vendor-address { margin: 2px 0; }
+          .po-message { margin: 8px 0 0 0; font-size: 9px; }
+          .po-order-details {
+            width: 200px;
+            font-size: 10px;
+            flex-shrink: 0;
+          }
+          .po-order-details div { margin-bottom: 2px; }
+          .po-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-bottom: 8px;
+          }
+          .po-items-table th, .po-items-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+          }
+          .po-items-table th { background: #f2f2f2; font-weight: bold; }
+          .po-summary-wrap {
+            margin-bottom: 12px;
+            font-size: 10px;
+          }
+          .po-summary-gst {
+            display: block;
+            margin-bottom: 4px;
+          }
+          .po-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+          }
+          .po-summary-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+          }
+          .po-summary-table .po-summary-label { border: none; padding-left: 0; }
+          .po-summary-table .po-tcs-row td { border-top: none; }
+          .po-summary-table .po-final-row td { font-weight: bold; border-top: 1px solid #000; }
+          .po-terms-section { font-size: 10px; margin-bottom: 12px; }
+          .po-terms-section p { margin: 2px 0; }
+          .po-terms-grid { margin-bottom: 8px; }
+          .po-inspection-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-top: 4px;
+          }
+          .po-inspection-table th, .po-inspection-table td {
+            border: 1px solid #000;
+            padding: 2px 4px;
+          }
+          .po-delivery-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            margin: 12px 0 8px 0;
+          }
+          .po-delivery-row > div { min-width: 0; }
+          .po-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #000;
+          }
+          .po-sig-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 22%;
+            text-align: center;
+          }
+          .po-sig-line {
+            border-top: 1px solid #000;
+            width: 100%;
+            height: 24px;
+            margin-bottom: 4px;
+          }
+          .po-sig-cell span { font-size: 9px; }
+          .po-sig-name { font-size: 10px; font-weight: bold; margin-top: 2px; }
+        `
+      }} />
     </div>
   );
+
+  if (typeof document !== "undefined") {
+    return createPortal(content, document.body);
+  }
+  return content;
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo, Fragment, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useCallback, useMemo, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Plus, ChevronRight, Minus, Edit2,
-    Package, Ban, CheckCircle2, Eye, LayoutGrid, X, Search, Printer
+    Package, Ban, CheckCircle2, Eye, LayoutGrid, X, Search
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import api from "@/lib/api";
@@ -20,7 +19,7 @@ import {
     TableHeader,
     TableRow
 } from "@/components/ui/table";
-import { useCurrentUserPermissions, useCurrentCompany } from "@/hooks/use-settings";
+import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/ui/access-denied";
 import { Role } from "@/types";
@@ -32,7 +31,7 @@ import { JobWorkDialog } from "@/components/job-works/job-work-dialog";
 import { JobWorkFilters } from "@/components/filters/job-work-filters";
 import { initialJobWorkFilters, JobWorkFiltersState, buildJobWorkFilterParams } from "@/lib/job-work-filters";
 import { toast } from "react-hot-toast";
-import { registerDialog } from "@/lib/dialog-stack";
+import { JobWorkPreviewModal } from "@/components/job-works/job-work-preview-modal";
 
 /**
  * Intelligent status mapping based on the user's defined flow:
@@ -77,7 +76,6 @@ export default function JobWorksPage() {
     const { user } = useAuth();
     const isAdmin = user?.role === Role.ADMIN;
     const { data: permissions } = useCurrentUserPermissions();
-    const { data: currentCompany } = useCurrentCompany();
     const queryClient = useQueryClient();
 
     const [filters, setFilters] = useState<JobWorkFiltersState>(initialJobWorkFilters);
@@ -499,10 +497,7 @@ export default function JobWorksPage() {
             />
 
             {previewJwId !== null && (
-                <JobWorkPreviewModal
-                    jwId={previewJwId}
-                    onClose={() => setPreviewJwId(null)}
-                />
+                <JobWorkPreviewModal jwId={previewJwId} onClose={() => setPreviewJwId(null)} />
             )}
 
             <Dialog
@@ -541,175 +536,4 @@ export default function JobWorksPage() {
             </Dialog>
         </div>
     );
-}
-
-// Separate component for preview matching PO standard
-function JobWorkPreviewModal({ jwId, onClose }: { jwId: number; onClose: () => void }) {
-    const { data: currentCompany } = useCurrentCompany();
-
-    // Use global dialog stack for Esc handling
-    useEffect(() => {
-        if (jwId) {
-            return registerDialog(onClose);
-        }
-    }, [jwId, onClose]);
-
-    const { data: jw, isLoading } = useQuery<JobWork>({
-        queryKey: ["job-work", jwId],
-        queryFn: async () => {
-            const res = await api.get(`/job-works/${jwId}`);
-            return res.data.data;
-        },
-        enabled: !!jwId
-    });
-
-    if (!jwId) return null;
-
-    const handlePrint = () => window.print();
-
-    const content = (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-white font-sans">
-            <div className="flex-none flex items-center justify-between px-4 py-3 border-b border-secondary-200 bg-secondary-50 print:hidden">
-                <h2 className="text-lg font-bold text-secondary-900">Job Work Challan – Preview</h2>
-                <div className="flex items-center gap-2">
-                    <Button onClick={handlePrint} className="bg-primary-600 hover:bg-primary-700 text-white font-semibold shadow-sm">
-                        <Printer className="w-4 h-4 mr-2" />
-                        Print Challan
-                    </Button>
-                    <Button variant="outline" onClick={onClose} className="border-secondary-300">
-                        <X className="w-4 h-4 mr-2" />
-                        Close
-                    </Button>
-                </div>
-            </div>
-
-            <div className="flex-1 overflow-auto p-6 md:p-10 print:p-0">
-                {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[400px]">
-                        <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                ) : jw ? (
-                    <div id="jw-document" className="max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none p-10 border border-secondary-100">
-                        <div className="flex justify-between items-start mb-8 pb-6 border-b-2 border-secondary-800">
-                            <div className="space-y-4">
-                                {currentCompany?.logoUrl ? (
-                                    <img src={currentCompany.logoUrl} alt="Logo" className="h-16 object-contain" />
-                                ) : (
-                                    <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center text-white text-xl font-bold">
-                                        {currentCompany?.name?.[0] || "A"}
-                                    </div>
-                                )}
-                                <div>
-                                    <h1 className="text-xl font-black text-secondary-900 uppercase tracking-tight">{currentCompany?.name || "COMPANY NAME"}</h1>
-                                    <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest mt-0.5">Delivery Challan</p>
-                                </div>
-                            </div>
-                            <div className="text-right space-y-4">
-                                <div className="bg-secondary-900 text-white px-4 py-2 rounded-lg">
-                                    <p className="text-[10px] font-bold uppercase opacity-70 tracking-widest">Challan No</p>
-                                    <p className="text-lg font-bold">{jw.jobWorkNo}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">Date</p>
-                                    <p className="font-bold text-secondary-900">{formatDateTime(jw.createdAt)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-12 mb-10 text-sm">
-                            <div className="space-y-2">
-                                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Consigned To</span>
-                                <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-100">
-                                    <p className="font-bold text-secondary-900 text-base uppercase">{jw.toPartyName || "—"}</p>
-                                    <p className="text-xs text-secondary-500 font-medium mt-1">Authorized Job Work Partner</p>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest">Process Details</span>
-                                <div className="p-4 bg-secondary-50 rounded-xl border border-secondary-100">
-                                    <p className="font-bold text-secondary-900 uppercase">Process: {jw.description || "As Specified"}</p>
-                                    {jw.remarks && <p className="text-xs text-secondary-600 mt-1 italic">{jw.remarks}</p>}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border border-secondary-200 rounded-xl overflow-hidden mb-10 shadow-sm">
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="bg-secondary-50 border-b border-secondary-200 font-bold text-secondary-600">
-                                        <th className="py-3 px-4 text-center w-12 border-r border-secondary-200">SR</th>
-                                        <th className="py-3 px-4 text-left">Item Description</th>
-                                        <th className="py-3 px-4 text-center w-32 border-l border-secondary-200">Drawing / Rev</th>
-                                        <th className="py-3 px-4 text-right w-28 border-l border-secondary-200">Rate (₹)</th>
-                                        <th className="py-3 px-4 text-right w-32 border-l border-secondary-200">Total (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-secondary-100 font-medium text-secondary-800">
-                                    {jw.items?.map((item, idx) => {
-                                        const r = item.rate ?? 0;
-                                        const g = item.gstPercent ?? 0;
-                                        const t = r + (r * g / 100);
-                                        return (
-                                            <tr key={idx} className="print:break-inside-avoid last:border-b-0">
-                                                <td className="py-3 px-4 text-center border-r border-secondary-100 text-secondary-400">{idx + 1}</td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-secondary-900">{item.itemName}</span>
-                                                        <span className="text-[10px] text-secondary-500 uppercase">{item.mainPartName} • {item.materialName}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4 text-center border-l border-secondary-100">
-                                                    <p className="font-bold">{item.drawingNo || "N/A"}</p>
-                                                    <p className="text-[9px] text-secondary-500">Rev: {item.revisionNo || "0"}</p>
-                                                </td>
-                                                <td className="py-3 px-4 text-right border-l border-secondary-100">{r.toLocaleString()}</td>
-                                                <td className="py-3 px-4 text-right border-l border-secondary-100 font-bold text-secondary-900">{t.toLocaleString()}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                                <tfoot className="bg-secondary-50 border-t border-secondary-200 font-bold">
-                                    <tr>
-                                        <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-widest text-[9px] text-secondary-500">Subtotal Value</td>
-                                        <td className="py-3 px-4 text-right text-sm text-secondary-900 border-l border-secondary-200 tabular-nums">
-                                            ₹{jw.items?.reduce((s, i) => s + (i.rate ?? 0) + ((i.rate ?? 0) * (i.gstPercent ?? 0) / 100), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-20 mt-16 px-4">
-                            <div className="border-t border-secondary-300 pt-4">
-                                <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-12">Authorized Signatory</p>
-                                <p className="text-sm font-bold text-secondary-900 uppercase leading-none">{currentCompany?.name}</p>
-                            </div>
-                            <div className="border-t border-secondary-300 pt-4 text-right">
-                                <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-widest mb-12">Receiver&apos;s Signature</p>
-                                <p className="text-[10px] font-bold text-secondary-400 italic">(Seal & Sign)</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center py-12 text-secondary-500 font-medium">Document not found.</div>
-                )}
-            </div>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @media print {
-                  body * { visibility: hidden !important; }
-                  #jw-document, #jw-document * { visibility: visible !important; }
-                  #jw-document { position: absolute !important; left: 0; top: 0; width: 100% !important; border: none !important; margin: 0 !important; }
-                  .fixed, .print-hide { display: none !important; }
-                }
-              `}} />
-        </div>
-    );
-
-    if (typeof document !== "undefined") {
-        return createPortal(content, document.body);
-    }
-
-    return content;
-}
+}

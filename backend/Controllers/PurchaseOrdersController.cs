@@ -675,6 +675,119 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<PODto> { Data = dto });
         }
 
+        /// <summary>Returns full data for Purchase Order print view (portrait format).</summary>
+        [HttpGet("{id}/print")]
+        public async Task<ActionResult<ApiResponse<PurchaseOrderPrintDto>>> GetPrint(int id)
+        {
+            if (!await HasPermission("ViewPO")) return Forbidden();
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var po = await _context.PurchaseOrders
+                .Include(p => p.Vendor)
+                .Include(p => p.Creator)
+                .Include(p => p.Approver)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.Item)
+                            .ThenInclude(it => it!.Material)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.PurchaseIndentItem)
+                        .ThenInclude(pii => pii!.PurchaseIndent)
+                .FirstOrDefaultAsync(p => p.Id == id && p.LocationId == locationId);
+
+            if (po == null) return NotFound();
+            var isAdmin = await IsAdmin();
+            if (!isAdmin && !po.IsActive) return NotFound();
+
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+            var companyName = company?.Name ?? "";
+            var companyAddress = string.Join(", ", new[] { company?.Address, company?.City, company?.State, company?.Pincode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var companyGst = company?.GstNo ?? "";
+
+            var docNo = "-";
+            var revNo = "-";
+            DateTime? revDate = null;
+            var appliedDoc = await _context.DocumentControls
+                .Where(d => d.DocumentType == DocumentType.PurchaseOrder && d.IsActive && d.IsApplied)
+                .FirstOrDefaultAsync();
+            if (appliedDoc != null)
+            {
+                docNo = appliedDoc.DocumentNo;
+                revNo = appliedDoc.RevisionNo;
+                revDate = appliedDoc.RevisionDate;
+            }
+
+            var gstPct = po.GstPercent ?? 0;
+            var subtotal = po.Items.Sum(i => i.Rate);
+            var gstAmt = gstPct > 0 ? Math.Round(subtotal * gstPct / 100, 2) : 0;
+            var halfGst = gstPct > 0 ? gstPct / 2 : 0; // SGST/CGST split for CGST_SGST
+
+            var srNo = 0;
+            var rows = po.Items.OrderBy(i => i.Id).Select(i =>
+            {
+                var qty = 1; // One unit per die/pattern
+                var amt = Math.Round(i.Rate * qty, 2);
+                var sgst = halfGst > 0 ? Math.Round(amt * halfGst / 100, 2) : 0;
+                var cgst = halfGst > 0 ? Math.Round(amt * halfGst / 100, 2) : 0;
+                var total = amt + sgst + cgst;
+                return new PurchaseOrderPrintRowDto
+                {
+                    SrNo = ++srNo,
+                    PartNo = i.PurchaseIndentItem?.Item?.MainPartName ?? "-",
+                    ProductName = (i.PurchaseIndentItem?.ItemNameSnapshot ?? i.PurchaseIndentItem?.Item?.CurrentName ?? i.PurchaseIndentItem?.Item?.MainPartName) ?? "-",
+                    DrawingNo = i.PurchaseIndentItem?.Item?.DrawingNo ?? "-",
+                    Quantity = qty,
+                    Rate = i.Rate,
+                    NetWeight = null,
+                    Amount = amt,
+                    SgstAmount = sgst,
+                    CgstAmount = cgst,
+                    Total = total
+                };
+            }).ToList();
+
+            var pi = po.Items.FirstOrDefault()?.PurchaseIndentItem?.PurchaseIndent;
+            var piNo = pi?.PiNo ?? "-";
+            var indentDate = pi?.CreatedAt;
+
+            var printDto = new PurchaseOrderPrintDto
+            {
+                CompanyName = companyName,
+                CompanyAddress = companyAddress,
+                CompanyGstNo = companyGst,
+                DocumentNo = docNo,
+                RevisionNo = revNo,
+                RevisionDate = revDate,
+                VendorPartyCode = po.Vendor?.PartyCode ?? "",
+                VendorName = po.Vendor?.Name ?? "",
+                VendorAddress = po.Vendor?.Address ?? "",
+                VendorGstNo = po.Vendor?.GstNo ?? "",
+                QuotationNo = po.QuotationNo ?? "-",
+                QuotationDate = po.CreatedAt,
+                PoNo = po.PoNo,
+                PoDate = po.CreatedAt,
+                PiNo = piNo,
+                IndentDate = indentDate,
+                PurchaseType = po.PurchaseType ?? "Regular",
+                RefWoNo = "",
+                DeliveryDate = po.DeliveryDate,
+                MtcReq = pi?.MtcReq ?? false,
+                MaterialSpecification = "Material shall be supplied against our document no. " + docNo + ", Rev. " + revNo + " or against any additional requirements",
+                PackingSpecification = "Box Packing",
+                DeliveryLocation = "At Our Premises",
+                PreparedBy = po.Creator != null ? po.Creator.FirstName + " " + po.Creator.LastName : "",
+                ReviewedBy = "Head Purchase",
+                AuthorisedBy = po.Approver != null ? po.Approver.FirstName + " " + po.Approver.LastName : "MR/Head Purchase",
+                GstPercent = gstPct,
+                Subtotal = Math.Round(subtotal, 2),
+                GstAmount = gstAmt,
+                TotalAmount = Math.Round(subtotal + gstAmt, 2),
+                Rows = rows
+            };
+
+            return Ok(new ApiResponse<PurchaseOrderPrintDto> { Data = printDto });
+        }
+
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] CreatePODto dto)
         {

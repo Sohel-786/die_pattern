@@ -342,6 +342,119 @@ export interface PurchaseIndentPrintRow {
   drgNo: string;
 }
 
+export interface PurchaseOrderPrintData {
+  companyName: string;
+  companyAddress: string;
+  companyGstNo: string;
+  documentNo: string;
+  revisionNo: string;
+  revisionDate: string | null;
+  vendorPartyCode: string;
+  vendorName: string;
+  vendorAddress: string;
+  vendorGstNo: string;
+  quotationNo: string;
+  quotationDate: string | null;
+  poNo: string;
+  poDate: string | null;
+  piNo: string;
+  indentDate: string | null;
+  purchaseType: string;
+  refWoNo: string;
+  deliveryDate: string | null;
+  mtcReq: boolean;
+  materialSpecification: string;
+  packingSpecification: string;
+  deliveryLocation: string;
+  preparedBy: string;
+  reviewedBy: string;
+  authorisedBy: string;
+  gstPercent: number;
+  subtotal: number;
+  gstAmount: number;
+  totalAmount: number;
+  rows: PurchaseOrderPrintRow[];
+}
+
+export interface PurchaseOrderPrintRow {
+  srNo: number;
+  partNo: string;
+  productName: string;
+  drawingNo: string;
+  quantity: number;
+  rate: number;
+  netWeight: number | null;
+  amount: number;
+  sgstAmount: number;
+  cgstAmount: number;
+  total: number;
+}
+
+export interface JobWorkPrintData {
+  companyName: string;
+  companyAddress: string;
+  companyGstNo: string;
+  documentNo: string;
+  revisionNo: string;
+  revisionDate: string | null;
+  jobWorkNo: string;
+  createdAt: string;
+  toPartyCode: string;
+  toPartyName: string;
+  toPartyAddress: string;
+  toPartyGstNo: string;
+  description: string;
+  remarks: string;
+  preparedBy: string;
+  rows: JobWorkPrintRow[];
+}
+
+export interface JobWorkPrintRow {
+  srNo: number;
+  partNo: string;
+  productName: string;
+  itemTypeName: string;
+  materialName: string;
+  drawingNo: string;
+  revisionNo: string;
+  rate: number | null;
+  gstPercent: number | null;
+  remarks: string;
+  willChangeName: boolean;
+  proposedNewName: string | null;
+}
+
+export interface TransferPrintData {
+  companyName: string;
+  companyAddress: string;
+  companyGstNo: string;
+  documentNo: string;
+  revisionNo: string;
+  revisionDate: string | null;
+  transferNo: string;
+  transferDate: string;
+  fromPartyName: string;
+  toPartyName: string;
+  outFor: string;
+  reasonDetails: string;
+  vehicleNo: string;
+  personName: string;
+  remarks: string;
+  preparedBy: string;
+  rows: TransferPrintRow[];
+}
+
+export interface TransferPrintRow {
+  srNo: number;
+  partNo: string;
+  productName: string;
+  itemTypeName: string;
+  materialName: string;
+  drawingNo: string;
+  revisionNo: string;
+  remarks: string;
+}
+
 export enum DocumentType {
   PurchaseIndent = 0,
   PurchaseOrder = 1,
