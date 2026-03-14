@@ -62,7 +62,7 @@ export function AttachmentListDialog({
 
     return (
         <>
-            <Dialog isOpen={open} onClose={onClose} title={title} size="md">
+            <Dialog isOpen={open} onClose={onClose} title={title} size="md" lockScroll={false}>
                 <div className="space-y-3 max-h-[60vh] overflow-auto">
                     {total === 0 ? (
                         <p className="text-sm text-secondary-500 py-4 text-center">No attachments added yet.</p>

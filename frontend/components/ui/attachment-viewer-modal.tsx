@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
-import { registerDialog } from "@/lib/dialog-stack";
+import { registerDialog, applyScrollLockState } from "@/lib/dialog-stack";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -45,6 +45,7 @@ export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: Attach
         unregisterRef.current = null;
         onCloseRef.current();
         requestAnimationFrame(() => {
+            applyScrollLockState();
             if (document.body && typeof document.body.focus === "function") {
                 document.body.setAttribute("tabindex", "-1");
                 document.body.focus({ preventScroll: true });
@@ -54,7 +55,7 @@ export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: Attach
 
     useEffect(() => {
         if (isOpen) {
-            const cleanup = registerDialog(handleClose);
+            const cleanup = registerDialog(handleClose, { lockScroll: false });
             unregisterRef.current = cleanup;
             return () => {
                 unregisterRef.current = null;
@@ -79,9 +80,10 @@ export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: Attach
             <FullScreenImageViewer
                 isOpen={isOpen}
                 imageSrc={fullUrl}
-                onClose={onClose}
+                onClose={handleClose}
                 alt="Attachment"
                 skipDialogStack
+                disableNoScroll
             />
         );
     }
@@ -96,7 +98,7 @@ export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: Attach
             >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
                     <span className="text-sm font-medium text-white truncate max-w-[60%]">{fileName || url.split("/").pop() || "Attachment"}</span>
-                    <Button type="button" variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg" title="Close (Esc)">
+                    <Button type="button" variant="ghost" size="sm" onClick={handleClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg" title="Close (Esc)">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -114,7 +116,7 @@ export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: Attach
             <div className="fixed inset-0 z-[2000] flex flex-col bg-black/95" role="dialog" aria-modal="true">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
                     <span className="text-sm font-medium text-white truncate">{fileName || url.split("/").pop() || "Attachment"}</span>
-                    <Button type="button" variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg">
+                    <Button type="button" variant="ghost" size="sm" onClick={handleClose} className="text-white hover:bg-white/10 h-9 w-9 p-0 rounded-lg">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>

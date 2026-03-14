@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
-import { registerDialog, getOpenDialogCount } from "@/lib/dialog-stack";
+import { registerDialog, getScrollLockCount } from "@/lib/dialog-stack";
 
 interface DialogProps {
   isOpen: boolean;
@@ -24,6 +24,8 @@ interface DialogProps {
   closeButtonDisabled?: boolean;
   /** When true, the default header (title and X button) is hidden */
   hideHeader?: boolean;
+  /** When false, this dialog does not lock body scroll (use for attachment list/viewer to avoid scroll lock issues) */
+  lockScroll?: boolean;
   /** Custom class for the dialog container */
   className?: string;
 }
@@ -39,6 +41,7 @@ export function Dialog({
   closeOnBackdropClick = false,
   closeButtonDisabled = false,
   hideHeader = false,
+  lockScroll = true,
   className,
 }: DialogProps) {
   // Store the element that had focus before the dialog opened
@@ -118,11 +121,11 @@ export function Dialog({
     };
 
     if (isOpen) {
-      // Add this dialog to the stack using the utility
-      const cleanup = registerDialog(handleClose);
+      // Add this dialog to the stack (optionally without scroll lock for attachment dialogs)
+      const cleanup = registerDialog(handleClose, { lockScroll });
 
-      // Lock scroll only if it's the first dialog opening
-      if (getOpenDialogCount() === 1) {
+      // Lock scroll only when the first scroll-locking dialog opens
+      if (lockScroll && getScrollLockCount() === 1) {
         document.body.style.overflow = "hidden";
         document.documentElement.style.overflow = "hidden";
       }
@@ -133,8 +136,8 @@ export function Dialog({
         // Remove from stack
         cleanup();
 
-        // Unlock scroll only if No more dialogs are open
-        if (getOpenDialogCount() === 0) {
+        // Unlock scroll only when no scroll-locking dialogs remain
+        if (getScrollLockCount() === 0) {
           document.body.style.overflow = "";
           document.documentElement.style.overflow = "";
         }

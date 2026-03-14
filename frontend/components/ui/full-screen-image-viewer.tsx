@@ -13,6 +13,8 @@ export interface FullScreenImageViewerProps {
   alt?: string;
   /** When true, do not register with dialog stack (use when parent already handles Esc, e.g. QuotationViewerModal) */
   skipDialogStack?: boolean;
+  /** When true, disable Lightbox's scroll lock (use when already inside a scroll-locking Dialog to avoid double-lock/cleanup issues) */
+  disableNoScroll?: boolean;
 }
 
 export function FullScreenImageViewer({
@@ -21,6 +23,7 @@ export function FullScreenImageViewer({
   imageSrc,
   alt = "Image",
   skipDialogStack = false,
+  disableNoScroll = false,
 }: FullScreenImageViewerProps) {
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -39,6 +42,7 @@ export function FullScreenImageViewer({
       close={onClose}
       slides={[{ src: imageSrc, alt }]}
       plugins={[Zoom]}
+      noScroll={disableNoScroll ? { disabled: true } : undefined}
       animation={{ fade: 300, swipe: 200 }}
       zoom={{
         maxZoomPixelRatio: 3,
