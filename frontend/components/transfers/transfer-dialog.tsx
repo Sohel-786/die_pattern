@@ -123,6 +123,15 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
         enabled: open
     });
 
+    const { data: currentTransferRule } = useQuery<{ allowVendorToVendorTransfer: boolean }>({
+        queryKey: ["settings", "transfer-rules", "current"],
+        queryFn: async () => {
+            const res = await api.get("/settings/transfer-rules/current");
+            return res.data?.data ?? { allowVendorToVendorTransfer: false };
+        },
+        enabled: open && !!selected?.locationId
+    });
+
     const { data: locations = [] } = useQuery<MasterLocation[]>({
         queryKey: ["locations", "active"],
         queryFn: async () => {
@@ -143,6 +152,23 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
         return name ?? currentLocation?.name ?? null;
     }, [selected, getAllPairs, currentLocation?.name]);
 
+    const isPartyVendor = useCallback((partyCategory?: string | null) => {
+        if (!partyCategory?.trim()) return false;
+        const c = partyCategory.trim().toUpperCase();
+        return c === "SUPPLIER / VENDOR" || c === "BOTH";
+    }, []);
+
+    const fromParty = useMemo(() => (fromPartyId && fromPartyId !== 0 ? parties.find(p => p.id === fromPartyId) : null), [fromPartyId, parties]);
+    const toParty = useMemo(() => (toPartyId && toPartyId !== 0 ? parties.find(p => p.id === toPartyId) : null), [toPartyId, parties]);
+    const isVendorToVendor = Boolean(
+        fromParty && toParty && isPartyVendor(fromParty.partyCategory) && isPartyVendor(toParty.partyCategory)
+    );
+    const vendorToVendorDisallowed = isVendorToVendor && !currentTransferRule?.allowVendorToVendorTransfer;
+
+    const fromIsVendorAndV2VDisallowed = Boolean(
+        fromParty && isPartyVendor(fromParty.partyCategory) && !currentTransferRule?.allowVendorToVendorTransfer
+    );
+
     const partyOptions = useMemo(() => [
         { value: 0, label: currentLocationName ?? "Our Location" },
         ...parties.map(p => ({ value: p.id, label: p.name }))
@@ -153,8 +179,26 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     }, [partyOptions, toPartyId]);
 
     const destinationOptions = useMemo(() => {
-        return partyOptions.filter(o => o.value !== fromPartyId);
-    }, [partyOptions, fromPartyId]);
+        let options = partyOptions.filter(o => o.value !== fromPartyId);
+        if (fromIsVendorAndV2VDisallowed) {
+            options = options.filter(o => {
+                if (o.value === 0) return true;
+                const party = parties.find(p => p.id === o.value);
+                return !party || !isPartyVendor(party.partyCategory);
+            });
+        }
+        return options;
+    }, [partyOptions, fromPartyId, fromIsVendorAndV2VDisallowed, parties, isPartyVendor]);
+
+    useEffect(() => {
+        if (!fromIsVendorAndV2VDisallowed) return;
+        if (toPartyId != null && toPartyId !== 0) {
+            const party = parties.find(p => p.id === toPartyId);
+            if (party && isPartyVendor(party.partyCategory)) {
+                setToPartyId(null);
+            }
+        }
+    }, [fromIsVendorAndV2VDisallowed, toPartyId, parties, isPartyVendor]);
 
     // No auto-switching logic - USER request: allow any selection for both fields.
 
@@ -238,6 +282,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const handleSubmit = async () => {
         if (toPartyId === null) return toast.error("Please select a Destination");
         if (fromPartyId === toPartyId) return toast.error("Source and destination cannot be the same");
+        if (vendorToVendorDisallowed) return toast.error("Vendor-to-vendor transfer is not allowed.");
         if (items.length === 0) return toast.error("Please add at least one item");
         if (!vehicleNo.trim()) return toast.error("Vehicle No. is required");
         if (!personName.trim()) return toast.error("Person Name is required");
@@ -289,6 +334,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
 
     const isValid = toPartyId !== null &&
         fromPartyId !== toPartyId &&
+        !vendorToVendorDisallowed &&
         items.length > 0 &&
         vehicleNo.trim() !== "" &&
         personName.trim() !== "" &&
@@ -412,6 +458,13 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 </div>
                             </div>
                         </div>
+
+                        {vendorToVendorDisallowed && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-2 text-amber-800 text-sm font-medium">
+                                <ShieldCheck className="w-4 h-4 shrink-0 text-amber-600" />
+                                Vendor-to-vendor transfer is not allowed for this location. Choose a different source or destination, or ask an admin to enable it in Settings → Access.
+                            </div>
+                        )}
 
                         {/* Items table: min-height for 4–5 visible rows; scroll only inside table after that */}
                         <div className="flex-1 min-h-[280px] flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm">

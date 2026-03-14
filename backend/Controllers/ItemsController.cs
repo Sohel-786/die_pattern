@@ -313,7 +313,7 @@ namespace net_backend.Controllers
         [HttpGet("{id}/name-history")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ItemNameHistoryEntryDto>>>> GetNameHistory(int id)
         {
-            if (!await HasPermission("ViewItem")) return Forbidden();
+            if (!await HasAllPermissions("ViewMaster", "ManageItem")) return Forbidden();
             var locationId = await GetCurrentLocationIdAsync();
             var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.LocationId == locationId);
             if (item == null) return NotFound(new ApiResponse<IEnumerable<ItemNameHistoryEntryDto>> { Success = false, Message = "Item not found" });

@@ -642,6 +642,17 @@ namespace net_backend.Models
         public virtual User? User { get; set; }
     }
 
+    [Table("location_transfer_settings")]
+    public class LocationTransferSetting
+    {
+        public int LocationId { get; set; }
+        public bool AllowVendorToVendorTransfer { get; set; }
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("LocationId")]
+        public virtual Location? Location { get; set; }
+    }
+
     [Table("transfers")]
     public class Transfer
     {

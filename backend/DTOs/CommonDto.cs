@@ -110,4 +110,23 @@ namespace net_backend.DTOs
         public string? Name { get; set; }
         public bool IsActive { get; set; }
     }
+
+    public class TransferRuleLocationDto
+    {
+        public int LocationId { get; set; }
+        public string LocationName { get; set; } = string.Empty;
+        public string? CompanyName { get; set; }
+        public bool AllowVendorToVendorTransfer { get; set; }
+    }
+
+    public class UpdateTransferRuleItemDto
+    {
+        public int LocationId { get; set; }
+        public bool AllowVendorToVendorTransfer { get; set; }
+    }
+
+    public class CurrentTransferRuleDto
+    {
+        public bool AllowVendorToVendorTransfer { get; set; }
+    }
 }

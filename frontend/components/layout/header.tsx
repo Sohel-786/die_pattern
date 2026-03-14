@@ -54,8 +54,8 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
   return (
     <header
       className={`bg-white border-b border-secondary-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shadow-sm ${isHorizontal
-        ? 'h-14 py-3'
-        : hasLogo ? 'min-h-[6.5rem] py-6' : 'h-24 py-4'
+        ? 'h-20 py-4'
+        : hasLogo ? 'min-h-[7rem] py-6' : 'h-24 py-4'
         }`}
     >
       <div className="flex items-center min-w-0 shrink-0">
@@ -65,8 +65,8 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
               src={logoUrl!}
               alt=""
               className={isHorizontal
-                ? "max-w-[75px] max-h-[60px] w-auto h-auto object-contain object-center"
-                : "max-w-[100px] max-h-[85px] w-auto h-auto object-contain object-center"
+                ? "max-w-[85px] max-h-[52px] w-auto h-auto object-contain object-center"
+                : "max-w-[110px] max-h-[72px] w-auto h-auto object-contain object-center"
               }
             />
           </div>
@@ -84,7 +84,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
             <button
               type="button"
               onClick={openSwitchLocation}
-              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 px-3 py-2 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm transition-all duration-200 hover:border-primary-200 hover:from-primary-50/50 hover:to-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300"
+              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4 px-4 py-2.5 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm transition-all duration-200 hover:border-primary-200 hover:from-primary-50/50 hover:to-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300"
               title="Switch company or location"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -114,7 +114,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
             </button>
           ) : (
             <div
-              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3 px-3 py-2 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm"
+              className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4 px-4 py-2.5 rounded-xl border border-secondary-200 bg-gradient-to-b from-secondary-50/80 to-white text-left min-w-0 shadow-sm"
               title="Current context"
             >
               <div className="flex items-center gap-2 min-w-0">

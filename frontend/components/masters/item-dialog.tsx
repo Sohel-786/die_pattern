@@ -17,6 +17,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import * as React from "react";
 import { toast } from "react-hot-toast";
+import { formatDateTime } from "@/lib/utils";
 
 const itemSchema = z.object({
     mainPartName: z.string().min(1, "Main Part Name is required"),
@@ -419,7 +420,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     <tbody className="divide-y divide-secondary-100">
                                         {nameHistory.map((h) => (
                                             <tr key={h.id} className="hover:bg-secondary-50/50">
-                                                <td className="py-2 px-3 text-secondary-700">{new Date(h.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</td>
+                                                <td className="py-2 px-3 text-secondary-700">{formatDateTime(h.createdAt)}</td>
                                                 <td className="py-2 px-3 font-medium">{h.oldName} → {h.newName}</td>
                                                 <td className="py-2 px-3 text-secondary-600">{h.source ?? h.changeType ?? "—"}</td>
                                                 <td className="py-2 px-3 text-secondary-600">{[h.jobWorkNo, h.inwardNo, h.qcNo].filter(Boolean).join(" / ") || "—"}</td>

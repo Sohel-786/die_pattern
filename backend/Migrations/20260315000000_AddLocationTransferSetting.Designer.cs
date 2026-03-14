@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using net_backend.Data;
 
@@ -11,9 +12,10 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315000000_AddLocationTransferSetting")]
+    partial class AddLocationTransferSetting
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -421,9 +423,6 @@ namespace net_backend.Migrations
                     b.Property<int?>("JobWorkItemId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("QcEntryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("NewName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -439,6 +438,9 @@ namespace net_backend.Migrations
                     b.Property<string>("OldRevision")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("QcEntryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");

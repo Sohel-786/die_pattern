@@ -38,6 +38,7 @@ namespace net_backend.Data
         public DbSet<User> Users { get; set; } = default!;
         public DbSet<UserPermission> UserPermissions { get; set; } = default!;
         public DbSet<UserLocationAccess> UserLocationAccess { get; set; } = default!;
+        public DbSet<LocationTransferSetting> LocationTransferSettings { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -310,6 +311,14 @@ namespace net_backend.Data
                 .WithMany()
                 .HasForeignKey(t => t.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LocationTransferSetting>()
+                .HasKey(s => s.LocationId);
+            modelBuilder.Entity<LocationTransferSetting>()
+                .HasOne(s => s.Location)
+                .WithMany()
+                .HasForeignKey(s => s.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<TransferItem>()
                 .HasOne(ti => ti.Transfer)

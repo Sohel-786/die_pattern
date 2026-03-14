@@ -38,6 +38,39 @@ namespace net_backend.Controllers
             return (GetSafeName(company?.Name ?? "Company"), GetSafeName(location?.Name ?? "Location"));
         }
 
+        private static bool IsPartyVendor(string? partyCategory)
+        {
+            if (string.IsNullOrWhiteSpace(partyCategory)) return false;
+            return string.Equals(partyCategory.Trim(), "SUPPLIER / VENDOR", StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(partyCategory.Trim(), "BOTH", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private const string VendorToVendorNotAllowedMessage = "Vendor-to-vendor transfer is not allowed.";
+
+        private async Task<(bool allowed, string? errorMessage)> ValidateVendorToVendorTransferAsync(int locationId, int? fromPartyId, int? toPartyId)
+        {
+            if (!fromPartyId.HasValue || !toPartyId.HasValue)
+                return (true, null);
+
+            var fromParty = await _context.Parties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == fromPartyId.Value);
+            var toParty = await _context.Parties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == toPartyId.Value);
+            if (fromParty == null || toParty == null)
+                return (true, null);
+
+            if (!IsPartyVendor(fromParty.PartyCategory) || !IsPartyVendor(toParty.PartyCategory))
+                return (true, null);
+
+            if (!await IsAdmin())
+                return (false, VendorToVendorNotAllowedMessage);
+
+            var setting = await _context.LocationTransferSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.LocationId == locationId);
+            if (setting == null || !setting.AllowVendorToVendorTransfer)
+                return (false, VendorToVendorNotAllowedMessage);
+
+            return (true, null);
+        }
+
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<TransferDto>>>> GetTransfers(
             [FromQuery] List<int>? fromPartyIds,
@@ -332,6 +365,10 @@ namespace net_backend.Controllers
             if (dto.FromPartyId == dto.ToPartyId)
                 return BadRequest(new ApiResponse<Transfer> { Success = false, Message = "Source and destination cannot be the same." });
 
+            var (vendorAllowed, vendorMsg) = await ValidateVendorToVendorTransferAsync(locationId, dto.FromPartyId, dto.ToPartyId);
+            if (!vendorAllowed)
+                return BadRequest(new ApiResponse<Transfer> { Success = false, Message = vendorMsg });
+
             await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -502,6 +539,10 @@ namespace net_backend.Controllers
             if (dto.ToPartyId == 0) dto.ToPartyId = null;
             if (dto.FromPartyId == dto.ToPartyId)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Source and destination cannot be the same." });
+
+            var (vendorAllowed, vendorMsg) = await ValidateVendorToVendorTransferAsync(locationId, dto.FromPartyId, dto.ToPartyId);
+            if (!vendorAllowed)
+                return BadRequest(new ApiResponse<bool> { Success = false, Message = vendorMsg });
 
             var incomingItemIds = dto.Items.Select(i => i.ItemId).Distinct().OrderBy(x => x).ToList();
             var existingItemIds = transfer.Items.Select(i => i.ItemId).Distinct().OrderBy(x => x).ToList();

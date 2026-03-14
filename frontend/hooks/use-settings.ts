@@ -182,3 +182,44 @@ export function useCurrentCompany() {
   }
   return useCompany(companyId);
 }
+
+export type TransferRuleLocation = {
+  locationId: number;
+  locationName: string;
+  companyName?: string | null;
+  allowVendorToVendorTransfer: boolean;
+};
+
+export type UpdateTransferRuleItem = {
+  locationId: number;
+  allowVendorToVendorTransfer: boolean;
+};
+
+export function useTransferRules(enabled: boolean) {
+  return useQuery({
+    queryKey: ['settings', 'transfer-rules'],
+    queryFn: async (): Promise<TransferRuleLocation[]> => {
+      const response = await api.get('/settings/transfer-rules');
+      return response.data?.data ?? [];
+    },
+    enabled,
+  });
+}
+
+export function useUpdateTransferRules() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: UpdateTransferRuleItem[]): Promise<unknown> => {
+      const response = await api.put('/settings/transfer-rules', items);
+      return response.data?.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'transfer-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'transfer-rules', 'current'] });
+      toast.success('Transfer rules saved');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to save transfer rules');
+    },
+  });
+}

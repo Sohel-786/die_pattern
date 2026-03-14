@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // Disabled to avoid duplicate API calls on initial load (Strict Mode double-mounts in dev)
+  reactStrictMode: false,
   output: 'standalone',
   images: {
     domains: ['localhost', 'ui-avatars.com'],
