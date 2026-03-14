@@ -996,6 +996,9 @@ export default function DashboardPage() {
                           New Name
                         </TableHead>
                         <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                          Revert
+                        </TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
                           Job Work
                         </TableHead>
                         <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
@@ -1019,6 +1022,15 @@ export default function DashboardPage() {
                           </TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600">{row.oldName}</TableCell>
                           <TableCell className="px-4 py-3 text-secondary-900 font-semibold">{row.newName}</TableCell>
+                          <TableCell className="px-4 py-3 text-secondary-600 whitespace-nowrap">
+                            {row.revert ? (
+                              <span className="text-amber-700 bg-amber-50/80 px-2 py-0.5 rounded text-xs" title={row.revert}>
+                                {row.revert}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
                           <TableCell className="px-4 py-3 text-secondary-600 whitespace-nowrap">
                             {row.jobWorkNo ? (
                               <>

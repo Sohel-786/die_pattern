@@ -19,6 +19,8 @@ namespace net_backend.DTOs
         public DateTime? InwardDate { get; set; }
         public string? QcNo { get; set; }
         public DateTime? QcDate { get; set; }
+        /// <summary>When non-null, indicates the change occurred from a Revert operation.</summary>
+        public string? Revert { get; set; }
     }
 }
 

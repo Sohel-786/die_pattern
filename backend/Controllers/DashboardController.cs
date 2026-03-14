@@ -247,6 +247,7 @@ namespace net_backend.Controllers
                 r.MainPartName,
                 r.OldName,
                 r.NewName,
+                r.Revert,
                 r.ChangeType,
                 r.Source,
                 r.JobWorkNo,
@@ -330,7 +331,8 @@ namespace net_backend.Controllers
                     // Use CreatedAt for accurate entry date/time (InwardDate can be user-entered date-only)
                     InwardDate = inv?.CreatedAt,
                     QcNo = qc?.QcNo,
-                    QcDate = qc?.ApprovedAt ?? qc?.CreatedAt
+                    QcDate = qc?.ApprovedAt ?? qc?.CreatedAt,
+                    Revert = l.RevertedFromLogId != null ? "Change occurred from Revert operation" : null
                 };
             }).ToList();
 

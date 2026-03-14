@@ -46,10 +46,13 @@ interface ItemDialogProps {
     isLoading?: boolean;
     existingItems?: Item[];
     readOnly?: boolean;
+    /** When true, shows the Display Name History Action column (Revert) for the latest change. Admin only. */
+    isAdmin?: boolean;
 }
 
-export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [], readOnly }: ItemDialogProps) {
+export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [], readOnly, isAdmin = false }: ItemDialogProps) {
     const isReadOnly = !!readOnly;
+    const showRevertAction = !isReadOnly && isAdmin;
     const queryClient = useQueryClient();
     const {
         register,
@@ -410,7 +413,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                             <th className="text-left py-2 px-3 font-semibold text-secondary-600">From → To</th>
                                             <th className="text-left py-2 px-3 font-semibold text-secondary-600">Source</th>
                                             <th className="text-left py-2 px-3 font-semibold text-secondary-600">Reference</th>
-                                            {!isReadOnly && <th className="text-right py-2 px-3 font-semibold text-secondary-600 w-20">Action</th>}
+                                            {showRevertAction && <th className="text-right py-2 px-3 font-semibold text-secondary-600 w-20">Action</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-secondary-100">
@@ -420,7 +423,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                                 <td className="py-2 px-3 font-medium">{h.oldName} → {h.newName}</td>
                                                 <td className="py-2 px-3 text-secondary-600">{h.source ?? h.changeType ?? "—"}</td>
                                                 <td className="py-2 px-3 text-secondary-600">{[h.jobWorkNo, h.inwardNo, h.qcNo].filter(Boolean).join(" / ") || "—"}</td>
-                                                {!isReadOnly && (
+                                                {showRevertAction && (
                                                     <td className="py-2 px-3 text-right">
                                                         {h.canRevert ? (
                                                             <Button

@@ -739,6 +739,7 @@ export default function ItemsPage() {
                 isLoading={createMutation.isPending || updateMutation.isPending}
                 existingItems={items}
                 readOnly={!!selectedItem && !isAdmin}
+                isAdmin={isAdmin}
             />
 
             <ItemChangeDialog

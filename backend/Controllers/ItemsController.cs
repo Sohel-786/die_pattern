@@ -338,7 +338,7 @@ namespace net_backend.Controllers
             var result = new List<ItemNameHistoryEntryDto>();
             foreach (var l in logs)
             {
-                var canRevert = l.NewName == item.CurrentName && !await _itemState.HasAnyTransactionAfterDateAsync(id, l.CreatedAt);
+                var canRevert = await IsAdmin() && l.NewName == item.CurrentName;
                 result.Add(new ItemNameHistoryEntryDto
                 {
                     Id = l.Id,
@@ -454,9 +454,6 @@ namespace net_backend.Controllers
 
             if (item.CurrentName != log.NewName)
                 return BadRequest(new ApiResponse<Item> { Success = false, Message = "Revert is only allowed for the current display name. This log entry is not the current version." });
-
-            if (await _itemState.HasAnyTransactionAfterDateAsync(id, log.CreatedAt))
-                return BadRequest(new ApiResponse<Item> { Success = false, Message = "Cannot revert: the item has been used in a transfer, inward, job work, or QC entry after this change. Revert is only allowed when the current name has not been used in any later transaction." });
 
             var oldCurrent = item.CurrentName ?? "";
             item.CurrentName = log.OldName;

@@ -793,6 +793,8 @@ export interface RecentItemChangeRow {
   inwardDate?: string | null;
   qcNo?: string | null;
   qcDate?: string | null;
+  /** When set, indicates the change occurred from a Revert operation. */
+  revert?: string | null;
 }
 
 export interface AppSettings {
