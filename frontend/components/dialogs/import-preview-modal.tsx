@@ -94,8 +94,8 @@ export function ImportPreviewModal({
     const records = getRecordsForTab();
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={title} size="3xl">
-            <div className="flex flex-col h-[70vh]">
+        <Dialog isOpen={isOpen} onClose={onClose} title={title} size="full">
+            <div className="flex flex-col h-[80vh]">
                 {/* Tabs Header */}
                 <div className="flex border-b border-secondary-200 mb-4 overflow-x-auto scrollbar-hide">
                     {tabs.map((tab) => (

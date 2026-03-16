@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
@@ -28,14 +29,42 @@ export function TablePagination({
   onPageChange,
   className,
 }: TablePaginationProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   if (totalCount <= PAGINATION_VISIBLE_THRESHOLD) return null;
 
   const totalPages = pageSize <= 0 ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
   const start = pageSize <= 0 ? 1 : (page - 1) * pageSize + 1;
   const end = pageSize <= 0 ? totalCount : Math.min(page * pageSize, totalCount);
 
+  const handlePageChange = (newPage: number) => {
+    onPageChange(newPage);
+
+    // After triggering page change, scroll the nearest scrollable parent to top
+    // Use requestAnimationFrame to ensure it happens after the next render cycle starts
+    requestAnimationFrame(() => {
+      let parent = containerRef.current?.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        const overflowY = style.overflowY;
+        const isScrollable = overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+
+        // If the element is actually scrollable, scroll it to top
+        if (isScrollable && parent.scrollHeight > parent.clientHeight) {
+          parent.scrollTo({ top: 0, behavior: "instant" });
+          return;
+        }
+        parent = parent.parentElement;
+      }
+
+      // If no scrollable parent found (e.g. main window scrolling), scroll the window
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
+  };
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "flex items-center justify-between gap-4 px-4 py-3 border-t border-secondary-200 bg-secondary-50/50 text-sm text-secondary-600",
         className
@@ -51,7 +80,7 @@ export function TablePagination({
           variant="outline"
           size="sm"
           className="h-8 w-8 p-0 border-secondary-200"
-          onClick={() => onPageChange(Math.max(1, page - 1))}
+          onClick={() => handlePageChange(Math.max(1, page - 1))}
           disabled={page <= 1}
           aria-label="Previous page"
         >
@@ -65,7 +94,7 @@ export function TablePagination({
           variant="outline"
           size="sm"
           className="h-8 w-8 p-0 border-secondary-200"
-          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
           disabled={page >= totalPages}
           aria-label="Next page"
         >

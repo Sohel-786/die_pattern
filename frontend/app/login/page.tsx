@@ -51,6 +51,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = (data: LoginForm) => {
+    if (loginMutation.isPending) return;
     loginMutation.mutate(data);
   };
 
@@ -178,8 +179,8 @@ export default function LoginPage() {
 
             <motion.div
               className="pt-1"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
+              whileHover={loginMutation.isPending ? {} : { scale: 1.01 }}
+              whileTap={loginMutation.isPending ? {} : { scale: 0.99 }}
             >
               <Button
                 type="submit"

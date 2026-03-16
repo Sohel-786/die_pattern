@@ -10,8 +10,8 @@ import { applyPrimaryColor } from "@/lib/theme";
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Initial fetch of software name (non-theme stuff)
-    api.get("/settings/software").catch(() => { });
+    // Initial fetch of theme-related data is handled by the page or other components
+    // and context-based theme application below.
 
     // Context-based theme application
     const updateTheme = () => {

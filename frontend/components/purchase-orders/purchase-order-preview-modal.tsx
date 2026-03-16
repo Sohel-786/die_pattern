@@ -78,7 +78,7 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
           <div id="po-print-document" className="po-print-container">
             <div className="po-page">
               {/* Header: Company left, Doc box right */}
-              <div className="po-header-row">
+              <div className="po-header-row mb-0">
                 <div className="po-header-left">
                   <h1 className="po-company-name">{printData.companyName}</h1>
                   <p className="po-company-address">{printData.companyAddress}</p>
@@ -92,7 +92,9 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                 </div>
               </div>
 
+              <div className="w-full border border-black border-t-0">
               <h2 className="po-title">PURCHASE ORDER</h2>
+              </div>
 
               {/* TO block and order details side by side */}
               <div className="po-to-order-row">
@@ -126,12 +128,10 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                     <th>Part No.</th>
                     <th>Product Name with Size</th>
                     <th>Drawing No.</th>
-                    <th>Qty</th>
                     <th>Rate(INR)</th>
                     <th>Net Weight</th>
                     <th>Amount</th>
-                    <th>SGST (%)</th>
-                    <th>CGST (%)</th>
+                    <th>GST (%)</th>
                     <th>Total</th>
                   </tr>
                 </thead>
@@ -142,12 +142,14 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                       <td>{row.partNo}</td>
                       <td>{row.productName}</td>
                       <td>{row.drawingNo}</td>
-                      <td style={{ textAlign: "right" }}>{row.quantity}</td>
                       <td style={{ textAlign: "right" }}>{row.rate.toFixed(2)}</td>
                       <td style={{ textAlign: "right" }}>{row.netWeight != null ? row.netWeight.toFixed(3) : "—"}</td>
                       <td style={{ textAlign: "right" }}>{row.amount.toFixed(2)}</td>
-                      <td style={{ textAlign: "right" }}>{row.sgstAmount.toFixed(2)}</td>
-                      <td style={{ textAlign: "right" }}>{row.cgstAmount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>
+                        {row.amount > 0 
+                          ? Math.round(((row.sgstAmount + row.cgstAmount) / row.amount) * 100) 
+                          : printData.gstPercent}%
+                      </td>
                       <td style={{ textAlign: "right" }}>{row.total.toFixed(2)}</td>
                     </tr>
                   ))}
@@ -160,21 +162,17 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                 <table className="po-summary-table">
                   <tbody>
                     <tr>
-                      <td colSpan={4} className="po-summary-label">Total Qty: {printData.rows.reduce((s, r) => s + r.quantity, 0)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.quantity, 0)}</td>
-                      <td></td>
-                      <td style={{ textAlign: "right" }}>{printData.rows.reduce((s, r) => s + (r.netWeight ?? 0), 0).toFixed(2)}</td>
+                      <td colSpan={4} className="po-summary-label">Total</td>
                       <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.subtotal.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.sgstAmount, 0).toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.cgstAmount, 0).toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.gstAmount.toFixed(2)}</td>
                       <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.total, 0).toFixed(2)}</td>
                     </tr>
                     <tr className="po-tcs-row">
-                      <td colSpan={9}>TCS %</td>
+                      <td colSpan={7}>TCS %</td>
                       <td colSpan={2} style={{ textAlign: "right" }}>0.00</td>
                     </tr>
                     <tr className="po-final-row">
-                      <td colSpan={10} style={{ fontWeight: "bold" }}>Final Amount</td>
+                      <td colSpan={8} style={{ fontWeight: "bold" }}>Final Amount</td>
                       <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.totalAmount.toFixed(2)}</td>
                     </tr>
                   </tbody>
@@ -265,14 +263,14 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
             #po-print-document, #po-print-document * { visibility: visible !important; }
             #po-print-document {
               position: absolute !important; left: 0 !important; top: 0 !important;
-              width: 210mm !important; min-height: 297mm !important; margin: 0 !important; padding: 0 !important;
+              width: 210mm !important; height: 100% !important; margin: 0 !important; padding: 0 !important;
               background: #fff !important; box-sizing: border-box !important;
             }
             #po-print-document .po-print-container {
               width: 100% !important; max-width: none !important; margin: 0 !important;
             }
             #po-print-document .po-page {
-              width: 100% !important; box-sizing: border-box !important;
+              width: 100% !important; min-height: 275mm !important; box-sizing: border-box !important;
             }
           }
           .po-print-container {
@@ -284,6 +282,9 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
             background: #fff;
           }
           .po-page {
+            display: flex;
+            flex-direction: column;
+            min-height: 275mm;
             padding: 12px 14px;
             border: 1px solid #000;
             box-sizing: border-box;
@@ -292,7 +293,6 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 8px;
             padding-bottom: 6px;
             border-bottom: 1px solid #000;
           }
@@ -391,8 +391,8 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
           .po-signatures {
             display: flex;
             justify-content: space-between;
-            margin-top: 16px;
-            padding-top: 12px;
+            margin-top: auto;
+            padding-top: 24px;
             border-top: 1px solid #000;
           }
           .po-sig-cell {
