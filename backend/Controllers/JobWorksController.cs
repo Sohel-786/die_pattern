@@ -800,11 +800,14 @@ namespace net_backend.Controllers
                         ProposedNewName = i.ProposedNewName,
                         OriginalNameSnapshot = i.OriginalNameSnapshot,
                         InwardNo = line?.Inward?.InwardNo,
+                        // Use CreatedAt for accurate inward/QC timestamps
+                        InwardDate = line?.Inward?.CreatedAt,
                         QCNo = qc?.QcEntry?.QcNo,
                         IsQCPending = line?.IsQCPending ?? false,
                         IsQCApproved = line?.IsQCApproved ?? false,
                         QCDecision = qcDecision,
                         IsQCEntryFinalised = isQCEntryFinalised,
+                        QCDate = qc?.QcEntry?.ApprovedAt ?? qc?.QcEntry?.CreatedAt,
                         IsInwarded = line != null
                     };
                 }).ToList()

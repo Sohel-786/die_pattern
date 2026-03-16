@@ -46,9 +46,13 @@ namespace net_backend.Controllers
             return Ok(new ApiResponse<IEnumerable<object>> { Data = items });
         }
 
-        /// <summary>All items (active + inactive) for filter dropdowns only. Not for use when selecting items for new transactions/transfers.</summary>
+        /// <summary>All items (active + inactive) for filter dropdowns only. Supports optional search and pagination for infinite scroll.</summary>
         [HttpGet("for-filter")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetForFilter()
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetForFilter(
+            [FromQuery] string? search,
+            [FromQuery] int? itemTypeId,
+            [FromQuery] int? page,
+            [FromQuery] int pageSize = 50)
         {
             var canUse =
                 await HasAllPermissions("ViewMaster", "ManageItem") ||
@@ -61,18 +65,35 @@ namespace net_backend.Controllers
             if (!canUse) return Forbidden();
 
             var locationId = await GetCurrentLocationIdAsync();
-            var items = await _context.Items
-                .Where(p => p.LocationId == locationId)
-                .OrderBy(p => p.MainPartName)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.MainPartName,
-                    p.CurrentName,
-                    p.ItemTypeId,
-                    ItemTypeName = p.ItemType != null ? p.ItemType.Name : (string?)null
-                })
-                .ToListAsync();
+            IQueryable<Item> query = _context.Items.Where(p => p.LocationId == locationId);
+
+            if (itemTypeId.HasValue && itemTypeId.Value > 0)
+            {
+                query = query.Where(p => p.ItemTypeId == itemTypeId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(p =>
+                    p.MainPartName.ToLower().Contains(s) ||
+                    p.CurrentName.ToLower().Contains(s) ||
+                    (p.DrawingNo != null && p.DrawingNo.ToLower().Contains(s)));
+            }
+
+            var ordered = query.OrderBy(p => p.MainPartName);
+            int totalCount = await ordered.CountAsync();
+
+            List<Item> items;
+            if (page.HasValue)
+            {
+                var (skip, take) = net_backend.Services.PaginationHelper.GetSkipTake(page.Value, pageSize);
+                items = await ordered.Skip(skip).Take(take).ToListAsync();
+            }
+            else
+            {
+                items = await ordered.ToListAsync();
+            }
 
             var itemIds = items.Select(p => p.Id).ToList();
             var previousNamesByItem = await _context.ItemChangeLogs
@@ -90,11 +111,11 @@ namespace net_backend.Controllers
                 p.MainPartName,
                 p.CurrentName,
                 p.ItemTypeId,
-                p.ItemTypeName,
+                ItemTypeName = p.ItemType != null ? p.ItemType.Name : (string?)null,
                 PreviousNames = previousNamesDict.TryGetValue(p.Id, out var names) ? names : new List<string>()
             }).ToList();
 
-            return Ok(new ApiResponse<IEnumerable<object>> { Data = result });
+            return Ok(new ApiResponse<IEnumerable<object>> { Data = result, TotalCount = totalCount });
         }
 
         [HttpGet]

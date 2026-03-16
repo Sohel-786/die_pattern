@@ -24,6 +24,14 @@ export interface MultiSelectSearchProps {
   label?: string;
   className?: string;
   "aria-label"?: string;
+  /** Optional callback for server-side search. When provided, internal filtering is disabled. */
+  onSearchChange?: (term: string) => void;
+  /** Optional callback for loading more items (infinite scroll) */
+  onLoadMore?: () => void;
+  /** Whether more pages are available to load */
+  hasNextPage?: boolean;
+  /** Whether currently loading more items */
+  isLoadingMore?: boolean;
 }
 
 export function MultiSelectSearch({
@@ -37,19 +45,31 @@ export function MultiSelectSearch({
   label,
   className,
   "aria-label": ariaLabel,
+  onSearchChange,
+  onLoadMore,
+  hasNextPage,
+  isLoadingMore,
 }: MultiSelectSearchProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = React.useDeferredValue(searchTerm);
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = React.useMemo(() => {
+    if (onSearchChange) return options; // Backend handles filtering
     if (!searchTerm.trim()) return options;
     const term = searchTerm.toLowerCase();
     return options.filter((o) => o.label.toLowerCase().includes(term));
-  }, [options, searchTerm]);
+  }, [options, searchTerm, onSearchChange]);
+
+  useEffect(() => {
+    if (onSearchChange) {
+      onSearchChange(debouncedSearchTerm);
+    }
+  }, [debouncedSearchTerm, onSearchChange]);
 
   useEffect(() => {
     if (isOpen) {
@@ -172,8 +192,9 @@ export function MultiSelectSearch({
                 />
               </div>
             </div>
-            <ul className="max-h-60 overflow-auto py-1" role="listbox">
-              {filteredOptions.length === 0 ? (
+
+            <ul className="max-h-60 overflow-auto py-1 scrollbar-thin" role="listbox">
+              {filteredOptions.length === 0 && !isLoadingMore ? (
                 <li className="px-3 py-2 text-sm text-secondary-500">No matches</li>
               ) : (
                 filteredOptions.map((opt) => {
@@ -204,10 +225,35 @@ export function MultiSelectSearch({
                   );
                 })
               )}
+              {/* Infinite Scroll Trigger */}
+              {onLoadMore && hasNextPage && (
+                <InfiniteScrollTrigger onVisible={onLoadMore} />
+              )}
+              {isLoadingMore && (
+                <li className="px-3 py-4 flex items-center justify-center">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+                </li>
+              )}
             </ul>
           </div>,
           document.body,
         )}
     </div>
   );
+}
+
+function InfiniteScrollTrigger({ onVisible }: { onVisible: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) onVisible();
+      },
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [onVisible]);
+
+  return <div ref={ref} className="h-4 w-full" />;
 }

@@ -10,7 +10,6 @@ import {
     PurchaseIndent,
     PurchaseIndentType,
     PurchaseIndentStatus,
-    ItemWithStatus,
 } from "@/types";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -80,24 +79,6 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
     useEffect(() => {
         if (!open) setItemSelectionOpen(false);
     }, [open]);
-
-    type PiItemLookup = { id: number; currentName?: string; mainPartName?: string; itemTypeName?: string };
-    const { data: items = [] } = useQuery<PiItemLookup[]>({
-        queryKey: ["purchase-indents", "items-with-status", indent?.id ?? "new"],
-        queryFn: async () => {
-            const params = indent?.id ? { excludePiId: indent.id } : {};
-            const res = await api.get("/purchase-indents/items-with-status", { params });
-            const data = res.data?.data ?? [];
-            if (!Array.isArray(data)) return [];
-            return data.map((x: any) => ({
-                id: x.itemId,
-                currentName: x.currentName,
-                mainPartName: x.mainPartName,
-                itemTypeName: x.itemTypeName,
-            })) as PiItemLookup[];
-        },
-        enabled: open,
-    });
 
     const mutation = useMutation({
         mutationFn: async (data: { type: PurchaseIndentType; remarks?: string; reqDateOfDelivery?: string; mtcReq: boolean; itemIds: number[] }) => {

@@ -92,17 +92,7 @@ export default function InwardsPage() {
         locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
         [locationUsers]);
 
-    const { data: itemsList = [] } = useQuery<any[]>({
-        queryKey: ["items-for-filter"],
-        queryFn: async () => {
-            const res = await api.get("/items/for-filter");
-            return res.data.data ?? [];
-        }
-    });
 
-    const itemOptions = useMemo(() =>
-        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – "), value: i.id })),
-        [itemsList]);
 
     const toggleActiveMutation = useMutation({
         mutationFn: async ({ id, active }: { id: number, active: boolean }) => {
@@ -152,7 +142,6 @@ export default function InwardsPage() {
                 onFiltersChange={setFilters}
                 partyOptions={partyOptions}
                 creatorOptions={creatorOptions}
-                itemOptions={itemOptions}
                 onClear={resetFilters}
                 isAdmin={isAdmin}
                 className="shrink-0 mb-6"
@@ -213,7 +202,7 @@ export default function InwardsPage() {
                                             </TableCell>
                                             <TableCell className="px-4 py-3 font-bold text-secondary-900 text-sm">{i.inwardNo}</TableCell>
                                             <TableCell className="px-4 py-3 text-secondary-700 text-sm">
-                                                {formatDateTime(i.inwardDate)}
+                                                {formatDateTime(i.createdAt || i.inwardDate)}
                                             </TableCell>
                                             <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
                                                 {i.vendorName ?? "—"}

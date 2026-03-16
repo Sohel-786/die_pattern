@@ -33,6 +33,7 @@ import { formatDateTime } from "@/lib/utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useInfiniteItemsForFilter } from "@/hooks/use-items";
 
 const ROW_COUNT_OPTIONS = [25, 50, 75, 100] as const;
 type RowCount = (typeof ROW_COUNT_OPTIONS)[number];
@@ -87,6 +88,8 @@ function ReportsContent() {
   const [isExporting, setIsExporting] = useState(false);
 
   const debouncedLedgerSearch = useDebouncedValue(ledgerSearch, 400);
+  const [itemSearch, setItemSearch] = useState("");
+  const debouncedItemSearch = useDebouncedValue(itemSearch, 400);
 
   const { data: itemTypes = [] } = useQuery({
     queryKey: ["item-types", "active"],
@@ -97,32 +100,21 @@ function ReportsContent() {
     enabled: canAccess,
   });
 
-  const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string; itemTypeId?: number; itemTypeName?: string }[]>({
-    queryKey: ["items-for-filter"],
-    queryFn: async () => {
-      const res = await api.get("/items/for-filter");
-      return res.data?.data ?? [];
-    },
-    enabled: canAccess,
-  });
+  const {
+    data: infiniteItemsData,
+    fetchNextPage: fetchNextItems,
+    hasNextPage: hasMoreItems,
+    isFetchingNextPage: fetchingMoreItems
+  } = useInfiniteItemsForFilter(debouncedItemSearch, ledgerItemTypeId);
 
-  const ledgerItemsByType = useMemo(() => {
-    if (ledgerItemTypeId === "" || ledgerItemTypeId == null) return itemsList;
-    const typeId = Number(ledgerItemTypeId);
-    if (!typeId) return itemsList;
-    return itemsList.filter((i: { itemTypeId?: number }) => i.itemTypeId === typeId);
-  }, [itemsList, ledgerItemTypeId]);
-
-  const ledgerItemOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      ledgerItemsByType.map(
-        (i: { id: number; currentName?: string; mainPartName?: string }) => ({
-          value: i.id,
-          label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`,
-        })
-      ),
-    [ledgerItemsByType]
-  );
+  const ledgerItemOptions: SearchableSelectOption[] = useMemo(() => {
+    if (!infiniteItemsData) return [];
+    const allItems = infiniteItemsData.pages.flatMap(page => (page.data as any[]) || []);
+    return allItems.map(i => ({
+      value: i.id,
+      label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`,
+    }));
+  }, [infiniteItemsData]);
 
   const ledgerParams = useMemo(
     () =>
@@ -265,6 +257,10 @@ function ReportsContent() {
                   setLedgerItemId(id);
                   resetPagination();
                 }}
+                onSearchChange={setItemSearch}
+                onLoadMore={fetchNextItems}
+                hasNextPage={hasMoreItems}
+                isLoadingMore={fetchingMoreItems}
                 placeholder={
                   ledgerItemTypeId !== ""
                     ? "Select item in this type"

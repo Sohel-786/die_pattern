@@ -14,6 +14,7 @@ import { hasActiveQCFilters } from "@/lib/qc-filters";
 import { InwardSourceType } from "@/types";
 import { QcStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -25,7 +26,6 @@ export interface QCFiltersProps {
     filters: QCFiltersState;
     onFiltersChange: (f: QCFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
-    itemOptions: MultiSelectSearchOption[];
     creatorOptions: MultiSelectSearchOption[];
     onClear: () => void;
     isAdmin: boolean;
@@ -36,7 +36,6 @@ export function QCFilters({
     filters,
     onFiltersChange,
     partyOptions,
-    itemOptions,
     creatorOptions,
     onClear,
     isAdmin,
@@ -129,14 +128,12 @@ export function QCFilters({
                                 <option value={QcStatus.Rejected}>Rejected</option>
                             </select>
                         </div>
-                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                            <label className={filterLabelClass}>Item Selection</label>
-                            <MultiSelectSearch
-                                options={itemOptions}
-                                value={filters.itemIds}
-                                onChange={(v) => update({ itemIds: v as (number | string)[] })}
+                        <div className="min-w-0">
+                            <ItemInfiniteSelect
+                                value={filters.itemIds as number[]}
+                                onChange={(v) => update({ itemIds: v })}
+                                label="Item Selection"
                                 placeholder="Select items"
-                                searchPlaceholder="Search…"
                             />
                         </div>
                     </div>

@@ -266,7 +266,8 @@ namespace net_backend.Controllers
                 VendorName = m.Inward?.Vendor?.Name,
                 IsQCPending = m.IsQCPending,
                 IsQCApproved = m.IsQCApproved,
-                InwardDate = m.Inward?.InwardDate ?? DateTime.Now,
+                // Prefer CreatedAt for accurate inward entry date/time; InwardDate is often date-only
+                InwardDate = m.Inward?.CreatedAt ?? m.Inward?.InwardDate ?? DateTime.Now,
                 OriginalDisplayName = m.ItemNameSnapshot ?? m.Item?.CurrentName,
                 NewDisplayNameFromJobWork = m.NewItemNameFromJobWork
             }).ToList();
@@ -739,7 +740,8 @@ namespace net_backend.Controllers
                     SourceRefDisplay = (i.InwardLine.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue && poDict != null && poDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? poDict[i.InwardLine.SourceRefId.Value].PoNo
                                      : (i.InwardLine.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue && jwDict != null && jwDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? jwDict[i.InwardLine.SourceRefId.Value].JobWorkNo
                                      : i.InwardLine.SourceRefId?.ToString(),
-                    InwardDate = i.InwardLine.Inward?.InwardDate,
+                    // Use CreatedAt for accurate inward entry date/time (InwardDate may be date-only)
+                    InwardDate = i.InwardLine.Inward?.CreatedAt ?? i.InwardLine.Inward?.InwardDate,
                     SourceDate = (i.InwardLine.SourceType == InwardSourceType.PO && i.InwardLine.SourceRefId.HasValue && poDict != null && poDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? poDict[i.InwardLine.SourceRefId.Value].CreatedAt
                                : (i.InwardLine.SourceType == InwardSourceType.JobWork && i.InwardLine.SourceRefId.HasValue && jwDict != null && jwDict.ContainsKey(i.InwardLine.SourceRefId.Value)) ? jwDict[i.InwardLine.SourceRefId.Value].CreatedAt
                                : null,

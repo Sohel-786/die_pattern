@@ -746,6 +746,10 @@ export interface JobWorkItem {
   /** True when the QC entry for this item has been finalised (status is Approved or Rejected) */
   isQCEntryFinalised?: boolean;
   isInwarded?: boolean;
+  /** Accurate inward entry timestamp (backend CreatedAt). */
+  inwardDate?: string | null;
+  /** Accurate QC decision timestamp (backend ApprovedAt/CreatedAt). */
+  qcDate?: string | null;
 }
 
 export interface JobWork {

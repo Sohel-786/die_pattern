@@ -114,13 +114,7 @@ export default function ReturnsPage() {
     },
   });
 
-  const { data: filterItems = [] } = useQuery({
-    queryKey: ["items-for-filter"],
-    queryFn: async () => {
-      const res = await api.get("/items/for-filter");
-      return res.data?.data ?? [];
-    },
-  });
+
 
   const { data: statuses = [] } = useQuery<Status[]>({
     queryKey: ["statuses", "active"],
@@ -149,9 +143,8 @@ export default function ReturnsPage() {
   const filterOptions = useMemo(() => ({
     company: filterCompanies.map((c: any) => ({ value: c.id, label: c.name })),
     location: filterLocations.map((l: any) => ({ value: l.id, label: l.name })),
-    item: filterItems.map((i: any) => ({ value: i.id, label: `${i.mainPartName} - ${i.currentName}` })),
     condition: RETURN_CONDITIONS.map(c => ({ value: c, label: c })),
-  }), [filterCompanies, filterLocations, filterItems]);
+  }), [filterCompanies, filterLocations]);
 
   const createMutation = useMutation({
     mutationFn: async (fd: FormData) => api.post("/returns", fd, { headers: { "Content-Type": "multipart/form-data" } }),
@@ -262,7 +255,6 @@ export default function ReturnsPage() {
             onFiltersChange={setFilters}
             companyOptions={filterOptions.company}
             locationOptions={filterOptions.location}
-            itemOptions={filterOptions.item}
             showConditionFilter={true}
             conditionOptions={filterOptions.condition}
             showReceivedByFilter={true}

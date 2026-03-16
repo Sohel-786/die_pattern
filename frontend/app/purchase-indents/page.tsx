@@ -71,17 +71,7 @@ export default function PurchaseIndentsPage() {
     const indents = piData?.list ?? [];
     const totalCount = piData?.totalCount ?? 0;
 
-    const { data: itemsList = [] } = useQuery<{ id: number; currentName?: string; mainPartName?: string }[]>({
-        queryKey: ["items-for-filter"],
-        queryFn: async () => {
-            const res = await api.get("/items/for-filter");
-            return res.data.data ?? [];
-        },
-    });
-    const itemOptions = useMemo(
-        () => itemsList.map((i) => ({ value: i.id, label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}` })),
-        [itemsList]
-    );
+
 
     const { data: locationUsers = [] } = useQuery<any[]>({
         queryKey: ["location-users"],
@@ -231,7 +221,6 @@ export default function PurchaseIndentsPage() {
             <PIFilters
                 filters={filters}
                 onFiltersChange={setFilters}
-                itemOptions={itemOptions}
                 creatorOptions={creatorOptions}
                 onClear={resetFilters}
                 isAdmin={isAdmin}

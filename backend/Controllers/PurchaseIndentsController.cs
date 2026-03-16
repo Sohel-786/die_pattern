@@ -177,7 +177,8 @@ namespace net_backend.Controllers
                                             _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
                                             inv.IsActive
                                       orderby inv.CreatedAt descending
-                                      select (DateTime?)inv.InwardDate).FirstOrDefault(),
+                                      // Use CreatedAt for accurate inward entry date/time (InwardDate is date-only)
+                                      select (DateTime?)inv.CreatedAt).FirstOrDefault(),
                         QCDate = (from il in _context.InwardLines
                                   join qi in _context.QcItems on il.Id equals qi.InwardLineId
                                   join qe in _context.QcEntries on qi.QcEntryId equals qe.Id
@@ -671,13 +672,14 @@ namespace net_backend.Controllers
                                   qe.IsActive
                             orderby qe.CreatedAt descending
                             select qe.QcNo).FirstOrDefault(),
-                    InwardDate = (from il in _context.InwardLines
-                                  join inv in _context.Inwards on il.InwardId equals inv.Id
-                                  where il.SourceType == InwardSourceType.PO &&
-                                        _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
-                                        inv.IsActive
-                                  orderby inv.CreatedAt descending
-                                  select (DateTime?)inv.InwardDate).FirstOrDefault(),
+                        InwardDate = (from il in _context.InwardLines
+                                      join inv in _context.Inwards on il.InwardId equals inv.Id
+                                      where il.SourceType == InwardSourceType.PO &&
+                                            _context.PurchaseOrderItems.Any(poi => poi.PurchaseIndentItemId == i.Id && poi.PurchaseOrderId == il.SourceRefId && poi.PurchaseOrder != null && poi.PurchaseOrder.IsActive) &&
+                                            inv.IsActive
+                                      orderby inv.CreatedAt descending
+                                      // Use CreatedAt for accurate inward entry date/time
+                                      select (DateTime?)inv.CreatedAt).FirstOrDefault(),
                     QCDate = (from il in _context.InwardLines
                               join qi in _context.QcItems on il.Id equals qi.InwardLineId
                               join qe in _context.QcEntries on qi.QcEntryId equals qe.Id

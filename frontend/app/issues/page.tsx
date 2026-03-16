@@ -131,6 +131,7 @@ export default function IssuesPage() {
     },
   });
 
+
   const {
     register,
     handleSubmit,
@@ -350,7 +351,6 @@ export default function IssuesPage() {
             onFiltersChange={setFilters}
             companyOptions={filterOptions.company}
             locationOptions={filterOptions.location}
-            itemOptions={filterOptions.item}
             onClear={() => setFilters(defaultFilters)}
             searchPlaceholder="Search entries..."
           />

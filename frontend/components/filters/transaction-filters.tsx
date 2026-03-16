@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectSearch } from "@/components/ui/multi-select-search";
 import type { MultiSelectSearchOption } from "@/components/ui/multi-select-search";
+import { ItemInfiniteSelect } from "./item-infinite-select";
 import { cn } from "@/lib/utils";
 
 export interface TransactionFiltersState {
@@ -36,7 +37,6 @@ export interface TransactionFiltersProps {
   onFiltersChange: (f: TransactionFiltersState) => void;
   companyOptions: MultiSelectSearchOption[];
   locationOptions: MultiSelectSearchOption[];
-  itemOptions: MultiSelectSearchOption[];
   onClear: () => void;
   /** Placeholder for the search bar; when set, the search bar is shown to the right of the filter icon */
   searchPlaceholder?: string;
@@ -58,7 +58,6 @@ export function TransactionFilters({
   onFiltersChange,
   companyOptions,
   locationOptions,
-  itemOptions,
   onClear,
   searchPlaceholder,
   className,
@@ -146,13 +145,9 @@ export function TransactionFilters({
 
             {!hideItemFilter && (
               <div className="min-w-0 flex flex-col">
-                <MultiSelectSearch
-                  label="Item"
-                  options={itemOptions}
+                <ItemInfiniteSelect
                   value={filters.itemIds}
-                  onChange={(v) => update({ itemIds: v as number[] })}
-                  placeholder="All items"
-                  searchPlaceholder="Search item…"
+                  onChange={(v) => update({ itemIds: v })}
                 />
               </div>
             )}

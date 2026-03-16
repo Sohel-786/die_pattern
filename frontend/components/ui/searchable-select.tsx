@@ -25,6 +25,14 @@ export interface SearchableSelectProps {
   error?: string;
   className?: string;
   "aria-label"?: string;
+  /** Optional callback for server-side search. When provided, internal filtering is disabled. */
+  onSearchChange?: (term: string) => void;
+  /** Optional callback for loading more items (infinite scroll) */
+  onLoadMore?: () => void;
+  /** Whether more pages are available to load */
+  hasNextPage?: boolean;
+  /** Whether currently loading more items */
+  isLoadingMore?: boolean;
 }
 
 export function SearchableSelect({
@@ -39,6 +47,10 @@ export function SearchableSelect({
   error,
   className,
   "aria-label": ariaLabel,
+  onSearchChange,
+  onLoadMore,
+  hasNextPage,
+  isLoadingMore,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,12 +61,13 @@ export function SearchableSelect({
   const listRef = useRef<HTMLUListElement>(null);
 
   const filteredOptions = React.useMemo(() => {
+    if (onSearchChange) return options; // Server-side filtering
     if (!searchTerm.trim()) return options;
     const term = searchTerm.toLowerCase();
     return options.filter((opt) =>
       opt.label.toLowerCase().includes(term),
     );
-  }, [options, searchTerm]);
+  }, [options, searchTerm, onSearchChange]);
 
   const selectedLabel = value !== undefined && value !== null && value !== ""
     ? options.find((o) => o.value === value)?.label ?? ""
@@ -145,6 +158,28 @@ export function SearchableSelect({
     };
   }, []);
 
+  // Infinite Scroll Observer
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    if (!isOpen || !onLoadMore || !hasNextPage) return;
+
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isLoadingMore) {
+        onLoadMore();
+      }
+    });
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => observerRef.current?.disconnect();
+  }, [isOpen, hasNextPage, isLoadingMore, onLoadMore]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
@@ -234,8 +269,10 @@ export function SearchableSelect({
                 autoComplete="off"
                 value={searchTerm}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  const val = e.target.value;
+                  setSearchTerm(val);
                   setHighlightIndex(0);
+                  if (onSearchChange) onSearchChange(val);
                 }}
                 placeholder={searchPlaceholder}
                 className="h-9 pl-8 border-secondary-200 bg-white focus:ring-1 focus:ring-primary-500 shadow-sm font-medium"
@@ -285,6 +322,11 @@ export function SearchableSelect({
                   {opt.label}
                 </li>
               ))
+            )}
+            {hasNextPage && (
+              <li ref={loadMoreRef} className="px-3 py-2 flex justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+              </li>
             )}
           </ul>
         </div>

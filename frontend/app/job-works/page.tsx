@@ -127,17 +127,7 @@ export default function JobWorksPage() {
         locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
         [locationUsers]);
 
-    const { data: itemsList = [] } = useQuery<any[]>({
-        queryKey: ["items-for-filter"],
-        queryFn: async () => {
-            const res = await api.get("/items/for-filter");
-            return res.data.data ?? [];
-        }
-    });
 
-    const itemOptions = useMemo(() =>
-        itemsList.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – "), value: i.id })),
-        [itemsList]);
 
     const resetFilters = useCallback(() => {
         setFilters((prev) => ({ ...initialJobWorkFilters, pageSize: prev.pageSize, page: 1 }));
@@ -216,7 +206,6 @@ export default function JobWorksPage() {
                 onClear={resetFilters}
                 partyOptions={partyOptions}
                 creatorOptions={creatorOptions}
-                itemOptions={itemOptions}
                 isAdmin={isAdmin}
                 className="shrink-0"
             />
@@ -387,7 +376,9 @@ export default function JobWorksPage() {
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">GST%</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">TOTAL AMOUNT</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">INWARD NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">INWARD DATE</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC DATE</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center pr-6">QC STATUS</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
@@ -433,8 +424,14 @@ export default function JobWorksPage() {
                                                                                                     </span>
                                                                                                 ) : <span className="text-secondary-300">—</span>}
                                                                                             </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] whitespace-nowrap">
+                                                                                                {item.inwardNo && item.inwardDate ? formatDateTime(item.inwardDate) : "—"}
+                                                                                            </TableCell>
                                                                                             <TableCell className="px-4 py-2 text-indigo-700 font-bold text-[12px]">
                                                                                                 {item.qcNo || <span className="text-secondary-300">—</span>}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] whitespace-nowrap">
+                                                                                                {item.qcNo && item.qcDate ? formatDateTime(item.qcDate) : "—"}
                                                                                             </TableCell>
                                                                                             <TableCell className="px-4 py-2 text-center pr-6">
                                                                                                 {item.qcNo ? (() => {
@@ -536,4 +533,4 @@ export default function JobWorksPage() {
             </Dialog>
         </div>
     );
-}
+}

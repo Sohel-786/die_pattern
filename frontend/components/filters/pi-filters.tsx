@@ -13,6 +13,7 @@ import type { PIFiltersState } from "@/lib/pi-filters";
 import { hasActivePIFilters } from "@/lib/pi-filters";
 import { PurchaseIndentStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { ItemInfiniteSelect } from "./item-infinite-select";
 
 /** Shared with PO filter for consistent enterprise UX. */
 const filterLabelClass =
@@ -25,7 +26,6 @@ const selectClass =
 export interface PIFiltersProps {
   filters: PIFiltersState;
   onFiltersChange: (f: PIFiltersState) => void;
-  itemOptions: MultiSelectSearchOption[];
   creatorOptions: MultiSelectSearchOption[];
   onClear: () => void;
   isAdmin: boolean;
@@ -39,7 +39,6 @@ function normalizeIds(v: (number | string)[]): number[] {
 export function PIFilters({
   filters,
   onFiltersChange,
-  itemOptions,
   creatorOptions,
   onClear,
   isAdmin,
@@ -116,15 +115,12 @@ export function PIFilters({
                 <option value={PurchaseIndentStatus.Rejected}>Rejected</option>
               </select>
             </div>
-            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-              <label className={filterLabelClass}>Item</label>
-              <MultiSelectSearch
-                options={itemOptions}
+            <div className="min-w-0">
+              <ItemInfiniteSelect
                 value={filters.itemIds}
-                onChange={(v) => update({ itemIds: normalizeIds(v) })}
+                onChange={(v) => update({ itemIds: v })}
+                label="Item"
                 placeholder="Select item"
-                searchPlaceholder="Search…"
-                aria-label="Filter by item"
               />
             </div>
             <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">

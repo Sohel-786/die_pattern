@@ -43,7 +43,7 @@ import {
   buildPOFilterParams,
   type POFiltersState,
 } from "@/lib/po-filters";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, formatDate } from "@/lib/utils";
 import { TablePagination } from "@/components/ui/table-pagination";
 import type { Party } from "@/types";
 import type { Item } from "@/types";
@@ -107,13 +107,7 @@ export default function PurchaseOrdersPage() {
     },
   });
 
-  const { data: itemsList = [] } = useQuery<Item[]>({
-    queryKey: ["items-for-filter"],
-    queryFn: async () => {
-      const res = await api.get("/items/for-filter");
-      return res.data.data ?? [];
-    },
-  });
+
 
   const partyOptions = useMemo(
     () =>
@@ -123,14 +117,7 @@ export default function PurchaseOrdersPage() {
       })),
     [vendors]
   );
-  const itemOptions = useMemo(
-    () =>
-      itemsList.map((i) => ({
-        value: i.id,
-        label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`,
-      })),
-    [itemsList]
-  );
+
 
   const { data: locationUsers = [] } = useQuery<any[]>({
     queryKey: ["location-users"],
@@ -284,7 +271,6 @@ export default function PurchaseOrdersPage() {
         filters={filters}
         onFiltersChange={setFilters}
         partyOptions={partyOptions}
-        itemOptions={itemOptions}
         creatorOptions={creatorOptions}
         onClear={resetFilters}
         isAdmin={isAdmin}
@@ -369,7 +355,7 @@ export default function PurchaseOrdersPage() {
                         {po.vendorName ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-secondary-700 text-sm">
-                        {po.deliveryDate ? formatDateTime(po.deliveryDate) : "—"}
+                        {po.deliveryDate ? formatDate(po.deliveryDate) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {getStatusBadge(po.status)}

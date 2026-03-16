@@ -13,6 +13,7 @@ import type { POFiltersState } from "@/lib/po-filters";
 import { hasActivePOFilters } from "@/lib/po-filters";
 import { PoStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -24,7 +25,6 @@ export interface POFiltersProps {
   filters: POFiltersState;
   onFiltersChange: (f: POFiltersState) => void;
   partyOptions: MultiSelectSearchOption[];
-  itemOptions: MultiSelectSearchOption[];
   creatorOptions: MultiSelectSearchOption[];
   onClear: () => void;
   isAdmin: boolean;
@@ -35,7 +35,6 @@ export function POFilters({
   filters,
   onFiltersChange,
   partyOptions,
-  itemOptions,
   creatorOptions,
   onClear,
   isAdmin,
@@ -123,15 +122,12 @@ export function POFilters({
                 aria-label="Filter by party"
               />
             </div>
-            <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-              <label className={filterLabelClass}>Item</label>
-              <MultiSelectSearch
-                options={itemOptions}
+            <div className="min-w-0">
+              <ItemInfiniteSelect
                 value={filters.itemIds}
-                onChange={(v) => update({ itemIds: v as number[] })}
+                onChange={(v) => update({ itemIds: v })}
+                label="Item"
                 placeholder="Select item"
-                searchPlaceholder="Search…"
-                aria-label="Filter by item"
               />
             </div>
             <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">

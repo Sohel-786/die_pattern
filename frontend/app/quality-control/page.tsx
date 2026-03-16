@@ -87,27 +87,7 @@ export default function QualityControlPage() {
         [parties]
     );
 
-    const { data: itemsList = [] } = useQuery<any[]>({
-        queryKey: ["items-for-filter"],
-        queryFn: async () => {
-            const res = await api.get("/items/for-filter");
-            return res.data.data ?? [];
-        },
-    });
 
-    const itemOptions = useMemo(() => {
-        const opts: { label: string; value: number | string }[] = [];
-        itemsList.forEach((i: any) => {
-            const main = i.mainPartName ? ` – ${i.mainPartName}` : "";
-            opts.push({ label: (i.currentName || "").trim() + main || `Item ${i.id}`, value: i.id });
-            (i.previousNames || []).forEach((oldName: string, idx: number) => {
-                const name = (oldName || "").trim();
-                if (name && name !== (i.currentName || "").trim())
-                    opts.push({ label: `${name} (previous)${main}`, value: `${i.id}_prev_${idx}` });
-            });
-        });
-        return opts;
-    }, [itemsList]);
 
     const setInactiveMutation = useMutation({
         mutationFn: (id: number) => api.patch(`/quality-control/${id}/inactive`),
@@ -132,6 +112,23 @@ export default function QualityControlPage() {
     const resetFilters = useCallback(() => {
         setFilters((prev) => ({ ...initialQCFilters, pageSize: prev.pageSize, page: 1 }));
     }, []);
+
+    // Prefer a real time value when available; fall back sensibly.
+    const getInwardDateForDisplay = (item: any): string | null => {
+        const inward = item?.inwardDate ? new Date(item.inwardDate) : null;
+        const source = item?.sourceDate ? new Date(item.sourceDate) : null;
+
+        // If inwardDate has a non‑midnight time, treat it as authoritative.
+        if (inward && (inward.getHours() !== 0 || inward.getMinutes() !== 0)) {
+            return item.inwardDate;
+        }
+
+        // Otherwise prefer sourceDate when it exists (often has the correct time).
+        if (source) return item.sourceDate;
+
+        // Last resort: return inwardDate even if it's date‑only.
+        return item?.inwardDate ?? null;
+    };
 
     /** Normalize sourceType from API (number or string) to display label. */
     const getSourceTypeLabel = (sourceType: InwardSourceType | string | number): string => {
@@ -181,7 +178,6 @@ export default function QualityControlPage() {
                 onFiltersChange={setFilters}
                 onClear={resetFilters}
                 partyOptions={partyOptions}
-                itemOptions={itemOptions}
                 creatorOptions={creatorOptions}
                 isAdmin={isAdmin}
                 className="shrink-0"
@@ -352,7 +348,7 @@ export default function QualityControlPage() {
                                                                                 <TableRow key={it.id} className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 text-nowrap font-sans">
                                                                                     <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">{lidx + 1}</TableCell>
                                                                                     <TableCell className="px-4 py-2 text-primary-700 font-bold text-[13px]">{it.sourceRefDisplay || "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-500 font-medium text-[11px]">
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
                                                                                         {it.sourceDate ? formatDateTime(it.sourceDate) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2">
@@ -373,8 +369,8 @@ export default function QualityControlPage() {
                                                                                         </div>
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-secondary-700 font-bold text-[12px]">{it.inwardNo || "—"}</TableCell>
-                                                                                    <TableCell className="px-4 py-2 text-secondary-500 text-[11px] whitespace-nowrap">
-                                                                                        {it.inwardDate ? formatDateTime(it.inwardDate) : "—"}
+                                                                                    <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px] whitespace-nowrap">
+                                                                                        {getInwardDateForDisplay(it) ? formatDateTime(getInwardDateForDisplay(it)) : "—"}
                                                                                     </TableCell>
                                                                                     <TableCell className="px-4 py-2 text-center pr-6">
                                                                                         {it.isApproved === true ? (

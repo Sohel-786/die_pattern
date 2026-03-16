@@ -67,7 +67,16 @@ export function PiItemSelectionDialog({
       const params = excludePiId != null ? { excludePiId } : {};
       const res = await api.get("/purchase-indents/items-with-status", { params });
       const data = res.data?.data ?? [];
-      return Array.isArray(data) ? data : [];
+      if (!Array.isArray(data)) return [];
+
+      // Normalise backend shape (handles PascalCase vs camelCase and missing fields)
+      return data.map((raw: any) => ({
+        itemId: raw.itemId ?? raw.ItemId ?? 0,
+        currentName: raw.currentName ?? raw.CurrentName ?? null,
+        mainPartName: raw.mainPartName ?? raw.MainPartName ?? null,
+        itemTypeName: raw.itemTypeName ?? raw.ItemTypeName ?? null,
+        status: (raw.status ?? raw.Status ?? "NotInStock") as ItemProcessState,
+      })) as ItemWithStatus[];
     },
     enabled: open,
   });
@@ -85,15 +94,45 @@ export function PiItemSelectionDialog({
     );
   }, [itemsWithStatus, search]);
 
+  // Normalise backend status strings (tolerate null/undefined, spaces, casing) to our enum keys
+  const normalizeStatus = (status?: string | null): ItemProcessState | null => {
+    if (!status) return null;
+    const key = status.replace(/\s+/g, "").toLowerCase();
+    switch (key) {
+      case "notinstock":
+        return "NotInStock";
+      case "inpi":
+        return "InPI";
+      case "inpo":
+        return "InPO";
+      case "inwarddone":
+        return "InwardDone";
+      case "inqc":
+        return "InQC";
+      case "injobwork":
+        return "InJobwork";
+      case "atvendor":
+        return "AtVendor";
+      case "outward":
+        return "Outward";
+      case "instock":
+        return "InStock";
+      default:
+        return null;
+    }
+  };
+
   const addableRows = useMemo(
-    () => filtered.filter((i) => i.status === "NotInStock" && !selectedSet.has(i.itemId)),
+    () =>
+      filtered.filter((i) => normalizeStatus(i.status) === "NotInStock" && !selectedSet.has(i.itemId)),
     [filtered, selectedSet]
   );
 
   const pendingItems = pendingItemsState;
 
   const addToPending = (item: ItemWithStatus) => {
-    if (item.status !== "NotInStock" || selectedSet.has(item.itemId) || pendingSet.has(item.itemId)) return;
+    const st = normalizeStatus(item.status);
+    if (st !== "NotInStock" || selectedSet.has(item.itemId) || pendingSet.has(item.itemId)) return;
     setPendingItemsState((prev) => [...prev, item]);
   };
 
@@ -230,7 +269,8 @@ export function PiItemSelectionDialog({
                     </TableRow>
                   ) : (
                     filtered.map((item, idx) => {
-                      const canAdd = item.status === "NotInStock" && !selectedSet.has(item.itemId);
+                      const canonicalStatus = normalizeStatus(item.status);
+                      const canAdd = canonicalStatus === "NotInStock" && !selectedSet.has(item.itemId);
                       const alreadyInPI = selectedSet.has(item.itemId);
                       const inPending = pendingSet.has(item.itemId);
                         return (<TableRow
@@ -272,7 +312,7 @@ export function PiItemSelectionDialog({
                             ) : (
                               <span
                                 className="inline-block h-7 w-7 rounded border border-secondary-200 bg-secondary-100"
-                                title={STATUS_LABELS[item.status]}
+                                title={canonicalStatus ? STATUS_LABELS[canonicalStatus] : item.status}
                               />
                             )}
                           </TableCell>
@@ -289,10 +329,10 @@ export function PiItemSelectionDialog({
                             <span
                               className={cn(
                                 "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                                STATUS_PILL_CLASS[item.status]
+                                canonicalStatus ? STATUS_PILL_CLASS[canonicalStatus] : "bg-secondary-100 text-secondary-700 border-secondary-200"
                               )}
                             >
-                              {STATUS_LABELS[item.status]}
+                              {canonicalStatus ? STATUS_LABELS[canonicalStatus] : item.status}
                             </span>
                           </TableCell>
                         </TableRow>

@@ -435,7 +435,8 @@ namespace net_backend.Controllers
                     l.SourceRefId, 
                     l.ItemId, 
                     l.Inward!.InwardNo,
-                    InwardDate = (DateTime?)l.Inward!.InwardDate,
+                    // Use CreatedAt for accurate inward entry date/time (InwardDate is user-entered date-only)
+                    InwardDate = (DateTime?)l.Inward!.CreatedAt,
                     l.Id 
                 })
                 .ToListAsync();

@@ -105,17 +105,7 @@ export default function TransfersPage() {
         locationUsers.map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
         [locationUsers]);
 
-    const { data: allItems = [] } = useQuery<any[]>({
-        queryKey: ["items-for-filter"],
-        queryFn: async () => {
-            const res = await api.get("/items/for-filter");
-            return res.data.data ?? [];
-        }
-    });
 
-    const itemOptions = useMemo(() =>
-        allItems.map(i => ({ label: [i.currentName, i.mainPartName].filter(Boolean).join(" – ") || `Item ${i.id}`, value: i.id })),
-        [allItems]);
 
     const isAdmin = currentUser?.role === Role.ADMIN;
 
@@ -156,7 +146,6 @@ export default function TransfersPage() {
                 onClear={resetFilters}
                 partyOptions={partyOptions}
                 creatorOptions={creatorOptions}
-                itemOptions={itemOptions}
                 isAdmin={isAdmin}
                 currentLocationName={currentLocationName ?? undefined}
                 className="shrink-0 mb-6"

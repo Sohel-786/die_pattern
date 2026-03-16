@@ -13,6 +13,7 @@ import type { JobWorkFiltersState } from "@/lib/job-work-filters";
 import { hasActiveJobWorkFilters } from "@/lib/job-work-filters";
 import { JobWorkStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
@@ -25,7 +26,6 @@ export interface JobWorkFiltersProps {
     onFiltersChange: (f: JobWorkFiltersState) => void;
     partyOptions: MultiSelectSearchOption[];
     creatorOptions: MultiSelectSearchOption[];
-    itemOptions: MultiSelectSearchOption[];
     onClear: () => void;
     isAdmin: boolean;
     className?: string;
@@ -42,7 +42,6 @@ export function JobWorkFilters({
     onFiltersChange,
     partyOptions,
     creatorOptions,
-    itemOptions,
     onClear,
     isAdmin,
     className,
@@ -124,14 +123,12 @@ export function JobWorkFilters({
                             />
                         </div>
 
-                        <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
-                            <label className={filterLabelClass}>Item</label>
-                            <MultiSelectSearch
-                                options={itemOptions}
+                        <div className="min-w-0">
+                            <ItemInfiniteSelect
                                 value={filters.itemIds}
-                                onChange={(v) => update({ itemIds: v as number[] })}
+                                onChange={(v) => update({ itemIds: v })}
+                                label="Item"
                                 placeholder="Select item"
-                                searchPlaceholder="Search item…"
                             />
                         </div>
 

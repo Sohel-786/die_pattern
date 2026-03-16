@@ -515,6 +515,10 @@ namespace net_backend.DTOs
         /// <summary>Whether the overall QC entry has been finalised (Approved/Rejected status).</summary>
         public bool IsQCEntryFinalised { get; set; }
         public bool IsInwarded { get; set; }
+        /// <summary>Accurate inward entry timestamp (from Inward.CreatedAt) when available.</summary>
+        public DateTime? InwardDate { get; set; }
+        /// <summary>Accurate QC decision timestamp (from QcEntry.CreatedAt/ApprovedAt) when available.</summary>
+        public DateTime? QCDate { get; set; }
     }
 
     public class JobWorkDto
