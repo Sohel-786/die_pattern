@@ -8,7 +8,7 @@ import { registerDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import type { PurchaseOrderPrintData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { formatDateTime, formatDate } from "@/lib/utils";
+import { formatDateTime, formatDate, formatRate } from "@/lib/utils";
 
 interface PurchaseOrderPreviewModalProps {
   poId: number;
@@ -142,15 +142,15 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                       <td>{row.partNo}</td>
                       <td>{row.productName}</td>
                       <td>{row.drawingNo}</td>
-                      <td style={{ textAlign: "right" }}>{row.rate.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{formatRate(row.rate)}</td>
                       <td style={{ textAlign: "right" }}>{row.netWeight != null ? row.netWeight.toFixed(3) : "—"}</td>
-                      <td style={{ textAlign: "right" }}>{row.amount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{formatRate(row.amount)}</td>
                       <td style={{ textAlign: "right" }}>
                         {row.amount > 0 
                           ? Math.round(((row.sgstAmount + row.cgstAmount) / row.amount) * 100) 
                           : printData.gstPercent}%
                       </td>
-                      <td style={{ textAlign: "right" }}>{row.total.toFixed(2)}</td>
+                      <td style={{ textAlign: "right" }}>{formatRate(row.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -163,17 +163,17 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
                   <tbody>
                     <tr>
                       <td colSpan={4} className="po-summary-label">Total</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.subtotal.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.gstAmount.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.rows.reduce((s, r) => s + r.total, 0).toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{formatRate(printData.subtotal)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{formatRate(printData.gstAmount)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{formatRate(printData.rows.reduce((s, r) => s + r.total, 0))}</td>
                     </tr>
                     <tr className="po-tcs-row">
                       <td colSpan={7}>TCS %</td>
-                      <td colSpan={2} style={{ textAlign: "right" }}>0.00</td>
+                      <td colSpan={2} style={{ textAlign: "right" }}>{formatRate(0)}</td>
                     </tr>
                     <tr className="po-final-row">
                       <td colSpan={8} style={{ fontWeight: "bold" }}>Final Amount</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{printData.totalAmount.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold" }}>{formatRate(printData.totalAmount)}</td>
                     </tr>
                   </tbody>
                 </table>

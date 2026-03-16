@@ -259,7 +259,9 @@ export default function CompaniesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-mono text-xs font-bold text-secondary-900">{company.gstNo}</span>
+                        <span className="text-sm font-semibold text-secondary-900 tracking-[0.08em]">
+                          {company.gstNo}
+                        </span>
                         {company.gstDate && (
                           <span className="text-[10px] text-secondary-500 font-medium">
                             Reg: {formatDateTime(company.gstDate)}

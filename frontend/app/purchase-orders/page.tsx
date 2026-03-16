@@ -43,7 +43,7 @@ import {
   buildPOFilterParams,
   type POFiltersState,
 } from "@/lib/po-filters";
-import { cn, formatDateTime, formatDate } from "@/lib/utils";
+import { cn, formatDateTime, formatDate, formatRate } from "@/lib/utils";
 import { TablePagination } from "@/components/ui/table-pagination";
 import type { Party } from "@/types";
 import type { Item } from "@/types";
@@ -640,16 +640,13 @@ export default function PurchaseOrdersPage() {
                                                 {gstPct}%
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-right font-bold text-secondary-900 text-[13px] tabular-nums">
-                                                {((i.rate ?? 0)).toLocaleString(
-                                                  undefined,
-                                                  { minimumFractionDigits: 2 }
-                                                )}
+                                                ₹{formatRate(i.rate ?? 0)}
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-right text-secondary-500 text-[13px] font-medium tabular-nums">
-                                                ₹{tax.toFixed(2)}
+                                                ₹{formatRate(tax)}
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-right font-black text-secondary-900 text-[13px] tabular-nums pr-6">
-                                                ₹{total.toFixed(2)}
+                                                ₹{formatRate(total)}
                                               </TableCell>
                                             </TableRow>
                                           );

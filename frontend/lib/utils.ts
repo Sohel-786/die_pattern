@@ -50,3 +50,26 @@ export function formatDateOnly(dateOnly: string | null | undefined): string {
   if (!d) return "—";
   return formatDate(d);
 }
+
+/** Professional money/rate formatting with thousand separators and 2 decimals (e.g. 1,23,456.00 for INR-style, 1,234,567.89 otherwise). */
+export function formatRate(value: number | string | null | undefined, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number; locale?: string }) {
+  if (value == null || value === "" || Number.isNaN(Number(value))) return "0.00";
+  const num = typeof value === "number" ? value : Number(value);
+  const locale = options?.locale ?? "en-IN";
+  const minimumFractionDigits = options?.minimumFractionDigits ?? 2;
+  const maximumFractionDigits = options?.maximumFractionDigits ?? 2;
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits,
+    maximumFractionDigits,
+    useGrouping: true,
+  }).format(num);
+}
+
+/** Format GST number in a clean, uppercase, grouped way (e.g. 27AAACX1234Q1Z5 → 27 AAA CX1234Q 1Z5). */
+export function formatGst(value: string | null | undefined): string {
+  if (!value) return "—";
+  const raw = value.replace(/\s+/g, "").toUpperCase();
+  // Typical GSTIN is 15 chars; group as 2-3-5-1-4 for readability.
+  if (raw.length !== 15) return raw;
+  return `${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5, 10)} ${raw.slice(10, 11)} ${raw.slice(11)}`;
+}

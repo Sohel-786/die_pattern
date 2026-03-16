@@ -27,7 +27,7 @@ import { QuotationListDialog } from "./quotation-list-dialog";
 import { toast } from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, formatRate } from "@/lib/utils";
 
 export interface POGridItem {
   purchaseIndentItemId: number;
@@ -734,8 +734,8 @@ export function PurchaseOrderDialog({
                                   placeholder="0"
                                 />
                               </td>
-                              <td className="py-2.5 px-3 text-center text-secondary-600 tabular-nums whitespace-nowrap min-w-[100px]">₹ {tax.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-center font-semibold text-secondary-900 tabular-nums whitespace-nowrap min-w-[100px]">₹ {total.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-center text-secondary-600 tabular-nums whitespace-nowrap min-w-[100px]">₹ {formatRate(tax)}</td>
+                              <td className="py-2.5 px-3 text-center font-semibold text-secondary-900 tabular-nums whitespace-nowrap min-w-[100px]">₹ {formatRate(total)}</td>
                             </tr>
                           );
                         })
@@ -780,15 +780,15 @@ export function PurchaseOrderDialog({
                 </div>
                 <div>
                   <span className="text-xs font-semibold text-secondary-500 block">Total Amount</span>
-                  <span className="text-base font-bold text-secondary-900">₹ {totalTaxable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-base font-bold text-secondary-900">₹ {formatRate(totalTaxable)}</span>
                 </div>
                 <div>
                   <span className="text-xs font-semibold text-secondary-500 block">Tax Total</span>
-                  <span className="text-base font-bold text-secondary-600">₹ {totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-base font-bold text-secondary-600">₹ {formatRate(totalGst)}</span>
                 </div>
                 <div>
                   <span className="text-xs font-semibold text-secondary-500 block">Final Amount</span>
-                  <span className="text-lg font-bold text-primary-700">₹ {finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-bold text-primary-700">₹ {formatRate(finalAmount)}</span>
                 </div>
               </div>
               <div className="flex gap-3">

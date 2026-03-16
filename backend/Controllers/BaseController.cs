@@ -26,7 +26,9 @@ namespace net_backend.Controllers
                 var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
                 {
-                    throw new UnauthorizedAccessException("User not authenticated");
+                    // When no authenticated user is present, treat as "anonymous" with no permissions.
+                    // Permission checks will fail gracefully (returning 403) instead of throwing.
+                    return 0;
                 }
                 return userId;
             }

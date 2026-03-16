@@ -8,7 +8,7 @@ import { registerDialog } from "@/lib/dialog-stack";
 import api from "@/lib/api";
 import type { JobWorkPrintData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { formatDateTime, formatDate } from "@/lib/utils";
+import { formatDateTime, formatDate, formatRate } from "@/lib/utils";
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
@@ -176,7 +176,7 @@ export function JobWorkPreviewModal({ jwId, onClose }: JobWorkPreviewModalProps)
                         <td>{row.materialName}</td>
                         <td>{row.drawingNo}</td>
                         <td>{row.revisionNo}</td>
-                        <td style={{ textAlign: "right" }}>{row.rate != null ? row.rate.toFixed(2) : "—"}</td>
+                        <td style={{ textAlign: "right" }}>{row.rate != null ? formatRate(row.rate) : "—"}</td>
                         <td style={{ textAlign: "right" }}>{row.gstPercent != null ? row.gstPercent.toFixed(1) : "—"}</td>
                         <td>{row.remarks}</td>
                         <td>{row.willChangeName ? "Yes" : "No"}</td>

@@ -56,7 +56,7 @@ import type { MultiSelectSearchOption } from "@/components/ui/multi-select-searc
 import { DatePicker } from "@/components/ui/date-picker";
 import { PurchaseIndentPreviewModal } from "@/components/purchase-indents/purchase-indent-preview-modal";
 import { PurchaseOrderPreviewModal } from "@/components/purchase-orders/purchase-order-preview-modal";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, formatRate } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { PurchaseIndentDialog } from "@/components/purchase-indents/purchase-indent-dialog";
@@ -1961,10 +1961,10 @@ export default function DashboardPage() {
                                                         )}
                                                       </TableCell>
                                                       <TableCell className="px-4 py-2 text-right text-secondary-500 text-[13px] font-medium tabular-nums">
-                                                        ₹{tax.toFixed(2)}
+                                                        ₹{formatRate(tax)}
                                                       </TableCell>
                                                       <TableCell className="px-4 py-2 text-right font-black text-secondary-900 text-[13px] tabular-nums pr-6">
-                                                        ₹{total.toFixed(2)}
+                                                        ₹{formatRate(total)}
                                                       </TableCell>
                                                     </TableRow>
                                                   );
