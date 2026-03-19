@@ -540,12 +540,6 @@ namespace net_backend.Controllers
             if (dto.VendorId <= 0)
                 return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Party Name is mandatory." });
 
-            if (string.IsNullOrWhiteSpace(dto.QuotationNo))
-                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Quotation Number is mandatory." });
-
-            if (dto.QuotationUrls == null || dto.QuotationUrls.Count == 0)
-                return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "At least one quotation file must be uploaded." });
-
             if (!dto.DeliveryDate.HasValue)
                 return BadRequest(new ApiResponse<PurchaseOrder> { Success = false, Message = "Delivery Date is mandatory." });
 
@@ -558,8 +552,8 @@ namespace net_backend.Controllers
                 LocationId = locationId,
                 VendorId = dto.VendorId,
                 DeliveryDate = dto.DeliveryDate,
-                QuotationNo = dto.QuotationNo,
-                QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls ?? new List<string>()),
+                QuotationNo = string.IsNullOrWhiteSpace(dto.QuotationNo) ? null : dto.QuotationNo.Trim(),
+                QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls),
                 GstType = dto.GstType.HasValue ? (int)dto.GstType.Value : null,
                 GstPercent = dto.GstPercent,
                 Remarks = dto.Remarks,
@@ -823,12 +817,6 @@ namespace net_backend.Controllers
             if (dto.VendorId <= 0)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Party Name is mandatory." });
 
-            if (string.IsNullOrWhiteSpace(dto.QuotationNo))
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Quotation Number is mandatory." });
-
-            if (dto.QuotationUrls == null || dto.QuotationUrls.Count == 0)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "At least one quotation file must be uploaded." });
-
             if (!dto.DeliveryDate.HasValue)
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Delivery Date is mandatory." });
 
@@ -837,8 +825,8 @@ namespace net_backend.Controllers
 
             po.VendorId = dto.VendorId;
             po.DeliveryDate = dto.DeliveryDate;
-            po.QuotationNo = dto.QuotationNo;
-            po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls ?? new List<string>());
+            po.QuotationNo = string.IsNullOrWhiteSpace(dto.QuotationNo) ? null : dto.QuotationNo.Trim();
+            po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls);
             po.GstType = dto.GstType.HasValue ? (int)dto.GstType.Value : null;
             po.GstPercent = dto.GstPercent;
             po.Remarks = dto.Remarks;

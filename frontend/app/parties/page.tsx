@@ -218,7 +218,6 @@ export default function PartiesPage() {
                             <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
                                 <th className="px-4 py-3 font-semibold w-16 text-center">Sr.No</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Name</th>
-                                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Category / Type</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Contact Info</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">GST No</th>
                                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Status</th>
@@ -229,7 +228,7 @@ export default function PartiesPage() {
                             {isLoading ? (
                                 [1, 2, 3].map((i) => (
                                     <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(7).fill(0).map((_, j) => (
+                                        {Array(6).fill(0).map((_, j) => (
                                             <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
                                         ))}
                                     </tr>
@@ -243,10 +242,6 @@ export default function PartiesPage() {
                                         <td className="px-4 py-3 text-secondary-500 font-medium text-center">{totalCount - (page - 1) * pageSize - idx}</td>
                                         <td className="px-4 py-3">
                                             <div className="font-bold text-secondary-900 uppercase tracking-tight">{party.name}</div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium text-secondary-700 text-xs">{party.partyCategory || "—"}</div>
-                                            <div className="text-[10px] text-secondary-400 font-medium uppercase">{party.customerType || "—"}</div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="font-medium text-secondary-700">{party.phoneNumber || "—"}</div>
@@ -295,7 +290,7 @@ export default function PartiesPage() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="py-12 text-center text-secondary-500 italic font-medium">
+                                    <td colSpan={6} className="py-12 text-center text-secondary-500 italic font-medium">
                                         No parties found matching criteria.
                                     </td>
                                 </tr>

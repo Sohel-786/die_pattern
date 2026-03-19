@@ -407,24 +407,14 @@ export function PurchaseOrderDialog({
 
   const isValid =
     !!vendorId &&
-    quotationNo.trim() !== "" &&
     deliveryDate.trim() !== "" &&
     deliveryDateNotPast &&
-    effectiveQuotationCount >= 1 &&
     includedItems.length >= 1 &&
     includedItems.every((i) => (i.rate ?? 0) > 0);
 
   const handleSubmit = async () => {
     if (!vendorId) {
       toast.error("Please select Party Name");
-      return;
-    }
-    if (quotationNo.trim() === "") {
-      toast.error("Quotation Number is required");
-      return;
-    }
-    if (effectiveQuotationCount === 0) {
-      toast.error("At least one quotation file must be uploaded");
       return;
     }
     if (deliveryDate.trim() === "") {
@@ -570,7 +560,7 @@ export function PurchaseOrderDialog({
 
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-3">
-                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number <span className="text-rose-500">*</span></Label>
+                  <Label className="text-xs font-semibold text-secondary-600">Quotation Number</Label>
                   <Input
                     placeholder="Supplier quote ref"
                     value={quotationNo}
@@ -581,7 +571,7 @@ export function PurchaseOrderDialog({
                 </div>
                 <div className="col-span-9 flex items-end gap-2 flex-wrap">
                   <div className="w-48 min-w-0">
-                    <Label className="text-xs font-semibold text-secondary-600">Quotation Upload <span className="text-rose-500">*</span></Label>
+                    <Label className="text-xs font-semibold text-secondary-600">Quotation Upload</Label>
                     <div className={cn(
                       "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
                       isReadOnly && "opacity-50 cursor-not-allowed hover:border-secondary-200"

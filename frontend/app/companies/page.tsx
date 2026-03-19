@@ -16,7 +16,7 @@ import { ImportPreviewModal } from "@/components/dialogs/import-preview-modal";
 import { Dialog } from "@/components/ui/dialog";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
 import { AccessDenied } from "@/components/ui/access-denied";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
@@ -264,7 +264,7 @@ export default function CompaniesPage() {
                         </span>
                         {company.gstDate && (
                           <span className="text-[10px] text-secondary-500 font-medium">
-                            Reg: {formatDateTime(company.gstDate)}
+                            Reg: {formatDate(company.gstDate)}
                           </span>
                         )}
                       </div>

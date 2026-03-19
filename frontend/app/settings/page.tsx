@@ -45,11 +45,7 @@ import {
   useLocationsActive,
   useUserLocationAccess,
   useUpdateUserLocationAccess,
-  useTransferRules,
-  useUpdateTransferRules,
   type CompanyLocationAccessItem,
-  type TransferRuleLocation,
-  type UpdateTransferRuleItem,
 } from "@/hooks/use-settings";
 import { useUsers, useCreateUser, useUpdateUser } from "@/hooks/use-users";
 // Removed useDivisions import
@@ -254,18 +250,6 @@ export default function SettingsPage() {
 
   const selectedUser = selectedUserId != null ? users?.find((u) => u.id === selectedUserId) : null;
   const isAdminSelected = selectedUser?.role === Role.ADMIN;
-  const { data: transferRules = [], isLoading: transferRulesLoading } = useTransferRules(activeTab === "access" && !!isAdminSelected);
-  const updateTransferRules = useUpdateTransferRules();
-  const [localTransferRules, setLocalTransferRules] = useState<TransferRuleLocation[]>([]);
-  useEffect(() => {
-    if (transferRules.length > 0) setLocalTransferRules(transferRules);
-  }, [transferRules]);
-  const handleTransferRuleToggle = useCallback((locationId: number, allow: boolean) => {
-    const next = localTransferRules.map((r) => (r.locationId === locationId ? { ...r, allowVendorToVendorTransfer: allow } : r));
-    setLocalTransferRules(next);
-    const payload: UpdateTransferRuleItem[] = next.map((r) => ({ locationId: r.locationId, allowVendorToVendorTransfer: r.allowVendorToVendorTransfer }));
-    updateTransferRules.mutate(payload);
-  }, [localTransferRules, updateTransferRules]);
 
   // When a new location is created (or access refreshed), refetch current user's location access so Settings pills update without reload
   useEffect(() => {
@@ -1190,52 +1174,7 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
 
-                {isAdminSelected && (
-                  <Card className="shadow-sm border-secondary-200 border-t-4 border-t-amber-500">
-                    <CardHeader className="bg-gradient-to-r from-amber-50/30 to-white border-b border-secondary-100 pb-3 pt-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-amber-100/50 rounded-lg text-amber-600">
-                          <ArrowLeftRight className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold text-primary-900">Transfer Rules (Admin only)</CardTitle>
-                          <p className="text-xs text-secondary-500 mt-0.5">Allow or disallow vendor-to-vendor transfer per location for this admin. When disabled, direct vendor → vendor transfers are blocked.</p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      {transferRulesLoading ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {localTransferRules.map((r) => (
-                            <label key={r.locationId} className="flex items-center justify-between p-3 rounded-lg border border-amber-100 bg-amber-50/20 hover:bg-amber-50/40 transition-colors cursor-pointer">
-                              <div>
-                                <span className="text-sm font-medium text-primary-900">{r.locationName}</span>
-                                {r.companyName && <span className="text-xs text-secondary-500 ml-2">({r.companyName})</span>}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-secondary-500">Allow vendor-to-vendor</span>
-                                <input
-                                  type="checkbox"
-                                  checked={r.allowVendorToVendorTransfer}
-                                  onChange={(e) => handleTransferRuleToggle(r.locationId, e.target.checked)}
-                                  disabled={updateTransferRules.isPending}
-                                  className="w-4 h-4 rounded border-secondary-300 text-amber-600 focus:ring-amber-500"
-                                />
-                              </div>
-                            </label>
-                          ))}
-                          {localTransferRules.length === 0 && !transferRulesLoading && (
-                            <p className="text-sm text-secondary-500 italic py-4">No locations available.</p>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Transfer Rules removed: all parties can transfer to any party */}
               </motion.div>
             )}
 

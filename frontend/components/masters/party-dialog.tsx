@@ -81,8 +81,6 @@ function GstSegmentGuide({ value }: { value: string }) {
 
 const partySchema = z.object({
     name: z.string().min(1, "Name is required"),
-    partyCategory: z.string().min(1, "Party Category is required"),
-    customerType: z.string().min(1, "Customer Type is required"),
     contactPerson: z.string().min(1, "Contact Person is required"),
     phoneNumber: z.string()
         .min(1, "Contact No. is required")
@@ -138,8 +136,6 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
         if (party && isOpen) {
             reset({
                 name: party.name,
-                partyCategory: (party.partyCategory?.toUpperCase().trim().replace(/\s*\/\s*/g, " / ") || "SUPPLIER / VENDOR"),
-                customerType: (party.customerType?.toUpperCase().trim() || "MANUFACTURER"),
                 phoneNumber: party.phoneNumber || "",
                 contactPerson: party.contactPerson || "",
                 email: party.email || "",
@@ -151,8 +147,6 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
         } else if (isOpen) {
             reset({
                 name: "",
-                partyCategory: "SUPPLIER / VENDOR",
-                customerType: "MANUFACTURER",
                 phoneNumber: "",
                 contactPerson: "",
                 email: "",
@@ -179,57 +173,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                 className="space-y-5"
             >
                 <div className="space-y-4">
-                    {/* Row 1: Party Category + Customer Type */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="partyCategory" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Party Category <span className="text-red-500">*</span>
-                            </Label>
-                            <Controller
-                                name="partyCategory"
-                                control={control}
-                                render={({ field }) => (
-                                    <select
-                                        {...field}
-                                        id="partyCategory"
-                                        className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
-                                        disabled={isReadOnly}
-                                    >
-                                        <option value="" disabled hidden>Select Category</option>
-                                        <option value="SUPPLIER / VENDOR">SUPPLIER / VENDOR</option>
-                                        <option value="CUSTOMER">CUSTOMER</option>
-                                        <option value="BOTH">BOTH</option>
-                                    </select>
-                                )}
-                            />
-                            {errors.partyCategory && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.partyCategory.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="customerType" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Customer Type <span className="text-red-500">*</span>
-                            </Label>
-                            <Controller
-                                name="customerType"
-                                control={control}
-                                render={({ field }) => (
-                                    <select
-                                        {...field}
-                                        id="customerType"
-                                        className="flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm font-medium"
-                                        disabled={isReadOnly}
-                                    >
-                                        <option value="" disabled hidden>Select Type</option>
-                                        <option value="MANUFACTURER">MANUFACTURER</option>
-                                        <option value="DEALER">DEALER</option>
-                                        <option value="DISTRIBUTOR">DISTRIBUTOR</option>
-                                    </select>
-                                )}
-                            />
-                            {errors.customerType && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.customerType.message}</p>}
-                        </div>
-                    </div>
-
-                    {/* Row 2: Party Name - full width */}
+                    {/* Party Name - full width */}
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
                             Name <span className="text-red-500">*</span>
@@ -249,7 +193,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                         {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
                     </div>
 
-                    {/* Row 3: Contact Person, Contact No., Email */}
+                    {/* Contact Person, Contact No., Email */}
                     <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="contactPerson" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
@@ -308,7 +252,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                         </div>
                     </div>
 
-                    {/* Row 4: GST No + GST Date - full width 2 col split (+ toggle in edit mode) */}
+                    {/* GST No + GST Date - full width 2 col split (+ toggle in edit mode) */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="gstNo" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">

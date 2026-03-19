@@ -29,8 +29,6 @@ namespace net_backend.Controllers
                 .ToListAsync();
             var data = parties.Select(p => new {
                 Name = p.Name,
-                PartyCategory = p.PartyCategory ?? "",
-                CustomerType = p.CustomerType ?? "",
                 Address = p.Address ?? "",
                 ContactPerson = p.ContactPerson ?? "",
                 PhoneNumber = p.PhoneNumber ?? "",
@@ -83,8 +81,8 @@ namespace net_backend.Controllers
                         newParties.Add(new Party
                         {
                             Name = validRow.Data.Name.Trim(),
-                            PartyCategory = validRow.Data.PartyCategory!,
-                            CustomerType = validRow.Data.CustomerType!,
+                            PartyCategory = "SUPPLIER / VENDOR",
+                            CustomerType = null,
                             Address = validRow.Data.Address!,
                             ContactPerson = validRow.Data.ContactPerson!,
                             PhoneNumber = validRow.Data.PhoneNumber!,
@@ -145,12 +143,11 @@ namespace net_backend.Controllers
                 var item = row.Data;
 
                 // ── Mandatory fields ─────────────────────────────────────────
-                if (string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.PartyCategory) ||
-                    string.IsNullOrWhiteSpace(item.CustomerType) || string.IsNullOrWhiteSpace(item.ContactPerson) ||
+                if (string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.ContactPerson) ||
                     string.IsNullOrWhiteSpace(item.PhoneNumber) || string.IsNullOrWhiteSpace(item.GstNo) ||
                     string.IsNullOrWhiteSpace(item.Address))
                 {
-                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name, Category, Customer Type, Contact Person, Contact No., GST No., and Address are mandatory." });
+                    validation.Invalid.Add(new ValidationEntry<PartyImportDto> { Row = row.RowNumber, Data = item, Message = "Name, Contact Person, Contact No., GST No., and Address are mandatory." });
                     continue;
                 }
 
@@ -283,11 +280,10 @@ namespace net_backend.Controllers
 
             // ── 1. Mandatory field check ─────────────────────────────────────
             if (string.IsNullOrWhiteSpace(party.Name) ||
-                string.IsNullOrWhiteSpace(party.PartyCategory) || string.IsNullOrWhiteSpace(party.CustomerType) ||
                 string.IsNullOrWhiteSpace(party.ContactPerson) || string.IsNullOrWhiteSpace(party.PhoneNumber) ||
                 string.IsNullOrWhiteSpace(party.GstNo) || string.IsNullOrWhiteSpace(party.Address))
             {
-                return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields (Name, Category, Customer Type, Contact Person, Contact No., GST No., Address) must be provided." });
+                return BadRequest(new ApiResponse<Party> { Success = false, Message = "All mandatory fields (Name, Contact Person, Contact No., GST No., Address) must be provided." });
             }
 
             if (!party.GstDate.HasValue)
@@ -327,6 +323,9 @@ namespace net_backend.Controllers
 
             // ── 5. Persist ──────────────────────────────────────────────────
             party.Name = nameTrimmed;
+            // Every Party is treated as a Vendor now; category/type are not user-selected.
+            party.PartyCategory = "SUPPLIER / VENDOR";
+            party.CustomerType = null;
             party.GstNo = gstNorm;
             party.CompanyId = companyId;
             party.CreatedAt = DateTime.Now;

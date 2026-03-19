@@ -12,29 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
-const STATUS_LABELS: Record<ItemProcessState, string> = {
-  NotInStock: "Not in stock",
-  InPI: "PI Issued",
-  InPO: "PO Issued",
-  InwardDone: "Inward Done",
-  InQC: "In QC",
-  InJobwork: "In Job work",
-  AtVendor: "At Vendor",
-  Outward: "Outward",
-  InStock: "In Stock",
-};
-
-const STATUS_PILL_CLASS: Record<ItemProcessState, string> = {
-  NotInStock: "bg-slate-100 text-slate-700 border-slate-200",
-  InPI: "bg-amber-100 text-amber-800 border-amber-200",
-  InPO: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  InwardDone: "bg-sky-100 text-sky-800 border-sky-200",
-  InQC: "bg-violet-100 text-violet-800 border-violet-200",
-  InJobwork: "bg-teal-100 text-teal-800 border-teal-200",
-  AtVendor: "bg-pink-100 text-pink-800 border-pink-200",
-  Outward: "bg-orange-100 text-orange-800 border-orange-200",
-  InStock: "bg-emerald-100 text-emerald-800 border-emerald-200",
-};
+// Note: This dialog now shows only "Not In Stock" items, so no status column/pills are required.
 
 interface PiItemSelectionDialogProps {
   open: boolean;
@@ -84,18 +62,8 @@ export function PiItemSelectionDialog({
   const selectedSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const pendingSet = useMemo(() => new Set(pendingItemsState.map(i => i.itemId)), [pendingItemsState]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return itemsWithStatus;
-    const q = search.trim().toLowerCase();
-    return itemsWithStatus.filter(
-      (i) =>
-        (i.currentName ?? "").toLowerCase().includes(q) ||
-        (i.mainPartName ?? "").toLowerCase().includes(q)
-    );
-  }, [itemsWithStatus, search]);
-
   // Normalise backend status strings (tolerate null/undefined, spaces, casing) to our enum keys
-  const normalizeStatus = (status?: string | null): ItemProcessState | null => {
+  function normalizeStatus(status?: string | null): ItemProcessState | null {
     if (!status) return null;
     const key = status.replace(/\s+/g, "").toLowerCase();
     switch (key) {
@@ -120,11 +88,21 @@ export function PiItemSelectionDialog({
       default:
         return null;
     }
-  };
+  }
+
+  const filtered = useMemo(() => {
+    const base = itemsWithStatus.filter((i) => normalizeStatus(i.status) === "NotInStock");
+    if (!search.trim()) return base;
+    const q = search.trim().toLowerCase();
+    return base.filter(
+      (i) =>
+        (i.currentName ?? "").toLowerCase().includes(q) ||
+        (i.mainPartName ?? "").toLowerCase().includes(q)
+    );
+  }, [itemsWithStatus, search]);
 
   const addableRows = useMemo(
-    () =>
-      filtered.filter((i) => normalizeStatus(i.status) === "NotInStock" && !selectedSet.has(i.itemId)),
+    () => filtered.filter((i) => !selectedSet.has(i.itemId)),
     [filtered, selectedSet]
   );
 
@@ -166,7 +144,7 @@ export function PiItemSelectionDialog({
     >
       <div className="flex flex-col flex-1 min-h-0 p-6 gap-4">
         <p className="text-sm text-secondary-600">
-          Click an item below to add it to the Purchase Indent. Items marked with a check are already selected.
+          Click an item below to add it to the Purchase Indent. Only items that are Not In Stock are shown.
         </p>
 
         {/* Selected for PI – pending section */}
@@ -243,7 +221,7 @@ export function PiItemSelectionDialog({
         </div>
         <div className="flex-1 min-h-0 border border-secondary-200 rounded-lg overflow-hidden bg-white flex flex-col">
           <div className="px-3 py-2 border-b border-secondary-200 bg-secondary-50 text-xs font-semibold text-secondary-600 uppercase tracking-wider">
-            Available items — click a row to add to selection
+            Available items (Not In Stock) — click a row to add to selection
           </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -258,17 +236,16 @@ export function PiItemSelectionDialog({
                     <TableHead className="text-xs font-bold uppercase text-secondary-600">Name</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-secondary-600">Main Part</TableHead>
                     <TableHead className="text-xs font-bold uppercase text-secondary-600 w-28">Type</TableHead>
-                    <TableHead className="text-xs font-bold uppercase text-secondary-600 w-36">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.length === 0 ? (<TableRow key="no-items">
-                      <TableCell colSpan={5} className="py-12 text-center text-secondary-500">
+                  {addableRows.length === 0 ? (<TableRow key="no-items">
+                      <TableCell colSpan={4} className="py-12 text-center text-secondary-500">
                         No items found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((item, idx) => {
+                    addableRows.map((item, idx) => {
                       const canonicalStatus = normalizeStatus(item.status);
                       const canAdd = canonicalStatus === "NotInStock" && !selectedSet.has(item.itemId);
                       const alreadyInPI = selectedSet.has(item.itemId);
@@ -312,7 +289,7 @@ export function PiItemSelectionDialog({
                             ) : (
                               <span
                                 className="inline-block h-7 w-7 rounded border border-secondary-200 bg-secondary-100"
-                                title={canonicalStatus ? STATUS_LABELS[canonicalStatus] : item.status}
+                                title="Not in stock"
                               />
                             )}
                           </TableCell>
@@ -324,16 +301,6 @@ export function PiItemSelectionDialog({
                           </TableCell>
                           <TableCell>
                             <span className="text-secondary-600 text-xs">{item.itemTypeName ?? "—"}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                                canonicalStatus ? STATUS_PILL_CLASS[canonicalStatus] : "bg-secondary-100 text-secondary-700 border-secondary-200"
-                              )}
-                            >
-                              {canonicalStatus ? STATUS_LABELS[canonicalStatus] : item.status}
-                            </span>
                           </TableCell>
                         </TableRow>
                       );
