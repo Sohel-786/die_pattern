@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("purchase-indents")]
+    [Route("api/purchase-indents")]
     [ApiController]
     public class PurchaseIndentsController : BaseController
     {

@@ -1,9 +1,12 @@
-import axios, { AxiosInstance } from "axios";
+          import axios, { AxiosInstance } from "axios";
 
 // Following e-tutor pattern - simple and clean
 const api: AxiosInstance = axios.create({
   withCredentials: true,
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+  // Use relative /api in both Dev and Prod to leverage:
+  // - dev-only Next rewrites: /api/* -> backend port
+  // - production: backend serves /api/* on the same IIS port
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
 });
 
 function getSelectedOrgContext(): { companyId: number; locationId: number } | null {

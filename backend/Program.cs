@@ -83,25 +83,28 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Ensure storage directory exists
+// Ensure storage directory exists (uploads at runtime are served from /storage)
 var storagePath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "storage");
 if (!Directory.Exists(storagePath))
 {
     Directory.CreateDirectory(storagePath);
 }
 
-app.UseStaticFiles(); // For standard wwwroot files
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(storagePath),
-    RequestPath = "/storage"
-});
+// Serve Next.js static export + runtime uploaded files from wwwroot.
+// /storage is served automatically because uploads are stored in wwwroot/storage.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SPA fallback for routes that don't have a pre-generated static file.
+// Keeps production behavior consistent with QC_Tool.
+app.MapFallbackToFile("index.html");
 
 // Clean, migration-based database initialization
 using (var scope = app.Services.CreateScope())

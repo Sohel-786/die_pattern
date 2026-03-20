@@ -11,7 +11,7 @@ using net_backend.Models;
 
 namespace net_backend.Controllers
 {
-    [Route("auth")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
@@ -50,7 +50,8 @@ namespace net_backend.Controllers
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false, 
+                // Match request scheme so cookies work correctly behind IIS (HTTP/HTTPS).
+                Secure = HttpContext.Request.IsHttps,
                 SameSite = SameSiteMode.Lax,
                 Expires = DateTime.UtcNow.AddDays(7),
                 Path = "/"

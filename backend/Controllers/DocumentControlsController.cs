@@ -6,7 +6,7 @@ using net_backend.Models;
 
 namespace net_backend.Controllers
 {
-    [Route("document-controls")]
+    [Route("api/document-controls")]
     [ApiController]
     public class DocumentControlsController : BaseController
     {

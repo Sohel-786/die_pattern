@@ -8,7 +8,7 @@ using net_backend.Services;
 namespace net_backend.Controllers
 {
     [ApiController]
-    [Route("masters")]
+    [Route("api/masters")]
     public class MasterController : BaseController
     {
         private readonly IExcelService _excelService;

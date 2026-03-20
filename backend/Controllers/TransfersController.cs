@@ -10,7 +10,7 @@ using System.IO;
 
 namespace net_backend.Controllers
 {
-    [Route("transfers")]
+    [Route("api/transfers")]
     [ApiController]
     public class TransfersController : BaseController
     {

@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("items")]
+    [Route("api/items")]
     [ApiController]
     public class ItemsController : BaseController
     {

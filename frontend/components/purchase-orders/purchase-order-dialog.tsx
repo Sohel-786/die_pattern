@@ -273,6 +273,14 @@ export function PurchaseOrderDialog({
     mutationFn: (data: any) => api.put(`/purchase-orders/${po!.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      // The edit dialog attachment URLs are loaded from the detail query:
+      // `queryKey: ["purchase-order", po?.id]`.
+      // If we only invalidate the list query, reopening the same PO edit dialog
+      // can show stale attachmentUrls until a full page reload.
+      if (po?.id) {
+        queryClient.invalidateQueries({ queryKey: ["purchase-order", po.id] });
+        queryClient.invalidateQueries({ queryKey: ["purchase-order-print", po.id] });
+      }
       queryClient.invalidateQueries({ queryKey: ["items"] });
       if (onSuccess) onSuccess();
       toast.success("PO updated");

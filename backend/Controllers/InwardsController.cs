@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace net_backend.Controllers
 {
-    [Route("inwards")]
+    [Route("api/inwards")]
     [ApiController]
     public class InwardsController : BaseController
     {

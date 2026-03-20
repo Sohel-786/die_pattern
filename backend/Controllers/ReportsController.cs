@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("reports")]
+    [Route("api/reports")]
     [ApiController]
     public class ReportsController : BaseController
     {

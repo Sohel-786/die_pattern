@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace net_backend.Controllers
 {
-    [Route("companies")]
+    [Route("api/companies")]
     [ApiController]
     public class CompaniesController : BaseController
     {

@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace net_backend.Controllers
 {
-    [Route("quality-control")]
+    [Route("api/quality-control")]
     [ApiController]
     public class QualityControlController : BaseController
     {

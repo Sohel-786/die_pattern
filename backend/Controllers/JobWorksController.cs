@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("job-works")]
+    [Route("api/job-works")]
     [ApiController]
     public class JobWorksController : BaseController
     {

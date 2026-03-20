@@ -8,7 +8,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("purchase-orders")]
+    [Route("api/purchase-orders")]
     [ApiController]
     public class PurchaseOrdersController : BaseController
     {

@@ -1,0 +1,6 @@
+# Local publish outputs (generated for IIS deployments, must not be pushed)
+/Publish/
+
+# Local reference project (used for porting logic; must not be pushed)
+/QC_Tool/
+

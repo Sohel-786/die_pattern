@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace net_backend.Controllers
 {
-    [Route("settings")]
+    [Route("api/settings")]
     [ApiController]
     [Authorize]
     public class SettingsController : ControllerBase

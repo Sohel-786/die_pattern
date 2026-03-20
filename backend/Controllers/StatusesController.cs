@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("statuses")]
+    [Route("api/statuses")]
     [ApiController]
     public class StatusesController : BaseController
     {

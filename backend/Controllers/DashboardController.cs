@@ -7,7 +7,7 @@ using net_backend.Services;
 
 namespace net_backend.Controllers
 {
-    [Route("dashboard")]
+    [Route("api/dashboard")]
     [ApiController]
     public class DashboardController : BaseController
     {

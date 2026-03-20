@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace net_backend.Controllers
 {
-    [Route("parties")]
+    [Route("api/parties")]
     [ApiController]
     public class PartiesController : BaseController
     {

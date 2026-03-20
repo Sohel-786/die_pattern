@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { FullScreenImageViewer } from "@/components/ui/full-screen-image-viewer";
 import { registerDialog, applyScrollLockState } from "@/lib/dialog-stack";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
 interface AttachmentViewerModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -29,7 +27,14 @@ function isImage(url: string, fileName?: string | null): boolean {
 export function AttachmentViewerModal({ isOpen, onClose, url, fileName }: AttachmentViewerModalProps) {
     if (!url) return null;
 
-    const fullUrl = url.startsWith("http") || url.startsWith("blob:") ? url : `${API_BASE}${url}`;
+    // Backend returns URLs like `/storage/...` (same IIS port in production). Prefixing with
+    // `NEXT_PUBLIC_API_URL` breaks production (turns `/storage/...` into `/api/storage/...`).
+    const fullUrl =
+        url.startsWith("http") || url.startsWith("blob:")
+            ? url
+            : url.startsWith("/")
+                ? url
+                : `/${url}`;
     const showPdf = isPdf(url, fileName);
     const showImage = isImage(url, fileName);
 

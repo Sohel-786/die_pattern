@@ -63,3 +63,13 @@ die_pattern/
 ```
 
 *Note: The `QC_Tool` folder in this repository is kept for reference only and is not part of the Die Pattern Management application.*
+
+---
+## Publish
+
+Create a timestamped `Publish/<stamp>/` folder containing the backend publish output plus the frontend static export copied into `wwwroot`.
+
+Run (PowerShell):
+```powershell
+.\publish.ps1 -Configuration Release
+```
