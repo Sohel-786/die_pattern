@@ -34,6 +34,13 @@ The system seeds an admin user on first run (defined in `DbInitializer.cs`):
 
 ---
 
+## 📦 Automated Production Publish
+Run this from the **repository root** (the folder containing `publish.ps1`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\publish.ps1
+```
+
 ## Tech Stack
 
 ### Backend
