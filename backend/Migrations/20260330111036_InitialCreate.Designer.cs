@@ -12,8 +12,8 @@ using net_backend.Data;
 namespace net_backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260310070902_RemoveManageUsersPermission")]
-    partial class RemoveManageUsersPermission
+    [Migration("20260330111036_InitialCreate")]
+    partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -275,10 +275,16 @@ namespace net_backend.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ItemNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ItemTypeName")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MaterialName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NewItemNameFromJobWork")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Quantity")
@@ -402,7 +408,19 @@ namespace net_backend.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
+                    b.Property<int?>("InwardId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InwardLineId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("JobWorkId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("JobWorkItemId")
                         .HasColumnType("int");
 
                     b.Property<string>("NewName")
@@ -421,7 +439,16 @@ namespace net_backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("QcEntryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RevertedFromLogId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -590,11 +617,20 @@ namespace net_backend.Migrations
                     b.Property<int>("JobWorkId")
                         .HasColumnType("int");
 
+                    b.Property<string>("OriginalNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProposedNewName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal?>("Rate")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("WillChangeName")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -820,6 +856,9 @@ namespace net_backend.Migrations
 
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ItemNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PurchaseIndentId")
                         .HasColumnType("int");
@@ -1114,6 +1153,9 @@ namespace net_backend.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ItemNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
@@ -1151,6 +1193,9 @@ namespace net_backend.Migrations
 
                     b.Property<int?>("DefaultLocationId")
                         .HasColumnType("int");
+
+                    b.Property<string>("EncryptedPassword")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()

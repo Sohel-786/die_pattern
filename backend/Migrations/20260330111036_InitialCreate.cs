@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -53,41 +53,21 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "locations",
+                name: "document_controls",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CompanyId = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_locations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_locations_companies_CompanyId",
-                        column: x => x.CompanyId,
-                        principalTable: "companies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "item_types",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DocumentType = table.Column<int>(type: "int", nullable: false),
+                    DocumentNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    RevisionNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    RevisionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsApplied = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_item_types", x => x.Id);
+                    table.PrimaryKey("PK_document_controls", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -102,6 +82,20 @@ namespace net_backend.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_item_statuses", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "item_types",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_item_types", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -130,6 +124,30 @@ namespace net_backend.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_owner_types", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "locations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CompanyId = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_locations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_locations_companies_CompanyId",
+                        column: x => x.CompanyId,
+                        principalTable: "companies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -174,6 +192,7 @@ namespace net_backend.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EncryptedPassword = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Role = table.Column<int>(type: "int", nullable: false),
@@ -204,6 +223,73 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MainPartName = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CurrentName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LocationId = table.Column<int>(type: "int", nullable: true),
+                    ItemTypeId = table.Column<int>(type: "int", nullable: false),
+                    DrawingNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RevisionNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MaterialId = table.Column<int>(type: "int", nullable: false),
+                    OwnerTypeId = table.Column<int>(type: "int", nullable: false),
+                    StatusId = table.Column<int>(type: "int", nullable: false),
+                    CurrentProcess = table.Column<int>(type: "int", nullable: false),
+                    CurrentLocationId = table.Column<int>(type: "int", nullable: true),
+                    CurrentPartyId = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_items_item_statuses_StatusId",
+                        column: x => x.StatusId,
+                        principalTable: "item_statuses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_items_item_types_ItemTypeId",
+                        column: x => x.ItemTypeId,
+                        principalTable: "item_types",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_items_locations_CurrentLocationId",
+                        column: x => x.CurrentLocationId,
+                        principalTable: "locations",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_items_locations_LocationId",
+                        column: x => x.LocationId,
+                        principalTable: "locations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_items_materials_MaterialId",
+                        column: x => x.MaterialId,
+                        principalTable: "materials",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_items_owner_types_OwnerTypeId",
+                        column: x => x.OwnerTypeId,
+                        principalTable: "owner_types",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_items_parties_CurrentPartyId",
+                        column: x => x.CurrentPartyId,
+                        principalTable: "parties",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "audit_logs",
                 columns: table => new
                 {
@@ -230,70 +316,115 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "items",
+                name: "inwards",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    MainPartName = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CurrentName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LocationId = table.Column<int>(type: "int", nullable: true),
-                    ItemTypeId = table.Column<int>(type: "int", nullable: false),
-                    DrawingNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RevisionNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MaterialId = table.Column<int>(type: "int", nullable: false),
-                    OwnerTypeId = table.Column<int>(type: "int", nullable: false),
-                    StatusId = table.Column<int>(type: "int", nullable: false),
-                    CurrentProcess = table.Column<int>(type: "int", nullable: false),
-                    CurrentLocationId = table.Column<int>(type: "int", nullable: true),
-                    CurrentPartyId = table.Column<int>(type: "int", nullable: true),
+                    InwardNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    InwardDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    VendorId = table.Column<int>(type: "int", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_items", x => x.Id);
+                    table.PrimaryKey("PK_inwards", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_items_item_types_ItemTypeId",
-                        column: x => x.ItemTypeId,
-                        principalTable: "item_types",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_items_item_statuses_StatusId",
-                        column: x => x.StatusId,
-                        principalTable: "item_statuses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_items_locations_LocationId",
+                        name: "FK_inwards_locations_LocationId",
                         column: x => x.LocationId,
                         principalTable: "locations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_items_locations_CurrentLocationId",
-                        column: x => x.CurrentLocationId,
+                        name: "FK_inwards_parties_VendorId",
+                        column: x => x.VendorId,
+                        principalTable: "parties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inwards_users_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "item_master_opening_history",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OriginalFileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ImportedByUserId = table.Column<int>(type: "int", nullable: true),
+                    ItemsImportedCount = table.Column<int>(type: "int", nullable: false),
+                    TotalRowsInFile = table.Column<int>(type: "int", nullable: true),
+                    ImportedItemsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ImportedOnlyFilePath = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_item_master_opening_history", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_item_master_opening_history_locations_LocationId",
+                        column: x => x.LocationId,
+                        principalTable: "locations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_item_master_opening_history_users_ImportedByUserId",
+                        column: x => x.ImportedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "job_works",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    JobWorkNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    ToPartyId = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_job_works", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_job_works_locations_LocationId",
+                        column: x => x.LocationId,
                         principalTable: "locations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_items_materials_MaterialId",
-                        column: x => x.MaterialId,
-                        principalTable: "materials",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_items_owner_types_OwnerTypeId",
-                        column: x => x.OwnerTypeId,
-                        principalTable: "owner_types",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_items_parties_CurrentPartyId",
-                        column: x => x.CurrentPartyId,
+                        name: "FK_job_works_parties_ToPartyId",
+                        column: x => x.ToPartyId,
                         principalTable: "parties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_job_works_users_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -308,6 +439,11 @@ namespace net_backend.Migrations
                     Type = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReqDateOfDelivery = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MtcReq = table.Column<bool>(type: "bit", nullable: false),
+                    DocumentNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RevisionNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RevisionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: false),
                     ApprovedBy = table.Column<int>(type: "int", nullable: true),
                     ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -322,38 +458,11 @@ namespace net_backend.Migrations
                         name: "FK_purchase_indents_users_ApprovedBy",
                         column: x => x.ApprovedBy,
                         principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_purchase_indents_users_CreatedBy",
                         column: x => x.CreatedBy,
                         principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "purchase_indent_items",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PurchaseIndentId = table.Column<int>(type: "int", nullable: false),
-                    ItemId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_purchase_indent_items", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_purchase_indent_items_items_ItemId",
-                        column: x => x.ItemId,
-                        principalTable: "items",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_purchase_indent_items_purchase_indents_PurchaseIndentId",
-                        column: x => x.PurchaseIndentId,
-                        principalTable: "purchase_indents",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -401,96 +510,13 @@ namespace net_backend.Migrations
                         name: "FK_purchase_orders_users_ApprovedBy",
                         column: x => x.ApprovedBy,
                         principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_purchase_orders_users_CreatedBy",
                         column: x => x.CreatedBy,
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "job_works",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    JobWorkNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LocationId = table.Column<int>(type: "int", nullable: false),
-                    ToPartyId = table.Column<int>(type: "int", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_job_works", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_job_works_locations_LocationId",
-                        column: x => x.LocationId,
-                        principalTable: "locations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_job_works_parties_ToPartyId",
-                        column: x => x.ToPartyId,
-                        principalTable: "parties",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_job_works_users_CreatedBy",
-                        column: x => x.CreatedBy,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "inwards",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    InwardNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    InwardDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LocationId = table.Column<int>(type: "int", nullable: false),
-                    VendorId = table.Column<int>(type: "int", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_inwards", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_inwards_locations_LocationId",
-                        column: x => x.LocationId,
-                        principalTable: "locations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_inwards_parties_VendorId",
-                        column: x => x.VendorId,
-                        principalTable: "parties",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_inwards_users_CreatedBy",
-                        column: x => x.CreatedBy,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -543,36 +569,54 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "item_change_logs",
+                name: "transfers",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ItemId = table.Column<int>(type: "int", nullable: false),
-                    OldName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    NewName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OldRevision = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    NewRevision = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ChangeType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TransferNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LocationId = table.Column<int>(type: "int", nullable: false),
+                    FromPartyId = table.Column<int>(type: "int", nullable: true),
+                    ToPartyId = table.Column<int>(type: "int", nullable: true),
+                    TransferDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OutFor = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ReasonDetails = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    VehicleNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PersonName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedBy = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_item_change_logs", x => x.Id);
+                    table.PrimaryKey("PK_transfers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_item_change_logs_items_ItemId",
-                        column: x => x.ItemId,
-                        principalTable: "items",
+                        name: "FK_transfers_locations_LocationId",
+                        column: x => x.LocationId,
+                        principalTable: "locations",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_item_change_logs_users_CreatedBy",
+                        name: "FK_transfers_parties_FromPartyId",
+                        column: x => x.FromPartyId,
+                        principalTable: "parties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_transfers_parties_ToPartyId",
+                        column: x => x.ToPartyId,
+                        principalTable: "parties",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_transfers_users_CreatedBy",
                         column: x => x.CreatedBy,
                         principalTable: "users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -654,7 +698,9 @@ namespace net_backend.Migrations
                     ManageChanges = table.Column<bool>(type: "bit", nullable: false),
                     RevertChanges = table.Column<bool>(type: "bit", nullable: false),
                     ViewReports = table.Column<bool>(type: "bit", nullable: false),
-                    ManageUsers = table.Column<bool>(type: "bit", nullable: false),
+                    ViewPIPReport = table.Column<bool>(type: "bit", nullable: false),
+                    ViewInwardReport = table.Column<bool>(type: "bit", nullable: false),
+                    ViewItemLedgerReport = table.Column<bool>(type: "bit", nullable: false),
                     AccessSettings = table.Column<bool>(type: "bit", nullable: false),
                     NavigationLayout = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -672,107 +718,41 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "transfers",
+                name: "item_change_logs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    TransferNo = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LocationId = table.Column<int>(type: "int", nullable: false),
-                    FromPartyId = table.Column<int>(type: "int", nullable: true),
-                    ToPartyId = table.Column<int>(type: "int", nullable: true),
-                    TransferDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    OutFor = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    ReasonDetails = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    VehicleNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    PersonName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    AttachmentUrlsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedBy = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_transfers", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_transfers_locations_LocationId",
-                        column: x => x.LocationId,
-                        principalTable: "locations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_transfers_parties_FromPartyId",
-                        column: x => x.FromPartyId,
-                        principalTable: "parties",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_transfers_parties_ToPartyId",
-                        column: x => x.ToPartyId,
-                        principalTable: "parties",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_transfers_users_CreatedBy",
-                        column: x => x.CreatedBy,
-                        principalTable: "users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "purchase_order_items",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false),
-                    PurchaseIndentItemId = table.Column<int>(type: "int", nullable: false),
-                    Rate = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_purchase_order_items", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_purchase_order_items_purchase_indent_items_PurchaseIndentItemId",
-                        column: x => x.PurchaseIndentItemId,
-                        principalTable: "purchase_indent_items",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_purchase_order_items_purchase_orders_PurchaseOrderId",
-                        column: x => x.PurchaseOrderId,
-                        principalTable: "purchase_orders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "job_work_items",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    JobWorkId = table.Column<int>(type: "int", nullable: false),
                     ItemId = table.Column<int>(type: "int", nullable: false),
-                    Rate = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    GstPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    OldName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    NewName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OldRevision = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    NewRevision = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ChangeType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Source = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    JobWorkId = table.Column<int>(type: "int", nullable: true),
+                    JobWorkItemId = table.Column<int>(type: "int", nullable: true),
+                    InwardId = table.Column<int>(type: "int", nullable: true),
+                    InwardLineId = table.Column<int>(type: "int", nullable: true),
+                    QcEntryId = table.Column<int>(type: "int", nullable: true),
+                    RevertedFromLogId = table.Column<int>(type: "int", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_job_work_items", x => x.Id);
+                    table.PrimaryKey("PK_item_change_logs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_job_work_items_items_ItemId",
+                        name: "FK_item_change_logs_items_ItemId",
                         column: x => x.ItemId,
                         principalTable: "items",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_job_work_items_job_works_JobWorkId",
-                        column: x => x.JobWorkId,
-                        principalTable: "job_works",
+                        name: "FK_item_change_logs_users_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -796,7 +776,9 @@ namespace net_backend.Migrations
                     IsQCPending = table.Column<bool>(type: "bit", nullable: false),
                     IsQCApproved = table.Column<bool>(type: "bit", nullable: false),
                     Rate = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    GstPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
+                    GstPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ItemNameSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewItemNameFromJobWork = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -813,6 +795,93 @@ namespace net_backend.Migrations
                         principalTable: "items",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "job_work_items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    JobWorkId = table.Column<int>(type: "int", nullable: false),
+                    ItemId = table.Column<int>(type: "int", nullable: false),
+                    Rate = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    GstPercent = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    WillChangeName = table.Column<bool>(type: "bit", nullable: false),
+                    ProposedNewName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OriginalNameSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_job_work_items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_job_work_items_items_ItemId",
+                        column: x => x.ItemId,
+                        principalTable: "items",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_job_work_items_job_works_JobWorkId",
+                        column: x => x.JobWorkId,
+                        principalTable: "job_works",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "purchase_indent_items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PurchaseIndentId = table.Column<int>(type: "int", nullable: false),
+                    ItemId = table.Column<int>(type: "int", nullable: false),
+                    ItemNameSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_purchase_indent_items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_purchase_indent_items_items_ItemId",
+                        column: x => x.ItemId,
+                        principalTable: "items",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_purchase_indent_items_purchase_indents_PurchaseIndentId",
+                        column: x => x.PurchaseIndentId,
+                        principalTable: "purchase_indents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "transfer_items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TransferId = table.Column<int>(type: "int", nullable: false),
+                    ItemId = table.Column<int>(type: "int", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ItemNameSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_transfer_items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_transfer_items_items_ItemId",
+                        column: x => x.ItemId,
+                        principalTable: "items",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_transfer_items_transfers_TransferId",
+                        column: x => x.TransferId,
+                        principalTable: "transfers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -844,36 +913,87 @@ namespace net_backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "transfer_items",
+                name: "purchase_order_items",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    TransferId = table.Column<int>(type: "int", nullable: false),
-                    ItemId = table.Column<int>(type: "int", nullable: false),
-                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false),
+                    PurchaseIndentItemId = table.Column<int>(type: "int", nullable: false),
+                    Rate = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_transfer_items", x => x.Id);
+                    table.PrimaryKey("PK_purchase_order_items", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_transfer_items_items_ItemId",
-                        column: x => x.ItemId,
-                        principalTable: "items",
+                        name: "FK_purchase_order_items_purchase_indent_items_PurchaseIndentItemId",
+                        column: x => x.PurchaseIndentItemId,
+                        principalTable: "purchase_indent_items",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_transfer_items_transfers_TransferId",
-                        column: x => x.TransferId,
-                        principalTable: "transfers",
+                        name: "FK_purchase_order_items_purchase_orders_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
+                        principalTable: "purchase_orders",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_audit_logs_UserId",
                 table: "audit_logs",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inward_lines_InwardId",
+                table: "inward_lines",
+                column: "InwardId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inward_lines_ItemId",
+                table: "inward_lines",
+                column: "ItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inwards_CreatedBy",
+                table: "inwards",
+                column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inwards_InwardNo",
+                table: "inwards",
+                column: "InwardNo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inwards_LocationId",
+                table: "inwards",
+                column: "LocationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inwards_VendorId",
+                table: "inwards",
+                column: "VendorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_item_change_logs_CreatedBy",
+                table: "item_change_logs",
+                column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_item_change_logs_ItemId",
+                table: "item_change_logs",
+                column: "ItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_item_master_opening_history_ImportedByUserId",
+                table: "item_master_opening_history",
+                column: "ImportedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_item_master_opening_history_LocationId",
+                table: "item_master_opening_history",
+                column: "LocationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_items_CurrentLocationId",
@@ -891,15 +1011,11 @@ namespace net_backend.Migrations
                 column: "ItemTypeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_items_LocationId",
+                name: "IX_items_LocationId_MainPartName",
                 table: "items",
-                column: "LocationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_items_MainPartName",
-                table: "items",
-                column: "MainPartName",
-                unique: true);
+                columns: new[] { "LocationId", "MainPartName" },
+                unique: true,
+                filter: "[LocationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_items_MaterialId",
@@ -917,14 +1033,30 @@ namespace net_backend.Migrations
                 column: "StatusId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_item_change_logs_CreatedBy",
-                table: "item_change_logs",
+                name: "IX_job_work_items_ItemId",
+                table: "job_work_items",
+                column: "ItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_job_work_items_JobWorkId",
+                table: "job_work_items",
+                column: "JobWorkId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_job_works_CreatedBy",
+                table: "job_works",
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
-                name: "IX_item_change_logs_ItemId",
-                table: "item_change_logs",
-                column: "ItemId");
+                name: "IX_job_works_LocationId_JobWorkNo",
+                table: "job_works",
+                columns: new[] { "LocationId", "JobWorkNo" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_job_works_ToPartyId",
+                table: "job_works",
+                column: "ToPartyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_locations_CompanyId",
@@ -1000,68 +1132,6 @@ namespace net_backend.Migrations
                 column: "VendorId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_job_works_CreatedBy",
-                table: "job_works",
-                column: "CreatedBy");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_job_works_JobWorkNo",
-                table: "job_works",
-                column: "JobWorkNo",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_job_works_LocationId",
-                table: "job_works",
-                column: "LocationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_job_works_ToPartyId",
-                table: "job_works",
-                column: "ToPartyId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_job_work_items_ItemId",
-                table: "job_work_items",
-                column: "ItemId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_job_work_items_JobWorkId",
-                table: "job_work_items",
-                column: "JobWorkId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inwards_CreatedBy",
-                table: "inwards",
-                column: "CreatedBy");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inwards_InwardNo",
-                table: "inwards",
-                column: "InwardNo",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inwards_LocationId",
-                table: "inwards",
-                column: "LocationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inwards_VendorId",
-                table: "inwards",
-                column: "VendorId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inward_lines_InwardId",
-                table: "inward_lines",
-                column: "InwardId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_inward_lines_ItemId",
-                table: "inward_lines",
-                column: "ItemId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_qc_entries_ApprovedBy",
                 table: "qc_entries",
                 column: "ApprovedBy");
@@ -1098,26 +1168,14 @@ namespace net_backend.Migrations
                 column: "QcEntryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_location_access_CompanyId",
-                table: "user_location_access",
-                column: "CompanyId");
+                name: "IX_transfer_items_ItemId",
+                table: "transfer_items",
+                column: "ItemId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_location_access_LocationId",
-                table: "user_location_access",
-                column: "LocationId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_user_location_access_UserId_CompanyId_LocationId",
-                table: "user_location_access",
-                columns: new[] { "UserId", "CompanyId", "LocationId" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_user_permissions_UserId",
-                table: "user_permissions",
-                column: "UserId",
-                unique: true);
+                name: "IX_transfer_items_TransferId",
+                table: "transfer_items",
+                column: "TransferId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_transfers_CreatedBy",
@@ -1146,14 +1204,26 @@ namespace net_backend.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_transfer_items_ItemId",
-                table: "transfer_items",
-                column: "ItemId");
+                name: "IX_user_location_access_CompanyId",
+                table: "user_location_access",
+                column: "CompanyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_transfer_items_TransferId",
-                table: "transfer_items",
-                column: "TransferId");
+                name: "IX_user_location_access_LocationId",
+                table: "user_location_access",
+                column: "LocationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_location_access_UserId_CompanyId_LocationId",
+                table: "user_location_access",
+                columns: new[] { "UserId", "CompanyId", "LocationId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_permissions_UserId",
+                table: "user_permissions",
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_users_DefaultCompanyId",
@@ -1168,32 +1238,89 @@ namespace net_backend.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "transfer_items");
-            migrationBuilder.DropTable(name: "qc_items");
-            migrationBuilder.DropTable(name: "inward_lines");
-            migrationBuilder.DropTable(name: "purchase_order_items");
-            migrationBuilder.DropTable(name: "job_work_items");
-            migrationBuilder.DropTable(name: "transfers");
-            migrationBuilder.DropTable(name: "qc_entries");
-            migrationBuilder.DropTable(name: "inwards");
-            migrationBuilder.DropTable(name: "purchase_indent_items");
-            migrationBuilder.DropTable(name: "purchase_orders");
-            migrationBuilder.DropTable(name: "purchase_indents");
-            migrationBuilder.DropTable(name: "job_works");
-            migrationBuilder.DropTable(name: "item_change_logs");
-            migrationBuilder.DropTable(name: "user_permissions");
-            migrationBuilder.DropTable(name: "user_location_access");
-            migrationBuilder.DropTable(name: "audit_logs");
-            migrationBuilder.DropTable(name: "items");
-            migrationBuilder.DropTable(name: "users");
-            migrationBuilder.DropTable(name: "parties");
-            migrationBuilder.DropTable(name: "locations");
-            migrationBuilder.DropTable(name: "item_types");
-            migrationBuilder.DropTable(name: "item_statuses");
-            migrationBuilder.DropTable(name: "materials");
-            migrationBuilder.DropTable(name: "owner_types");
-            migrationBuilder.DropTable(name: "companies");
-            migrationBuilder.DropTable(name: "app_settings");
+            migrationBuilder.DropTable(
+                name: "app_settings");
+
+            migrationBuilder.DropTable(
+                name: "audit_logs");
+
+            migrationBuilder.DropTable(
+                name: "document_controls");
+
+            migrationBuilder.DropTable(
+                name: "item_change_logs");
+
+            migrationBuilder.DropTable(
+                name: "item_master_opening_history");
+
+            migrationBuilder.DropTable(
+                name: "job_work_items");
+
+            migrationBuilder.DropTable(
+                name: "purchase_order_items");
+
+            migrationBuilder.DropTable(
+                name: "qc_items");
+
+            migrationBuilder.DropTable(
+                name: "transfer_items");
+
+            migrationBuilder.DropTable(
+                name: "user_location_access");
+
+            migrationBuilder.DropTable(
+                name: "user_permissions");
+
+            migrationBuilder.DropTable(
+                name: "job_works");
+
+            migrationBuilder.DropTable(
+                name: "purchase_indent_items");
+
+            migrationBuilder.DropTable(
+                name: "purchase_orders");
+
+            migrationBuilder.DropTable(
+                name: "inward_lines");
+
+            migrationBuilder.DropTable(
+                name: "qc_entries");
+
+            migrationBuilder.DropTable(
+                name: "transfers");
+
+            migrationBuilder.DropTable(
+                name: "purchase_indents");
+
+            migrationBuilder.DropTable(
+                name: "inwards");
+
+            migrationBuilder.DropTable(
+                name: "items");
+
+            migrationBuilder.DropTable(
+                name: "users");
+
+            migrationBuilder.DropTable(
+                name: "item_statuses");
+
+            migrationBuilder.DropTable(
+                name: "item_types");
+
+            migrationBuilder.DropTable(
+                name: "materials");
+
+            migrationBuilder.DropTable(
+                name: "owner_types");
+
+            migrationBuilder.DropTable(
+                name: "parties");
+
+            migrationBuilder.DropTable(
+                name: "locations");
+
+            migrationBuilder.DropTable(
+                name: "companies");
         }
     }
 }
