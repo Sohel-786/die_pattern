@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using net_backend.Utils;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
@@ -25,8 +26,7 @@ namespace net_backend.Controllers
 
         private string GetSafeName(string name)
         {
-            if (string.IsNullOrEmpty(name)) return "Common";
-            return string.Concat(name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+            return AttachmentStoragePaths.SanitizeFolderName(name);
         }
 
         private async Task<(string companyDir, string locationDir)> GetStorageContextNames()
@@ -406,7 +406,7 @@ namespace net_backend.Controllers
                 if (dto.AttachmentUrls != null && dto.AttachmentUrls.Any())
                 {
                     var (compDir, locDir) = await GetStorageContextNames();
-                    var finalBaseRel = Path.Combine("storage", compDir, locDir, "transfer", transfer.TransferNo);
+                    var finalBaseRel = Path.Combine("storage", compDir, locDir, "transfer", transfer.TransferNo, "files");
                     var finalBaseAbs = Path.Combine(_env.WebRootPath, finalBaseRel);
                     if (!Directory.Exists(finalBaseAbs)) Directory.CreateDirectory(finalBaseAbs);
 
@@ -587,7 +587,7 @@ namespace net_backend.Controllers
                 if (dto.AttachmentUrls != null && dto.AttachmentUrls.Any())
                 {
                     var (compDir, locDir) = await GetStorageContextNames();
-                    var finalBaseRel = Path.Combine("storage", compDir, locDir, "transfer", transfer.TransferNo);
+                    var finalBaseRel = Path.Combine("storage", compDir, locDir, "transfer", transfer.TransferNo, "files");
                     var finalBaseAbs = Path.Combine(_env.WebRootPath, finalBaseRel);
                     if (!Directory.Exists(finalBaseAbs)) Directory.CreateDirectory(finalBaseAbs);
 
@@ -840,20 +840,30 @@ namespace net_backend.Controllers
 
             var (compDir, locDir) = await GetStorageContextNames();
 
-            // Format: storage/company/location/transfer/temp/guid/filename
+            // Format: storage/company/location/transfer/temp/files/guid/filename
             var tempGuid = Guid.NewGuid().ToString("N");
-            var relativePath = Path.Combine("storage", compDir, locDir, "transfer", "temp", tempGuid);
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            var isImage = ImageOptimizer.IsImageExtension(ext);
+            var isPdf = ext == ".pdf";
+            if (string.IsNullOrEmpty(ext) || (!isImage && !isPdf))
+                return BadRequest("Only PDF and image files are allowed.");
+
+            var relativePath = Path.Combine("storage", compDir, locDir, "transfer", "temp", "files", tempGuid);
             var absolutePath = Path.Combine(_env.WebRootPath, relativePath);
 
             if (!Directory.Exists(absolutePath)) Directory.CreateDirectory(absolutePath);
 
-            var fileName = file.FileName; // Keep original or guid? Requirement says "attachment files"
-            // To be safe and unique in the folder:
-            var finalFileName = Guid.NewGuid().ToString("N").Substring(0, 8) + "_" + fileName;
+            var finalFileName = isImage ? $"{tempGuid}.webp" : $"{tempGuid}{ext}";
             var filePath = Path.Combine(absolutePath, finalFileName);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            if (isImage)
             {
+                await using var readStream = file.OpenReadStream();
+                await ImageOptimizer.OptimizeImageToWebpAsync(readStream, filePath);
+            }
+            else
+            {
+                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await file.CopyToAsync(stream);
             }
 

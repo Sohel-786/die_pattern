@@ -5,6 +5,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using net_backend.Utils;
 
 namespace net_backend.Controllers
 {
@@ -19,6 +20,18 @@ namespace net_backend.Controllers
         {
             _codeGenerator = codeGenerator;
             _env = env;
+        }
+
+        private async Task<(string companyDir, string locationDir)> GetCompanyLocationDirsAsync()
+        {
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+
+            return (
+                AttachmentStoragePaths.SanitizeFolderName(company?.Name ?? "Company"),
+                AttachmentStoragePaths.SanitizeFolderName(location?.Name ?? "Location")
+            );
         }
 
         public static void MapToDto(PurchaseOrder po, PODto dto)
@@ -119,27 +132,39 @@ namespace net_backend.Controllers
             if (uploadFile.Length > maxBytes)
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
 
-            var allowed = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp" };
             var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
-            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+            var isImage = ImageOptimizer.IsImageExtension(ext);
+            var isPdf = ext == ".pdf";
+            if (string.IsNullOrEmpty(ext) || (!isImage && !isPdf))
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "Only PDF and image files (PNG, JPG, JPEG, GIF, WEBP) are allowed." });
 
             try
             {
-                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
-                var dir = Path.Combine(root, "wwwroot", "storage", "po-quotations");
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
 
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
-                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
+                var tempGuid = Guid.NewGuid().ToString("N");
+                var tempBaseDirRel = AttachmentStoragePaths.GetModuleTempDirRel(companyDir, locationDir, "purchase-order");
+                var tempDirRel = Path.Combine(tempBaseDirRel, tempGuid);
+                var tempDirAbs = Path.Combine(webRootPath, tempDirRel);
+                Directory.CreateDirectory(tempDirAbs);
 
-                await using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                var fileName = isImage ? $"{tempGuid}.webp" : $"{tempGuid}.pdf";
+                var fileAbsPath = Path.Combine(tempDirAbs, fileName);
+
+                if (isImage)
+                {
+                    await using var readStream = uploadFile.OpenReadStream();
+                    await ImageOptimizer.OptimizeImageToWebpAsync(readStream, fileAbsPath);
+                }
+                else
+                {
+                    await using var stream = new FileStream(fileAbsPath, FileMode.Create, FileAccess.Write, FileShare.None);
                     await uploadFile.CopyToAsync(stream);
+                }
 
-                var url = $"/storage/po-quotations/{fileName}";
+                var rel = Path.Combine(tempDirRel, fileName);
+                var url = AttachmentStoragePaths.UrlFromRelPath(rel);
                 return Ok(new ApiResponse<object> { Data = new { url } });
             }
             catch (UnauthorizedAccessException)
@@ -162,20 +187,22 @@ namespace net_backend.Controllers
                 return BadRequest(new ApiResponse<bool> { Success = false, Message = "Quotation URL is required." });
 
             var decoded = Uri.UnescapeDataString(url.Trim());
-            if (!decoded.StartsWith("/storage/po-quotations/", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid quotation path." });
-
-            var fileName = Path.GetFileName(decoded);
-            if (string.IsNullOrEmpty(fileName) || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-                return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid file name." });
-
             try
             {
+                if (!decoded.StartsWith("/storage/", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid quotation path." });
+
+                // Only allow deletion under our purchase-order attachment folders.
+                if (decoded.IndexOf("/purchase-order/", StringComparison.OrdinalIgnoreCase) < 0)
+                    return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid quotation path." });
+
                 var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
-                var dir = Path.Combine(root, "wwwroot", "storage", "po-quotations");
-                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
-                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
+                var wwwroot = Path.Combine(root, "wwwroot");
+                var relativePath = decoded.TrimStart('/');
+                var filePath = Path.GetFullPath(Path.Combine(wwwroot, relativePath));
+                if (!filePath.StartsWith(Path.GetFullPath(wwwroot), StringComparison.OrdinalIgnoreCase))
                     return BadRequest(new ApiResponse<bool> { Success = false, Message = "Invalid path." });
+
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
@@ -575,6 +602,24 @@ namespace net_backend.Controllers
             _context.PurchaseOrders.Add(po);
             await _context.SaveChangesAsync();
 
+            // Move uploaded temp quotations -> final purchase-order folder (entry save boundary).
+            if (dto.QuotationUrls != null && dto.QuotationUrls.Any())
+            {
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.QuotationUrls,
+                    moduleKey: "purchase-order",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: po.PoNo);
+
+                po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(movedUrls);
+                // Persist alongside item-process updates below.
+            }
+
             // Set item current process to InPO (PO Issued) as soon as they are in a PO
             foreach (var poItem in po.Items)
             {
@@ -826,7 +871,25 @@ namespace net_backend.Controllers
             po.VendorId = dto.VendorId;
             po.DeliveryDate = dto.DeliveryDate;
             po.QuotationNo = string.IsNullOrWhiteSpace(dto.QuotationNo) ? null : dto.QuotationNo.Trim();
-            po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(dto.QuotationUrls);
+            if (dto.QuotationUrls != null)
+            {
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.QuotationUrls,
+                    moduleKey: "purchase-order",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: po.PoNo);
+
+                po.QuotationUrlsJson = QuotationUrlsHelper.ToJson(movedUrls);
+            }
+            else
+            {
+                po.QuotationUrlsJson = null;
+            }
             po.GstType = dto.GstType.HasValue ? (int)dto.GstType.Value : null;
             po.GstPercent = dto.GstPercent;
             po.Remarks = dto.Remarks;

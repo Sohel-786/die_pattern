@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using net_backend.Utils;
 using System.Text.Json;
 
 namespace net_backend.Controllers
@@ -23,6 +24,18 @@ namespace net_backend.Controllers
             _itemState = itemState;
         }
 
+        private async Task<(string companyDir, string locationDir)> GetCompanyLocationDirsAsync()
+        {
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+
+            return (
+                AttachmentStoragePaths.SanitizeFolderName(company?.Name ?? "Company"),
+                AttachmentStoragePaths.SanitizeFolderName(location?.Name ?? "Location")
+            );
+        }
+
         // ── Temp Upload (stored in temp dir, URL returned to client) ──────────────────
         [HttpPost("upload-attachment")]
         public async Task<ActionResult<ApiResponse<object>>> UploadAttachment([FromForm] IFormFile? file)
@@ -36,23 +49,40 @@ namespace net_backend.Controllers
             if (uploadFile.Length > maxBytes)
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "File size must be under 20 MB." });
 
-            var allowed = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp" };
             var ext = Path.GetExtension(uploadFile.FileName)?.ToLowerInvariant();
-            if (string.IsNullOrEmpty(ext) || !allowed.Contains(ext))
+            var isImage = ImageOptimizer.IsImageExtension(ext);
+            var isPdf = ext == ".pdf";
+            if (string.IsNullOrEmpty(ext) || (!isImage && !isPdf))
                 return BadRequest(new ApiResponse<object> { Success = false, Message = "Only PDF and image files are allowed." });
 
             try
             {
-                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
-                var dir = Path.Combine(root, "wwwroot", "storage", "qc-attachments-temp");
-                Directory.CreateDirectory(dir);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
-                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
-                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await uploadFile.CopyToAsync(stream);
-                var url = $"/storage/qc-attachments-temp/{fileName}";
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var tempGuid = Guid.NewGuid().ToString("N");
+                var tempBaseDirRel = Path.Combine(
+                    AttachmentStoragePaths.GetModuleTempDirRel(companyDir, locationDir, "qc"),
+                    tempGuid);
+                var tempBaseDirAbs = Path.Combine(webRootPath, tempBaseDirRel);
+                Directory.CreateDirectory(tempBaseDirAbs);
+
+                var fileName = isImage ? $"{tempGuid}.webp" : $"{tempGuid}{ext}";
+                var destinationAbs = Path.Combine(tempBaseDirAbs, fileName);
+
+                if (isImage)
+                {
+                    await using var readStream = uploadFile.OpenReadStream();
+                    await ImageOptimizer.OptimizeImageToWebpAsync(readStream, destinationAbs);
+                }
+                else
+                {
+                    await using var stream = new FileStream(destinationAbs, FileMode.Create, FileAccess.Write, FileShare.None);
+                    await uploadFile.CopyToAsync(stream);
+                }
+
+                var rel = Path.Combine(tempBaseDirRel, fileName);
+                var url = AttachmentStoragePaths.UrlFromRelPath(rel);
                 return Ok(new ApiResponse<object> { Data = new { url } });
             }
             catch (Exception ex)
@@ -315,6 +345,25 @@ namespace net_backend.Controllers
 
             _context.QcEntries.Add(qcEntry);
             await _context.SaveChangesAsync();
+
+            // Move uploaded temp attachments -> final QC folder for this entry.
+            var incomingUrls = dto.AttachmentUrls ?? new List<string>();
+            if (incomingUrls.Count > 0)
+            {
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    incomingUrls,
+                    moduleKey: "qc",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: qcEntry.QcNo);
+
+                qcEntry.AttachmentUrlsJson = movedUrls.Count > 0 ? JsonSerializer.Serialize(movedUrls) : null;
+                await _context.SaveChangesAsync();
+            }
 
             // Mark items as In QC so Item Master shows correct state
             var itemIds = await _context.InwardLines
@@ -587,7 +636,20 @@ namespace net_backend.Controllers
             entry.SourceType = dto.SourceType;
             entry.Remarks = dto.Remarks ?? entry.Remarks;
             if (dto.AttachmentUrls != null)
-                entry.AttachmentUrlsJson = dto.AttachmentUrls.Count > 0 ? JsonSerializer.Serialize(dto.AttachmentUrls) : null;
+            {
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.AttachmentUrls,
+                    moduleKey: "qc",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: entry.QcNo);
+
+                entry.AttachmentUrlsJson = movedUrls.Count > 0 ? JsonSerializer.Serialize(movedUrls) : null;
+            }
             entry.UpdatedAt = DateTime.Now;
 
             if (dto.InwardLineIds != null && dto.InwardLineIds.Any())

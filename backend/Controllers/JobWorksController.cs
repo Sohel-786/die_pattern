@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using net_backend.Utils;
 
 namespace net_backend.Controllers
 {
@@ -311,8 +312,8 @@ namespace net_backend.Controllers
             var locationName = location.Name;
             
             // Clean names for folder path
-            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));
-            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars()));
+            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars())).Trim();
+            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars())).Trim();
 
             foreach (var itemDto in dto.Items)
             {
@@ -335,26 +336,18 @@ namespace net_backend.Controllers
             var nextCode = await _codeGenerator.GenerateCode("JW", locationId);
             var jobWorkNo = nextCode ?? $"JW-{Guid.NewGuid().ToString().Substring(0, 8)}";
 
-            // Process attachments: Move from temp to JobWorkNo folder
+            // Process attachments: move temp -> final on save/update boundary.
             var finalAttachmentUrls = new List<string>();
-            var targetSubFolder = Path.Combine("storage", companyName, locationName, "jobwork", jobWorkNo);
-            var targetPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", targetSubFolder);
-
             if (dto.AttachmentUrls != null && dto.AttachmentUrls.Any())
             {
-                if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
-
-                foreach (var oldUrl in dto.AttachmentUrls)
-                {
-                    var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", oldUrl.TrimStart('/'));
-                    if (System.IO.File.Exists(oldFilePath))
-                    {
-                        var fileName = Path.GetFileName(oldFilePath);
-                        var newFilePath = Path.Combine(targetPath, fileName);
-                        System.IO.File.Move(oldFilePath, newFilePath, true);
-                        finalAttachmentUrls.Add($"/{targetSubFolder.Replace("\\", "/")}/{fileName}");
-                    }
-                }
+                var webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                finalAttachmentUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.AttachmentUrls,
+                    moduleKey: "job-work",
+                    companyDir: companyName,
+                    locationDir: locationName,
+                    entryKey: jobWorkNo);
             }
 
             var jw = new JobWork
@@ -424,37 +417,21 @@ namespace net_backend.Controllers
 
             var companyName = (company?.Name ?? "General");
             var locationName = (location?.Name ?? "General");
-            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));
-            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars()));
+            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars())).Trim();
+            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars())).Trim();
 
-            // Process attachments: Move from temp to JobWorkNo folder
+            // Process attachments: move temp -> final on save/update boundary.
             var finalAttachmentUrls = new List<string>();
-            var targetSubFolder = Path.Combine("storage", companyName, locationName, "jobwork", jw.JobWorkNo);
-            var targetPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", targetSubFolder);
-
             if (dto.AttachmentUrls != null && dto.AttachmentUrls.Any())
             {
-                if (!Directory.Exists(targetPath)) Directory.CreateDirectory(targetPath);
-
-                foreach (var url in dto.AttachmentUrls)
-                {
-                    var isTemp = url.Contains("/jobwork/attachments/");
-                    if (isTemp)
-                    {
-                        var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", url.TrimStart('/'));
-                        if (System.IO.File.Exists(oldFilePath))
-                        {
-                            var fileName = Path.GetFileName(oldFilePath);
-                            var newFilePath = Path.Combine(targetPath, fileName);
-                            System.IO.File.Move(oldFilePath, newFilePath, true);
-                            finalAttachmentUrls.Add($"/{targetSubFolder.Replace("\\", "/")}/{fileName}");
-                        }
-                    }
-                    else
-                    {
-                        finalAttachmentUrls.Add(url);
-                    }
-                }
+                var webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                finalAttachmentUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.AttachmentUrls,
+                    moduleKey: "job-work",
+                    companyDir: companyName,
+                    locationDir: locationName,
+                    entryKey: jw.JobWorkNo);
             }
 
             // Check for inwarded items to prevent their removal or editing of sensitive fields
@@ -721,23 +698,38 @@ namespace net_backend.Controllers
             var locationName = location.Name;
             
             // Clean names for folder path
-            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars()));
-            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars()));
+            companyName = string.Concat(companyName.Split(Path.GetInvalidFileNameChars())).Trim();
+            locationName = string.Concat(locationName.Split(Path.GetInvalidFileNameChars())).Trim();
 
-            var subFolder = Path.Combine("storage", companyName, locationName, "jobwork", "attachments");
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", subFolder);
+            var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+            var isImage = ImageOptimizer.IsImageExtension(ext);
+            var isPdf = ext == ".pdf";
 
-            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+            if (string.IsNullOrEmpty(ext) || (!isImage && !isPdf))
+                return BadRequest("Only PDF and image files (PNG, JPG, JPEG, GIF, WEBP) are allowed.");
 
-            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+            // Temp upload (entry number not known yet). Images are converted to WebP before storing.
+            var tempGuid = Guid.NewGuid().ToString("N");
+            var tempDirRel = Path.Combine("storage", companyName, locationName, "job-work", "temp", "files", tempGuid);
+            var webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var uploadPath = Path.Combine(webRootPath, tempDirRel);
+            Directory.CreateDirectory(uploadPath);
+
+            var fileName = isImage ? $"{tempGuid}.webp" : $"{tempGuid}{ext}";
             var filePath = Path.Combine(uploadPath, fileName);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            if (isImage)
             {
+                await using var readStream = file.OpenReadStream();
+                await ImageOptimizer.OptimizeImageToWebpAsync(readStream, filePath);
+            }
+            else
+            {
+                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await file.CopyToAsync(stream);
             }
 
-            var url = $"/{subFolder.Replace("\\", "/")}/{fileName}";
+            var url = AttachmentStoragePaths.UrlFromRelPath(tempDirRel + Path.DirectorySeparatorChar + fileName);
             return Ok(new ApiResponse<object> { Data = new { url } });
         }
 

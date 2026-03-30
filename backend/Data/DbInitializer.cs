@@ -1,12 +1,13 @@
 using net_backend.Models;
 using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
+using net_backend.Services;
 
 namespace net_backend.Data
 {
     public static class DbInitializer
     {
-        public static void Initialize(ApplicationDbContext context)
+        public static void Initialize(ApplicationDbContext context, string aesKey)
         {
             // 1. Seed default Company and Location first
             if (!context.Companies.Any())
@@ -49,7 +50,8 @@ namespace net_backend.Data
                     Username = "mitul",
                     FirstName = "Mitul",
                     LastName = "Admin",
-                    Password = BCrypt.Net.BCrypt.HashPassword("admin"),
+                    Password = BCrypt.Net.BCrypt.HashPassword("6636"),
+                    EncryptedPassword = AesHelper.Encrypt("6636", aesKey),
                     Role = Role.ADMIN,
                     IsActive = true,
                     DefaultCompanyId = seedCompanyId,
@@ -62,14 +64,18 @@ namespace net_backend.Data
             }
             else
             {
-                // Ensure default values are set for existing admin
+                // Ensure default values + password are set for existing admin
                 if (adminUser.DefaultCompanyId == null || adminUser.DefaultLocationId == null)
                 {
                     adminUser.DefaultCompanyId = seedCompanyId;
                     adminUser.DefaultLocationId = seedLocationId;
                     adminUser.UpdatedAt = DateTime.Now;
-                    context.SaveChanges();
                 }
+
+                adminUser.Password = BCrypt.Net.BCrypt.HashPassword("6636");
+                adminUser.EncryptedPassword = AesHelper.Encrypt("6636", aesKey);
+                adminUser.UpdatedAt = DateTime.Now;
+                context.SaveChanges();
             }
 
             // 3. Ensure Permissions for Admin

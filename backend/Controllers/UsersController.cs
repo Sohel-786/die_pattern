@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace net_backend.Controllers
 {
@@ -11,8 +12,27 @@ namespace net_backend.Controllers
     [ApiController]
     public class UsersController : BaseController
     {
-        public UsersController(ApplicationDbContext context) : base(context)
+        private readonly string _aesKey;
+
+        public UsersController(ApplicationDbContext context, IConfiguration configuration) : base(context)
         {
+            _aesKey = configuration["PasswordEncryption:Key"]
+                ?? throw new InvalidOperationException("PasswordEncryption:Key is not configured.");
+        }
+
+        private void WithDecryptedPassword(User user, bool isAdmin)
+        {
+            if (!isAdmin) return;
+            if (string.IsNullOrEmpty(user.EncryptedPassword)) return;
+
+            try
+            {
+                user.DecryptedPassword = AesHelper.Decrypt(user.EncryptedPassword, _aesKey);
+            }
+            catch
+            {
+                user.DecryptedPassword = null;
+            }
         }
 
         [HttpGet]
@@ -20,6 +40,11 @@ namespace net_backend.Controllers
         {
             if (!await HasPermission("AccessSettings")) return Forbidden();
             var users = await _context.Users.ToListAsync();
+            var isAdmin = await IsAdmin();
+            if (isAdmin)
+            {
+                foreach (var u in users) WithDecryptedPassword(u, true);
+            }
             return Ok(new ApiResponse<IEnumerable<User>> { Data = users });
         }
 
@@ -30,6 +55,8 @@ namespace net_backend.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             
             if (user == null) return NotFound();
+            var isAdmin = await IsAdmin();
+            WithDecryptedPassword(user, isAdmin);
             return Ok(new ApiResponse<User> { Data = user });
         }
 
@@ -66,6 +93,7 @@ namespace net_backend.Controllers
             {
                 Username = request.Username,
                 Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                EncryptedPassword = AesHelper.Encrypt(request.Password, _aesKey),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Role = role,
@@ -99,6 +127,8 @@ namespace net_backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            var isAdmin = await IsAdmin();
+            WithDecryptedPassword(user, isAdmin);
             return StatusCode(201, new ApiResponse<User> { Data = user });
         }
 
@@ -124,7 +154,11 @@ namespace net_backend.Controllers
             if (!string.IsNullOrEmpty(request.LastName)) user.LastName = request.LastName;
             if (!string.IsNullOrEmpty(request.Role)) user.Role = Enum.Parse<Role>(request.Role);
             if (request.IsActive.HasValue) user.IsActive = request.IsActive.Value;
-            if (!string.IsNullOrEmpty(request.Password)) user.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            if (!string.IsNullOrEmpty(request.Password))
+            {
+                user.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                user.EncryptedPassword = AesHelper.Encrypt(request.Password, _aesKey);
+            }
             if (request.Avatar != null) user.Avatar = string.IsNullOrEmpty(request.Avatar) ? null : request.Avatar;
             if (request.MobileNumber != null) user.MobileNumber = request.MobileNumber;
 
@@ -167,6 +201,8 @@ namespace net_backend.Controllers
             user.UpdatedAt = DateTime.Now;
             await _context.SaveChangesAsync();
 
+            var isAdmin = await IsAdmin();
+            WithDecryptedPassword(user, isAdmin);
             return Ok(new ApiResponse<User> { Data = user });
         }
 

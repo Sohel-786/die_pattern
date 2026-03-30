@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Loader2, Plus, Upload, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
@@ -62,6 +62,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const [attachmentUrlsToDelete, setAttachmentUrlsToDelete] = useState<string[]>([]);
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const submitLockRef = useRef(false);
 
     const { data: autoNextCode } = useQuery<string>({
         queryKey: ["transfers", "next-code"],
@@ -227,6 +228,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     };
 
     const removeAttachmentUrl = (url: string) => {
+        // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
     };
     const removePendingAttachment = (index: number) => {
@@ -236,12 +238,34 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
 
     const handleSubmit = async () => {
-        if (toPartyId === null) return toast.error("Please select a Destination");
-        if (fromPartyId === toPartyId) return toast.error("Source and destination cannot be the same");
-        if (items.length === 0) return toast.error("Please add at least one item");
-        if (!vehicleNo.trim()) return toast.error("Vehicle No. is required");
-        if (!personName.trim()) return toast.error("Person Name is required");
-        if (!reasonDetails.trim()) return toast.error("Reason Details is required");
+        if (submitLockRef.current) return;
+        if (uploading || createMutation.isPending || updateMutation.isPending) return;
+        submitLockRef.current = true;
+
+        if (toPartyId === null) {
+            submitLockRef.current = false;
+            return toast.error("Please select a Destination");
+        }
+        if (fromPartyId === toPartyId) {
+            submitLockRef.current = false;
+            return toast.error("Source and destination cannot be the same");
+        }
+        if (items.length === 0) {
+            submitLockRef.current = false;
+            return toast.error("Please add at least one item");
+        }
+        if (!vehicleNo.trim()) {
+            submitLockRef.current = false;
+            return toast.error("Vehicle No. is required");
+        }
+        if (!personName.trim()) {
+            submitLockRef.current = false;
+            return toast.error("Person Name is required");
+        }
+        if (!reasonDetails.trim()) {
+            submitLockRef.current = false;
+            return toast.error("Reason Details is required");
+        }
 
         setUploading(true);
         try {
@@ -284,6 +308,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             toast.error(err.response?.data?.message || err.message || "Upload failed.");
         } finally {
             setUploading(false);
+            submitLockRef.current = false;
         }
     };
 

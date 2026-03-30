@@ -20,7 +20,6 @@ import { CameraPhotoInput, CameraPhotoInputRef } from "@/components/ui/camera-ph
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { toast } from "react-hot-toast";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const itemSchema = z.object({
     itemName: z.string().min(1, "Item name is required"),
@@ -84,7 +83,7 @@ export function StoreItemDialog({
                 description: item.description ?? "",
                 isActive: item.isActive,
             });
-            setImagePreview(item.image ? (item.image.startsWith("/") ? `${API_BASE}${item.image}` : `${API_BASE}/storage/${item.image}`) : null);
+            setImagePreview(item.image ? (item.image.startsWith("/") ? item.image : `/storage/${item.image}`) : null);
             setImageRemovedByUser(false);
         } else if (isOpen) {
             reset({

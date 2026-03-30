@@ -82,6 +82,7 @@ export function PurchaseOrderDialog({
   const [purchaseType, setPurchaseType] = useState<PurchaseType>("Regular");
   const [gstType, setGstType] = useState<GstType | "">("");
   const [uploading, setUploading] = useState(false);
+  const submitLockRef = useRef(false);
   const [itemsDisplayMap, setItemsDisplayMap] = useState<Record<number, { currentName: string; mainPartName: string; drawingNo?: string; revisionNo?: string; materialName?: string; itemTypeName?: string; piNo?: string }>>({});
   const deliveryDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -311,6 +312,7 @@ export function PurchaseOrderDialog({
   };
 
   const removeQuotationUrl = (url: string) => {
+    // Mark for deletion; actual deletion happens on Save/Update.
     setQuotationUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
   };
   const removePendingQuotation = (index: number) => {
@@ -421,26 +423,35 @@ export function PurchaseOrderDialog({
     includedItems.every((i) => (i.rate ?? 0) > 0);
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) return;
+    // Prevent double-click in the same render tick.
+    if (uploading || mutation.isPending) return;
+    submitLockRef.current = true;
     if (!vendorId) {
       toast.error("Please select Party Name");
+      submitLockRef.current = false;
       return;
     }
     if (deliveryDate.trim() === "") {
       toast.error("Delivery Date is required");
+      submitLockRef.current = false;
       return;
     }
     const todayStr = format(new Date(), "yyyy-MM-dd");
     if (deliveryDate < todayStr) {
       toast.error("Delivery Date cannot be in the past");
+      submitLockRef.current = false;
       return;
     }
     if (includedItems.length === 0) {
       toast.error("At least one item must be included in the PO (check the box).");
+      submitLockRef.current = false;
       return;
     }
     const missingRates = includedItems.filter((i) => (i.rate ?? 0) <= 0);
     if (missingRates.length > 0) {
       toast.error("Enter rate for all included items");
+      submitLockRef.current = false;
       return;
     }
     setUploading(true);
@@ -481,6 +492,7 @@ export function PurchaseOrderDialog({
       toast.error(err.response?.data?.message || err.message || "Upload or save failed");
     } finally {
       setUploading(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -796,11 +808,11 @@ export function PurchaseOrderDialog({
                 {!isReadOnly && (
                   <Button
                     onClick={handleSubmit}
-                    disabled={mutation.isPending || !isValid}
+                    disabled={mutation.isPending || uploading || !isValid}
                     className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                     title={isEditing && po?.isActive === false ? "Inactive POs cannot be updated" : (isEditing && po?.status !== PoStatus.Pending ? "Approved or Rejected POs cannot be updated" : "")}
                   >
-                    {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                    {mutation.isPending || uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                     {isEditing ? "Update" : "Save"}
                   </Button>
                 )}

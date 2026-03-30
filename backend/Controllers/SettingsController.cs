@@ -5,6 +5,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
 
 namespace net_backend.Controllers
 {
@@ -15,11 +16,14 @@ namespace net_backend.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly string _aesKey;
 
-        public SettingsController(ApplicationDbContext context, IWebHostEnvironment env)
+        public SettingsController(ApplicationDbContext context, IWebHostEnvironment env, IConfiguration configuration)
         {
             _context = context;
             _env = env;
+            _aesKey = configuration["PasswordEncryption:Key"]
+                ?? throw new InvalidOperationException("PasswordEncryption:Key is not configured.");
         }
 
         [AllowAnonymous]
@@ -229,17 +233,22 @@ namespace net_backend.Controllers
             try
             {
                 // 1. Wipe Transactional Data
+                _context.DocumentControls.RemoveRange(_context.DocumentControls);
                 _context.AuditLogs.RemoveRange(_context.AuditLogs);
                 _context.ItemChangeLogs.RemoveRange(_context.ItemChangeLogs);
                 _context.QcItems.RemoveRange(_context.QcItems);
                 _context.QcEntries.RemoveRange(_context.QcEntries);
+                _context.TransferItems.RemoveRange(_context.TransferItems);
+                _context.Transfers.RemoveRange(_context.Transfers);
                 _context.InwardLines.RemoveRange(_context.InwardLines);
                 _context.Inwards.RemoveRange(_context.Inwards);
+                _context.JobWorkItems.RemoveRange(_context.JobWorkItems);
                 _context.JobWorks.RemoveRange(_context.JobWorks);
                 _context.PurchaseOrderItems.RemoveRange(_context.PurchaseOrderItems);
                 _context.PurchaseOrders.RemoveRange(_context.PurchaseOrders);
                 _context.PurchaseIndentItems.RemoveRange(_context.PurchaseIndentItems);
                 _context.PurchaseIndents.RemoveRange(_context.PurchaseIndents);
+                _context.ItemMasterOpeningHistory.RemoveRange(_context.ItemMasterOpeningHistory);
                 
                 // 2. Wipe Masters
                 _context.Items.RemoveRange(_context.Items);
@@ -273,32 +282,22 @@ namespace net_backend.Controllers
                 await _context.SaveChangesAsync();
 
                 // 5. Re-initialize baseline data
-                DbInitializer.Initialize(_context);
+                DbInitializer.Initialize(_context, _aesKey);
 
                 // 6. Wipe transaction attachment storage
                 var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
                 var storageRoot = Path.Combine(root, "wwwroot", "storage");
-                var wipeSubDirs = new[] { "inward-attachments-temp", "qc-attachments-temp", "po-quotations" };
-                foreach (var sub in wipeSubDirs)
-                {
-                    var fullPath = Path.Combine(storageRoot, sub);
-                    if (Directory.Exists(fullPath))
-                        Directory.Delete(fullPath, recursive: true);
-                }
-                // Wipe per-company/location inward and qc attachment folders (any company subfolder that has these)
+                // Wipe all attachment-related uploads, but keep company logos.
+                // This covers both legacy folders and the new production structure.
                 if (Directory.Exists(storageRoot))
                 {
-                    foreach (var companyDir in Directory.GetDirectories(storageRoot))
+                    foreach (var childDir in Directory.GetDirectories(storageRoot))
                     {
-                        // Skip company-logos folder
-                        if (Path.GetFileName(companyDir).Equals("company-logos", StringComparison.OrdinalIgnoreCase)) continue;
-                        foreach (var locationDir in Directory.GetDirectories(companyDir))
-                        {
-                            var inwAttach = Path.Combine(locationDir, "inward-attachments");
-                            if (Directory.Exists(inwAttach)) Directory.Delete(inwAttach, recursive: true);
-                            var qcAttach = Path.Combine(locationDir, "qc-attachments");
-                            if (Directory.Exists(qcAttach)) Directory.Delete(qcAttach, recursive: true);
-                        }
+                        var name = Path.GetFileName(childDir);
+                        if (name.Equals("company-logos", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        Directory.Delete(childDir, recursive: true);
                     }
                 }
 

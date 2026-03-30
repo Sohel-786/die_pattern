@@ -195,7 +195,7 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
           </div>
           <span className={cn(
             "text-[10px] uppercase font-extrabold text-center whitespace-nowrap transition-colors tracking-widest",
-            isActive ? "text-primary-700" : "text-secondary-400 group-hover:text-primary-600",
+            isActive ? "text-primary-700" : "text-black group-hover:text-primary-600",
           )}>
             {item.label}
           </span>

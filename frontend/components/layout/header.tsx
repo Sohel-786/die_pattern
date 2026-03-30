@@ -9,7 +9,7 @@ import { LogOut, Building2, ChevronDown, ChevronUp, MapPin } from 'lucide-react'
 import { useLogout } from '@/hooks/use-auth-mutations';
 import { Button } from '@/components/ui/button';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// API_BASE removed: root-relative paths should be used for assets to work in both Dev (proxied) and Prod (IIS)
 
 interface HeaderProps {
   user: User;
@@ -36,7 +36,9 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
     ? currentCompany.logoUrl
     : currentPair?.companyLogo;
 
-  const logoUrl = logoPath ? `${API_BASE}${logoPath}` : null;
+  const logoUrl = logoPath 
+    ? (logoPath.startsWith("http") || logoPath.startsWith("blob:") ? logoPath : (logoPath.startsWith("/") ? logoPath : `/${logoPath}`))
+    : null;
   const hasLogo = Boolean(logoUrl);
   const hasMultipleLocations = pairs.length > 1;
 

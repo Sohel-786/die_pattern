@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Package, Plus, X, Upload } from "lucide-react";
 import api from "@/lib/api";
@@ -40,6 +40,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
     const [attachmentUrlsToDelete, setAttachmentUrlsToDelete] = useState<string[]>([]);
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const submitLockRef = useRef(false);
 
     const uniqueInwards = useMemo(() => {
         const map = new Map<number, { id: number; no: string }>();
@@ -169,6 +170,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
     };
 
     const removeAttachmentUrl = (url: string) => {
+        // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
     };
     const removePendingAttachment = (index: number) => {
@@ -180,10 +182,26 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
     const isFormValid = !!partyId && !!sourceType && includedIds.length > 0 && effectiveAttachmentCount > 0;
 
     const handleSubmit = async () => {
-        if (!partyId) return toast.error("Please select Party");
-        if (sourceType === "") return toast.error("Please select Source Type");
-        if (includedIds.length === 0) return toast.error("Include at least one item in this QC entry");
-        if (effectiveAttachmentCount === 0) return toast.error("Please attach at least one inspection document before saving.");
+        if (submitLockRef.current) return;
+        if (uploading || mutation.isPending) return;
+        submitLockRef.current = true;
+
+        if (!partyId) {
+            submitLockRef.current = false;
+            return toast.error("Please select Party");
+        }
+        if (sourceType === "") {
+            submitLockRef.current = false;
+            return toast.error("Please select Source Type");
+        }
+        if (includedIds.length === 0) {
+            submitLockRef.current = false;
+            return toast.error("Include at least one item in this QC entry");
+        }
+        if (effectiveAttachmentCount === 0) {
+            submitLockRef.current = false;
+            return toast.error("Please attach at least one inspection document before saving.");
+        }
 
         setUploading(true);
         try {
@@ -214,6 +232,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             toast.error(err.response?.data?.message || err.message || "Upload failed.");
         } finally {
             setUploading(false);
+            submitLockRef.current = false;
         }
     };
 

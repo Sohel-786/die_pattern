@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Trash2, Save, Package, Loader2, Plus, Printer, Eye
@@ -46,6 +46,8 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
     const [mtcReq, setMtcReq] = useState<boolean>(false);
     const [nextPiCode, setNextPiCode] = useState("");
     const [itemSelectionOpen, setItemSelectionOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const submitLockRef = useRef(false);
 
     useEffect(() => {
         if (indent && open) {
@@ -101,6 +103,12 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
         },
         onError: (err: { response?: { data?: { message?: string } } }) =>
             toast.error(err.response?.data?.message || "Operation failed")
+        ,
+        onSettled: () => {
+            // Always release local lock after request finishes.
+            setSubmitting(false);
+            submitLockRef.current = false;
+        }
     });
 
     const selectedItemIds = useMemo(() => selectedItemsState.map(i => i.id), [selectedItemsState]);
@@ -136,11 +144,17 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
     };
 
     const handleSubmit = () => {
+        // Prevent double-click while mutation is in-flight.
+        if (submitLockRef.current) return;
+        if (submitting || mutation.isPending) return;
+        submitLockRef.current = true;
         if (selectedItemIds.length === 0) {
+            submitLockRef.current = false;
             toast.error("Please select at least one item");
             return;
         }
         if (!reqDateOfDelivery && !isReadOnly) {
+            submitLockRef.current = false;
             toast.error("Required Date of Delivery is mandatory");
             return;
         }
@@ -150,11 +164,13 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             today.setHours(0, 0, 0, 0);
             const selected = new Date(reqDateOfDelivery);
             if (selected < today) {
+                submitLockRef.current = false;
                 toast.error("Required Date of Delivery cannot be in the past");
                 return;
             }
         }
 
+        setSubmitting(true);
         mutation.mutate({
             type,
             remarks: remarks || undefined,
@@ -372,7 +388,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         {(!isReadOnly || (isReadOnly && initialItemIds.some(id => !selectedItemIds.includes(id)))) && (
                             <Button
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending || selectedItemsState.length === 0}
+                            disabled={mutation.isPending || submitting || selectedItemsState.length === 0}
                                 className="h-9 px-5 bg-primary-600 hover:bg-primary-700 text-white font-semibold gap-2 disabled:opacity-50"
                                 title={
                                     isEditing && indent?.isActive === false
@@ -382,7 +398,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                             : "")
                                 }
                             >
-                                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {mutation.isPending || submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 {isEditing ? "Update" : "Save"}
                             </Button>
                         )}

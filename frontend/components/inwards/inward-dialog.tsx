@@ -71,6 +71,7 @@ export function InwardDialog({
     const [attachmentUrlsToDelete, setAttachmentUrlsToDelete] = useState<string[]>([]);
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const submitLockRef = useRef(false);
 
     const uniqueSources = useMemo(() => {
         const map = new Map<string, { type: InwardSourceType; id: number; display: string }>();
@@ -255,6 +256,7 @@ export function InwardDialog({
     };
 
     const removeAttachmentUrl = (url: string) => {
+        // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
     };
     const removePendingAttachment = (index: number) => {
@@ -264,10 +266,19 @@ export function InwardDialog({
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
 
     const handleSubmit = async () => {
-        if (!vendorId) return toast.error("Please select Vendor / Party");
+        if (submitLockRef.current) return;
+        if (uploading || mutation.isPending) return;
+        submitLockRef.current = true;
+        if (!vendorId) {
+            submitLockRef.current = false;
+            return toast.error("Please select Vendor / Party");
+        }
 
         const includedLines = lines.filter(l => l.included !== false);
-        if (includedLines.length === 0) return toast.error("Please include at least one item for inward");
+        if (includedLines.length === 0) {
+            submitLockRef.current = false;
+            return toast.error("Please include at least one item for inward");
+        }
 
         setUploading(true);
         try {
@@ -305,6 +316,7 @@ export function InwardDialog({
             toast.error(err.response?.data?.message || err.message || "Upload failed.");
         } finally {
             setUploading(false);
+            submitLockRef.current = false;
         }
     };
 

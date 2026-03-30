@@ -241,12 +241,12 @@ namespace net_backend.Controllers
 
             try
             {
-                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
+                var webRoot = net_backend.Utils.AttachmentStoragePaths.GetWebRootPath(_env);
                 // Structured path: wwwroot/storage/company-logos/{companyName}/
                 var safeName = string.IsNullOrWhiteSpace(companyName)
                     ? "unknown"
                     : string.Concat(companyName.Trim().Split(Path.GetInvalidFileNameChars())).Trim();
-                var dir = Path.Combine(root, "wwwroot", "storage", "company-logos", safeName);
+                var dir = Path.Combine(webRoot, "storage", "company-logos", safeName);
                 Directory.CreateDirectory(dir);
                 var fileName = $"logo{ext}";
                 var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
@@ -255,7 +255,8 @@ namespace net_backend.Controllers
                 await using (var stream = new FileStream(filePath, FileMode.Create))
                     await uploadFile.CopyToAsync(stream);
                 // Append cache-buster timestamp so the browser doesn't show stale image
-                var url = $"/storage/company-logos/{safeName}/{fileName}?v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                var safeSegment = Uri.EscapeDataString(safeName);
+                var url = $"/storage/company-logos/{safeSegment}/{fileName}?v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
                 return Ok(new ApiResponse<object> { Data = new { logoUrl = url }, Message = "Logo uploaded." });
             }
             catch (Exception ex)
@@ -506,8 +507,40 @@ namespace net_backend.Controllers
             if (request.Pincode != null) existing.Pincode = request.Pincode.Trim();
             if (request.ContactPerson != null) existing.ContactPerson = request.ContactPerson.Trim();
             if (request.GstDate.HasValue) existing.GstDate = request.GstDate;
-            if (request.LogoUrl != null) existing.LogoUrl = request.LogoUrl;
             if (request.ThemeColor != null) existing.ThemeColor = request.ThemeColor;
+
+            // ── Logo update / removal ─────────────────────────────────────
+            if (request.LogoUrl != null)
+            {
+                var oldLogoUrl = existing.LogoUrl;
+                var newLogoUrl = request.LogoUrl.Trim();
+
+                // If the logo is being removed or replaced, delete the old physical file
+                if (!string.IsNullOrWhiteSpace(oldLogoUrl) && oldLogoUrl != newLogoUrl)
+                {
+                    try
+                    {
+                        var webRoot = net_backend.Utils.AttachmentStoragePaths.GetWebRootPath(_env);
+                        // Strip query-string (cache-buster) and URL-decode path so `%20` maps to real folders on disk.
+                        var urlPathRaw = oldLogoUrl.Contains('?') ? oldLogoUrl[..oldLogoUrl.IndexOf('?')] : oldLogoUrl;
+                        var urlPath = Uri.UnescapeDataString(urlPathRaw ?? string.Empty);
+                        var physicalPath = net_backend.Utils.AttachmentStoragePaths.ToPhysicalPath(webRoot, urlPath);
+                        if (System.IO.File.Exists(physicalPath))
+                        {
+                            System.IO.File.Delete(physicalPath);
+
+                            // Best-effort: remove company logo folder if now empty.
+                            var dir = Path.GetDirectoryName(physicalPath);
+                            if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                                Directory.Delete(dir, recursive: false);
+                        }
+                    }
+                    catch { /* best-effort — do not block the update */ }
+                }
+
+                // Store empty string as null (no logo), otherwise store the new URL
+                existing.LogoUrl = string.IsNullOrWhiteSpace(newLogoUrl) ? null : newLogoUrl;
+            }
 
             // ── Phone number validation ───────────────────────────────────
             if (request.ContactNumber != null)

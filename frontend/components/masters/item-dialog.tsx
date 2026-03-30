@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck, PackageX, History, RotateCcw } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Autocomplete } from "@/components/ui/autocomplete";
@@ -53,8 +53,22 @@ interface ItemDialogProps {
 
 export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existingItems = [], readOnly, isAdmin = false }: ItemDialogProps) {
     const isReadOnly = !!readOnly;
+    const [submitting, setSubmitting] = useState(false);
+    const observedInFlightRef = React.useRef(false);
+    const submitLockRef = React.useRef(false);
     const showRevertAction = !isReadOnly && isAdmin;
     const queryClient = useQueryClient();
+
+    useEffect(() => {
+        // Only release the local lock after the parent actually enters "loading"
+        // (prevents double-submit before react-query flips `isLoading` to true).
+        if (isLoading) observedInFlightRef.current = true;
+        if (!isLoading && observedInFlightRef.current && submitting) {
+            setSubmitting(false);
+            observedInFlightRef.current = false;
+            submitLockRef.current = false;
+        }
+    }, [isLoading, submitting]);
     const {
         register,
         handleSubmit,
@@ -164,6 +178,10 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
             <form
                 onSubmit={handleSubmit((data) => {
                     if (isReadOnly) return;
+                    // Prevent double-click before react-query state updates.
+                    if (submitLockRef.current || submitting || isLoading) return;
+                    submitLockRef.current = true;
+                    setSubmitting(true);
                     onSubmit(data);
                 })}
                 className="space-y-8"
@@ -466,10 +484,10 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                     {!isReadOnly && (
                         <Button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || submitting}
                             className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
                         >
-                            {isLoading ? (
+                            {isLoading || submitting ? (
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                     Registering...

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Trash2, Save, Package, Loader2, Plus, Upload, Eye, X, Printer, FileText, ShieldCheck
@@ -55,6 +55,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [urlsToDelete, setUrlsToDelete] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
+    const submitLockRef = useRef(false);
     const [itemSelectionOpen, setItemSelectionOpen] = useState(false);
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
 
@@ -154,7 +155,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
     };
 
     const removeUrl = (url: string) => {
-        setUrlsToDelete(prev => prev.includes(url) ? prev : [...prev, url]);
+        // Mark for deletion; actual deletion happens on Save/Update.
+        setUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
     };
 
     const removePending = (index: number) => {
@@ -190,11 +192,26 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
     };
 
     const handleSubmit = async () => {
-        if (toPartyId === 0) return toast.error("Please select a Party");
-        if (!description.trim()) return toast.error("Please enter a purpose/description");
-        if (items.length === 0) return toast.error("Please add at least one item");
+        if (submitLockRef.current) return;
+        if (uploading || mutation.isPending) return;
+        submitLockRef.current = true;
+        if (toPartyId === 0) {
+            submitLockRef.current = false;
+            return toast.error("Please select a Party");
+        }
+        if (!description.trim()) {
+            submitLockRef.current = false;
+            return toast.error("Please enter a purpose/description");
+        }
+        if (items.length === 0) {
+            submitLockRef.current = false;
+            return toast.error("Please add at least one item");
+        }
         const invalidNameChange = items.find(i => i.willChangeName && !(i.proposedNewName ?? "").trim());
-        if (invalidNameChange) return toast.error("When 'Will change display name' is selected, New Display Name is required.");
+        if (invalidNameChange) {
+            submitLockRef.current = false;
+            return toast.error("When 'Will change display name' is selected, New Display Name is required.");
+        }
 
         setUploading(true);
         try {
@@ -243,6 +260,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
             toast.error(err.response?.data?.message ?? "Failed to save Job Work");
         } finally {
             setUploading(false);
+            submitLockRef.current = false;
         }
     };
 

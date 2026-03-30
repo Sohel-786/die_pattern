@@ -518,6 +518,13 @@ namespace net_backend.Models
         public string Username { get; set; } = string.Empty;
         [Required]
         public string Password { get; set; } = string.Empty;
+        public string? EncryptedPassword { get; set; }
+
+        /// <summary>
+        /// Populated on read by UsersController for admin viewing — never stored in DB.
+        /// </summary>
+        [NotMapped]
+        public string? DecryptedPassword { get; set; }
         [Required]
         public string FirstName { get; set; } = string.Empty;
         [Required]

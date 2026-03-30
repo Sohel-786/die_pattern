@@ -152,8 +152,10 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [logoUploading, setLogoUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
+    const [pendingLogoRemoval, setPendingLogoRemoval] = useState(false);
+    const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+    const [localLogoPreviewUrl, setLocalLogoPreviewUrl] = useState<string | null>(null);
 
-    const apiBase = typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001") : "";
 
     useEffect(() => {
         if (item && isOpen) {
@@ -172,6 +174,9 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                 useAsParty: item.useAsParty ?? false,
                 themeColor: item.themeColor || "#0d6efd",
             });
+            setPendingLogoRemoval(false);
+            setPendingLogoFile(null);
+            setLocalLogoPreviewUrl(null);
         } else if (isOpen) {
             reset({
                 name: "",
@@ -188,18 +193,29 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                 useAsParty: false,
                 themeColor: "#0d6efd",
             });
+            setPendingLogoRemoval(false);
+            setPendingLogoFile(null);
+            setLocalLogoPreviewUrl(null);
         }
     }, [item, reset, isOpen]);
 
-    const uploadLogo = async (file: File) => {
-        if (isReadOnly) return;
+    useEffect(() => {
+        return () => {
+            if (localLogoPreviewUrl?.startsWith("blob:")) {
+                try { URL.revokeObjectURL(localLogoPreviewUrl); } catch { /* noop */ }
+            }
+        };
+    }, [localLogoPreviewUrl]);
+
+    const uploadLogo = async (file: File): Promise<string | null> => {
+        if (isReadOnly) return null;
         if (!file.type.startsWith("image/")) {
             toast.error("Please select an image file (jpg, png, gif, webp).");
-            return;
+            return null;
         }
         if (file.size > 5 * 1024 * 1024) {
             toast.error("Image must be under 5 MB.");
-            return;
+            return null;
         }
         setLogoUploading(true);
         try {
@@ -212,14 +228,39 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
             const data = res.data as Record<string, unknown>;
             const url = (data?.data as Record<string, unknown> | undefined)?.logoUrl as string | undefined;
             if (url) {
-                setValue("logoUrl", url);
-                toast.success("Logo uploaded.");
-            } else toast.error(res.data?.message || "Upload failed.");
+                return url;
+            } else {
+                toast.error(res.data?.message || "Upload failed.");
+                return null;
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Logo upload failed.");
+            return null;
         } finally {
             setLogoUploading(false);
         }
+    };
+
+    const stageLogo = (file: File) => {
+        if (isReadOnly) return;
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select an image file (jpg, png, gif, webp).");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be under 5 MB.");
+            return;
+        }
+        // If user selects a new logo, cancel pending removal.
+        if (pendingLogoRemoval) setPendingLogoRemoval(false);
+
+        setPendingLogoFile(file);
+        const preview = URL.createObjectURL(file);
+        if (localLogoPreviewUrl?.startsWith("blob:")) {
+            try { URL.revokeObjectURL(localLogoPreviewUrl); } catch { /* noop */ }
+        }
+        setLocalLogoPreviewUrl(preview);
+        setValue("logoUrl", preview, { shouldValidate: false });
     };
 
     const handleLogoDrop = (e: React.DragEvent) => {
@@ -227,13 +268,13 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
         e.preventDefault();
         setDragActive(false);
         const file = e.dataTransfer.files?.[0];
-        if (file) uploadLogo(file);
+        if (file) stageLogo(file);
     };
 
     const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (isReadOnly) return;
         const file = e.target.files?.[0];
-        if (file) uploadLogo(file);
+        if (file) stageLogo(file);
         e.target.value = "";
     };
 
@@ -242,8 +283,34 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title={dialogTitle} size="2xl" contentScroll={false}>
             <form
-                onSubmit={handleSubmit((data) => {
+                onSubmit={handleSubmit(async (data) => {
                     if (isReadOnly) return;
+                    // If user chose to remove the logo, do not upload anything.
+                    if (pendingLogoRemoval) {
+                        setPendingLogoFile(null);
+                        if (localLogoPreviewUrl?.startsWith("blob:")) {
+                            try { URL.revokeObjectURL(localLogoPreviewUrl); } catch { /* noop */ }
+                        }
+                        setLocalLogoPreviewUrl(null);
+                        onSubmit({ ...data, logoUrl: "" });
+                        return;
+                    }
+
+                    // Upload staged logo only when saving/updating.
+                    if (pendingLogoFile) {
+                        const uploadedUrl = await uploadLogo(pendingLogoFile);
+                        if (!uploadedUrl) return; // toast already shown
+                        setPendingLogoFile(null);
+                        if (localLogoPreviewUrl?.startsWith("blob:")) {
+                            try { URL.revokeObjectURL(localLogoPreviewUrl); } catch { /* noop */ }
+                        }
+                        setLocalLogoPreviewUrl(null);
+                        setValue("logoUrl", uploadedUrl, { shouldValidate: false });
+                        toast.success("Logo uploaded.");
+                        onSubmit({ ...data, logoUrl: uploadedUrl });
+                        return;
+                    }
+
                     onSubmit(data);
                 })}
                 className="flex flex-col h-full min-h-0"
@@ -287,11 +354,29 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                 className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
                                     } ${logoUploading || isReadOnly ? "pointer-events-none opacity-70" : ""}`}
                             >
-                                {logoUrl ? (
+                                {logoUrl && !pendingLogoRemoval ? (
                                     <>
-                                        <img src={`${apiBase}${logoUrl}`} alt="Logo" className="max-h-12 max-w-[90%] w-auto object-contain" />
+                                        <img 
+                                            src={logoUrl.startsWith("http") || logoUrl.startsWith("blob:") ? logoUrl : (logoUrl.startsWith("/") ? logoUrl : `/${logoUrl}`)} 
+                                            alt="Logo" 
+                                            className="max-h-12 max-w-[90%] w-auto object-contain" 
+                                        />
                                         {!logoUploading && (
-                                            <Button type="button" variant="ghost" size="sm" className="absolute top-0.5 right-0.5 h-6 w-6 p-0 rounded-full bg-white/95 shadow border border-secondary-200 text-rose-500 hover:bg-rose-50" onClick={(e) => { e.stopPropagation(); setValue("logoUrl", ""); }}>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute top-0.5 right-0.5 h-6 w-6 p-0 rounded-full bg-white/95 shadow border border-secondary-200 text-rose-500 hover:bg-rose-50"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPendingLogoFile(null);
+                                                    if (localLogoPreviewUrl?.startsWith("blob:")) {
+                                                        try { URL.revokeObjectURL(localLogoPreviewUrl); } catch { /* noop */ }
+                                                    }
+                                                    setLocalLogoPreviewUrl(null);
+                                                    setPendingLogoRemoval(true);
+                                                }}
+                                            >
                                                 <Trash2 className="w-3 h-3" />
                                             </Button>
                                         )}

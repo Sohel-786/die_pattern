@@ -82,14 +82,8 @@ const tabs = [
 
 const userSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z
-    .string()
-    .refine((val) => !val || val.length === 0 || val.length >= 1, {
-      message: "Password cannot be empty",
-    })
-    .optional(),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  password: z.string().min(1, "Password is mandatory"),
+  name: z.string().trim().min(1, "Name is required"),
   role: z.nativeEnum(Role),
   isActive: z.boolean().optional(),
   avatar: z.string().nullable().optional(),
@@ -274,8 +268,7 @@ export default function SettingsPage() {
     defaultValues: {
       username: "",
       password: "",
-      firstName: "",
-      lastName: "",
+      name: "",
       role: Role.USER,
       isActive: true,
       avatar: null as string | null,
@@ -370,8 +363,7 @@ export default function SettingsPage() {
       reset({
         username: "",
         password: "",
-        firstName: "",
-        lastName: "",
+        name: "",
         role: Role.USER,
         isActive: true,
         avatar: null,
@@ -492,19 +484,19 @@ export default function SettingsPage() {
   };
 
   const handleOpenUserForm = (user?: User) => {
+    setShowPassword(currentUser?.role === Role.ADMIN);
     if (user) {
       setEditingUser(user);
       const companyId = user.defaultCompanyId ?? user.companyId ?? undefined;
       const locationId = user.defaultLocationId ?? user.locationId ?? undefined;
       reset({
         username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        name: `${user.firstName} ${user.lastName}`.trim(),
         role: user.role,
         isActive: user.isActive,
         avatar: user.avatar ?? null,
         mobileNumber: user.mobileNumber || "",
-        password: "",
+        password: user.decryptedPassword || "",
         companyId,
         locationId,
       });
@@ -513,8 +505,7 @@ export default function SettingsPage() {
       reset({
         username: "",
         password: "",
-        firstName: "",
-        lastName: "",
+        name: "",
         role: Role.USER,
         isActive: true,
         avatar: null,
@@ -532,10 +523,15 @@ export default function SettingsPage() {
   };
 
   const onSubmitUser = (data: UserForm) => {
+    const normalized = data.name?.trim() || "";
+    const parts = normalized.split(/\s+/).filter(Boolean);
+    const firstName = parts[0] ?? "";
+    // If only one token is provided, repeat it so backend first/last remain non-empty.
+    const lastName = parts.length > 1 ? parts.slice(1).join(" ") : firstName;
     if (editingUser) {
       const updateData: any = {
-        firstName: data.firstName,
-        lastName: data.lastName,
+        firstName,
+        lastName,
         username: data.username,
         role: data.role,
         isActive: data.isActive,
@@ -561,8 +557,8 @@ export default function SettingsPage() {
         {
           username: data.username,
           password: data.password!,
-          firstName: data.firstName,
-          lastName: data.lastName,
+          firstName,
+          lastName,
           role: data.role,
           isActive: data.isActive ?? false,
           avatar: data.avatar ?? null,
@@ -1364,29 +1360,18 @@ export default function SettingsPage() {
           onSubmit={handleSubmit(onSubmitUser)}
           className="flex flex-col overflow-hidden"
         >
-          <div className="overflow-y-auto p-6 space-y-6">
+          <div className="overflow-y-auto p-6 pt-0 space-y-6">
             {/* Profile Basics Row */}
             <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">First Name <span className="text-rose-500">*</span></Label>
+              <div className="space-y-2 col-span-2">
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Name <span className="text-rose-500">*</span></Label>
                 <Input
-                  {...register("firstName")}
+                  {...register("name")}
                   className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                  placeholder="e.g. Rahul"
+                  placeholder="e.g. Rahul Sharma"
                 />
-                {errors.firstName && (
-                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.firstName.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Last Name <span className="text-rose-500">*</span></Label>
-                <Input
-                  {...register("lastName")}
-                  className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
-                  placeholder="e.g. Sharma"
-                />
-                {errors.lastName && (
-                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.lastName.message}</p>
+                {errors.name && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tighter">{errors.name.message}</p>
                 )}
               </div>
             </div>
@@ -1407,7 +1392,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Password {editingUser ? "(Optional)" : "*"}</Label>
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Password <span className="text-rose-500">*</span></Label>
                 <div className="relative group">
                   <Input
                     type={showPassword ? "text" : "password"}
@@ -1432,7 +1417,7 @@ export default function SettingsPage() {
             {/* Contact & Role Row */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Contact Protocol {watch("role") !== Role.ADMIN ? "*" : ""}</Label>
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Contact Number {watch("role") !== Role.ADMIN ? "*" : ""}</Label>
                 <Input
                   {...register("mobileNumber")}
                   onChange={(e) => {
@@ -1553,6 +1538,15 @@ export default function SettingsPage() {
 
           <div className="flex gap-3 pt-4 border-t border-secondary-100">
             <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseUserForm}
+              className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
               type="submit"
               disabled={createUser.isPending || updateUser.isPending}
               className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11"
@@ -1568,15 +1562,6 @@ export default function SettingsPage() {
                   Save
                 </div>
               )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseUserForm}
-              className="flex-1 border-secondary-300 text-secondary-700 font-bold h-11"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
             </Button>
           </div>
         </form>

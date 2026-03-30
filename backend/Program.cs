@@ -112,6 +112,8 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
     var env = services.GetRequiredService<IWebHostEnvironment>();
+    var aesKey = builder.Configuration["PasswordEncryption:Key"]
+        ?? throw new InvalidOperationException("PasswordEncryption:Key is not configured.");
     
     try
     {
@@ -121,7 +123,7 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
         
         // 2. Handle Data: Seed initial/required data
-        DbInitializer.Initialize(context);
+        DbInitializer.Initialize(context, aesKey);
         
         // 3. Backfill null item name snapshots for traceability (old records created before snapshot columns)
         var backfill = services.GetRequiredService<net_backend.Services.IItemSnapshotBackfillService>();

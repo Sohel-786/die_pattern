@@ -100,6 +100,8 @@ export interface User {
   username: string;
   firstName: string;
   lastName: string;
+  /** From API: decrypted password (admin only) for display in User Add/Edit dialog. */
+  decryptedPassword?: string | null;
   role: Role;
   isActive: boolean;
   avatar?: string | null;

@@ -4,6 +4,7 @@ using net_backend.Data;
 using net_backend.DTOs;
 using net_backend.Models;
 using net_backend.Services;
+using net_backend.Utils;
 using System.Text.Json;
 
 namespace net_backend.Controllers
@@ -23,13 +24,16 @@ namespace net_backend.Controllers
             _itemState = itemState;
         }
 
-        // ── Helper: resolve a storage folder for an inward ───────────────────────────
-        private string GetInwardStorageDir(string companyName, string locationName, string inwardNo)
+        private async Task<(string companyDir, string locationDir)> GetCompanyLocationDirsAsync()
         {
-            var safe = (string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Trim();
-            var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
-            return Path.Combine(root, "wwwroot", "storage",
-                safe(companyName), safe(locationName), "inward-attachments", safe(inwardNo));
+            var (companyId, locationId) = await GetCurrentLocationAndCompanyAsync();
+            var company = await _context.Companies.FindAsync(companyId);
+            var location = await _context.Locations.FindAsync(locationId);
+
+            return (
+                AttachmentStoragePaths.SanitizeFolderName(company?.Name ?? "Company"),
+                AttachmentStoragePaths.SanitizeFolderName(location?.Name ?? "Location")
+            );
         }
 
         // ── Temp upload (no inward number yet – stored in temp, returned as URL) ─────
@@ -52,16 +56,33 @@ namespace net_backend.Controllers
 
             try
             {
-                var root = _env.ContentRootPath ?? Directory.GetCurrentDirectory();
-                var dir = Path.Combine(root, "wwwroot", "storage", "inward-attachments-temp");
-                Directory.CreateDirectory(dir);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.GetFullPath(Path.Combine(dir, fileName));
-                if (!filePath.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new ApiResponse<object> { Success = false, Message = "Invalid file path." });
-                await using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await uploadFile.CopyToAsync(stream);
-                var url = $"/storage/inward-attachments-temp/{fileName}";
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var tempGuid = Guid.NewGuid().ToString("N");
+                var tempBaseDirRel = Path.Combine(
+                    AttachmentStoragePaths.GetModuleTempDirRel(companyDir, locationDir, "inward"),
+                    tempGuid);
+                var tempBaseDirAbs = Path.Combine(webRootPath, tempBaseDirRel);
+                Directory.CreateDirectory(tempBaseDirAbs);
+
+                var isImage = ImageOptimizer.IsImageExtension(ext);
+                var fileName = isImage ? $"{tempGuid}.webp" : $"{tempGuid}{ext}";
+                var destinationAbs = Path.Combine(tempBaseDirAbs, fileName);
+
+                if (isImage)
+                {
+                    await using var readStream = uploadFile.OpenReadStream();
+                    await ImageOptimizer.OptimizeImageToWebpAsync(readStream, destinationAbs);
+                }
+                else
+                {
+                    await using var stream = new FileStream(destinationAbs, FileMode.Create, FileAccess.Write, FileShare.None);
+                    await uploadFile.CopyToAsync(stream);
+                }
+
+                var rel = Path.Combine(tempBaseDirRel, fileName);
+                var url = AttachmentStoragePaths.UrlFromRelPath(rel);
                 return Ok(new ApiResponse<object> { Data = new { url } });
             }
             catch (Exception ex)
@@ -470,6 +491,24 @@ namespace net_backend.Controllers
 
             _context.Inwards.Add(inward);
             await _context.SaveChangesAsync();
+
+            // Move uploaded temp attachments -> final inward folder (entry save/update boundary).
+            var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+            var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+            var incomingUrls = dto.AttachmentUrls ?? new List<string>();
+            if (incomingUrls.Count > 0)
+            {
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    incomingUrls,
+                    moduleKey: "inward",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: inward.InwardNo);
+
+                inward.AttachmentUrlsJson = movedUrls.Count > 0 ? JsonSerializer.Serialize(movedUrls) : null;
+                await _context.SaveChangesAsync();
+            }
             
             await ProcessInwardMovementsAsync(inward);
             
@@ -500,9 +539,23 @@ namespace net_backend.Controllers
             inward.InwardDate = dto.InwardDate ?? inward.InwardDate;
             inward.VendorId = dto.VendorId;
             inward.Remarks = dto.Remarks;
-            inward.AttachmentUrlsJson = dto.AttachmentUrls != null
-                ? (dto.AttachmentUrls.Count > 0 ? JsonSerializer.Serialize(dto.AttachmentUrls) : null)
-                : inward.AttachmentUrlsJson;
+
+            // Move temp attachments (if any) -> final inward folder for this entry.
+            if (dto.AttachmentUrls != null)
+            {
+                var (companyDir, locationDir) = await GetCompanyLocationDirsAsync();
+                var webRootPath = AttachmentStoragePaths.GetWebRootPath(_env);
+
+                var movedUrls = await AttachmentStorageMover.MoveTempUrlsToFinalAsync(
+                    webRootPath,
+                    dto.AttachmentUrls,
+                    moduleKey: "inward",
+                    companyDir: companyDir,
+                    locationDir: locationDir,
+                    entryKey: inward.InwardNo);
+
+                inward.AttachmentUrlsJson = movedUrls.Count > 0 ? JsonSerializer.Serialize(movedUrls) : null;
+            }
             inward.UpdatedAt = DateTime.Now;
 
             var itemIds = dto.Lines.Select(l => l.ItemId).Distinct().ToList();
