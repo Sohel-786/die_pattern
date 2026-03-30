@@ -103,7 +103,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // SPA fallback for routes that don't have a pre-generated static file.
-// Keeps production behavior consistent with QC_Tool.
+// Keeps production behavior consistent with DiePattern.
 app.MapFallbackToFile("index.html");
 
 // Clean, migration-based database initialization

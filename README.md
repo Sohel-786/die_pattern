@@ -62,8 +62,6 @@ die_pattern/
 └── README.md
 ```
 
-*Note: The `QC_Tool` folder in this repository is kept for reference only and is not part of the Die Pattern Management application.*
-
 ---
 ## Publish
 
