@@ -98,7 +98,7 @@ namespace net_backend.Controllers
                 LastName = request.LastName,
                 Role = role,
                 IsActive = request.IsActive,
-                Avatar = request.Avatar,
+                Avatar = string.IsNullOrWhiteSpace(request.Avatar) ? "/avatar/avatar.svg" : request.Avatar,
                 MobileNumber = request.MobileNumber,
                 DefaultCompanyId = request.CompanyId,
                 DefaultLocationId = request.LocationId,

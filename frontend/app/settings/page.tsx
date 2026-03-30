@@ -60,11 +60,7 @@ import { User, UserPermission } from "@/types";
 import { Plus, Edit2, Search, Eye, EyeOff, MapPin } from "lucide-react";
 import { applyPrimaryColor } from "@/lib/theme";
 import { useSoftwareProfileDraft } from "@/contexts/software-profile-draft-context";
-import {
-  AVATAR_OPTIONS,
-  DEFAULT_AVATAR_PATH,
-  AVATAR_PRESETS_PATH,
-} from "@/lib/avatar-options";
+import { DEFAULT_AVATAR_PATH } from "@/lib/avatar-options";
 import { cn } from "@/lib/utils";
 import { DocumentControlSettings } from "@/components/settings/document-control-settings";
 
@@ -86,7 +82,6 @@ const userSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   role: z.nativeEnum(Role),
   isActive: z.boolean().optional(),
-  avatar: z.string().nullable().optional(),
   mobileNumber: z.string().optional().nullable(),
   companyId: z.number().optional(),
   locationId: z.number().optional(),
@@ -271,7 +266,6 @@ export default function SettingsPage() {
       name: "",
       role: Role.USER,
       isActive: true,
-      avatar: null as string | null,
     },
   });
 
@@ -366,7 +360,6 @@ export default function SettingsPage() {
         name: "",
         role: Role.USER,
         isActive: true,
-        avatar: null,
         companyId: undefined,
         locationId: undefined,
       });
@@ -494,7 +487,6 @@ export default function SettingsPage() {
         name: `${user.firstName} ${user.lastName}`.trim(),
         role: user.role,
         isActive: user.isActive,
-        avatar: user.avatar ?? null,
         mobileNumber: user.mobileNumber || "",
         password: user.decryptedPassword || "",
         companyId,
@@ -508,7 +500,6 @@ export default function SettingsPage() {
         name: "",
         role: Role.USER,
         isActive: true,
-        avatar: null,
         companyId: undefined,
         locationId: undefined,
       });
@@ -535,7 +526,6 @@ export default function SettingsPage() {
         username: data.username,
         role: data.role,
         isActive: data.isActive,
-        avatar: data.avatar ?? null,
         mobileNumber: data.mobileNumber,
         companyId: data.companyId,
         locationId: data.locationId,
@@ -561,7 +551,6 @@ export default function SettingsPage() {
           lastName,
           role: data.role,
           isActive: data.isActive ?? false,
-          avatar: data.avatar ?? null,
           mobileNumber: data.mobileNumber,
           companyId,
           locationId,
@@ -1488,37 +1477,17 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Identity Row: Avatar & Status */}
+            {/* Identity Row: Default Avatar (fixed) & Status */}
             <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 border border-slate-200">
-              <div className="space-y-3">
-                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Profile Identity</Label>
-                <div className="flex flex-row flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setValue("avatar", null, { shouldValidate: true })}
-                    className={cn(
-                      "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
-                      !watch("avatar") ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    <img src={DEFAULT_AVATAR_PATH} alt="Def" className="w-full h-full object-cover" />
-                  </button>
-                  {AVATAR_OPTIONS.map((filename) => {
-                    const isSelected = watch("avatar") === filename;
-                    return (
-                      <button
-                        key={filename}
-                        type="button"
-                        onClick={() => setValue("avatar", filename, { shouldValidate: true })}
-                        className={cn(
-                          "relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all hover:scale-110 active:scale-95",
-                          isSelected ? "border-slate-950 ring-2 ring-slate-950/20 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
-                        )}
-                      >
-                        <img src={`${AVATAR_PRESETS_PATH}/${filename}`} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    );
-                  })}
+              <div className="flex items-center gap-3">
+                <img
+                  src={DEFAULT_AVATAR_PATH}
+                  alt="Default avatar"
+                  className="w-10 h-10 rounded-full object-cover border border-slate-200 bg-white"
+                />
+                <div className="leading-tight">
+                  <div className="text-sm font-bold text-slate-800">Profile Avatar</div>
+                  <div className="text-[11px] font-medium text-slate-500">Uses the system default avatar</div>
                 </div>
               </div>
 
