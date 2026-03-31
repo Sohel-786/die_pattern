@@ -183,8 +183,8 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
             "flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all duration-500 min-w-[80px] group cursor-pointer relative",
             "border-[1.5px]",
             isActive
-              ? "bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] scale-105 -translate-y-1.5 border-primary-600"
-              : "border-primary-600/20 hover:border-primary-600/40 hover:bg-white hover:shadow-2xl hover:-translate-y-1 active:scale-95",
+              ? "bg-card shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] scale-105 -translate-y-1.5 border-primary-600"
+              : "border-primary-600/20 hover:border-primary-600/40 hover:bg-card hover:shadow-2xl hover:-translate-y-1 active:scale-95",
           )}
         >
           <div className={cn("transition-all duration-500 flex items-center justify-center", isActive ? "scale-110" : "group-hover:scale-110")}>
@@ -195,7 +195,7 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
           </div>
           <span className={cn(
             "text-[10px] uppercase font-extrabold text-center whitespace-nowrap transition-colors tracking-widest",
-            isActive ? "text-primary-700" : "text-black group-hover:text-primary-600",
+            isActive ? "text-primary-700 dark:text-primary-300" : "text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400",
           )}>
             {item.label}
           </span>
@@ -211,14 +211,14 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
     );
   };
 
-  const renderDivider = () => <div className="self-stretch w-px bg-secondary-200 mx-1 my-3" />;
+  const renderDivider = () => <div className="self-stretch w-px bg-border mx-1 my-3" />;
 
   const renderSectionLabel = (label: string) => (
     <h3 className="text-[10px] font-bold text-primary-600 uppercase tracking-widest px-3 mb-1">{label}</h3>
   );
 
   return (
-    <nav className="w-full bg-white border-b border-secondary-200 shadow-sm sticky top-14 z-30">
+    <nav className="w-full bg-card border-b border-border shadow-sm sticky top-14 z-30">
       <div className={cn(
         "transition-all duration-300 ease-in-out px-4",
         isExpanded

@@ -96,11 +96,13 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
   const linkClass = (href: string, iconOnly = false) => {
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
     const base = "flex items-center gap-2 rounded-md transition-all text-sm cursor-pointer overflow-hidden " +
-      (isActive ? "bg-primary-50 text-primary-600 font-medium shadow-sm" : "text-secondary-600 hover:bg-secondary-50 hover:text-primary-600");
+      (isActive 
+        ? "bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 font-medium shadow-sm" 
+        : "text-secondary-600 dark:[color:#c9d1d9] hover:bg-secondary-50 dark:hover:bg-[#21262d] hover:text-primary-600 dark:hover:text-primary-400");
     return iconOnly ? `${base} justify-center px-2 py-2.5` : `${base} px-4 py-2.5`;
   };
 
-  const sectionHeaderClass = "flex items-center justify-between w-full px-3 py-1.5 rounded-md text-secondary-700 hover:bg-secondary-50 transition-all text-sm font-medium overflow-hidden";
+  const sectionHeaderClass = "flex items-center justify-between w-full px-3 py-1.5 rounded-md text-secondary-700 dark:[color:#e6edf3] hover:bg-secondary-50 dark:hover:bg-[#21262d] transition-all text-sm font-medium overflow-hidden";
 
   const renderMenuItem = (href: string, label: string, icon: any) => {
     const Icon = icon;
@@ -128,7 +130,7 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
   return (
     <aside
-      className="h-screen fixed left-0 top-0 flex flex-col bg-white border-r border-secondary-200 shadow-lg z-50 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+      className="h-screen fixed left-0 top-0 flex flex-col bg-white dark:bg-card border-r border-secondary-200 dark:border-border shadow-lg z-50 overflow-hidden transition-[width,background-color,border-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
       style={{ width: currentWidth }}
       onMouseEnter={() => !expanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -188,10 +190,10 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
                 <>
                   <button onClick={() => toggleMenu('master')} className={sectionHeaderClass}>
                     <div className="flex items-center gap-1">
-                      <FolderOpen className="w-4 h-4 text-secondary-500" />
+                      <FolderOpen className="w-4 h-4 text-secondary-500 dark:[color:#8b949e]" />
                       <SidebarText show={showFullSidebar} className="-ml-1">Master Entry</SidebarText>
                     </div>
-                    {openMenus.master ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {openMenus.master ? <ChevronDown className="w-4 h-4 text-secondary-400 dark:[color:#8b949e]" /> : <ChevronRight className="w-4 h-4 text-secondary-400 dark:[color:#8b949e]" />}
                   </button>
                   {openMenus.master && (
                     <div className="pl-1 mt-0.5 space-y-0.5">
@@ -214,15 +216,15 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
           {/* Transactions Section: PI, PO, Inward, Job Work, Outward, QC as separate options */}
           {(permissions?.viewPI || permissions?.viewPO || permissions?.viewInward || permissions?.viewQC || permissions?.viewMovement) && (
-            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""}`}>
+            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 dark:border-[#21262d] mt-1" : ""}`}>
               {showFullSidebar ? (
                 <>
                   <button onClick={() => toggleMenu('transaction')} className={sectionHeaderClass}>
                     <div className="flex items-center gap-1">
-                      <ArrowLeftRight className="w-4 h-4 text-secondary-500" />
+                      <ArrowLeftRight className="w-4 h-4 text-secondary-500 dark:[color:#8b949e]" />
                       <SidebarText show={showFullSidebar} className="-ml-1">Transactions</SidebarText>
                     </div>
-                    {openMenus.transaction ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {openMenus.transaction ? <ChevronDown className="w-4 h-4 text-secondary-400 dark:[color:#8b949e]" /> : <ChevronRight className="w-4 h-4 text-secondary-400 dark:[color:#8b949e]" />}
                   </button>
                   {openMenus.transaction && (
                     <div className="pl-1 mt-0.5 space-y-0.5">
@@ -250,25 +252,28 @@ export function Sidebar({ userRole, expanded, onExpandChange, sidebarWidth }: Si
 
           {/* Transfer Entry */}
           {permissions?.viewTransfer && (
-            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""}`}>
+            <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 dark:border-[#21262d] mt-1" : ""}`}>
               {renderMenuItem("/transfers", "Transfer Entry", Truck)}
             </div>
           )}
 
 
           {/* Reports & Settings */}
-          <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 mt-1" : ""} space-y-0.5`}>
+          <div className={`pt-1 ${showFullSidebar ? "border-t border-secondary-100 dark:border-[#21262d] mt-1" : ""} space-y-0.5`}>
             {permissions?.viewReports && renderMenuItem("/reports", "Reports", BarChart3)}
             {permissions?.accessSettings && renderMenuItem("/settings", "Settings", Settings)}
           </div>
         </div>
       </nav>
 
-      <div className="shrink-0 p-2 border-t border-secondary-200 bg-secondary-50">
-        <Button variant="ghost" size="sm" className={`w-full hover:bg-red-50 hover:text-red-600 ${!showFullSidebar ? "justify-center px-2" : "justify-start"}`} onClick={handleLogout}>
+      <div className="shrink-0 p-3 border-t border-secondary-200 dark:border-[#21262d] bg-secondary-50 dark:bg-[#0d1117]">
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all text-red-600 dark:[color:#f87171] hover:bg-red-50 dark:hover:bg-red-950/20 ${!showFullSidebar ? "justify-center" : "justify-start"}`}
+        >
           <LogOut className="w-5 h-5 shrink-0" />
-          <SidebarText show={showFullSidebar} className="-ml-1 text-red-600">Logout</SidebarText>
-        </Button>
+          <SidebarText show={showFullSidebar} className="-ml-1">Logout</SidebarText>
+        </button>
       </div>
     </aside>
   );

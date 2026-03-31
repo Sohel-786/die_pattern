@@ -221,7 +221,7 @@ export function SearchableSelect({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {label && (
-        <Label htmlFor={id} className="block mb-1">
+        <Label htmlFor={id} className="block mb-1 text-sm font-medium text-secondary-700 dark:text-secondary-100">
           {label}
         </Label>
       )}
@@ -237,13 +237,13 @@ export function SearchableSelect({
         onClick={() => !disabled && setIsOpen((o) => !o)}
         onKeyDown={handleKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-secondary-300 bg-white px-3 py-2 text-left text-sm ring-offset-white",
+          "flex h-10 w-full items-center justify-between rounded-md border border-secondary-300 dark:border-secondary-200 bg-white dark:bg-secondary-900/50 px-3 py-2 text-left text-sm ring-offset-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
           "disabled:cursor-not-allowed disabled:opacity-50",
           error && "border-red-500",
         )}
       >
-        <span className={selectedLabel ? "text-slate-900 font-medium" : "text-secondary-500"}>
+        <span className={cn("truncate", selectedLabel ? "text-slate-900 dark:text-foreground font-medium" : "text-secondary-500 dark:text-secondary-400")}>
           {selectedLabel || placeholder}
         </span>
         <svg
@@ -258,10 +258,9 @@ export function SearchableSelect({
 
       {isOpen && (
         <div
-          className="absolute z-50 mt-1 w-full rounded-md border border-secondary-200 bg-white shadow-lg overflow-hidden"
+          className="absolute z-50 mt-1 w-full rounded-md border border-secondary-200 dark:border-border bg-white dark:bg-card shadow-lg overflow-hidden"
         >
-          <div className="border-b border-secondary-200 p-2 bg-secondary-50">
-            <div className="relative">
+          <div className="border-b border-secondary-200 dark:border-border p-2 bg-secondary-50 dark:bg-secondary-900/50">            <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
               <Input
                 ref={searchInputRef}
@@ -275,7 +274,7 @@ export function SearchableSelect({
                   if (onSearchChange) onSearchChange(val);
                 }}
                 placeholder={searchPlaceholder}
-                className="h-9 pl-8 border-secondary-200 bg-white focus:ring-1 focus:ring-primary-500 shadow-sm font-medium"
+                className="h-9 pl-8 border-secondary-200 dark:border-secondary-700 bg-white dark:bg-input focus:ring-1 focus:ring-primary-500 shadow-sm font-medium"
                 onKeyDown={handleKeyDown}
                 role="combobox"
                 aria-autocomplete="list"
@@ -306,13 +305,13 @@ export function SearchableSelect({
                   className={cn(
                     "px-3 py-2 text-sm transition-colors font-medium",
                     opt.disabled
-                      ? "cursor-not-allowed bg-secondary-50 text-secondary-400"
+                      ? "cursor-not-allowed bg-secondary-50 dark:bg-secondary-900/50 text-secondary-400 dark:text-muted-foreground"
                       : "cursor-pointer",
                     !opt.disabled && value === opt.value
-                      ? "bg-primary-100 text-primary-800"
+                      ? "bg-primary-50 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300 shadow-sm"
                       : !opt.disabled && index === highlightIndex
-                        ? "bg-secondary-100 text-slate-900 outline-none"
-                        : !opt.disabled && "text-slate-700 hover:bg-secondary-50",
+                        ? "bg-secondary-100 dark:bg-primary-600 text-slate-900 dark:text-white outline-none font-bold"
+                        : !opt.disabled && "text-slate-700 dark:text-secondary-800 hover:bg-secondary-50 dark:hover:bg-primary-600 dark:hover:text-white",
                   )}
                   onClick={() => {
                     selectOption(opt);

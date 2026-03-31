@@ -187,16 +187,16 @@ export default function QualityControlPage() {
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100 font-sans">
+                            <TableRow className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-900/40 font-sans">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12 border-r border-primary-200/50">SR.NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">QC NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">QC DATE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PARTY NAME</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">SOURCE TYPE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 dark:!text-white tracking-wider text-center w-12 border-r border-primary-200/50 dark:border-primary-800/50">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">QC NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">QC DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">PARTY NAME</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">SOURCE TYPE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -327,20 +327,20 @@ export default function QualityControlPage() {
                                                                     <div className="overflow-x-auto">
                                                                         <Table>
                                                                             <TableHeader>
-                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white text-nowrap">
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">
+                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-secondary-800 hover:bg-transparent dark:hover:bg-transparent text-nowrap">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">
                                                                                         {q.sourceType === InwardSourceType.PO ? "PO NO." : "JW NO."}
                                                                                     </TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">
                                                                                         {q.sourceType === InwardSourceType.PO ? "PO DATE" : "JW DATE"}
                                                                                     </TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">ITEM DESCRIPTION</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">ITEM TYPE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-40">DRAWING NO / REV</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">INWARD NO.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">INWARD DATE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center w-24 pr-6">QC STATUS</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">ITEM DESCRIPTION</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">ITEM TYPE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-40">DRAWING NO / REV</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">INWARD NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">INWARD DATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center w-24 pr-6">QC STATUS</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                         <TableBody>

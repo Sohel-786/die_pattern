@@ -17,9 +17,9 @@ import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
 const inputClass =
-    "h-9 rounded-lg border border-secondary-200 bg-white px-3 text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
+    "h-9 rounded-lg border border-secondary-200 dark:border-secondary-200 bg-white dark:bg-card px-3 text-sm text-secondary-900 dark:text-foreground placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
 const selectClass =
-    "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
+    "h-9 w-full rounded-lg border border-secondary-200 dark:border-secondary-200 bg-white dark:bg-card pl-3 pr-8 text-sm text-secondary-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
 export interface JobWorkFiltersProps {
     filters: JobWorkFiltersState;
@@ -124,10 +124,10 @@ export function JobWorkFilters({
                         </div>
 
                         <div className="min-w-0">
+                            <label className={filterLabelClass}>ITEM SELECTION</label>
                             <ItemInfiniteSelect
                                 value={filters.itemIds}
                                 onChange={(v) => update({ itemIds: v })}
-                                label="Item"
                                 placeholder="Select item"
                             />
                         </div>

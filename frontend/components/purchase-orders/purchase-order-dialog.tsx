@@ -526,7 +526,7 @@ export function PurchaseOrderDialog({
       contentScroll={false}
       className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col"
     >
-      <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+      <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
         {loadingPO && isEditing ? (
           <div className="flex flex-1 items-center justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
@@ -537,12 +537,12 @@ export function PurchaseOrderDialog({
               {/* Single block: no section headers */}
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-secondary-600">PO No.</Label>
-                  <Input value={nextPoCode} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-semibold" />
+                  <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PO No.</Label>
+                  <Input value={nextPoCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold" />
                 </div>
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-secondary-600">PO Date</Label>
-                  <Input value={formatDate(isEditing && poData?.createdAt ? poData.createdAt : new Date())} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm" />
+                  <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PO Date</Label>
+                  <Input value={formatDate(isEditing && poData?.createdAt ? poData.createdAt : new Date())} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm" />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>
@@ -551,8 +551,8 @@ export function PurchaseOrderDialog({
                     onChange={(e) => setPurchaseType(e.target.value as PurchaseType)}
                     disabled={isReadOnly}
                     className={cn(
-                      "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                      isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                      "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
                     )}
                   >
                     <option value="Regular">Regular</option>
@@ -573,8 +573,8 @@ export function PurchaseOrderDialog({
                   </div>
                 </div>
                 <div className="col-span-3">
-                  <Label className="text-xs font-semibold text-secondary-600">address</Label>
-                  <Input value={selectedVendor?.address || "—"} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm truncate" />
+                  <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">address</Label>
+                  <Input value={selectedVendor?.address || "—"} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm truncate" />
                 </div>
               </div>
 
@@ -645,7 +645,7 @@ export function PurchaseOrderDialog({
                     {selectedPIsForDisplay.map((pi) => (
                       <span
                         key={pi.id}
-                        className="inline-flex items-center gap-2 rounded-lg border border-secondary-200 bg-white px-3 py-1.5 text-sm font-medium text-secondary-800 shadow-sm"
+                        className="inline-flex items-center gap-2 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card px-3 py-1.5 text-sm font-medium text-secondary-800 dark:text-foreground shadow-sm"
                       >
                         {pi.piNo}
                         <button
@@ -667,25 +667,25 @@ export function PurchaseOrderDialog({
               )}
 
               {/* Items table: only this area scrolls; horizontal scroll for long content */}
-              <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 dark:border-border rounded-lg bg-white dark:bg-card overflow-hidden">
                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                   <table className="w-full border-collapse text-sm min-w-[900px]">
-                    <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
+                    <thead className="sticky top-0 bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 z-10">
                       <tr>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-12 text-center">Sr.No</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-10">Include</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PI No.</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Type</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Drawing No. / Rev</th>
-                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Material</th>
-                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">GST %</th>
-                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[8rem]">Unit Rate (₹)</th>
-                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Tax</th>
-                        <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Total</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap w-12 text-center">Sr.No</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap w-10">Include</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap">PI No.</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap w-24">Type</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap">Drawing No. / Rev</th>
+                        <th className="text-left py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap">Material</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap w-20">GST %</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap min-w-[8rem]">Unit Rate (₹)</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Tax</th>
+                        <th className="text-center py-2.5 px-3 font-semibold text-primary-900 dark:!text-white text-xs uppercase tracking-wider whitespace-nowrap min-w-[100px]">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-secondary-100 bg-white">
+                    <tbody className="divide-y divide-secondary-200 dark:divide-border bg-white dark:bg-card">
                       {items.length === 0 ? (<tr key="empty">
                           <td colSpan={11} className="py-12 text-center text-secondary-500 text-sm">
                             No items. Click &quot;Add PI&quot; to add approved purchase indents.
@@ -770,7 +770,7 @@ export function PurchaseOrderDialog({
             </div>
 
             {/* Footer: same style as master dialogs */}
-            <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-6">
+            <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-between gap-6">
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
                   <Label className="text-xs font-semibold text-secondary-500 block">Delivery Date <span className="text-rose-500">*</span></Label>

@@ -152,20 +152,20 @@ export default function TransfersPage() {
             />
 
             {/* Main Table Container */}
-            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white">
+            <Card className="border-secondary-200 dark:border-border shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white dark:bg-card">
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100 font-sans">
+                            <TableRow className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-900/40 font-sans">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12 border-r border-primary-200/50">SR.NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">TRANSFER NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">DATE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">FROM</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">TO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 dark:!text-white tracking-wider text-center w-12 border-r border-primary-200/50 dark:border-primary-800/50">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">TRANSFER NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">FROM</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">TO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -181,8 +181,8 @@ export default function TransfersPage() {
                                 transfers.map((tr, idx) => (
                                     <Fragment key={tr.id}><TableRow
                                             className={cn(
-                                                "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                expandedTransferId === tr.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
+                                                "transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                expandedTransferId === tr.id ? "bg-primary-50/60 border-none" : "border-b border-secondary-100 hover:bg-primary-50/30",
                                                 !tr.isActive && "bg-secondary-50/50 opacity-75"
                                             )}
                                             onClick={() => setExpandedTransferId(expandedTransferId === tr.id ? null : tr.id)}
@@ -280,28 +280,28 @@ export default function TransfersPage() {
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
                                                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                            className="overflow-hidden bg-secondary-50/10 w-full"
+                                                            className="overflow-hidden bg-secondary-50/10 dark:bg-secondary-900/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
-                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
-                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                <div className="bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm w-full">
+                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/50 px-4 py-2 border-b border-secondary-100 dark:border-secondary-800 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                                                             Transferred Items
                                                                         </p>
-                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                        <span className="text-[10px] font-medium text-secondary-400 dark:text-secondary-500">
                                                                             Total: {tr.items?.length || 0} item(s)
                                                                         </span>
                                                                     </div>
                                                                     <div className="overflow-x-auto">
                                                                         <Table>
                                                                             <TableHeader>
-                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Item Description</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">Type</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Material</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">Drawing No / Rev</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right pr-6">Remarks</TableHead>
+                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-border hover:bg-transparent dark:hover:bg-transparent">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">Item Description</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">Type</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center">Material</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center">Drawing No / Rev</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-right pr-6">Remarks</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                             <TableBody>

@@ -275,16 +275,16 @@ export default function ReturnsPage() {
                 <div className="overflow-x-auto rounded-lg border border-secondary-200">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-primary-200 bg-primary-100/50">
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Inward No</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Date</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Source</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Item</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Condition</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Location</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Status</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Image</th>
-                        <th className="px-4 py-3 font-semibold text-primary-900 text-center">Actions</th>
+                      <tr className="border-b border-primary-200 dark:border-primary-800 bg-primary-100/50 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200">
+                        <th className="px-4 py-3 font-semibold text-center border-r border-primary-200/50 dark:border-primary-800/50">Inward No</th>
+                        <th className="px-4 py-3 font-semibold text-center">Date</th>
+                        <th className="px-4 py-3 font-semibold text-center">Source</th>
+                        <th className="px-4 py-3 font-semibold text-center">Item</th>
+                        <th className="px-4 py-3 font-semibold text-center">Condition</th>
+                        <th className="px-4 py-3 font-semibold text-center">Location</th>
+                        <th className="px-4 py-3 font-semibold text-center">Status</th>
+                        <th className="px-4 py-3 font-semibold text-center">Image</th>
+                        <th className="px-4 py-3 font-semibold text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -14,6 +14,7 @@ import api from "@/lib/api";
 import { useEffect } from "react";
 import { Save, X, MapPin, Building2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
     name: z.string().min(1, "Location name is required"),
@@ -83,11 +84,11 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
                 className="space-y-5"
             >
                 {/* Parent Company */}
-                <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-secondary-600">
-                        Parent Company <span className="text-rose-500">*</span>
+                <div className="space-y-2">
+                    <Label className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Parent Corporate Entity <span className="text-rose-500">*</span>
                     </Label>
-                    <div className="relative">
+                    <div className="relative group">
                         <SearchableSelect
                             options={companies.map(c => ({ value: c.id, label: c.name }))}
                             value={companyId || ""}
@@ -98,52 +99,53 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
                             placeholder="Select Parent Company..."
                             id="parent-company"
                             disabled={isReadOnly || !!item}
+                            className="h-11 border-secondary-200 dark:border-border font-bold tracking-tight transition-all"
                         />
                         {!!item && (
-                            <p className="text-[11px] text-secondary-400 mt-1 italic flex items-center gap-1">
-                                <span>🔒</span> Company cannot be changed after creation.
+                            <p className="text-[10px] text-secondary-400 dark:text-secondary-500 mt-2 font-bold uppercase tracking-tight flex items-center gap-1.5 ml-1">
+                                <span className="text-amber-500">🔒</span> Company identity is locked after registration.
                             </p>
                         )}
                     </div>
-                    {errors.companyId && !item && <p className="text-xs text-rose-500">{errors.companyId.message}</p>}
+                    {errors.companyId && !item && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight ml-1">{errors.companyId.message}</p>}
                 </div>
 
                 {/* Location Name */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="location-name" className="text-xs font-semibold text-secondary-600">
-                        Location Name / Code <span className="text-rose-500">*</span>
+                <div className="space-y-2">
+                    <Label htmlFor="location-name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Location Identifier / Code <span className="text-rose-500">*</span>
                     </Label>
-                    <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                    <div className="relative group">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                         <Input
                             id="location-name"
                             {...register("name")}
-                            className="h-9 pl-9 border-secondary-200 text-sm"
+                            className="h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight transition-all"
                             placeholder="e.g. Warehouse 01 or Shop Floor"
                             disabled={isReadOnly}
                         />
                     </div>
-                    {errors.name && <p className="text-xs text-rose-500">{errors.name.message}</p>}
+                    {errors.name && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight ml-1">{errors.name.message}</p>}
                 </div>
 
                 {/* Address */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="location-address" className="text-xs font-semibold text-secondary-600">
-                        Address <span className="text-rose-500">*</span>
+                <div className="space-y-2">
+                    <Label htmlFor="location-address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Complete Address <span className="text-rose-500">*</span>
                     </Label>
                     <Textarea
                         id="location-address"
                         {...register("address")}
-                        className="min-h-[80px] text-sm border-secondary-200 rounded-lg resize-none"
-                        placeholder="Full address of this location..."
+                        className="min-h-[100px] border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight resize-none transition-all py-3 px-4"
+                        placeholder="Full physical address or plot details of this location..."
                         disabled={isReadOnly}
                     />
-                    {errors.address && <p className="text-xs text-rose-500">{errors.address.message}</p>}
+                    {errors.address && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight ml-1">{errors.address.message}</p>}
                 </div>
 
                 {/* Active Toggle (edit only) */}
                 {!!item && (
-                    <div className="flex items-center gap-3 py-1">
+                    <div className="flex items-center gap-4 py-2 px-1">
                         <button
                             type="button"
                             onClick={() => {
@@ -151,40 +153,53 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
                                 setValue("isActive", !isActive);
                             }}
                             disabled={isReadOnly}
-                            className={`relative w-10 h-5 rounded-full transition-colors ${isActive ? "bg-primary-600" : "bg-secondary-200"}`}
+                            className={cn(
+                                "relative w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                            )}
                         >
-                            <span className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full shadow-sm transition-transform ${isActive ? "translate-x-5" : "translate-x-0"}`} />
+                            <span className={cn(
+                                "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                            )} />
                         </button>
-                        <span className="text-sm font-medium text-secondary-700 select-none">
-                            {isActive ? "Active" : "Inactive"}
+                        <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none">
+                            {isActive ? "Location Active" : "Location Inactive"}
                         </span>
                     </div>
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-2 border-t border-secondary-100">
-                    <Button
-                        type={isReadOnly ? "button" : "submit"}
-                        disabled={isReadOnly ? false : isLoading}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} bg-primary-600 hover:bg-primary-700 text-white font-semibold h-9 ${isReadOnly ? "hidden" : ""}`}
-                    >
-                        {isLoading ? (
-                            <span className="flex items-center gap-2">
-                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Saving...
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-2">
-                                <Save className="w-4 h-4" />
-                                {item ? "Update" : "Save"}
-                            </span>
-                        )}
-                    </Button>
+                <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
+                    {!isReadOnly && (
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
+                        >
+                            {isLoading ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    {item ? "Update Location Profile" : "Register Location"}
+                                </span>
+                            )}
+                        </Button>
+                    ) || (
+                        <div className="hidden" />
+                    )}
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-200 text-secondary-700 font-semibold h-9`}
+                        className={cn(
+                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly ? "w-full" : "flex-[0.5]"
+                        )}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel

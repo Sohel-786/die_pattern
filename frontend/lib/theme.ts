@@ -76,8 +76,11 @@ export function applyPrimaryColor(hex: string | null | undefined): void {
     // Reset to default blue
     hex = "#0d6efd";
   }
+  const [r, g, b] = hexToRgb(hex);
   const shades = getPrimaryShades(hex);
   root.style.setProperty("--primary", shades["DEFAULT"]);
+  // RGB triplet for dark-mode alpha overlays (e.g. rgb(var(--primary-rgb) / 0.18))
+  root.style.setProperty("--primary-rgb", `${r} ${g} ${b}`);
   root.style.setProperty("--primary-50", shades["50"]);
   root.style.setProperty("--primary-100", shades["100"]);
   root.style.setProperty("--primary-200", shades["200"]);

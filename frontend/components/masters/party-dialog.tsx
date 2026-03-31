@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { Save, X, ShieldCheck, Power, User, Phone, Mail, MapPin, ShieldAlert } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "@/lib/utils";
 
 // Indian GSTIN: 2-digit state code + 10-char PAN + entity no. + Z + check digit
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -41,9 +42,9 @@ function GstSegmentGuide({ value }: { value: string }) {
                     const total = seg.pos[1] - seg.pos[0];
                     const pct = Math.max(0, Math.min(1, filled / total));
                     return (
-                        <div key={seg.label} className="flex-1 bg-secondary-100 rounded-full overflow-hidden">
+                        <div key={seg.label} className="flex-1 bg-secondary-100 dark:bg-card/50 rounded-full overflow-hidden shadow-inner h-1.5">
                             <div
-                                className={`h-full transition-all duration-150 ${seg.color}`}
+                                className={cn("h-full transition-all duration-300", seg.color)}
                                 style={{ width: `${pct * 100}%` }}
                             />
                         </div>
@@ -55,12 +56,14 @@ function GstSegmentGuide({ value }: { value: string }) {
                 {GST_SEGMENTS.map((seg) => (
                     <div
                         key={seg.label}
-                        className={`flex-1 text-center text-[9px] font-bold uppercase tracking-wider transition-colors ${activeSegment?.label === seg.label
-                            ? "text-primary-700"
-                            : len >= seg.pos[1]
-                                ? "text-secondary-400 line-through"
-                                : "text-secondary-300"
-                            }`}
+                        className={cn(
+                            "flex-1 text-center text-[8px] font-black uppercase tracking-widest transition-colors",
+                            activeSegment?.label === seg.label
+                                ? "text-primary-700 dark:text-primary-400"
+                                : len >= seg.pos[1]
+                                    ? "text-secondary-400 dark:text-secondary-600 line-through"
+                                    : "text-secondary-300 dark:text-secondary-700"
+                        )}
                     >
                         {seg.label}
                     </div>
@@ -175,8 +178,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                 <div className="space-y-4">
                     {/* Party Name - full width */}
                     <div className="space-y-2">
-                        <Label htmlFor="name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Name <span className="text-red-500">*</span>
+                        <Label htmlFor="name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                            Legal Registered Name <span className="text-rose-500">*</span>
                         </Label>
                         <Autocomplete
                             id="name"
@@ -187,30 +190,30 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             }}
                             options={partyNames}
                             placeholder="e.g. J&J STEEL CAST"
-                            className="h-10"
+                            className="h-11 border-secondary-200 dark:border-border font-bold tracking-tight"
                             disabled={isReadOnly}
                         />
-                        {errors.name && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.name.message}</p>}
+                        {errors.name && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.name.message}</p>}
                     </div>
 
                     {/* Contact Person, Contact No., Email */}
                     <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="contactPerson" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Contact Person <span className="text-red-500">*</span>
+                            <Label htmlFor="contactPerson" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                                Point of Contact <span className="text-rose-500">*</span>
                             </Label>
                             <Input
                                 id="contactPerson"
                                 {...register("contactPerson")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight"
                                 placeholder="e.g. Rahul Rajput"
                                 disabled={isReadOnly}
                             />
-                            {errors.contactPerson && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.contactPerson.message}</p>}
+                            {errors.contactPerson && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.contactPerson.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="phoneNumber" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Contact No. <span className="text-red-500">*</span>
+                            <Label htmlFor="phoneNumber" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                                Secure Mobile <span className="text-rose-500">*</span>
                             </Label>
                             <Input
                                 id="phoneNumber"
@@ -218,7 +221,10 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                 maxLength={10}
                                 autoComplete="off"
                                 disabled={isReadOnly}
-                                className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium ${errors.phoneNumber ? "border-rose-400" : ""}`}
+                                className={cn(
+                                    "h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight",
+                                    errors.phoneNumber && "border-rose-400 dark:border-rose-500/30"
+                                )}
                                 placeholder="e.g. 9979260161"
                                 onKeyDown={(e) => {
                                     if (isReadOnly) {
@@ -237,26 +243,25 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                     setValue("phoneNumber", raw, { shouldValidate: true });
                                 }}
                             />
-                            {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.phoneNumber.message}</p>}
+                            {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.phoneNumber.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Email ID</Label>
+                            <Label htmlFor="email" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">Company Email</Label>
                             <Input
                                 id="email"
                                 {...register("email")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight"
                                 placeholder="contact@domain.com"
                                 disabled={isReadOnly}
                             />
-                            {errors.email && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.email.message}</p>}
+                            {errors.email && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.email.message}</p>}
                         </div>
                     </div>
 
-                    {/* GST No + GST Date - full width 2 col split (+ toggle in edit mode) */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="gstNo" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                GST No <span className="text-red-500">*</span>
+                            <Label htmlFor="gstNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                                GST Identification <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
                                 <Input
@@ -266,12 +271,14 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                     autoComplete="off"
                                     spellCheck={false}
                                     disabled={isReadOnly}
-                                    className={`h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono font-bold uppercase tracking-widest pr-10 ${watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
-                                        ? "border-green-400 focus:ring-green-400 text-green-700"
-                                        : errors.gstNo
-                                            ? "border-rose-400 focus:ring-rose-400"
-                                            : ""
-                                        }`}
+                                    className={cn(
+                                        "h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-mono font-black uppercase tracking-[0.2em] pr-10 transition-all",
+                                        watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
+                                            ? "border-green-400/50 dark:border-green-500/30 text-green-700 dark:text-green-500 bg-green-50/30 dark:bg-green-500/5"
+                                            : errors.gstNo
+                                                ? "border-rose-400/50 dark:border-rose-500/30 bg-rose-50/30 dark:bg-rose-500/5"
+                                                : ""
+                                    )}
                                     placeholder="24AABCU9603R1ZA"
                                     onKeyDown={(e) => {
                                         if (isReadOnly) {
@@ -300,27 +307,27 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                     }}
                                 />
                                 {/* Live validity icon */}
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                                     {watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "") ? (
-                                        <span className="text-green-500 text-xs font-bold">✓</span>
+                                        <span className="text-green-500 text-xs font-black transition-all scale-110">✓</span>
                                     ) : watch("gstNo")?.length === 15 ? (
-                                        <ShieldAlert className="w-4 h-4 text-rose-500" />
+                                        <ShieldAlert className="w-4 h-4 text-rose-500 animate-pulse" />
                                     ) : (
-                                        <span className="text-[10px] font-bold text-secondary-400">{watch("gstNo")?.length ?? 0}/15</span>
+                                        <span className="text-[10px] font-black text-secondary-400 tabular-nums">{watch("gstNo")?.length ?? 0}/15</span>
                                     )}
                                 </div>
                             </div>
                             <GstSegmentGuide value={watch("gstNo") || ""} />
                             {errors.gstNo && (
-                                <p className="text-xs text-rose-500 mt-1 font-medium flex items-center gap-1">
-                                    <ShieldAlert className="w-3 h-3 shrink-0" />
+                                <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight flex items-center gap-1.5">
+                                    <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                                     {errors.gstNo.message}
                                 </p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="gstDate" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                GST Date <span className="text-red-500">*</span>
+                            <Label htmlFor="gstDate" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                                Registration Date <span className="text-rose-500">*</span>
                             </Label>
                             <Controller
                                 control={control}
@@ -333,15 +340,17 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                                 if (isReadOnly) return;
                                                 field.onChange(date ? date.toISOString().split('T')[0] : "");
                                             }}
-                                            className={`h-10 shadow-sm text-sm font-medium ${errors.gstDate
-                                                ? "border-rose-400 focus:ring-rose-400"
-                                                : "border-secondary-300 focus:ring-primary-500"
-                                                }`}
+                                            className={cn(
+                                                "h-11 shadow-sm text-sm font-bold tracking-tight transition-all",
+                                                errors.gstDate 
+                                                    ? "border-rose-400 focus:ring-rose-400 dark:border-rose-500/30 font-bold" 
+                                                    : "border-secondary-200 dark:border-border dark:bg-card focus:ring-primary-500/10"
+                                            )}
                                             disabled={isReadOnly}
                                         />
                                         {errors.gstDate && (
-                                            <p className="text-xs text-rose-500 mt-1 font-medium flex items-center gap-1">
-                                                <ShieldAlert className="w-3 h-3 shrink-0" />
+                                            <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight flex items-center gap-1.5">
+                                                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                                                 {errors.gstDate.message}
                                             </p>
                                         )}
@@ -353,23 +362,26 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
 
                     {/* Row 5: Address - full width */}
                     <div className="space-y-2">
-                        <Label htmlFor="address" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Address <span className="text-red-500">*</span>
+                        <Label htmlFor="address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
+                            Registered Office Address <span className="text-rose-500">*</span>
                         </Label>
                         <Textarea
                             id="address"
                             {...register("address")}
-                            className="border-secondary-300 shadow-sm focus:ring-primary-500 text-sm min-h-[60px] font-medium"
-                            placeholder="Address details..."
+                            className="border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm min-h-[70px] font-bold tracking-tight resize-none transition-all py-3 px-4"
+                            placeholder="Detailed office or warehouse address..."
                             disabled={isReadOnly}
                         />
-                        {errors.address && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.address.message}</p>}
+                        {errors.address && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.address.message}</p>}
                     </div>
 
                     {/* Active toggle - edit mode only */}
                     {!!party && (
-                        <div className="flex items-center py-1">
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="flex items-center py-2 px-1">
+                            <label className={cn(
+                                "flex items-center gap-4 cursor-pointer group",
+                                isReadOnly && "pointer-events-none opacity-60"
+                            )}>
                                 <div className="relative">
                                     <input
                                         type="checkbox"
@@ -381,21 +393,32 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         }}
                                         disabled={isReadOnly}
                                     />
-                                    <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                    <div className={cn(
+                                        "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                        isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                    )}></div>
+                                    <div className={cn(
+                                        "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                        isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                                    )}></div>
                                 </div>
-                                <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                                <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                    Mark as Active Master Record
+                                </span>
                             </label>
                         </div>
                     )}
                 </div>
 
-                <div className="flex gap-4 pt-4 border-t border-secondary-100">
+                <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
+                        className={cn(
+                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly ? "w-full" : "flex-1"
+                        )}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
@@ -404,7 +427,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                         <Button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
                         >
                             {isLoading ? (
                                 <div className="flex items-center gap-2">
@@ -414,7 +437,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save
+                                    Save Party Profile
                                 </div>
                             )}
                         </Button>

@@ -135,7 +135,7 @@ export function MultiSelectSearch({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {label && (
-        <Label htmlFor={id} className="block mb-1.5 text-sm font-medium text-secondary-700">
+        <Label htmlFor={id} className="block mb-1.5 text-sm font-medium text-secondary-700 dark:text-secondary-100">
           {label}
         </Label>
       )}
@@ -148,12 +148,12 @@ export function MultiSelectSearch({
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((o) => !o)}
         className={cn(
-          "flex h-auto min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-secondary-300 bg-white px-3 py-2 text-left text-sm ring-offset-white",
+          "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-secondary-300 dark:border-secondary-200 bg-white dark:bg-secondary-900/50 px-3 py-1 text-left text-sm ring-offset-white",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >
-        <span className={cn("min-w-0 flex-1 break-words text-left", value.length ? "text-text" : "text-secondary-500")}>
+        <span className={cn("min-w-0 flex-1 break-words text-left", value.length ? "text-text dark:text-foreground" : "text-secondary-500 dark:text-secondary-400")}>
           {displayText}
         </span>
         <svg
@@ -172,14 +172,14 @@ export function MultiSelectSearch({
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-[9999] max-h-[min(70vh,320px)] min-w-[200px] max-w-[min(100vw-2rem,420px)] rounded-lg border border-secondary-200 bg-white shadow-lg"
+            className="fixed z-[9999] max-h-[min(70vh,320px)] min-w-[200px] max-w-[min(100vw-2rem,420px)] rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card shadow-lg"
             style={{
               top: dropdownRect.top,
               left: dropdownRect.left,
               width: dropdownRect.width,
             }}
           >
-            <div className="border-b border-secondary-200 p-2">
+            <div className="border-b border-secondary-200 dark:border-border p-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
                 <Input
@@ -200,22 +200,23 @@ export function MultiSelectSearch({
                 filteredOptions.map((opt) => {
                   const selected = value.includes(opt.value);
                   return (
-                    <li
-                      key={String(opt.value)}
-                      role="option"
-                      aria-selected={selected}
-                      className={cn(
-                        "flex cursor-pointer items-start gap-2 px-3 py-2 text-sm text-text hover:bg-secondary-50",
-                        selected && "bg-primary-50 text-primary-800",
-                      )}
-                      onClick={() => toggle(opt.value)}
-                    >
+                      <li
+                        key={String(opt.value)}
+                        role="option"
+                        aria-selected={selected}
+                        className={cn(
+                          "flex cursor-pointer items-start gap-2 px-3 py-2 text-sm transition-colors",
+                          "text-secondary-900 dark:text-secondary-800 hover:bg-secondary-50 dark:hover:bg-primary-600 dark:hover:text-white",
+                          selected && "bg-primary-50 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300",
+                        )}
+                        onClick={() => toggle(opt.value)}
+                      >
                       <span
                         className={cn(
                           "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                           selected
                             ? "border-primary-500 bg-primary-500 text-white"
-                            : "border-secondary-300 bg-white",
+                            : "border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800",
                         )}
                       >
                         {selected ? <Check className="h-3 w-3" /> : null}

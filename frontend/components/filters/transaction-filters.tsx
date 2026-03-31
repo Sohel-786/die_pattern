@@ -99,7 +99,7 @@ export function TransactionFilters({
                   value={filters.search}
                   onChange={(e) => update({ search: e.target.value })}
                   placeholder={searchPlaceholder}
-                  className="pl-9 h-10 rounded-lg border-secondary-300 bg-white focus-visible:ring-2 focus-visible:ring-primary-500"
+                  className="pl-9 h-9 rounded-lg border-secondary-300 bg-white focus-visible:ring-2 focus-visible:ring-primary-500"
                   aria-label="Search entries"
                 />
               </div>
@@ -148,6 +148,7 @@ export function TransactionFilters({
                 <ItemInfiniteSelect
                   value={filters.itemIds}
                   onChange={(v) => update({ itemIds: v })}
+                  label="ITEM SELECTION"
                 />
               </div>
             )}

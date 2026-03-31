@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
-    Save, Camera, Upload, Trash2,
+    Save, Camera, Upload, Trash2, X,
     Package, Hash, MapPin,
     FileText, ShieldCheck, Power, AlertCircle
 } from "lucide-react";
@@ -19,6 +19,7 @@ import { StoreItem } from "@/types";
 import { CameraPhotoInput, CameraPhotoInputRef } from "@/components/ui/camera-photo-input";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { toast } from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 
 const itemSchema = z.object({
@@ -143,41 +144,41 @@ export function StoreItemDialog({
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8">
                     <div className="space-y-6">
                         <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-secondary-900 uppercase tracking-widest pb-2 border-b border-secondary-100">Asset Information</h4>
-                            <div className="space-y-4">
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-400 uppercase tracking-[0.2em] pb-3 border-b border-secondary-100 dark:border-border/50">Asset Information</h4>
+                            <div className="space-y-5">
                                 <div>
-                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase">Asset Name *</Label>
-                                    <div className="relative">
-                                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                        <Autocomplete value={watchedItemName || ""} onChange={val => setValue("itemName", val)} options={filteredItemNames} placeholder="e.g. Micrometer" className="h-11 pl-10 border-secondary-200" />
+                                    <Label className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest ml-1 mb-2 block">Asset Classification *</Label>
+                                    <div className="relative group">
+                                        <Package className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
+                                        <Autocomplete value={watchedItemName || ""} onChange={val => setValue("itemName", val)} options={filteredItemNames} placeholder="e.g. Micrometer" className="h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card font-bold tracking-tight shadow-sm" />
                                     </div>
-                                    {errors.itemName && <p className="text-[10px] text-rose-500">{errors.itemName.message}</p>}
+                                    {errors.itemName && <p className="text-[10px] text-rose-500 mt-1.5 font-bold uppercase tracking-tight ml-1">{errors.itemName.message}</p>}
                                 </div>
                                 <div>
-                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase">Serial Number *</Label>
-                                    <div className="relative">
-                                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                        <Input {...register("serialNumber")} className="h-11 pl-10 border-secondary-200" placeholder="SN-XXXXX" />
+                                    <Label className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest ml-1 mb-2 block">Identifier Segment *</Label>
+                                    <div className="relative group">
+                                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
+                                        <Input {...register("serialNumber")} className="h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card font-mono font-black tracking-[0.1em] shadow-sm" placeholder="SN-XXXXX" />
                                     </div>
-                                    {errors.serialNumber && <p className="text-[10px] text-rose-500">{errors.serialNumber.message}</p>}
+                                    {errors.serialNumber && <p className="text-[10px] text-rose-500 mt-1.5 font-bold uppercase tracking-tight ml-1">{errors.serialNumber.message}</p>}
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-secondary-900 uppercase tracking-widest pb-2 border-b border-secondary-100">Storage Details</h4>
-                            <div className="space-y-4">
+                        <div className="space-y-6">
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-400 uppercase tracking-[0.2em] pb-3 border-b border-secondary-100 dark:border-border/50">Storage Control</h4>
+                            <div className="space-y-5">
                                 <div>
-                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase">Storage Zone</Label>
-                                    <div className="relative">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                        <Autocomplete value={watchedInHouseLocation || ""} onChange={val => setValue("inHouseLocation", val)} options={filteredInHouseLocations} placeholder="e.g. Shelf A-04" className="h-11 pl-10 border-secondary-200" />
+                                    <Label className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest ml-1 mb-2 block">Warehouse Zone</Label>
+                                    <div className="relative group">
+                                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
+                                        <Autocomplete value={watchedInHouseLocation || ""} onChange={val => setValue("inHouseLocation", val)} options={filteredInHouseLocations} placeholder="e.g. Shelf A-04" className="h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card font-bold tracking-tight shadow-sm" />
                                     </div>
                                 </div>
                                 <div>
-                                    <Label className="text-[10px] font-bold text-secondary-500 uppercase">Remarks</Label>
-                                    <div className="relative">
-                                        <FileText className="absolute left-3 top-3 w-4 h-4 text-secondary-400" />
-                                        <Textarea {...register("description")} className="min-h-[100px] pl-10 border-secondary-200 resize-none text-sm pt-2.5" placeholder="Additional details..." />
+                                    <Label className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest ml-1 mb-2 block">Operational Remarks</Label>
+                                    <div className="relative group">
+                                        <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
+                                        <Textarea {...register("description")} className="min-h-[120px] pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card resize-none text-sm font-bold tracking-tight pt-3.5 shadow-sm transition-all" placeholder="Enter any specific storage or condition notes..." />
                                     </div>
                                 </div>
                             </div>
@@ -186,36 +187,47 @@ export function StoreItemDialog({
 
                     <div className="space-y-6">
                         <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-secondary-900 uppercase tracking-widest pb-2 border-b border-secondary-100">Asset Identity Photo</h4>
-                            <div className="aspect-square rounded-2xl border-2 border-dashed border-secondary-200 bg-secondary-50/50 flex flex-col items-center justify-center p-4">
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-400 uppercase tracking-[0.2em] pb-3 border-b border-secondary-100 dark:border-border/50">Asset Geometry</h4>
+                            <div className="aspect-square rounded-3xl border-2 border-dashed border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-card/30 flex flex-col items-center justify-center p-6 shadow-inner group/upload transition-all duration-300 hover:border-primary-400/50">
                                 {imagePreview ? (
-                                    <div className="relative w-full h-full group">
-                                        <img src={imagePreview} className="w-full h-full object-contain" />
-                                        {!isImageLocked && <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleImageCapture(null)}><Trash2 className="w-4 h-4" /></Button>}
+                                    <div className="relative w-full h-full group/preview rounded-2xl overflow-hidden bg-white dark:bg-secondary-950">
+                                        <img src={imagePreview} className="w-full h-full object-contain transition-transform duration-500 group-hover/preview:scale-110" />
+                                        {!isImageLocked && (
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                                                <Button type="button" variant="destructive" size="icon" className="h-10 w-10 rounded-xl shadow-xl transform scale-75 group-hover/preview:scale-100 transition-all duration-300" onClick={() => handleImageCapture(null)}><Trash2 className="w-5 h-5" /></Button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <Camera className="w-12 h-12 text-secondary-300" />
-                                        <div className="flex flex-col gap-2 w-full">
-                                            <Button type="button" variant="outline" className="h-10 rounded-xl font-bold text-xs" onClick={() => cameraInputRef.current?.open()}>Capture Photo</Button>
-                                            <Button type="button" variant="secondary" className="h-10 rounded-xl font-bold text-xs" onClick={() => {
+                                    <div className="flex flex-col items-center gap-6">
+                                        <div className="w-16 h-16 rounded-2xl bg-secondary-100 dark:bg-secondary-900/50 flex items-center justify-center text-secondary-400 dark:text-secondary-700 group-hover/upload:text-primary-500 group-hover/upload:scale-110 transition-all duration-300">
+                                            <Camera className="w-8 h-8" />
+                                        </div>
+                                        <div className="flex flex-col gap-3 w-full min-w-[200px]">
+                                            <Button type="button" variant="outline" className="h-11 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] border-secondary-200 dark:border-border hover:bg-primary-50 dark:hover:bg-primary-950/20" onClick={() => cameraInputRef.current?.open()}>
+                                                <Camera className="w-3.5 h-3.5 mr-2" /> Live Capture
+                                            </Button>
+                                            <Button type="button" variant="secondary" className="h-11 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] bg-secondary-100 dark:bg-secondary-800 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-all" onClick={() => {
                                                 const el = document.createElement('input'); el.type = 'file'; el.accept = 'image/*';
                                                 el.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleImageCapture(f); }; el.click();
-                                            }}>Upload Media</Button>
+                                            }}>
+                                                <Upload className="w-3.5 h-3.5 mr-2" /> Upload Media
+                                            </Button>
                                         </div>
                                     </div>
                                 )}
                             </div>
                             {isImageLocked && (
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2.5 text-[10px] text-amber-700 font-bold">
-                                    <AlertCircle className="w-4 h-4 shrink-0" /> Photo locked due to transaction history.
+                                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex gap-3 text-[10px] text-amber-700 dark:text-amber-400 font-black uppercase tracking-tight leading-relaxed">
+                                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> 
+                                    <div>Identity locked due to existing audit trail or transaction history.</div>
                                 </div>
                             )}
                         </div>
                         <div className="space-y-4">
-                            <h4 className="text-xs font-bold text-secondary-900 uppercase tracking-widest pb-2 border-b border-secondary-100">Status</h4>
-                            <div className="flex items-center py-2">
-                                <label className="flex items-center gap-3 cursor-pointer group">
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-400 uppercase tracking-[0.2em] pb-3 border-b border-secondary-100 dark:border-border/50">Status</h4>
+                            <div className="flex items-center py-2 px-1">
+                                <label className="flex items-center gap-4 cursor-pointer group">
                                     <div className="relative">
                                         <input
                                             type="checkbox"
@@ -223,10 +235,18 @@ export function StoreItemDialog({
                                             checked={isActive}
                                             onChange={(e) => setValue("isActive", e.target.checked)}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                        <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                        <div className={cn(
+                                            "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                            isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                        )}></div>
+                                        <div className={cn(
+                                            "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                            isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                                        )}></div>
                                     </div>
-                                    <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                                    <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                        Enable Asset Record
+                                    </span>
                                 </label>
                             </div>
                         </div>
@@ -234,11 +254,36 @@ export function StoreItemDialog({
                 </div>
                 </fieldset>
                 <div className="hidden"><CameraPhotoInput ref={cameraInputRef} onCapture={handleImageCapture} previewUrl={null} hideDefaultTrigger={true} /></div>
-                <div className="flex gap-4 pt-6 border-t">
-                    <Button type="button" variant="outline" onClick={onClose} className={`${isReadOnly ? "w-full" : "flex-1"} h-12 rounded-xl`}>Cancel</Button>
+                <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-secondary-800 bg-white dark:bg-card/50 rounded-b-xl backdrop-blur-sm">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        className={cn(
+                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly ? "w-full" : "flex-1"
+                        )}
+                    >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                    </Button>
                     {!isReadOnly && (
-                        <Button type="submit" disabled={isLoading} className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12">
-                            {isLoading ? 'Processing...' : "Save"}
+                        <Button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
+                        >
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <Save className="w-4 h-4" />
+                                    Save Asset Entry
+                                </div>
+                            )}
                         </Button>
                     )}
                 </div>

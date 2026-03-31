@@ -342,21 +342,21 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                 contentScroll={false}
                 className="overflow-hidden border-none shadow-2xl flex flex-col h-[94vh] max-h-[94vh]"
             >
-                <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+                <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-5 py-3 gap-3 overflow-y-auto">
                         {/* Top row: Core Info & Actions */}
-                        <div className="grid grid-cols-12 gap-3 items-end bg-white p-3 rounded-lg border border-secondary-200/60 shadow-sm shrink-0">
+                        <div className="grid grid-cols-12 gap-3 items-end bg-white dark:bg-card p-3 rounded-lg border border-secondary-200/60 dark:border-border shadow-sm shrink-0">
                             <div className="col-span-2">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Transfer No.</Label>
-                                <Input value={nextCode} readOnly className="h-8 mt-0.5 bg-secondary-50 border-secondary-200 text-xs font-semibold" />
+                                <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Transfer No.</Label>
+                                <Input value={nextCode} readOnly className="h-8 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-xs font-semibold dark:text-foreground" />
                             </div>
                             <div className="col-span-2">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Transfer Date</Label>
-                                <Input readOnly value={formatDateOnly(transferDate)} className="h-8 mt-0.5 text-xs border-secondary-200 bg-secondary-50 font-semibold cursor-default" />
+                                <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Transfer Date</Label>
+                                <Input readOnly value={formatDateOnly(transferDate)} className="h-8 mt-0.5 text-xs border-secondary-200 dark:border-border bg-secondary-50 dark:bg-secondary-200/10 font-semibold cursor-default dark:text-foreground" />
                             </div>
                             <div className="col-span-2">
-                                <Label className="text-[11px] font-semibold text-secondary-600">Out For <span className="text-rose-500">*</span></Label>
-                                <select value={outFor} onChange={(e) => setOutFor(e.target.value)} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 bg-white text-xs font-medium", isReadOnly && "bg-secondary-50 cursor-not-allowed")}>
+                                <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Out For <span className="text-rose-500">*</span></Label>
+                                <select value={outFor} onChange={(e) => setOutFor(e.target.value)} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 dark:border-border bg-white dark:bg-card text-xs font-medium dark:text-foreground", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed")}>
                                     <option value="">Select...</option>
                                     <option value="Casting">Casting</option>
                                     <option value="Job Work">Job Work</option>
@@ -366,7 +366,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                             </div>
                             <div className="col-span-6 flex items-center justify-end gap-3">
                                 <div className="flex flex-col gap-1 items-end">
-                                    <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Item Configuration</span>
+                                    <span className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest">Item Configuration</span>
                                     <div className="flex items-center gap-2">
                                         {!isReadOnly && !lockStructure && (
                                             <Button type="button" onClick={() => setItemSelectionOpen(true)} disabled={fromPartyId === null} className="h-8 px-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-[10px] uppercase tracking-widest gap-1.5 rounded-lg shadow-sm">
@@ -374,9 +374,9 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                                 Add Items
                                             </Button>
                                         )}
-                                        <div className={cn("flex items-center gap-1.5 h-8 px-3 rounded border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors", (uploading || isReadOnly) && "opacity-50 cursor-not-allowed")}>
+                                        <div className={cn("flex items-center gap-1.5 h-8 px-3 rounded border-2 border-dashed border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 hover:bg-white dark:hover:bg-card hover:border-primary-400 transition-colors", (uploading || isReadOnly) && "opacity-50 cursor-not-allowed")}>
                                             <label className={cn("flex items-center gap-1.5 h-full text-[10px] cursor-pointer", (uploading || isReadOnly) && "cursor-not-allowed")}>
-                                                <Upload className="w-3.5 h-3.5 text-secondary-400" />
+                                                <Upload className="w-3.5 h-3.5 text-secondary-400 dark:text-secondary-500" />
                                                 {uploading ? "Uploading..." : "Technical Docs / Images"}
                                                 <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
                                             </label>
@@ -390,9 +390,9 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         </div>
 
                         {/* Party Selection & Logistics Block */}
-                        <div className="grid grid-cols-12 gap-3 bg-white p-3 rounded-lg border border-secondary-200/60 shadow-sm shrink-0">
+                        <div className="grid grid-cols-12 gap-3 bg-white dark:bg-card p-3 rounded-lg border border-secondary-200/60 dark:border-border shadow-sm shrink-0">
                             <div className="col-span-4 flex flex-col gap-1.5">
-                                <Label className="text-[11px] font-semibold text-secondary-600">From <span className="text-rose-500">*</span></Label>
+                                <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">From <span className="text-rose-500">*</span></Label>
                                 <SearchableSelect
                                     options={fromOptions}
                                     value={fromPartyId ?? ""}
@@ -400,13 +400,13 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                     disabled={isReadOnly || lockStructure || items.length > 0}
                                     placeholder="Choose source..."
                                 />
-                                <Label className="text-[11px] font-semibold text-secondary-500 mt-0.5">Address</Label>
-                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 bg-secondary-50/50 text-xs text-secondary-700 leading-snug overflow-y-auto font-medium">
+                                <Label className="text-[11px] font-semibold text-secondary-500 dark:text-secondary-500 mt-0.5">Address</Label>
+                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-secondary-300 leading-snug overflow-y-auto font-medium">
                                     {fromAddress ?? "—"}
                                 </div>
                             </div>
                             <div className="col-span-4 flex flex-col gap-1.5">
-                                <Label className="text-[11px] font-semibold text-secondary-600">To <span className="text-rose-500">*</span></Label>
+                                <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">To <span className="text-rose-500">*</span></Label>
                                 <SearchableSelect
                                     options={destinationOptions}
                                     value={toPartyId ?? ""}
@@ -414,77 +414,77 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                     disabled={isReadOnly || lockStructure}
                                     placeholder="Choose destination..."
                                 />
-                                <Label className="text-[11px] font-semibold text-secondary-500 mt-0.5">Address</Label>
-                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 bg-secondary-50/50 text-xs text-secondary-700 leading-snug overflow-y-auto font-medium">
+                                <Label className="text-[11px] font-semibold text-secondary-500 dark:text-secondary-500 mt-0.5">Address</Label>
+                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-secondary-300 leading-snug overflow-y-auto font-medium">
                                     {toAddress ?? "—"}
                                 </div>
                             </div>
                             <div className="col-span-4 flex flex-col gap-1.5">
-                                <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Logistics & Dispatch Details</span>
+                                <span className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest">Logistics & Dispatch Details</span>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <Label className="text-[11px] font-semibold text-secondary-600">Vehicle No. <span className="text-rose-500">*</span></Label>
-                                        <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. GJ01..." readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
+                                        <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Vehicle No. <span className="text-rose-500">*</span></Label>
+                                        <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. GJ01..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
-                                        <Label className="text-[11px] font-semibold text-secondary-600">Person Name <span className="text-rose-500">*</span></Label>
-                                        <Input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Name..." readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
+                                        <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Person Name <span className="text-rose-500">*</span></Label>
+                                        <Input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Name..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-1.5 mt-0.5">
-                                    <Label className="text-[11px] font-semibold text-secondary-600">Reason Details <span className="text-rose-500">*</span></Label>
-                                    <Input value={reasonDetails} onChange={(e) => setReasonDetails(e.target.value)} placeholder="e.g. FOR CASTING REPAIR" readOnly={isReadOnly} className="h-8 border-secondary-200 text-xs" />
+                                    <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Reason Details <span className="text-rose-500">*</span></Label>
+                                    <Input value={reasonDetails} onChange={(e) => setReasonDetails(e.target.value)} placeholder="e.g. FOR CASTING REPAIR" readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Items table: min-height for 4–5 visible rows; scroll only inside table after that */}
-                        <div className="flex-1 min-h-[280px] flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm">
+                        <div className="flex-1 min-h-[280px] flex flex-col border border-secondary-200 dark:border-border rounded-lg bg-white dark:bg-card overflow-hidden shadow-sm">
                             <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                                 <table className="w-full border-collapse text-sm min-w-[900px]">
-                                    <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
+                                    <thead className="sticky top-0 bg-secondary-100 dark:bg-secondary-900/50 border-b border-secondary-200 dark:border-border z-10">
                                         <tr>
-                                            <th className="text-center py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap w-14">Sr.No</th>
-                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap">Item Specification</th>
-                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap w-40">Material / Type</th>
-                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap w-48">Technical Docs</th>
-                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Item Remarks</th>
-                                            {!isReadOnly && !lockStructure && <th className="text-center py-2 px-2 font-semibold text-secondary-700 text-[11px] uppercase tracking-wider w-16">Action</th>}
+                                            <th className="text-center py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider whitespace-nowrap w-14">Sr.No</th>
+                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider whitespace-nowrap">Item Specification</th>
+                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider whitespace-nowrap w-40">Material / Type</th>
+                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider whitespace-nowrap w-48">Technical Docs</th>
+                                            <th className="text-left py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider whitespace-nowrap min-w-[180px]">Item Remarks</th>
+                                            {!isReadOnly && !lockStructure && <th className="text-center py-2 px-2 font-semibold text-secondary-700 dark:text-secondary-200 text-[11px] uppercase tracking-wider w-16">Action</th>}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-secondary-100 bg-white">
+                                    <tbody className="divide-y divide-secondary-100 dark:divide-border bg-white dark:bg-card">
                                         {items.length === 0 ? (<tr>
-                                                <td colSpan={6} className="py-8 text-center text-secondary-500 text-xs">
+                                                <td colSpan={6} className="py-8 text-center text-secondary-500 dark:text-secondary-500 text-xs">
                                                     No items. Select source/destination and click &quot;Add Items for Transfer&quot; to begin.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            items.map((item, idx) => (<tr key={item.itemId} className="hover:bg-primary-50/30 transition-colors">
-                                                    <td className="py-2 px-2 text-center text-secondary-500 font-medium text-xs">{idx + 1}</td>
+                                            items.map((item, idx) => (<tr key={item.itemId} className="hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors">
+                                                    <td className="py-2 px-2 text-center text-secondary-500 dark:text-secondary-500 font-medium text-xs">{idx + 1}</td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className="font-semibold text-secondary-900 truncate text-xs">{item.itemName}</span>
-                                                            <span className="text-[11px] text-secondary-500 truncate">{item.mainPartName}</span>
+                                                            <span className="font-semibold text-secondary-900 dark:text-foreground truncate text-xs">{item.itemName}</span>
+                                                            <span className="text-[11px] text-secondary-500 dark:text-secondary-500 truncate">{item.mainPartName}</span>
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col">
-                                                            <span className="text-secondary-700 font-medium text-[11px]">{item.itemTypeName ?? "—"}</span>
-                                                            <span className="text-[10px] text-secondary-400">{item.materialName ?? "—"}</span>
+                                                            <span className="text-secondary-700 dark:text-secondary-300 font-medium text-[11px]">{item.itemTypeName ?? "—"}</span>
+                                                            <span className="text-[10px] text-secondary-400 dark:text-secondary-500">{item.materialName ?? "—"}</span>
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className="font-medium text-secondary-800 text-[11px] truncate">{item.drawingNo ?? "NO DRAWING"}</span>
-                                                            <span className="text-[10px] text-secondary-400">Rev: {item.revisionNo ?? "00"}</span>
+                                                            <span className="font-medium text-secondary-800 dark:text-secondary-200 text-[11px] truncate">{item.drawingNo ?? "NO DRAWING"}</span>
+                                                            <span className="text-[10px] text-secondary-400 dark:text-secondary-500">Rev: {item.revisionNo ?? "00"}</span>
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-2 min-w-[160px]">
-                                                        <Input value={item.remarks || ""} onChange={(e) => updateItem(item.itemId, "remarks", e.target.value)} disabled={isReadOnly} placeholder="Line notes..." className={cn("h-7 text-[11px] border-secondary-200 focus:border-primary-400 bg-secondary-50/30 rounded", isReadOnly && "opacity-50 cursor-not-allowed")} />
+                                                        <Input value={item.remarks || ""} onChange={(e) => updateItem(item.itemId, "remarks", e.target.value)} disabled={isReadOnly} placeholder="Line notes..." className={cn("h-7 text-[11px] border-secondary-200 dark:border-border focus:border-primary-400 bg-secondary-50/30 dark:bg-secondary-200/10 rounded dark:text-foreground dark:placeholder:text-secondary-600", isReadOnly && "opacity-50 cursor-not-allowed")} />
                                                     </td>
                                                     {!isReadOnly && !lockStructure && (
                                                         <td className="py-2 px-2 text-center">
-                                                            <Button variant="ghost" size="sm" onClick={() => removeItem(item.itemId)} className="h-7 w-7 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-full">
+                                                            <Button variant="ghost" size="sm" onClick={() => removeItem(item.itemId)} className="h-7 w-7 p-0 text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 rounded-full">
                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                             </Button>
                                                         </td>
@@ -498,18 +498,18 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         </div>
 
                         {/* Overall remarks: small */}
-                        <div className="bg-white p-3 rounded-lg border border-secondary-200/60 shadow-sm shrink-0 flex flex-col gap-1">
+                        <div className="bg-white dark:bg-card p-3 rounded-lg border border-secondary-200/60 dark:border-border shadow-sm shrink-0 flex flex-col gap-1">
                             <Label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest block leading-none">Overall Transfer Remarks</Label>
-                            <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional remarks..." readOnly={isReadOnly} rows={2} className={cn("min-h-0 text-xs border-secondary-100 bg-secondary-50/20 rounded resize-none py-2", isReadOnly && "bg-secondary-50 cursor-default")} />
+                            <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional remarks..." readOnly={isReadOnly} rows={2} className={cn("min-h-0 text-xs border-secondary-100 dark:border-border bg-secondary-50/20 dark:bg-secondary-200/10 rounded resize-none py-2 dark:text-foreground dark:placeholder:text-secondary-600", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-default")} />
                         </div>
                     </div>
 
                     {/* Footer: Cancel & Save or Cancel & Update */}
-                    <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
+                    <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
                         <Button
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="h-9 px-5 font-semibold"
+                            className="h-9 px-5 font-semibold dark:border-border"
                         >
                             Cancel
                         </Button>

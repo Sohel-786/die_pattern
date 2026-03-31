@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
 import { Save, X, ShieldCheck, Power, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
     name: z.string().min(1, "Status name is required"),
@@ -75,15 +76,15 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
             >
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="status-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                            Status Label Master <span className="text-red-500">*</span>
+                        <Label htmlFor="status-name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            Status Label Master <span className="text-rose-500">*</span>
                         </Label>
-                        <div className="relative">
-                            <Activity className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                        <div className="relative group">
+                            <Activity className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 group-focus-within:text-primary-500 transition-colors" />
                             <Input
                                 id="status-name"
                                 {...register("name")}
-                                className="h-12 pl-11 border-secondary-200 focus:ring-primary-500/20 rounded-xl font-medium shadow-none"
+                                className="h-12 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card focus:ring-primary-500/10 rounded-xl font-bold text-sm tracking-tight shadow-sm transition-all"
                                 placeholder="e.g. Under Repair, Ready for Production"
                                 disabled={isReadOnly}
                             />
@@ -92,8 +93,8 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
                     </div>
 
                     {!!item && (
-                        <div className="flex items-center py-2">
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="flex items-center py-2 px-1">
+                            <label className="flex items-center gap-4 cursor-pointer group">
                                 <div className="relative">
                                     <input
                                         type="checkbox"
@@ -105,21 +106,32 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
                                         }}
                                         disabled={isReadOnly}
                                     />
-                                    <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                    <div className={cn(
+                                        "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                        isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                    )}></div>
+                                    <div className={cn(
+                                        "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                        isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                                    )}></div>
                                 </div>
-                                <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                                <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                    Mark as Active Status
+                                </span>
                             </label>
                         </div>
                     )}
                 </div>
 
-                <div className="flex gap-3 pt-6 border-t border-secondary-100">
+                <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-border">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-12 rounded-xl`}
+                        className={cn(
+                            "flex-1 border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly && "w-full"
+                        )}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
@@ -128,7 +140,7 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
                         <Button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-12 shadow-lg shadow-primary-200"
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
                         >
                             {isLoading ? (
                                 <div className="flex items-center gap-2">
@@ -138,7 +150,7 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save
+                                    Save Record
                                 </div>
                             )}
                         </Button>

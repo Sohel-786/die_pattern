@@ -243,13 +243,13 @@ export default function PurchaseOrdersPage() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-secondary-50/30 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 p-4 gap-4 bg-background overflow-hidden">
       <div className="flex justify-between items-center shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-secondary-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
             Purchase Orders
           </h1>
-          <p className="text-secondary-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             Official procurement and repair work orders
           </p>
         </div>
@@ -277,35 +277,35 @@ export default function PurchaseOrdersPage() {
         className="shadow-sm"
       />
 
-      <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+      <Card className="shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
         <div className="overflow-auto flex-1 min-h-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
+              <TableRow className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-900/40">
                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                <TableHead className="w-12 h-11 text-center font-bold uppercase tracking-tight text-[11px] text-primary-900 dark:!text-white">SR.NO</TableHead>
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap text-primary-900 dark:!text-white">
                   PO NO.
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   PO DATE
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   PARTY NAME
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   DELIVERY DATE
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   APPROVAL STATUS
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   ACTIVE
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   CREATED BY
                 </TableHead>
-                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">
+                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap text-secondary-700 dark:text-secondary-400">
                   ACTIONS
                 </TableHead>
               </TableRow>
@@ -324,8 +324,8 @@ export default function PurchaseOrdersPage() {
                   <Fragment key={po.id}><TableRow
                       key={po.id}
                       className={cn(
-                        "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                        expandedPOId === po.id ? "bg-primary-50/60" : "hover:bg-primary-50/30"
+                        "border-b border-border transition-colors font-sans whitespace-nowrap group cursor-pointer",
+                        expandedPOId === po.id ? "bg-primary-50/60 dark:bg-primary-900/20" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10"
                       )}
                       onClick={() => setExpandedPOId(expandedPOId === po.id ? null : po.id)}
                     >
@@ -337,24 +337,24 @@ export default function PurchaseOrdersPage() {
                             style={{ originX: "50%", originY: "50%" }}
                             className={cn(
                               "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200",
-                              expandedPOId === po.id ? "bg-primary-100/50 text-primary-600" : "text-secondary-400 group-hover:bg-primary-100 group-hover:text-primary-600"
+                              expandedPOId === po.id ? "bg-primary-100/60 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400" : "text-muted-foreground group-hover:bg-primary-100/70 dark:group-hover:bg-primary-900/20 group-hover:text-primary-600 dark:group-hover:text-primary-400"
                             )}
                           >
                             <ChevronRight className="w-5 h-5" />
                           </motion.div>
                         </div>
                       </TableCell>
-                      <td className="px-4 py-3 text-secondary-500 font-medium text-center text-sm">{orders.length - orders.indexOf(po)}</td>
-                      <td className="px-4 py-3 font-bold text-secondary-900 text-sm">
+                      <td className="px-4 py-3 text-muted-foreground font-medium text-center text-sm">{orders.length - orders.indexOf(po)}</td>
+                      <td className="px-4 py-3 font-bold text-foreground text-sm">
                         {po.poNo}
                       </td>
-                      <td className="px-4 py-3 text-secondary-700 text-sm">
+                      <td className="px-4 py-3 text-foreground/80 text-sm">
                         {formatDateTime(po.createdAt)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                      <td className="px-4 py-3 font-medium text-foreground/90 text-sm">
                         {po.vendorName ?? "—"}
                       </td>
-                      <td className="px-4 py-3 text-secondary-700 text-sm">
+                      <td className="px-4 py-3 text-foreground/80 text-sm">
                         {po.deliveryDate ? formatDate(po.deliveryDate) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -363,12 +363,14 @@ export default function PurchaseOrdersPage() {
                       <td className="px-4 py-3 text-center">
                         <span className={cn(
                           "inline-flex px-2 py-1 rounded-full text-xs font-semibold",
-                          po.isActive !== false ? "bg-green-100 text-green-700" : "bg-secondary-200 text-secondary-700"
+                          po.isActive !== false
+                            ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300"
+                            : "bg-muted text-muted-foreground"
                         )}>
                           {po.isActive !== false ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
+                      <td className="px-4 py-3 text-right text-muted-foreground text-sm whitespace-nowrap">
                         {po.creatorName ?? "System"}
                       </td>
                       <td className="px-4 py-3 text-right pr-6">
@@ -379,7 +381,7 @@ export default function PurchaseOrdersPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0 text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded-lg transition-all"
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                                   title="Approve or reject"
                                   aria-label="Open approval actions"
                                   onClick={(e) => e.stopPropagation()}
@@ -400,7 +402,7 @@ export default function PurchaseOrdersPage() {
                                       <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
                                       <span>Approve</span>
                                     </DropdownMenuItem>
-                                    <div className="my-1 border-t border-secondary-100" role="separator" />
+                                    <div className="my-1 border-t border-border" role="separator" />
                                     <DropdownMenuItem
                                       onClick={() => {
                                         const target = po;
@@ -418,13 +420,13 @@ export default function PurchaseOrdersPage() {
                                       const target = po;
                                       requestAnimationFrame(() => setRevertTarget(target));
                                     }}
-                                    className="flex items-center gap-2 cursor-pointer py-2 text-amber-700 font-medium"
+                                    className="flex items-center gap-2 cursor-pointer py-2 text-amber-700 dark:text-amber-300 font-medium"
                                   >
                                     <RotateCcw className="w-4 h-4 shrink-0" />
                                     <span>Revert to Pending</span>
                                   </DropdownMenuItem>
                                 ) : (
-                                  <div className="px-3 py-2 text-xs text-secondary-500 italic">
+                                  <div className="px-3 py-2 text-xs text-muted-foreground italic">
                                     No approval actions available
                                   </div>
                                 )}
@@ -436,7 +438,7 @@ export default function PurchaseOrdersPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setPreviewPOId(po.id)}
-                              className="h-8 w-8 p-0 text-secondary-500 hover:text-primary-600 hover:bg-white border border-transparent hover:border-primary-100 rounded-lg transition-all"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary-600 dark:hover:text-primary-400 hover:bg-muted border border-transparent hover:border-primary-100 dark:hover:border-primary-900/30 rounded-lg transition-all"
                               title="Preview"
                             >
                               <Eye className="w-4 h-4" />
@@ -464,7 +466,7 @@ export default function PurchaseOrdersPage() {
                                 disabled={!!(po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-")))}
                                 onClick={() => setInactiveTarget(po)}
                                 className={cn(
-                                  "h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-amber-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-100",
+                                  "h-8 w-8 p-0 border border-transparent rounded-lg transition-all text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:border-amber-100 dark:hover:border-amber-900/30",
                                   (po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-"))) && "opacity-30 cursor-not-allowed"
                                 )}
                                 title={po.hasInward || po.items?.some(i => i.isInwarded || (i.inwardNo && i.inwardNo !== "-")) ? "Cannot deactivate because some items have been inwarded in active entries" : "Deactivate PO"}
@@ -476,7 +478,7 @@ export default function PurchaseOrdersPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setActiveTarget(po)}
-                                className="h-8 w-8 p-0 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                className="h-8 w-8 p-0 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/20 rounded-lg transition-all"
                                 title="Activate PO"
                               >
                                 <CheckCircle className="w-4 h-4" />
@@ -491,7 +493,7 @@ export default function PurchaseOrdersPage() {
                       {expandedPOId === po.id && (
                         <TableRow
                           key={`expand-${po.id}`}
-                          className="hover:bg-transparent border-b border-secondary-100"
+                          className="hover:bg-transparent border-b border-border"
                         >
                           <td colSpan={11} className="p-0 border-none max-w-0">
                             <motion.div
@@ -499,65 +501,65 @@ export default function PurchaseOrdersPage() {
                               animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.3, ease: "easeInOut" }}
-                              className="overflow-hidden bg-secondary-50/10 w-full"
+                              className="overflow-hidden bg-muted/20 w-full"
                             >
                               <div className="px-4 pb-4 pt-4">
-                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
-                                  <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
-                                    <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm w-full">
+                                  <div className="bg-muted/40 px-4 py-2 border-b border-border flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                       Purchase Order Items
                                     </p>
-                                    <span className="text-[10px] font-medium text-secondary-400">
+                                    <span className="text-[10px] font-medium text-muted-foreground">
                                       Total Items: {po.items?.length || 0}
                                     </span>
                                   </div>
                                   <div className="overflow-x-auto">
                                     <Table>
                                       <TableHeader>
-                                        <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">
+                                        <TableRow className="bg-secondary-50/50 dark:bg-card border-b border-secondary-100 dark:border-border hover:bg-secondary-50/50 dark:hover:bg-card">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">
                                             SR.NO
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             PI NO.
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             PI DATE
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             ITEM DESCRIPTION
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             TYPE
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             DRAWING / REV
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             INWARD NO.
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             INWARD DATE
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap text-center">
                                             QC NO.
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             QC DATE
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                                             MATERIAL
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider text-center whitespace-nowrap">
                                             GST %
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider text-right whitespace-nowrap">
                                             UNIT RATE (₹)
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider text-right whitespace-nowrap">
                                             TAX
                                           </TableHead>
-                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right whitespace-nowrap pr-6">
+                                          <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-wider text-right whitespace-nowrap pr-6">
                                             TOTAL
                                           </TableHead>
                                         </TableRow>
@@ -571,81 +573,81 @@ export default function PurchaseOrdersPage() {
                                           return (
                                             <TableRow
                                               key={i.id}
-                                              className="border-b border-secondary-50 last:border-0 hover:bg-secondary-50/20 whitespace-nowrap"
+                                              className="border-b border-border/40 last:border-0 hover:bg-muted/40 whitespace-nowrap"
                                             >
-                                              <TableCell className="px-4 py-2 text-secondary-400 font-medium text-[13px] text-center">
+                                              <TableCell className="px-4 py-2 text-muted-foreground font-medium text-[13px] text-center">
                                                 {po.items.indexOf(i) + 1}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-700 font-semibold text-[13px]">
+                                              <TableCell className="px-4 py-2 text-foreground/85 font-semibold text-[13px]">
                                                 {i.piNo ?? "—"}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                              <TableCell className="px-4 py-2 text-muted-foreground font-medium text-[13px]">
                                                 {i.piDate ? formatDateTime(i.piDate) : "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col min-w-0">
-                                                  <span className="font-bold text-secondary-900 text-[13px] tracking-tight">
+                                                  <span className="font-bold text-foreground text-[13px] tracking-tight">
                                                     {i.currentName ?? "—"}
                                                   </span>
-                                                  <span className="text-[11px] text-secondary-500 font-medium tracking-tight">
+                                                  <span className="text-[11px] text-muted-foreground font-medium tracking-tight">
                                                     {i.mainPartName ?? "—"}
                                                   </span>
                                                 </div>
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                              <TableCell className="px-4 py-2 text-muted-foreground text-[13px] font-medium">
                                                 {i.itemTypeName ?? "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col min-w-0">
-                                                  <span className="font-bold text-secondary-800 text-[13px] tracking-tight">
+                                                  <span className="font-bold text-foreground/90 text-[13px] tracking-tight">
                                                     {i.drawingNo ?? "N/A"}
                                                   </span>
-                                                  <span className="text-[11px] font-semibold text-secondary-400">
+                                                  <span className="text-[11px] font-semibold text-muted-foreground">
                                                     {i.revisionNo ? `R${i.revisionNo}` : "R0"}
                                                   </span>
                                                 </div>
                                               </TableCell>
                                               <TableCell className="px-4 py-2">
                                                 {i.inwardNo ? (
-                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 font-bold text-[11px]">
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-100 dark:bg-primary-900/20 dark:text-primary-300 dark:border-primary-900/30 font-bold text-[11px]">
                                                     {i.inwardNo}
                                                   </span>
                                                 ) : (
-                                                  <span className="text-secondary-400 text-[11px] italic font-medium">Not Inwarded</span>
+                                                  <span className="text-muted-foreground text-[11px] italic font-medium">Not Inwarded</span>
                                                 )}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                              <TableCell className="px-4 py-2 text-muted-foreground font-medium text-[13px]">
                                                 {i.inwardNo && i.inwardDate ? formatDateTime(i.inwardDate) : "—"}
                                               </TableCell>
                                               <TableCell className="px-4 py-2 text-center">
                                                 {i.qcNo ? (
-                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 font-bold text-[11px]">
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-green-50 text-green-700 border border-green-100 dark:bg-green-950/30 dark:text-green-300 dark:border-green-900/30 font-bold text-[11px]">
                                                     {i.qcNo}
                                                   </span>
                                                 ) : i.inwardNo ? (
-                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 font-bold text-[11px]">
+                                                  <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/30 font-bold text-[11px]">
                                                     Pending QC
                                                   </span>
                                                 ) : (
-                                                  <span className="text-secondary-300 text-[11px]">—</span>
+                                                  <span className="text-muted-foreground/60 text-[11px]">—</span>
                                                 )}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-600 font-medium text-[13px]">
+                                              <TableCell className="px-4 py-2 text-muted-foreground font-medium text-[13px]">
                                                 {i.qcNo && i.qcDate ? formatDateTime(i.qcDate) : "—"}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-secondary-600 text-[13px] font-medium">
+                                              <TableCell className="px-4 py-2 text-muted-foreground text-[13px] font-medium">
                                                 {i.materialName ?? "—"}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-center text-[13px] font-medium text-secondary-500 tabular-nums">
+                                              <TableCell className="px-4 py-2 text-center text-[13px] font-medium text-muted-foreground tabular-nums">
                                                 {gstPct}%
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-right font-bold text-secondary-900 text-[13px] tabular-nums">
+                                              <TableCell className="px-4 py-2 text-right font-bold text-foreground text-[13px] tabular-nums">
                                                 ₹{formatRate(i.rate ?? 0)}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-right text-secondary-500 text-[13px] font-medium tabular-nums">
+                                              <TableCell className="px-4 py-2 text-right text-muted-foreground text-[13px] font-medium tabular-nums">
                                                 ₹{formatRate(tax)}
                                               </TableCell>
-                                              <TableCell className="px-4 py-2 text-right font-black text-secondary-900 text-[13px] tabular-nums pr-6">
+                                              <TableCell className="px-4 py-2 text-right font-black text-foreground text-[13px] tabular-nums pr-6">
                                                 ₹{formatRate(total)}
                                               </TableCell>
                                             </TableRow>
@@ -666,7 +668,7 @@ export default function PurchaseOrdersPage() {
                 <TableRow key="empty">
                   <td
                     colSpan={10}
-                    className="py-16 text-center text-secondary-400 italic font-medium"
+                    className="py-16 text-center text-muted-foreground italic font-medium"
                   >
                     No purchase orders found.
                   </td>
@@ -707,9 +709,9 @@ export default function PurchaseOrdersPage() {
         size="sm"
       >
         <div className="space-y-4 font-sans">
-          <p className="text-secondary-600">
+          <p className="text-muted-foreground">
             Approve PO{" "}
-            <span className="font-bold text-secondary-900">
+            <span className="font-bold text-foreground">
               {approveTarget?.poNo}
             </span>
             ? This action cannot be undone.
@@ -749,9 +751,9 @@ export default function PurchaseOrdersPage() {
         size="sm"
       >
         <div className="space-y-4 font-sans">
-          <p className="text-secondary-600">
+          <p className="text-muted-foreground">
             Reject PO{" "}
-            <span className="font-bold text-secondary-900">
+            <span className="font-bold text-foreground">
               {rejectTarget?.poNo}
             </span>
             ? This action cannot be undone.
@@ -789,9 +791,9 @@ export default function PurchaseOrdersPage() {
         size="sm"
       >
         <div className="space-y-4 font-sans">
-          <p className="text-secondary-600">
+          <p className="text-muted-foreground">
             Deactivate PO{" "}
-            <span className="font-bold text-secondary-900">
+            <span className="font-bold text-foreground">
               {inactiveTarget?.poNo}
             </span>
             ? Its PI items will become available for selection in other POs. You cannot deactivate if any item from this PO has been inwarded.
@@ -824,9 +826,9 @@ export default function PurchaseOrdersPage() {
         size="sm"
       >
         <div className="space-y-4 font-sans">
-          <p className="text-secondary-600">
+          <p className="text-muted-foreground">
             Reactivate PO{" "}
-            <span className="font-bold text-secondary-900">
+            <span className="font-bold text-foreground">
               {activeTarget?.poNo}
             </span>
             ? This is only allowed if none of its PI items have been used in another active PO.
@@ -859,10 +861,10 @@ export default function PurchaseOrdersPage() {
         size="sm"
       >
         <div className="space-y-4 font-sans text-sm">
-          <p className="text-secondary-600 leading-relaxed">
-            Revert PO <span className="font-bold text-secondary-900">{revertTarget?.poNo}</span> back to Pending?
+          <p className="text-muted-foreground leading-relaxed">
+            Revert PO <span className="font-bold text-foreground">{revertTarget?.poNo}</span> back to Pending?
           </p>
-          <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg text-amber-800 text-[12px] font-medium leading-relaxed">
+          <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg text-amber-800 text-[12px] font-medium leading-relaxed dark:bg-amber-950/30 dark:border-amber-900/30 dark:text-amber-200">
             This will allow editing the order again. Items will be reverted to &apos;PI Issued&apos; state. You cannot revert if any inward entry exists.
           </div>
           <div className="flex gap-3 pt-2">

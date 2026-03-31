@@ -66,11 +66,11 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
 
 const filterLabelClass =
-  "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
+  "text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1 block";
 const inputClass =
-  "h-9 rounded-lg border border-secondary-200 bg-white px-3 text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
+  "h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary-400 transition-colors";
 const selectClass =
-  "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
+  "h-9 w-full rounded-lg border border-border bg-background pl-3 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
 function hasAnyActive(values: Array<unknown>): boolean {
   return values.some((v) => {
@@ -87,27 +87,27 @@ const getProcessColor = (process?: string) => {
   const p = process?.replace(/\s+/g, "").toLowerCase() || "";
   switch (p) {
     case "instock":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/30";
     case "notinstock":
-      return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5";
+      return "bg-slate-50 text-slate-600 border-slate-200/60 shadow-sm shadow-slate-500/5 dark:bg-slate-950/30 dark:text-slate-300 dark:border-slate-900/30";
     case "atvendor":
-      return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5";
+      return "bg-violet-50 text-violet-700 border-violet-200/60 shadow-sm shadow-violet-500/5 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-900/30";
     case "inqc":
-      return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5";
+      return "bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm shadow-sky-500/5 dark:bg-sky-950/30 dark:text-sky-300 dark:border-sky-900/30";
     case "inwarddone":
-      return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5";
+      return "bg-teal-50 text-teal-700 border-teal-200/60 shadow-sm shadow-teal-500/5 dark:bg-teal-950/30 dark:text-teal-300 dark:border-teal-900/30";
     case "pi":
     case "inpi":
     case "piissued":
-      return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5";
+      return "bg-orange-50 text-orange-700 border-orange-200/60 shadow-sm shadow-orange-500/5 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900/30";
     case "po":
     case "inpo":
     case "poissued":
-      return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
+      return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/30";
     case "injobwork":
-      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5";
+      return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200/60 shadow-sm shadow-fuchsia-500/5 dark:bg-fuchsia-950/30 dark:text-fuchsia-300 dark:border-fuchsia-900/30";
     default:
-      return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+      return "bg-muted text-foreground/80 border-border/60 shadow-sm shadow-black/5 dark:bg-muted/40 dark:text-foreground/80";
   }
 };
 
@@ -125,13 +125,13 @@ const formatProcess = (process?: string) => {
 
 const getConditionColor = (condition?: string) => {
   switch (condition?.toLowerCase()) {
-    case "good condition": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
-    case "under repair": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5";
-    case "scrapped": return "bg-rose-50 text-rose-700 border-rose-200/60 shadow-sm shadow-rose-500/5";
-    case "new": return "bg-blue-50 text-blue-700 border-blue-200/60 shadow-sm shadow-blue-500/5";
-    case "available": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5";
-    case "on hold": return "bg-gray-50 text-gray-700 border-gray-200/60 shadow-sm shadow-gray-500/5";
-    default: return "bg-secondary-50 text-secondary-700 border-secondary-200/60 shadow-sm shadow-secondary-500/5";
+    case "good condition": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/30";
+    case "under repair": return "bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm shadow-amber-500/5 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/30";
+    case "scrapped": return "bg-rose-50 text-rose-700 border-rose-200/60 shadow-sm shadow-rose-500/5 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900/30";
+    case "new": return "bg-blue-50 text-blue-700 border-blue-200/60 shadow-sm shadow-blue-500/5 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/30";
+    case "available": return "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm shadow-emerald-500/5 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/30";
+    case "on hold": return "bg-gray-50 text-gray-700 border-gray-200/60 shadow-sm shadow-gray-500/5 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-900/30";
+    default: return "bg-muted text-foreground/80 border-border/60 shadow-sm shadow-black/5 dark:bg-muted/40 dark:text-foreground/80";
   }
 };
 
@@ -590,9 +590,9 @@ export default function DashboardPage() {
       value: metrics?.summary?.total ?? 0,
       icon: LayoutGrid,
       gradient: "from-blue-500 to-blue-600",
-      baseBg: "bg-blue-50/40",
-      shadowColor: "shadow-blue-500/20",
-      iconColor: "text-blue-600",
+      baseBg: "bg-blue-50/40 dark:bg-blue-900/10",
+      shadowColor: "shadow-blue-500/20 dark:shadow-blue-900/40",
+      iconColor: "text-blue-600 dark:text-blue-400",
       section: "location" as const,
     },
     {
@@ -600,9 +600,9 @@ export default function DashboardPage() {
       value: metrics?.summary?.atVendor ?? 0,
       icon: Package,
       gradient: "from-amber-500 to-amber-600",
-      baseBg: "bg-amber-50/40",
-      shadowColor: "shadow-amber-500/20",
-      iconColor: "text-amber-600",
+      baseBg: "bg-amber-50/40 dark:bg-amber-900/10",
+      shadowColor: "shadow-amber-500/20 dark:shadow-amber-900/40",
+      iconColor: "text-amber-600 dark:text-amber-400",
       section: "at-vendor" as const,
     },
     {
@@ -610,9 +610,9 @@ export default function DashboardPage() {
       value: metrics?.summary?.pendingPI ?? 0,
       icon: ClipboardList,
       gradient: "from-rose-500 to-rose-600",
-      baseBg: "bg-rose-50/40",
-      shadowColor: "shadow-rose-500/20",
-      iconColor: "text-rose-600",
+      baseBg: "bg-rose-50/40 dark:bg-rose-900/10",
+      shadowColor: "shadow-rose-500/20 dark:shadow-rose-900/40",
+      iconColor: "text-rose-600 dark:text-rose-400",
       section: "pending-pi" as const,
     },
     {
@@ -620,9 +620,9 @@ export default function DashboardPage() {
       value: metrics?.summary?.pendingPO ?? 0,
       icon: FileText,
       gradient: "from-emerald-500 to-emerald-600",
-      baseBg: "bg-emerald-50/40",
-      shadowColor: "shadow-emerald-500/20",
-      iconColor: "text-emerald-600",
+      baseBg: "bg-emerald-50/40 dark:bg-emerald-900/10",
+      shadowColor: "shadow-emerald-500/20 dark:shadow-emerald-900/40",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
       section: "pending-po" as const,
     },
     {
@@ -630,9 +630,9 @@ export default function DashboardPage() {
       value: recentChangesData?.total ?? 0,
       icon: History,
       gradient: "from-indigo-500 to-indigo-600",
-      baseBg: "bg-indigo-50/40",
-      shadowColor: "shadow-indigo-500/20",
-      iconColor: "text-indigo-600",
+      baseBg: "bg-indigo-50/40 dark:bg-indigo-900/10",
+      shadowColor: "shadow-indigo-500/20 dark:shadow-indigo-900/40",
+      iconColor: "text-indigo-600 dark:text-indigo-400",
       section: "recent-changes" as const,
     },
   ];
@@ -672,7 +672,7 @@ export default function DashboardPage() {
                 <div
                   onClick={() => toggleSection(stat.section)}
                   className={cn(
-                    "relative overflow-hidden rounded-2xl cursor-pointer group h-full transition-all duration-300 border border-secondary-100/50",
+                    "relative overflow-hidden rounded-2xl cursor-pointer group h-full transition-all duration-300 border border-secondary-100/50 dark:border-secondary-800/30",
                     stat.baseBg,
                     `shadow-xl ${stat.shadowColor}`,
                     isExpanded && `ring-2 ring-primary-400 bg-gradient-to-br ${stat.gradient}`
@@ -683,19 +683,19 @@ export default function DashboardPage() {
                       <div className="space-y-1">
                         <p className={cn(
                           "text-sm font-medium transition-colors",
-                          isExpanded ? "text-white" : "text-secondary-500"
+                          isExpanded ? "text-white" : "text-secondary-500 dark:text-secondary-400"
                         )}>
                           {stat.title}
                         </p>
                         <h3 className={cn(
                           "text-4xl font-bold transition-colors tracking-tight",
-                          isExpanded ? "text-white" : "text-text"
+                          isExpanded ? "text-white" : "text-text dark:text-foreground"
                         )}>
                           {stat.value}
                         </h3>
                         <p className={cn(
                           "text-xs mt-1 flex items-center gap-1 transition-colors",
-                          isExpanded ? "text-white/90" : "text-secondary-400"
+                          isExpanded ? "text-white/90" : "text-secondary-400 dark:text-secondary-500"
                         )}>
                           {isExpanded ? (
                             <>Collapse <ChevronUp className="w-3 h-3" /></>
@@ -706,7 +706,7 @@ export default function DashboardPage() {
                       </div>
                       <div className={cn(
                         "p-3 rounded-xl transition-all",
-                        isExpanded ? "bg-white/20" : "bg-secondary-50"
+                        isExpanded ? "bg-white/20 dark:bg-white/10" : "bg-muted/50 dark:bg-secondary-800/50"
                       )}>
                         <Icon className={cn(
                           "w-6 h-6",
@@ -724,10 +724,10 @@ export default function DashboardPage() {
         {/* Location Wise Table */}
         {expandedSection === "location" && (
           <div>
-            <Card className="shadow-lg border border-secondary-200">
-              <div className="border-b border-secondary-200 px-4 py-3">
-                <h2 className="text-xl font-bold text-text">Die/Pattern Counts At Location</h2>
-                <p className="text-sm text-secondary-500 mt-0.5">
+            <Card className="shadow-lg border border-border">
+              <div className="border-b border-border px-4 py-3">
+                <h2 className="text-xl font-bold text-foreground">Die/Pattern Counts At Location</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
                   Items currently at each location (opened company only). Select a location and apply filters.
                 </p>
               </div>
@@ -736,7 +736,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col">
                     <label className={filterLabelClass}>Search</label>
                     <div className="relative flex items-center">
-                      <Search className="absolute left-3 h-4 w-4 text-secondary-400 pointer-events-none" />
+                      <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                       <Input
                         type="search"
                         value={locationSearch}
@@ -848,15 +848,15 @@ export default function DashboardPage() {
                   <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Condition</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
+                      <TableRow className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/40">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider w-12 text-center">#</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Main Part</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Current Name</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Drawing No</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Item Type</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Condition</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Process</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -982,29 +982,29 @@ export default function DashboardPage() {
                 ) : (recentChangesData?.data?.length ?? 0) > 0 ? (
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider whitespace-nowrap">
+                      <TableRow className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/40">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider whitespace-nowrap">
                           Change Date/Time
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           Item
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           Old Name
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           New Name
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           Revert
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           Job Work
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           Inward
                         </TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider whitespace-nowrap">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider whitespace-nowrap">
                           QC
                         </TableHead>
                       </TableRow>
@@ -1181,14 +1181,14 @@ export default function DashboardPage() {
                   <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider w-12 text-center">#</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Main Part</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Current Name</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Drawing No</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Item Type</TableHead>
-                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Process</TableHead>
+                      <TableRow className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/40">
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider w-12 text-center">#</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Vendor</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Main Part</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Current Name</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Drawing No</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Item Type</TableHead>
+                        <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Process</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1353,15 +1353,15 @@ export default function DashboardPage() {
                     <>
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableRow className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/40">
                           <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-10 px-0 text-center"></TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PI No</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Date</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Type</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider text-center">Sr.No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider">PI No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Date</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">Status</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Type</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right pr-6">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1371,7 +1371,7 @@ export default function DashboardPage() {
                               className={cn(
                                 "border-b border-secondary-100 transition-all cursor-pointer group whitespace-nowrap",
                                 expandedPIId === pi.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
-                                !pi.isActive && "bg-secondary-50/50 opacity-75"
+                                !pi.isActive && "bg-muted/40 opacity-80"
                               )}
                               onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
                             >
@@ -1689,15 +1689,15 @@ export default function DashboardPage() {
                     <>
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-primary-100 border-b border-primary-200 hover:bg-primary-100">
+                        <TableRow className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/40">
                           <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-10 px-0 text-center"></TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center">Sr.No</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider">PO No</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PO Date</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Vendor</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">Status</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">Created By</TableHead>
-                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">Actions</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider text-center">Sr.No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-primary-900 dark:text-primary-200 tracking-wider">PO No</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">PO Date</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Vendor</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">Status</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">Created By</TableHead>
+                          <TableHead className="h-10 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right pr-6">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1707,7 +1707,7 @@ export default function DashboardPage() {
                               className={cn(
                                 "border-b border-secondary-100 transition-all cursor-pointer group whitespace-nowrap",
                                 expandedPOId === po.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
-                                !po.isActive && "bg-secondary-50/50 opacity-75"
+                                !po.isActive && "bg-muted/40 opacity-80"
                               )}
                               onClick={() => setExpandedPOId(expandedPOId === po.id ? null : po.id)}
                             >

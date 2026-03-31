@@ -79,28 +79,28 @@ export default function InwardDetailClient() {
   const isSubmitted = inward.status === InwardStatus.Submitted;
 
   return (
-    <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-background overflow-hidden font-sans">
       {/* High-Fidelity Header */}
-      <header className="shrink-0 bg-white border-b border-secondary-200 px-8 py-5 flex items-center justify-between shadow-sm z-30">
+      <header className="shrink-0 bg-white dark:bg-card border-b border-secondary-200 dark:border-border px-8 py-5 flex items-center justify-between shadow-sm z-30">
         <div className="flex items-center gap-6">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="h-10 w-10 p-0 text-secondary-500 hover:text-primary-600 hover:bg-secondary-50 transition-all rounded-xl border border-transparent hover:border-secondary-200"
+            className="h-10 w-10 p-0 text-secondary-500 dark:text-secondary-400 hover:text-primary-600 hover:bg-secondary-50 dark:hover:bg-secondary-800 transition-all rounded-xl border border-transparent hover:border-secondary-200 dark:hover:border-border"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex flex-col">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-secondary-900 tracking-tight leading-none">
+              <h1 className="text-2xl font-black text-secondary-900 dark:text-foreground tracking-tight leading-none">
                 {inward.inwardNo}
               </h1>
               <span
                 className={cn(
                   "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm",
                   isSubmitted
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                    : "bg-amber-50 text-amber-600 border-amber-100",
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-500 dark:border-emerald-800/50"
+                    : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-500 dark:border-amber-800/50",
                 )}
               >
                 {isSubmitted ? "Submitted to QC" : "Draft Entry"}
@@ -128,7 +128,7 @@ export default function InwardDetailClient() {
             </Button>
           )}
           {isSubmitted && (
-            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-2 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
               <CheckCircle2 className="w-4 h-4" />
               <span className="text-[11px] font-black uppercase tracking-widest">
                 Receipt Locked
@@ -142,58 +142,58 @@ export default function InwardDetailClient() {
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Key Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-secondary-200 shadow-sm flex flex-col gap-4 group hover:border-primary-200 transition-all">
+            <div className="bg-white dark:bg-card p-6 rounded-2xl border border-secondary-200 dark:border-border shadow-sm flex flex-col gap-4 group hover:border-primary-200 dark:hover:border-primary-800 transition-all">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 border-l-4 border-l-blue-500 shadow-inner group-hover:scale-110 transition-transform">
                 <User className="w-6 h-6" />
               </div>
               <div>
-                <Label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                <Label className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
                   Vendor / Party
                 </Label>
-                <p className="font-black text-secondary-900 text-lg mt-1 truncate">
+                <p className="font-black text-secondary-900 dark:text-foreground text-lg mt-1 truncate">
                   {inward.vendorName ?? "Internal Receipt"}
                 </p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-secondary-200 shadow-sm flex flex-col gap-4 group hover:border-primary-200 transition-all">
+            <div className="bg-white dark:bg-card p-6 rounded-2xl border border-secondary-200 dark:border-border shadow-sm flex flex-col gap-4 group hover:border-primary-200 dark:hover:border-primary-800 transition-all">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 border-l-4 border-l-emerald-500 shadow-inner group-hover:scale-110 transition-transform">
                 <MapPin className="w-6 h-6" />
               </div>
               <div>
-                <Label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                <Label className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
                   Inventory Location
                 </Label>
-                <p className="font-black text-secondary-900 text-lg mt-1 truncate">
+                <p className="font-black text-secondary-900 dark:text-foreground text-lg mt-1 truncate">
                   {inward.locationName}
                 </p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-secondary-200 shadow-sm flex flex-col gap-4 group hover:border-primary-200 transition-all">
+            <div className="bg-white dark:bg-card p-6 rounded-2xl border border-secondary-200 dark:border-border shadow-sm flex flex-col gap-4 group hover:border-primary-200 dark:hover:border-primary-800 transition-all">
               <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 border-l-4 border-l-amber-500 shadow-inner group-hover:scale-110 transition-transform">
                 <Package className="w-6 h-6" />
               </div>
               <div>
-                <Label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                <Label className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
                   Total Package Qty
                 </Label>
-                <p className="font-black text-secondary-900 text-lg">
+                <p className="font-black text-secondary-900 dark:text-foreground text-lg">
                   {inward.lines?.reduce((sum, l) => sum + l.quantity, 0)}{" "}
                   Items
                 </p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-secondary-200 shadow-sm flex flex-col gap-4 group hover:border-primary-200 transition-all border-l-4 border-l-primary-500">
+            <div className="bg-white dark:bg-card p-6 rounded-2xl border border-secondary-200 dark:border-border shadow-sm flex flex-col gap-4 group hover:border-primary-200 dark:hover:border-primary-800 transition-all border-l-4 border-l-primary-500">
               <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center border border-primary-100 shadow-inner group-hover:scale-110 transition-transform">
                 <Info className="w-6 h-6" />
               </div>
               <div>
-                <Label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                <Label className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
                   Created By
                 </Label>
-                <p className="font-black text-secondary-900 text-lg mt-1 truncate">
+                <p className="font-black text-secondary-900 dark:text-foreground text-lg mt-1 truncate">
                   {inward.creatorName}
                 </p>
               </div>
@@ -201,14 +201,14 @@ export default function InwardDetailClient() {
           </div>
 
           {/* Received Items Breakdown */}
-          <div className="bg-white rounded-3xl border border-secondary-200 shadow-xl overflow-hidden flex flex-col">
-            <div className="px-8 py-5 border-b border-secondary-100 bg-secondary-50/30 flex items-center justify-between">
+          <div className="bg-white dark:bg-card rounded-3xl border border-secondary-200 dark:border-border shadow-xl overflow-hidden flex flex-col">
+            <div className="px-8 py-5 border-b border-secondary-100 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-lg border border-secondary-200 shadow-sm">
+                <div className="p-2 bg-white dark:bg-secondary-800 rounded-lg border border-secondary-200 dark:border-border shadow-sm">
                   <FileText className="w-5 h-5 text-primary-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-secondary-800 uppercase tracking-widest">
+                  <h3 className="text-sm font-black text-secondary-800 dark:text-secondary-200 uppercase tracking-widest">
                     Received Product Breakdown
                   </h3>
                   <p className="text-[10px] font-bold text-secondary-400 uppercase tracking-tighter mt-0.5">
@@ -217,7 +217,7 @@ export default function InwardDetailClient() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black text-primary-600 bg-primary-50 px-4 py-1.5 rounded-xl border border-primary-100 shadow-sm uppercase tracking-widest">
+                <span className="text-[11px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/20 px-4 py-1.5 rounded-xl border border-primary-100 dark:border-primary-800/50 shadow-sm uppercase tracking-widest">
                   {inward.lines?.length} Distinct Line(s)
                 </span>
               </div>
@@ -225,50 +225,50 @@ export default function InwardDetailClient() {
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-[#fcfdfe] border-b border-secondary-100">
+                <thead className="bg-[#fcfdfe] dark:bg-primary-900/40 border-b border-secondary-100 dark:border-border">
                   <tr>
-                    <th className="py-4 px-8 text-left font-black text-secondary-400 text-[10px] uppercase tracking-widest w-16">
+                    <th className="py-4 px-8 text-left font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest w-16">
                       SR
                     </th>
-                    <th className="py-4 px-8 text-left font-black text-secondary-400 text-[10px] uppercase tracking-widest">
+                    <th className="py-4 px-8 text-left font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest">
                       Item Specification
                     </th>
-                    <th className="py-4 px-8 text-left font-black text-secondary-400 text-[10px] uppercase tracking-widest">
+                    <th className="py-4 px-8 text-left font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest">
                       Source Context
                     </th>
-                    <th className="py-4 px-8 text-center font-black text-secondary-400 text-[10px] uppercase tracking-widest w-32">
+                    <th className="py-4 px-8 text-center font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest w-32">
                       Qty
                     </th>
-                    <th className="py-4 px-8 text-left font-black text-secondary-400 text-[10px] uppercase tracking-widest">
+                    <th className="py-4 px-8 text-left font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest">
                       Remark
                     </th>
-                    <th className="py-4 px-8 text-right font-black text-secondary-400 text-[10px] uppercase tracking-widest">
+                    <th className="py-4 px-8 text-right font-black text-secondary-400 dark:text-secondary-500 text-[10px] uppercase tracking-widest">
                       QC Health
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-secondary-100">
+                <tbody className="divide-y divide-secondary-100 dark:divide-border whitespace-nowrap">
                   {(inward.lines || []).map((line, idx) => (
                     <tr
                       key={line.id}
-                      className="hover:bg-primary-50/20 transition-all group"
+                      className="hover:bg-primary-50/20 dark:hover:bg-primary-900/10 transition-all group"
                     >
-                      <td className="py-5 px-8 font-black text-secondary-300 group-hover:text-primary-600 transition-colors tabular-nums">
+                      <td className="py-5 px-8 font-black text-secondary-300 dark:text-secondary-600 group-hover:text-primary-600 transition-colors tabular-nums">
                         {String(idx + 1).padStart(2, "0")}
                       </td>
                       <td className="py-5 px-8">
                         <div className="flex flex-col">
-                          <span className="font-black text-secondary-900 group-hover:text-primary-700 transition-colors text-base tracking-tight leading-none">
+                          <span className="font-black text-secondary-900 dark:text-foreground group-hover:text-primary-700 transition-colors text-base tracking-tight leading-none">
                             {line.itemName || line.mainPartName || "No Name"}
                           </span>
                           {line.newDisplayNameFromJobWork ? (
-                            <span className="text-xs font-bold text-primary-600 mt-1">
+                            <span className="text-xs font-bold text-primary-600 dark:text-primary-400 mt-1">
                               Old name → New after QC:{" "}
                               {line.newDisplayNameFromJobWork}
                             </span>
                           ) : null}
-                          <span className="text-[11px] font-bold text-secondary-400 uppercase mt-1.5 tracking-tighter tabular-nums">
+                          <span className="text-[11px] font-bold text-secondary-400 dark:text-secondary-500 uppercase mt-1.5 tracking-tighter tabular-nums">
                             {line.mainPartName || "—"}
                           </span>
                         </div>
@@ -276,7 +276,7 @@ export default function InwardDetailClient() {
 
                       <td className="py-5 px-8">
                         <div className="flex flex-col">
-                          <span className="text-[9px] font-black text-secondary-400 uppercase leading-none mb-1 tracking-widest flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-secondary-400 dark:text-secondary-500 uppercase leading-none mb-1 tracking-widest flex items-center gap-1.5">
                             {line.sourceType === InwardSourceType.PO ? (
                               <FileText className="w-3 h-3" />
                             ) : (
@@ -284,41 +284,41 @@ export default function InwardDetailClient() {
                             )}
                             {SOURCE_LABELS[line.sourceType]}
                           </span>
-                          <span className="font-black text-primary-600 tracking-tight text-sm">
+                          <span className="font-black text-primary-600 dark:text-primary-400 tracking-tight text-sm">
                             {line.sourceRefDisplay}
                           </span>
                         </div>
                       </td>
 
                       <td className="py-5 px-8 text-center">
-                        <span className="inline-flex h-10 px-4 items-center justify-center bg-secondary-100/50 rounded-xl font-black text-secondary-900 border border-secondary-200 shadow-inner text-base">
+                        <span className="inline-flex h-10 px-4 items-center justify-center bg-secondary-100/50 dark:bg-card rounded-xl font-black text-secondary-900 dark:text-foreground border border-secondary-200 dark:border-border shadow-inner text-base">
                           {line.quantity}
                         </span>
                       </td>
 
                       <td className="py-5 px-8">
-                        <p className="text-xs font-bold text-secondary-500 italic max-w-xs truncate tabular-nums">
+                        <p className="text-xs font-bold text-secondary-500 dark:text-secondary-400 italic max-w-xs truncate tabular-nums">
                           {line.remarks ? (
                             `"${line.remarks}"`
                           ) : (
-                            <span className="text-secondary-200">No notes</span>
+                            <span className="text-secondary-200 dark:text-secondary-700">No notes</span>
                           )}
                         </p>
                       </td>
 
                       <td className="py-5 px-8 text-right">
                         {line.isQCApproved ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[9px] uppercase tracking-widest border border-emerald-100 shadow-sm cursor-default">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-500 font-black text-[9px] uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50 shadow-sm cursor-default">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Approved
                           </div>
                         ) : line.isQCPending ? (
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 font-black text-[9px] uppercase tracking-widest border border-amber-100 shadow-sm cursor-default">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-500 font-black text-[9px] uppercase tracking-widest border border-amber-100 dark:border-amber-800/50 shadow-sm cursor-default">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             Awaiting QC
                           </div>
                         ) : (
-                          <span className="text-secondary-300 text-[9px] uppercase font-black tracking-widest">
+                          <span className="text-secondary-300 dark:text-secondary-700 text-[9px] uppercase font-black tracking-widest">
                             Logged
                           </span>
                         )}
@@ -332,47 +332,47 @@ export default function InwardDetailClient() {
 
           {/* Descriptive Extras */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-3xl border border-secondary-200 shadow-sm border-l-8 border-l-primary-500 relative overflow-hidden group">
+            <div className="bg-white dark:bg-card p-8 rounded-3xl border border-secondary-200 dark:border-border shadow-sm border-l-8 border-l-primary-500 relative overflow-hidden group">
               <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
                 <Info className="w-32 h-32" />
               </div>
               <Label className="text-[10px] font-black text-primary-500 uppercase tracking-widest mb-4 block">
                 General Receipt Remarks
               </Label>
-              <p className="text-sm text-secondary-700 leading-relaxed font-bold italic bg-secondary-50/50 p-6 rounded-2xl border border-secondary-100 min-h-[100px] shadow-inner">
+              <p className="text-sm text-secondary-700 dark:text-secondary-300 leading-relaxed font-bold italic bg-secondary-50/50 dark:bg-secondary-900/30 p-6 rounded-2xl border border-secondary-100 dark:border-border min-h-[100px] shadow-inner">
                 &quot;{inward.remarks || "No specific instructions provided for this inward batch entry."}&quot;
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-3xl border border-secondary-200 shadow-sm">
-              <Label className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-6 block border-b border-secondary-100 pb-2">
+            <div className="bg-white dark:bg-card p-8 rounded-3xl border border-secondary-200 dark:border-border shadow-sm">
+              <Label className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest mb-6 block border-b border-secondary-100 dark:border-border pb-2">
                 Audit Trace & System Logs
               </Label>
               <div className="space-y-6">
                 <div className="flex justify-between items-center group">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-secondary-50 flex items-center justify-center text-secondary-400 group-hover:text-primary-500 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-secondary-50 dark:bg-secondary-900 flex items-center justify-center text-secondary-400 dark:text-secondary-600 group-hover:text-primary-500 transition-colors">
                       <User className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">
                       Created By
                     </span>
                   </div>
-                  <span className="text-sm font-black text-secondary-900 bg-secondary-50 px-3 py-1 rounded-lg border border-secondary-100">
+                  <span className="text-sm font-black text-secondary-900 dark:text-secondary-100 bg-secondary-50 dark:bg-secondary-900 px-3 py-1 rounded-lg border border-secondary-100 dark:border-border">
                     {inward.creatorName}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center group">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-secondary-50 flex items-center justify-center text-secondary-400 group-hover:text-amber-500 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-secondary-50 dark:bg-secondary-900 flex items-center justify-center text-secondary-400 dark:text-secondary-600 group-hover:text-amber-500 transition-colors">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">
                       System Timestamp
                     </span>
                   </div>
-                  <span className="text-[11px] font-black text-secondary-900 tabular-nums">
+                  <span className="text-[11px] font-black text-secondary-900 dark:text-secondary-100 tabular-nums">
                     {formatDateTime(
                       inward.createdAt || inward.inwardDate,
                     )}
@@ -381,14 +381,14 @@ export default function InwardDetailClient() {
 
                 <div className="flex justify-between items-center group pt-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-400">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center text-emerald-400 dark:text-emerald-600">
                       <ShieldCheck className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">
                       Audit Status
                     </span>
                   </div>
-                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest px-3 py-1 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-800/50">
                     Verified System Entry
                   </span>
                 </div>

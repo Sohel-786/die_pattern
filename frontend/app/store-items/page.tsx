@@ -217,8 +217,8 @@ export default function StoreItemsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                  <th className="px-4 py-3 font-semibold w-16 text-center">Sr.No</th>
+                <tr className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200">
+                  <th className="px-4 py-3 font-semibold w-16 text-center border-r border-primary-200/50 dark:border-primary-800/50">Sr.No</th>
                   <th className="px-4 py-3 font-semibold">Name</th>
                   <th className="px-4 py-3 font-semibold">Serial No</th>
                   <th className="px-4 py-3 font-semibold">Zone Location</th>

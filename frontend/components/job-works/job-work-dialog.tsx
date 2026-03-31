@@ -282,17 +282,17 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 contentScroll={false}
                 className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col font-sans"
             >
-                <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+                <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4 overflow-y-auto">
                         {/* Header Content */}
-                        <div className="grid grid-cols-12 gap-4 items-end bg-white p-5 rounded-xl border border-secondary-200 shadow-sm">
+                        <div className="grid grid-cols-12 gap-4 items-end bg-white dark:bg-card p-5 rounded-xl border border-secondary-200 dark:border-border shadow-sm">
                             <div className="col-span-12 md:col-span-2">
-                                <Label className="text-xs font-semibold text-secondary-600">JW No.</Label>
-                                <Input value={nextCode} readOnly className="h-9 mt-1 bg-secondary-50 border-secondary-200 text-sm font-bold text-secondary-700" />
+                                <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">JW No.</Label>
+                                <Input value={nextCode} readOnly className="h-9 mt-1 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-secondary-300" />
                             </div>
                             <div className="col-span-12 md:col-span-2">
-                                <Label className="text-xs font-semibold text-secondary-600">JW Date</Label>
-                                <div className="h-9 mt-1 px-3 flex items-center bg-secondary-50 border border-secondary-200 rounded-lg text-sm font-medium text-secondary-700">
+                                <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">JW Date</Label>
+                                <div className="h-9 mt-1 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm font-medium text-secondary-700 dark:text-secondary-300">
                                     {formatDate(isEditing && jobWork?.createdAt ? jobWork.createdAt : new Date())}
                                 </div>
                             </div>
@@ -315,7 +315,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                     onChange={(e) => setDescription(e.target.value)}
                                     disabled={isReadOnly || hasAnyInward}
                                     placeholder={hasAnyInward ? "Locked - Active Inward Exists" : "e.g. For Repairing, New Job..."}
-                                    className={cn("h-9 mt-1 text-sm font-medium border-secondary-200 focus:border-primary-400", hasAnyInward && "opacity-60 cursor-not-allowed")}
+                                    className={cn("h-9 mt-1 text-sm font-medium border-secondary-200 dark:border-border focus:border-primary-400 dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600", hasAnyInward && "opacity-60 cursor-not-allowed")}
                                 />
                             </div>
 
@@ -326,7 +326,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                     onChange={(e) => setRemarks(e.target.value)}
                                     disabled={isReadOnly}
                                     placeholder="Add internal notes..."
-                                    className="h-9 mt-1 text-sm border-secondary-200 focus:border-primary-400"
+                                    className="h-9 mt-1 text-sm border-secondary-200 dark:border-border focus:border-primary-400 dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600"
                                 />
                             </div>
 
@@ -334,12 +334,12 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                 <div className="flex-1 min-w-0">
                                     <Label className="text-xs font-semibold text-secondary-600">Doc Attachments</Label>
                                     <div className={cn(
-                                        "mt-1 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-all",
-                                        (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200"
+                                        "mt-1 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 hover:bg-white dark:hover:bg-card hover:border-primary-400 transition-all",
+                                        (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200 dark:hover:border-border"
                                     )}>
                                         <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", (isReadOnly || uploading) ? "cursor-not-allowed" : "cursor-pointer")}>
-                                            <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
-                                            <span className="text-xs font-medium text-secondary-600 truncate">
+                                            <Upload className="w-4 h-4 text-secondary-400 dark:text-secondary-500 shrink-0" />
+                                            <span className="text-xs font-medium text-secondary-600 dark:text-secondary-400 truncate">
                                                 {uploading ? "Uploading..." : effectiveAttachmentCount === 0 ? "Upload PDF/Images" : `${effectiveAttachmentCount} file(s)`}
                                             </span>
                                             <input type="file" multiple className="hidden" onChange={handleFileSelect} disabled={isReadOnly || uploading} accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" />
@@ -372,17 +372,17 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                         {/* Items Section */}
                         <div className="flex-1 min-h-0 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
                                     <Package className="w-4 h-4 text-primary-600" />
                                 </div>
-                                <h3 className="font-bold text-secondary-900 tracking-tight uppercase text-xs">Line Items</h3>
-                                <span className="bg-secondary-100 text-secondary-600 px-2 py-0.5 rounded text-[10px] font-black">{items.length}</span>
+                                <h3 className="font-bold text-secondary-900 dark:text-foreground tracking-tight uppercase text-xs">Line Items</h3>
+                                <span className="bg-secondary-100 dark:bg-secondary-900/40 text-secondary-600 dark:text-secondary-300 px-2 py-0.5 rounded text-[10px] font-black">{items.length}</span>
                             </div>
 
-                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 dark:border-border rounded-xl bg-white dark:bg-card overflow-hidden shadow-sm">
                                 <div className="flex-1 overflow-auto overflow-x-auto min-h-0">
                                     <table className="w-full border-collapse text-sm min-w-[1000px]">
-                                        <thead className="sticky top-0 bg-secondary-50 border-b border-secondary-200 z-10">
+                                        <thead className="sticky top-0 bg-secondary-50 dark:bg-secondary-900/50 border-b border-secondary-200 dark:border-border z-10">
                                             <tr>
                                                 <th className="py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-12 text-center">#</th>
                                                 <th className="text-left py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-64">Item Description</th>
@@ -397,7 +397,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                 {!isReadOnly && <th className="text-center py-2.5 px-4 font-semibold text-secondary-600 text-[11px] uppercase tracking-wider w-16">Action</th>}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-secondary-100">
+                                        <tbody className="divide-y divide-secondary-100 dark:divide-border bg-white dark:bg-card">
                                             {items.length === 0 ? (<tr>
                                                     <td colSpan={11} className="py-20 text-center">
                                                         <div className="flex flex-col items-center gap-2 opacity-30">
@@ -413,26 +413,26 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                     const total = rate + (rate * gst / 100);
                                                     const isLocked = item.isInwarded;
 
-                                                        return (<tr key={item.itemId} className={cn("hover:bg-primary-50/20 group transition-colors", isLocked && "bg-secondary-50/50")}>
-                                                            <td className="py-2.5 px-4 text-center text-xs font-bold text-secondary-400">
+                                                        return (<tr key={item.itemId} className={cn("hover:bg-primary-50/20 dark:hover:bg-primary-900/10 group transition-colors", isLocked && "bg-secondary-50/50 dark:bg-secondary-900/30")}>
+                                                            <td className="py-2.5 px-4 text-center text-xs font-bold text-secondary-400 dark:text-secondary-500">
                                                                 {isLocked ? <ShieldCheck className="w-3.5 h-3.5 text-primary-500 mx-auto" /> : idx + 1}
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <div className="flex flex-col min-w-0">
-                                                                    <span className="font-bold text-secondary-900 leading-tight">{item.itemName}</span>
-                                                                    <span className="text-[11px] text-secondary-500 mt-0.5 truncate">{item.mainPartName}</span>
+                                                                    <span className="font-bold text-secondary-900 dark:text-foreground leading-tight">{item.itemName}</span>
+                                                                    <span className="text-[11px] text-secondary-500 dark:text-secondary-500 mt-0.5 truncate">{item.mainPartName}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-primary-700">{item.itemTypeName}</span>
-                                                                    <span className="text-[11px] text-secondary-500">{item.materialName}</span>
+                                                                    <span className="text-xs font-bold text-primary-700 dark:text-primary-300">{item.itemTypeName}</span>
+                                                                    <span className="text-[11px] text-secondary-500 dark:text-secondary-500">{item.materialName}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-secondary-800">{item.drawingNo || "N/A"}</span>
-                                                                    <span className="text-[11px] text-secondary-500 font-medium">Rev: {item.revisionNo || "0"}</span>
+                                                                    <span className="text-xs font-bold text-secondary-800 dark:text-secondary-200">{item.drawingNo || "N/A"}</span>
+                                                                    <span className="text-[11px] text-secondary-500 dark:text-secondary-500 font-medium">Rev: {item.revisionNo || "0"}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-4 text-center">
@@ -454,7 +454,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                     onChange={(e) => updateItem(item.itemId, "proposedNewName", e.target.value)}
                                                                     disabled={isReadOnly || isLocked || !item.willChangeName}
                                                                     placeholder={item.willChangeName ? "Enter new display name" : "—"}
-                                                                    className={cn("h-8 text-xs border-secondary-200 bg-secondary-50/30 w-full", (!item.willChangeName || isReadOnly || isLocked) && "opacity-60")}
+                                                                    className={cn("h-8 text-xs border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-secondary-200/10 w-full dark:text-foreground dark:placeholder:text-secondary-600", (!item.willChangeName || isReadOnly || isLocked) && "opacity-60")}
                                                                 />
                                                             </td>
                                                             <td className="py-2.5 px-4">
@@ -463,7 +463,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                     value={item.rate || ""}
                                                                     onChange={(e) => updateItem(item.itemId, "rate", Number(e.target.value))}
                                                                     disabled={isReadOnly || isLocked}
-                                                                    className={cn("h-8 text-right font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
+                                                                    className={cn("h-8 text-right font-bold text-xs border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-secondary-200/10 w-full dark:text-foreground dark:placeholder:text-secondary-600", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                     placeholder="0.00"
                                                                 />
                                                             </td>
@@ -473,10 +473,10 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                     value={item.gstPercent ?? 18}
                                                                     onChange={(e) => updateItem(item.itemId, "gstPercent", Number(e.target.value))}
                                                                     disabled={isReadOnly || isLocked}
-                                                                    className={cn("h-8 text-center font-bold text-xs border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
+                                                                    className={cn("h-8 text-center font-bold text-xs border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-secondary-200/10 w-full dark:text-foreground", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                 />
                                                             </td>
-                                                            <td className="py-2.5 px-4 text-right font-bold text-secondary-900 tabular-nums">
+                                                            <td className="py-2.5 px-4 text-right font-bold text-secondary-900 dark:text-foreground tabular-nums">
                                                                 {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                             </td>
                                                             <td className="py-2.5 px-4">
@@ -485,7 +485,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                     onChange={(e) => updateItem(item.itemId, "remarks", e.target.value)}
                                                                     disabled={isReadOnly || isLocked}
                                                                     placeholder={isLocked ? "Locked - Inwarded" : (isReadOnly ? "Locked - Inactive" : "Line note...")}
-                                                                    className={cn("h-8 text-xs italic border-secondary-200 bg-secondary-50/30 w-full", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
+                                                                    className={cn("h-8 text-xs italic border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-secondary-200/10 w-full dark:text-foreground dark:placeholder:text-secondary-600", (isReadOnly || isLocked) && "opacity-60 cursor-not-allowed")}
                                                                 />
                                                             </td>
                                                             <td className="py-2.5 px-4 text-center">
@@ -494,7 +494,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         onClick={() => removeItem(item.itemId)}
-                                                                        className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                        className="h-7 w-7 p-0 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors"
                                                                     >
                                                                         <Trash2 className="w-3.5 h-3.5" />
                                                                     </Button>
@@ -511,24 +511,24 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                         </div>
                     </div>
 
-                    <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-6 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
+                    <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-between gap-6 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
                         <div className="flex items-center gap-8 flex-wrap">
                             <div>
-                                <span className="text-xs font-semibold text-secondary-500 block">Subtotal</span>
-                                <span className="text-base font-bold text-secondary-900">₹ {totalTaxable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-xs font-semibold text-secondary-500 dark:text-secondary-500 block">Subtotal</span>
+                                <span className="text-base font-bold text-secondary-900 dark:text-foreground">₹ {totalTaxable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div>
-                                <span className="text-xs font-semibold text-secondary-500 block">GST Total</span>
-                                <span className="text-base font-bold text-secondary-600">₹ {totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-xs font-semibold text-secondary-500 dark:text-secondary-500 block">GST Total</span>
+                                <span className="text-base font-bold text-secondary-600 dark:text-secondary-300">₹ {totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div>
-                                <span className="text-xs font-semibold text-secondary-500 block">Grand Total</span>
-                                <span className="text-lg font-bold text-primary-700">₹ {finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-xs font-semibold text-secondary-500 dark:text-secondary-500 block">Grand Total</span>
+                                <span className="text-lg font-bold text-primary-700 dark:text-primary-300">₹ {finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-5 font-semibold">
+                            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-5 font-semibold dark:border-border">
                                 Cancel
                             </Button>
                             {!isReadOnly && (

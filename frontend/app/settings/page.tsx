@@ -576,20 +576,20 @@ export default function SettingsPage() {
         className="space-y-6"
       >
         {/* Header with section tabs */}
-        <div className="border-b border-secondary-200 pb-6 mb-2">
+        <div className="border-b border-border pb-6 mb-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary-100 rounded-xl shrink-0">
                 <Settings className="w-8 h-8 text-primary-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-black">Settings</h1>
-                <p className="text-secondary-600 mt-0.5">
+                <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+                <p className="text-muted-foreground mt-0.5">
                   Software profile, access control, and user management
                 </p>
               </div>
             </div>
-            <nav className="flex gap-1 p-1 bg-secondary-100 rounded-lg w-fit flex-nowrap overflow-x-auto">
+            <nav className="flex gap-1 p-1 bg-muted rounded-lg w-fit flex-nowrap overflow-x-auto border border-border">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -599,8 +599,8 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${isActive
-                      ? "bg-white text-primary-600 shadow-sm ring-1 ring-secondary-200"
-                      : "text-secondary-600 hover:text-primary-600 hover:bg-white/50"
+                      ? "bg-card text-primary-600 shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:text-primary-600 hover:bg-card/60"
                       }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
@@ -623,11 +623,11 @@ export default function SettingsPage() {
                 className="space-y-6"
               >
                 <Card>
-                  <CardHeader className="border-b border-secondary-100">
-                    <CardTitle className="text-xl text-black">
+                  <CardHeader className="border-b border-border">
+                    <CardTitle className="text-xl text-foreground">
                       Software Profile
                     </CardTitle>
-                    <p className="text-sm text-secondary-600 font-normal mt-1">
+                    <p className="text-sm text-muted-foreground font-normal mt-1">
                       Basic branding and software naming
                     </p>
                   </CardHeader>
@@ -635,7 +635,7 @@ export default function SettingsPage() {
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 gap-8">
                         <div className="space-y-2">
-                          <Label htmlFor="softwareName" className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
+                          <Label htmlFor="softwareName" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">
                             Software Designation
                           </Label>
                           <Input
@@ -643,9 +643,9 @@ export default function SettingsPage() {
                             value={softwareName}
                             onChange={(e) => setSoftwareName(e.target.value)}
                             placeholder="e.g. Die & Pattern System"
-                            className="h-12 px-4 rounded-xl border-slate-200 focus:ring-2 focus:ring-slate-950 transition-all font-medium"
+                            className="h-12 px-4 rounded-xl border-border focus:ring-2 focus:ring-ring/30 transition-all font-medium"
                           />
-                          <p className="text-[10px] text-secondary-400 font-bold uppercase tracking-tight ml-1">The name displayed in browser tabs and UI headers.</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight ml-1">The name displayed in browser tabs and UI headers.</p>
                         </div>
                       </div>
                     </div>
@@ -698,9 +698,9 @@ export default function SettingsPage() {
                           <p className="text-sm text-secondary-600 max-w-2xl leading-relaxed">
                             Permanently delete all master entries (Parties, Items), transactional
                             records (PI, PO, Inwards, QC), and non-admin user accounts.
-                            Only your <span className="font-bold text-black underline decoration-red-500/30">Admin account</span>,
-                            one <span className="font-bold text-black underline decoration-red-500/30">Company</span>, and
-                            one <span className="font-bold text-black underline decoration-red-500/30">Location</span> will be preserved.
+                            Only your <span className="font-bold text-foreground underline decoration-red-500/30">Admin account</span>,
+                            one <span className="font-bold text-foreground underline decoration-red-500/30">Company</span>, and
+                            one <span className="font-bold text-foreground underline decoration-red-500/30">Location</span> will be preserved.
                           </p>
                           <p className="text-xs font-bold text-red-600 flex items-center gap-1.5 pt-1 uppercase tracking-wider">
                             <Trash2 className="w-3 h-3" /> This action is irreversible and permanent.
@@ -759,7 +759,7 @@ export default function SettingsPage() {
                         type="button"
                         variant="ghost"
                         onClick={() => setIsResetDialogOpen(false)}
-                        className="flex-1 h-12 rounded-xl font-bold text-secondary-600 hover:bg-secondary-100"
+                        className="flex-1 h-12 rounded-xl font-bold text-muted-foreground hover:bg-muted"
                         disabled={resetSystem.isPending}
                       >
                         Abort
@@ -1221,24 +1221,24 @@ export default function SettingsPage() {
                     </div>
                     <div className="border border-secondary-200 rounded-lg overflow-hidden">
                       <table className="w-full">
-                        <thead className="bg-primary-100 border-b border-primary-200">
-                          <tr>
-                            <th className="text-left py-3 px-4 font-semibold text-primary-900 text-sm">
+                        <thead className="bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800">
+                          <tr className="text-primary-900 dark:text-primary-200">
+                            <th className="text-left py-3 px-4 font-semibold text-sm border-r border-primary-200/50 dark:border-primary-800/50">
                               Name
                             </th>
-                            <th className="text-left py-3 px-4 font-semibold text-primary-900 text-sm">
+                            <th className="text-left py-3 px-4 font-semibold text-sm">
                               Username
                             </th>
-                            <th className="text-left py-3 px-4 font-semibold text-primary-900 text-sm">
+                            <th className="text-left py-3 px-4 font-semibold text-sm">
                               Mobile No.
                             </th>
-                            <th className="text-left py-3 px-4 font-semibold text-primary-900 text-sm">
+                            <th className="text-left py-3 px-4 font-semibold text-sm">
                               Role
                             </th>
-                            <th className="text-left py-3 px-4 font-semibold text-primary-900 text-sm">
+                            <th className="text-left py-3 px-4 font-semibold text-sm">
                               Status
                             </th>
-                            <th className="text-right py-3 px-4 font-semibold text-primary-900 text-sm">
+                            <th className="text-right py-3 px-4 font-semibold text-sm">
                               Actions
                             </th>
                           </tr>

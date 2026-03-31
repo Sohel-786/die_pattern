@@ -271,7 +271,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             contentScroll={false}
             className="overflow-hidden border-none shadow-2xl flex flex-col"
         >
-            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 {isEditing && !qcDetail ? (
                     <div className="flex flex-1 items-center justify-center py-20">
                         <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
@@ -279,25 +279,25 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                 ) : (
                     <>
                         <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">
-                            <div className="grid grid-cols-12 gap-4 items-end bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm">
+                            <div className="grid grid-cols-12 gap-4 items-end bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm">
                                 <div className="col-span-2">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">QC No.</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">QC No.</Label>
                                     <Input
                                         value={isEditing ? (qcDetail?.qcNo ?? "") : (nextCode ?? "...")}
                                         readOnly
-                                        className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-bold text-primary-700 disabled:opacity-100"
+                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-primary-700 disabled:opacity-100 dark:text-primary-300"
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">QC Date</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">QC Date</Label>
                                     <Input
                                         value={formatDate(isEditing && qcDetail?.createdAt ? qcDetail.createdAt : new Date())}
                                         readOnly
-                                        className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-bold text-secondary-700 disabled:opacity-100"
+                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-secondary-300 disabled:opacity-100"
                                     />
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Vendor / Party <span className="text-rose-500">*</span></Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Vendor / Party <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <SearchableSelect
                                             options={parties.map((p) => ({ label: p.name, value: p.id }))}
@@ -312,7 +312,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                     </div>
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Source Type <span className="text-rose-500">*</span></Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Source Type <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <select
                                             value={sourceType}
@@ -322,7 +322,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                 setSelectedItems([]);
                                             }}
                                             disabled={isReadOnly || selectedItems.length > 0}
-                                            className="h-9 w-full px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-semibold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
+                                            className="h-9 w-full px-3 rounded-lg border border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-sm font-semibold text-secondary-700 dark:text-secondary-300 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
                                         >
                                             <option value="">Select source type</option>
                                             {sourceOptions.map((opt) => (
@@ -333,17 +333,17 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                         </select>
                                     </div>
                                 </div>
-                                <div className="col-span-12 flex flex-col gap-2 border-t border-secondary-100 pt-4 mt-2">
+                                <div className="col-span-12 flex flex-col gap-2 border-t border-secondary-100 dark:border-border pt-4 mt-2">
                                     <div className="flex items-end gap-2 flex-wrap">
                                         <div className="w-48 min-w-0">
-                                            <Label className="text-xs font-semibold text-secondary-600">Inspection Documents <span className="text-rose-500">*</span></Label>
+                                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Inspection Documents <span className="text-rose-500">*</span></Label>
                                             <div className={cn(
-                                                "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 bg-secondary-50/50 hover:bg-white hover:border-primary-400 transition-colors",
-                                                (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200"
+                                                "mt-0.5 flex items-center gap-2 h-9 min-h-9 px-3 rounded-lg border-2 border-dashed border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 hover:bg-white dark:hover:bg-card hover:border-primary-400 transition-colors",
+                                                (isReadOnly || uploading) && "opacity-50 cursor-not-allowed hover:border-secondary-200 dark:hover:border-border"
                                             )}>
                                                 <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", isReadOnly || uploading ? "cursor-not-allowed" : "cursor-pointer")}>
                                                     <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
-                                                    <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
+                                                    <span className="text-xs font-medium text-secondary-600 dark:text-secondary-400 whitespace-nowrap truncate">
                                                         {uploading ? "Saving..." : effectiveAttachmentCount === 0 ? "PDF / Images" : "PDF / Images"}
                                                     </span>
                                                     <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
@@ -362,7 +362,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                         </Button>
 
                                         {!isReadOnly && (
-                                            <div className="ml-auto pl-4 border-l border-secondary-200 flex items-center h-9">
+                                            <div className="ml-auto pl-4 border-l border-secondary-200 dark:border-border flex items-center h-9">
                                                 <Button
                                                     type="button"
                                                     onClick={() => setIsItemSelectionOpen(true)}
@@ -376,13 +376,13 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                         )}
                                     </div>
                                     <div className="mt-2">
-                                        <Label className="text-xs font-semibold text-secondary-600">Remarks</Label>
+                                        <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Remarks</Label>
                                         <Input
                                             value={remarks}
                                             onChange={(e) => setRemarks(e.target.value)}
                                             placeholder="Optional remarks..."
                                             disabled={isReadOnly}
-                                            className="h-9 mt-0.5 border-secondary-200 text-sm"
+                                            className="h-9 mt-0.5 border-secondary-200 dark:border-border text-sm dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600"
                                         />
                                     </div>
                                 </div>
@@ -391,12 +391,12 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                             {/* Selected Inward Sources Chips */}
                             {uniqueInwards.length > 0 && (
                                 <div className="flex flex-col gap-1.5 px-1">
-                                    <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest leading-none">Selected Inward Sources</span>
+                                    <span className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest leading-none">Selected Inward Sources</span>
                                     <div className="flex flex-wrap items-center gap-2">
                                         {uniqueInwards.map((src) => (
                                             <span
                                                 key={src.id}
-                                                className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700 shadow-sm transition-all hover:bg-white"
+                                                className="inline-flex items-center gap-2 rounded-full border border-primary-100 dark:border-primary-900/30 bg-primary-50 dark:bg-primary-900/20 px-3 py-1 text-xs font-bold text-primary-700 dark:text-primary-300 shadow-sm transition-all hover:bg-white dark:hover:bg-card"
                                             >
                                                 <span className="opacity-50 text-[10px]">INWARD</span>
                                                 {src.no}
@@ -418,10 +418,10 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                 </div>
                             )}
 
-                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
+                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 dark:border-border rounded-lg bg-white dark:bg-card overflow-hidden shadow-sm mt-4">
                                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                                     <table className="w-full border-collapse text-sm min-w-[1000px]">
-                                        <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10 font-bold uppercase tracking-wider text-[11px] text-secondary-600">
+                                        <thead className="sticky top-0 bg-secondary-100 dark:bg-secondary-900/50 border-b border-secondary-200 dark:border-border z-10 font-bold uppercase tracking-wider text-[11px] text-secondary-600 dark:text-secondary-300">
                                             <tr>
                                                 <th className="text-center py-2.5 px-3 w-16">Include</th>
                                                 <th className="text-center py-2.5 px-3 w-12">Sr.No</th>
@@ -433,9 +433,9 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                 <th className="text-left py-2.5 px-3 w-32">Material</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-secondary-100 bg-white">
+                                        <tbody className="divide-y divide-secondary-100 dark:divide-border bg-white dark:bg-card">
                                             {selectedItems.length === 0 ? (<tr>
-                                                    <td colSpan={8} className="py-12 text-center text-secondary-500 text-sm">
+                                                    <td colSpan={8} className="py-12 text-center text-secondary-500 dark:text-secondary-500 text-sm">
                                                         No items selected. Click &quot;{getAddButtonText()}&quot; to begin.
                                                     </td>
                                                 </tr>
@@ -446,7 +446,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                             key={item.inwardLineId}
                                                             className={cn(
                                                                 "transition-all duration-200",
-                                                                !isIncluded ? "bg-secondary-50/50 opacity-60" : "hover:bg-primary-50/30"
+                                                                !isIncluded ? "bg-secondary-50/50 dark:bg-secondary-900/30 opacity-60" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10"
                                                             )}
                                                         >
                                                             <td className="py-2.5 px-3 text-center">
@@ -461,7 +461,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                                     )}
                                                                 />
                                                             </td>
-                                                            <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
+                                                            <td className="py-2.5 px-3 text-secondary-500 dark:text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
                                                             <td className="py-2.5 px-3">
                                                                 <span className="font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded text-[11px] tracking-tight whitespace-nowrap border border-primary-100 italic">
                                                                     {item.inwardNo}
@@ -469,33 +469,33 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col">
-                                                                    <span className="font-bold text-secondary-800 text-[11px] tracking-tighter uppercase">{item.sourceRefDisplay || "—"}</span>
-                                                                    <span className="text-[9px] font-black text-secondary-400 uppercase tracking-widest leading-none">
+                                                                    <span className="font-bold text-secondary-800 dark:text-secondary-200 text-[11px] tracking-tighter uppercase">{item.sourceRefDisplay || "—"}</span>
+                                                                    <span className="text-[9px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
                                                                         {item.sourceType === InwardSourceType.PO ? "Purchase Order" : "Job Work"}
                                                                     </span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0 gap-0.5">
-                                                                    <span className="font-bold text-secondary-900 text-sm truncate uppercase italic tracking-tight">{item.itemName}</span>
+                                                                    <span className="font-bold text-secondary-900 dark:text-foreground text-sm truncate uppercase italic tracking-tight">{item.itemName}</span>
                                                                     {item.newDisplayNameFromJobWork ? (
                                                                         <span className="text-[11px] text-primary-600 font-medium">
                                                                             Old: {item.originalDisplayName ?? item.itemName} → New: {item.newDisplayNameFromJobWork} <span className="text-primary-500/90">(applied on approve)</span>
                                                                         </span>
                                                                     ) : null}
-                                                                    <span className="text-[10px] font-bold text-secondary-500 truncate uppercase">{item.mainPartName || ""}</span>
+                                                                    <span className="text-[10px] font-bold text-secondary-500 dark:text-secondary-500 truncate uppercase">{item.mainPartName || ""}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="py-2.5 px-3 text-secondary-700 font-medium text-xs uppercase tracking-tight">
+                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 font-medium text-xs uppercase tracking-tight">
                                                                 {item.itemTypeName || "—"}
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0">
-                                                                    <span className="font-bold text-secondary-800 text-xs truncate">{item.drawingNo ?? "N/A"}</span>
-                                                                    <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest leading-none">R{item.revisionNo ?? "0"}</span>
+                                                                    <span className="font-bold text-secondary-800 dark:text-secondary-200 text-xs truncate">{item.drawingNo ?? "N/A"}</span>
+                                                                    <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">R{item.revisionNo ?? "0"}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="py-2.5 px-3 text-secondary-700 font-medium text-xs uppercase tracking-tight">
+                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 font-medium text-xs uppercase tracking-tight">
                                                                 {item.materialName || "—"}
                                                             </td>
                                                         </tr>
@@ -508,7 +508,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                             </div>
                         </div>
 
-                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
+                        <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-end gap-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
                             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 px-5 font-semibold">
                                 Cancel
                             </Button>

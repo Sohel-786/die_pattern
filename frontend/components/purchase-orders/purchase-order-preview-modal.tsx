@@ -50,7 +50,7 @@ export function PurchaseOrderPreviewModal({ poId, onClose }: PurchaseOrderPrevie
 
   const content = (
     <div
-      className="fixed inset-0 z-[9999] flex flex-col bg-white"
+      className="fixed inset-0 z-[9999] flex flex-col bg-white force-white"
       role="dialog"
       aria-modal="true"
       aria-labelledby="po-preview-title"

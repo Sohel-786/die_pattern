@@ -14,6 +14,7 @@ import { Save, X, Building2, MapPin, FileDigit, UserCircle, Phone, ImagePlus, Tr
 import api from "@/lib/api";
 import { toast } from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "@/lib/utils";
 
 // Indian GSTIN: 2-digit state code + 10-char PAN + entity no. + Z + check digit
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -39,9 +40,9 @@ function GstSegmentGuide({ value }: { value: string }) {
                     const total = seg.pos[1] - seg.pos[0];
                     const pct = Math.max(0, Math.min(1, filled / total));
                     return (
-                        <div key={seg.label} className="flex-1 bg-secondary-100 rounded-full overflow-hidden">
+                        <div key={seg.label} className="flex-1 bg-secondary-100 dark:bg-card/50 rounded-full overflow-hidden shadow-inner h-1.5">
                             <div
-                                className={`h-full transition-all duration-150 ${seg.color}`}
+                                className={cn("h-full transition-all duration-300", seg.color)}
                                 style={{ width: `${pct * 100}%` }}
                             />
                         </div>
@@ -52,12 +53,14 @@ function GstSegmentGuide({ value }: { value: string }) {
                 {GST_SEGMENTS.map((seg) => (
                     <div
                         key={seg.label}
-                        className={`flex-1 text-center text-[9px] font-bold uppercase tracking-wider transition-colors ${activeSegment?.label === seg.label
-                            ? "text-primary-700"
-                            : len >= seg.pos[1]
-                                ? "text-secondary-400 line-through"
-                                : "text-secondary-300"
-                            }`}
+                        className={cn(
+                            "flex-1 text-center text-[8px] font-black uppercase tracking-widest transition-colors",
+                            activeSegment?.label === seg.label
+                                ? "text-primary-700 dark:text-primary-400"
+                                : len >= seg.pos[1]
+                                    ? "text-secondary-400 dark:text-secondary-600 line-through"
+                                    : "text-secondary-300 dark:text-secondary-700"
+                        )}
                     >
                         {seg.label}
                     </div>
@@ -318,23 +321,23 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                 <fieldset disabled={isReadOnly} className="flex-1 min-h-0">
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 min-w-0 flex-shrink-0">
-                        <div className="sm:col-span-8 space-y-1.5 min-w-0">
-                            <Label htmlFor="company-name" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">
-                                Legal Company Name <span className="text-red-500">*</span>
+                        <div className="sm:col-span-8 space-y-2 min-w-0">
+                            <Label htmlFor="company-name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Legal Company Name <span className="text-rose-500">*</span>
                             </Label>
-                            <div className="relative">
-                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                            <div className="relative group">
+                                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                                 <Input
                                     id="company-name"
                                     {...register("name")}
-                                    className="h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium"
+                                    className="h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight transition-all"
                                     placeholder="e.g. Aira Euro Automation Pvt Ltd"
                                 />
                             </div>
                             {errors.name && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.name.message}</p>}
                         </div>
-                        <div className="sm:col-span-4 space-y-1.5 min-w-0">
-                            <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Logo</Label>
+                        <div className="sm:col-span-4 space-y-2 min-w-0">
+                            <Label className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Company Logo</Label>
                             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleLogoSelect} />
                             <div
                                 onDragOver={(e) => {
@@ -351,8 +354,13 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                     if (isReadOnly) return;
                                     fileInputRef.current?.click();
                                 }}
-                                className={`relative flex items-center justify-center rounded-lg border-2 border-dashed h-16 w-full cursor-pointer transition-colors ${dragActive ? "border-primary-500 bg-primary-50" : "border-secondary-200 bg-secondary-50/50 hover:bg-secondary-100/50"
-                                    } ${logoUploading || isReadOnly ? "pointer-events-none opacity-70" : ""}`}
+                                className={cn(
+                                    "relative flex items-center justify-center rounded-xl border-2 border-dashed h-16 w-full cursor-pointer transition-all duration-300",
+                                    dragActive 
+                                        ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/20" 
+                                        : "border-secondary-200 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/20 hover:bg-secondary-100/50 dark:hover:bg-secondary-800/50",
+                                    (logoUploading || isReadOnly) && "pointer-events-none opacity-60"
+                                )}
                             >
                                 {logoUrl && !pendingLogoRemoval ? (
                                     <>
@@ -366,7 +374,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="absolute top-0.5 right-0.5 h-6 w-6 p-0 rounded-full bg-white/95 shadow border border-secondary-200 text-rose-500 hover:bg-rose-50"
+                                                className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full bg-white dark:bg-secondary-800 shadow-md border border-secondary-200 dark:border-border text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all hover:scale-110 active:scale-95"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setPendingLogoFile(null);
@@ -377,52 +385,54 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                                     setPendingLogoRemoval(true);
                                                 }}
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         )}
                                     </>
                                 ) : (
-                                    <div className="flex flex-col items-center gap-0.5 text-secondary-500">
-                                        {logoUploading ? <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /> : <ImagePlus className="w-6 h-6 text-secondary-400" />}
-                                        <span className="text-[10px] font-medium leading-tight">{logoUploading ? "Uploading..." : "Click or drop"}</span>
+                                    <div className="flex flex-col items-center gap-1 text-secondary-400 dark:text-secondary-600 group-hover:text-primary-500 transition-colors">
+                                        {logoUploading ? <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /> : <ImagePlus className="w-6 h-6" />}
+                                        <span className="text-[9px] font-black uppercase tracking-widest leading-tight">{logoUploading ? "Uploading..." : "Staging Area"}</span>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-1.5 min-w-0 flex-shrink-0">
-                        <Label htmlFor="company-address" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Address <span className="text-red-500">*</span></Label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-secondary-400" />
+                    <div className="space-y-2 min-w-0 flex-shrink-0">
+                        <Label htmlFor="company-address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Legal Registered Address <span className="text-rose-500">*</span></Label>
+                        <div className="relative group">
+                            <MapPin className="absolute left-3.5 top-3 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                             <Textarea
                                 id="company-address"
                                 {...register("address")}
                                 rows={2}
-                                className="pl-10 py-2 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium resize-none min-h-[52px]"
+                                className="pl-11 py-3 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight resize-none min-h-[70px] transition-all"
                                 placeholder="Plot no., Estate, Road, Area, City, Pincode"
                             />
                         </div>
                         {errors.address && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.address.message}</p>}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0 pb-1">
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-gst" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Number <span className="text-red-500">*</span></Label>
-                            <div className="relative">
-                                <FileDigit className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0 flex-shrink-0 pb-1">
+                        <div className="space-y-2 min-w-0">
+                            <Label htmlFor="company-gst" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">GST Identification Number <span className="text-rose-500">*</span></Label>
+                            <div className="relative group">
+                                <FileDigit className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                                 <Input
                                     id="company-gst"
                                     value={watch("gstNo") || ""}
                                     maxLength={15}
                                     autoComplete="off"
                                     spellCheck={false}
-                                    className={`h-10 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono font-bold uppercase tracking-widest ${watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
-                                        ? "border-green-400 focus:ring-green-400 text-green-700"
-                                        : errors.gstNo
-                                            ? "border-rose-400 focus:ring-rose-400"
-                                            : ""
-                                        }`}
+                                    className={cn(
+                                        "h-11 pl-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-mono font-black uppercase tracking-[0.2em] transition-all",
+                                        watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "")
+                                            ? "border-green-400/50 dark:border-green-500/30 text-green-700 dark:text-green-500 bg-green-50/30 dark:bg-green-500/5"
+                                            : errors.gstNo
+                                                ? "border-rose-400/50 dark:border-rose-500/30 bg-rose-50/30 dark:bg-rose-500/5"
+                                                : ""
+                                    )}
                                     placeholder="e.g. 24AAFCA0525L1ZY"
                                     onKeyDown={(e) => {
                                         const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
@@ -436,13 +446,13 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                         setValue("gstNo", raw, { shouldValidate: true });
                                     }}
                                 />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                                     {watch("gstNo")?.length === 15 && GST_REGEX.test(watch("gstNo") || "") ? (
-                                        <ShieldCheck className="w-4 h-4 text-green-500" />
+                                        <ShieldCheck className="w-4 h-4 text-green-500 transition-all scale-110" />
                                     ) : watch("gstNo")?.length === 15 ? (
-                                        <ShieldAlert className="w-4 h-4 text-rose-500" />
+                                        <ShieldAlert className="w-4 h-4 text-rose-500 animate-pulse" />
                                     ) : (
-                                        <span className="text-[10px] font-bold text-secondary-400">{watch("gstNo")?.length ?? 0}/15</span>
+                                        <span className="text-[10px] font-black text-secondary-400 tabular-nums">{watch("gstNo")?.length ?? 0}/15</span>
                                     )}
                                 </div>
                             </div>
@@ -454,8 +464,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                 </p>
                             )}
                         </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-gst-date" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">GST Date <span className="text-red-500">*</span></Label>
+                        <div className="space-y-2 min-w-0">
+                            <Label htmlFor="company-gst-date" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Registration Date <span className="text-rose-500">*</span></Label>
                             <Controller
                                 control={control}
                                 name="gstDate"
@@ -463,7 +473,12 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                     <DatePicker
                                         value={field.value}
                                         onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : "")}
-                                        className={`h-10 shadow-sm text-sm font-medium ${errors.gstDate ? "border-rose-400 focus:ring-rose-400" : "border-secondary-300 focus:ring-primary-500"}`}
+                                        className={cn(
+                                            "h-11 shadow-sm text-sm font-bold tracking-tight transition-all",
+                                            errors.gstDate 
+                                                ? "border-rose-400 focus:ring-rose-400 dark:border-rose-500/30" 
+                                                : "border-secondary-200 dark:border-border dark:bg-card focus:ring-primary-500/10"
+                                        )}
                                     />
                                 )}
                             />
@@ -476,67 +491,73 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 min-w-0 flex-shrink-0">
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-state" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">State</Label>
-                            <Input id="company-state" {...register("state")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Gujarat" />
+                    <div className="grid grid-cols-3 gap-6 min-w-0 flex-shrink-0">
+                        <div className="space-y-2 min-w-0">
+                            <Label htmlFor="company-state" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">State</Label>
+                            <Input id="company-state" {...register("state")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. Gujarat" />
                         </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-city" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">City</Label>
-                            <Input id="company-city" {...register("city")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. Ahmedabad" />
+                        <div className="space-y-2 min-w-0">
+                            <Label htmlFor="company-city" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">City</Label>
+                            <Input id="company-city" {...register("city")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. Ahmedabad" />
                         </div>
-                        <div className="space-y-1.5 min-w-0">
-                            <Label htmlFor="company-pincode" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Pincode</Label>
-                            <Input id="company-pincode" {...register("pincode")} className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="e.g. 382405" />
+                        <div className="space-y-2 min-w-0">
+                            <Label htmlFor="company-pincode" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Pincode</Label>
+                            <Input id="company-pincode" {...register("pincode")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. 382405" />
                         </div>
                     </div>
 
-                    <div className="space-y-1.5 min-w-0 flex-shrink-0">
-                        <Label htmlFor="theme-color" className="text-xs font-bold text-secondary-500 uppercase tracking-wider block">Company Theme Color</Label>
-                        <div className="flex gap-3">
+                    <div className="space-y-2 min-w-0 flex-shrink-0">
+                        <Label htmlFor="theme-color" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Company Branding Palette</Label>
+                        <div className="flex gap-4">
                             <input
                                 type="color"
                                 id="theme-color-picker"
                                 value={watch("themeColor") || "#0d6efd"}
                                 onChange={(e) => setValue("themeColor", e.target.value)}
-                                className="w-10 h-10 rounded-lg border border-secondary-300 cursor-pointer p-1 bg-white shrink-0"
+                                className="w-11 h-11 rounded-xl border border-secondary-200 dark:border-border cursor-pointer p-1.5 bg-white dark:bg-card shadow-sm shrink-0 transition-transform active:scale-90"
                             />
                             <Input
                                 id="theme-color"
                                 {...register("themeColor")}
-                                className="h-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-mono uppercase"
-                                placeholder="#0d6efd"
+                                className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-mono font-black uppercase tracking-widest"
+                                placeholder="#0D6EFD"
                             />
                         </div>
                     </div>
 
                     {/* Conditional Party Info Section */}
                     {useAsParty && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 flex-shrink-0 bg-primary-50/30 p-4 rounded-xl border border-primary-100/50">
-                            <div className="space-y-1.5 min-w-0">
-                                <Label htmlFor="contact-person" className="text-xs font-bold text-primary-700 uppercase tracking-wider block">Contact Person <span className="text-red-500">*</span></Label>
-                                <div className="relative">
-                                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0 flex-shrink-0 bg-primary-50/30 dark:bg-primary-950/20 p-5 rounded-2xl border border-primary-100/30 dark:border-primary-800/30 shadow-inner group/party animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="space-y-2 min-w-0">
+                                <Label htmlFor="contact-person" className="text-[11px] font-black text-primary-700 dark:text-primary-400 uppercase tracking-widest leading-none block ml-1">Direct Contact Person <span className="text-rose-500">*</span></Label>
+                                <div className="relative group/input">
+                                    <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 dark:text-primary-500 group-focus-within/input:text-primary-600 transition-colors" />
                                     <Input
                                         id="contact-person"
                                         {...register("contactPerson")}
-                                        className={`h-10 pl-10 bg-white border-primary-200 shadow-sm focus:ring-primary-500 text-sm font-medium ${errors.contactPerson ? "border-rose-400" : ""}`}
-                                        placeholder="e.g. John Doe"
+                                        className={cn(
+                                            "h-11 pl-11 bg-white dark:bg-card border-primary-200 dark:border-primary-800/50 shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight transition-all",
+                                            errors.contactPerson && "border-rose-400 dark:border-rose-500/30"
+                                        )}
+                                        placeholder="Full Name"
                                     />
                                 </div>
-                                {errors.contactPerson && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.contactPerson.message}</p>}
+                                {errors.contactPerson && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.contactPerson.message}</p>}
                             </div>
-                            <div className="space-y-1.5 min-w-0">
-                                <Label htmlFor="contact-number" className="text-xs font-bold text-primary-700 uppercase tracking-wider block">Contact Number <span className="text-red-500">*</span></Label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                            <div className="space-y-2 min-w-0">
+                                <Label htmlFor="contact-number" className="text-[11px] font-black text-primary-700 dark:text-primary-400 uppercase tracking-widest leading-none block ml-1">Secure Contact Number <span className="text-rose-500">*</span></Label>
+                                <div className="relative group/input">
+                                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 dark:text-primary-500 group-focus-within/input:text-primary-600 transition-colors" />
                                     <Input
                                         id="contact-number"
                                         {...register("contactNumber")}
                                         maxLength={10}
                                         autoComplete="off"
-                                        className={`h-10 pl-10 bg-white border-primary-200 shadow-sm focus:ring-primary-500 text-sm font-medium ${errors.contactNumber ? "border-rose-400" : ""}`}
-                                        placeholder="e.g. 9876543210"
+                                        className={cn(
+                                            "h-11 pl-11 bg-white dark:bg-card border-primary-200 dark:border-primary-800/50 shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight transition-all",
+                                            errors.contactNumber && "border-rose-400 dark:border-rose-500/30"
+                                        )}
+                                        placeholder="10-digit Mobile"
                                         onKeyDown={(e) => {
                                             const allow = ["Backspace", "Delete", "Tab", "Escape", "ArrowLeft", "ArrowRight", "Home", "End"];
                                             if (allow.includes(e.key)) return;
@@ -550,15 +571,18 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                         }}
                                     />
                                 </div>
-                                {errors.contactNumber && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.contactNumber.message}</p>}
+                                {errors.contactNumber && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.contactNumber.message}</p>}
                             </div>
                         </div>
                     )}
 
-                    <div className="flex flex-col gap-4 pt-4 border-t border-secondary-100">
-                        {/* Feature Flag: Use as Party - Always visible as it's a creation option */}
-                        <div className="flex items-center py-1">
-                            <label className={`flex items-center gap-3 cursor-pointer group ${item?.useAsParty ? "pointer-events-none opacity-80" : ""}`}>
+                    <div className="flex flex-col gap-4 pt-4 border-t border-secondary-100 dark:border-border">
+                        {/* Feature Flag: Use as Party */}
+                        <div className="flex items-center py-2 px-1">
+                            <label className={cn(
+                                "flex items-center gap-4 cursor-pointer group",
+                                item?.useAsParty && "pointer-events-none opacity-60"
+                            )}>
                                 <div className="relative">
                                     <input
                                         type="checkbox"
@@ -567,20 +591,28 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                         disabled={item?.useAsParty}
                                         onChange={(e) => setValue("useAsParty", e.target.checked)}
                                     />
-                                    <div className={`w-10 h-5 rounded-full transition-colors ${useAsParty ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                    <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${useAsParty ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                    <div className={cn(
+                                        "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                        useAsParty ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                    )}></div>
+                                    <div className={cn(
+                                        "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                        useAsParty ? "translate-x-5 scale-105" : "translate-x-0"
+                                    )}></div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-secondary-700 select-none">Use as Party</span>
-                                    <span className="text-[10px] text-secondary-500 font-medium leading-none">Enable company to act as a party in transaction entries</span>
+                                    <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest leading-none mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                        Enable Transaction Entry Capability
+                                    </span>
+                                    <span className="text-[10px] text-secondary-400 dark:text-secondary-500 font-bold uppercase tracking-tight leading-none italic">Allows company to be referenced in job-work or purchase modules</span>
                                 </div>
                             </label>
                         </div>
 
                         {/* Master Status - Edit mode only */}
                         {!!item && (
-                            <div className="flex items-center py-1">
-                                <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="flex items-center py-2 px-1">
+                                <label className="flex items-center gap-4 cursor-pointer group">
                                     <div className="relative">
                                         <input
                                             type="checkbox"
@@ -588,10 +620,18 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                             checked={isActive}
                                             onChange={(e) => setValue("isActive", e.target.checked)}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                        <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                        <div className={cn(
+                                            "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                            isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                        )}></div>
+                                        <div className={cn(
+                                            "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                            isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                                        )}></div>
                                     </div>
-                                    <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                                    <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                        Mark as Active Master Record
+                                    </span>
                                 </label>
                             </div>
                         )}
@@ -599,12 +639,15 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                 </div>
                 </fieldset>
 
-                <div className="shrink-0 px-6 py-4 border-t border-secondary-100 flex gap-4 bg-white rounded-b-xl">
+                <div className="shrink-0 px-6 py-5 border-t border-secondary-100 dark:border-secondary-800 flex gap-4 bg-white dark:bg-card/50 rounded-b-xl backdrop-blur-sm">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
+                        className={cn(
+                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly ? "w-full" : "flex-1"
+                        )}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
@@ -613,7 +656,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                         <Button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
                         >
                             {isLoading ? (
                                 <div className="flex items-center gap-2">
@@ -623,7 +666,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save
+                                    Save Corporate Profile
                                 </div>
                             )}
                         </Button>

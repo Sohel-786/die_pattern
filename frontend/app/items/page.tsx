@@ -335,8 +335,8 @@ export default function ItemsPage() {
                     <div className="table-container overflow-x-auto">
                         <table className="w-full text-left text-sm whitespace-nowrap min-w-[800px]">
                             <thead>
-                                <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                                    <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
+                                <tr className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200">
+                                    <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs border-r border-primary-200/50 dark:border-primary-800/50">Sr.No</th>
                                     <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Import Date &amp; Time</th>
                                     <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">File Name</th>
                                     <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Items Imported</th>
@@ -608,8 +608,8 @@ export default function ItemsPage() {
                         <div className="table-container overflow-x-auto">
                             <table className="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
                                 <thead>
-                                    <tr className="border-b border-primary-200 bg-primary-100 text-primary-900">
-                                        <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs">Sr.No</th>
+                                    <tr className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200">
+                                        <th className="px-4 py-3 font-semibold w-16 text-center uppercase tracking-wider text-xs border-r border-primary-200/50 dark:border-primary-800/50">Sr.No</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Part Name</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs">Display Name</th>
                                         <th className="px-4 py-3 font-semibold uppercase tracking-wider text-xs text-center">Asset Type</th>

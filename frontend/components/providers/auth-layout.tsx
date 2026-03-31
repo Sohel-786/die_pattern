@@ -235,10 +235,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || (permissionsLoading && pathname !== '/login')) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-secondary-600">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -257,7 +257,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   // Require company/location selection before rendering app (so API calls get headers)
   if (needOrgSelection) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <OrgContextDialog
           open
           access={allowedAccess}
@@ -271,10 +271,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
   // No access edge case: user exists but has no location access rows configured
   if (allowedAccess && allowedAccess.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-secondary-50 p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-secondary-100 p-6">
-          <h1 className="text-xl font-semibold text-gray-900">No location access</h1>
-          <p className="mt-2 text-sm text-secondary-600">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md w-full bg-card text-card-foreground rounded-2xl shadow-lg border border-border p-6">
+          <h1 className="text-xl font-semibold text-foreground">No location access</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Your account does not have any company/location access configured. Please contact an admin.
           </p>
           <div className="mt-5 flex justify-end">
@@ -308,7 +308,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     const firstAllowed = getFirstAllowedRoute(permissions);
     return (
       <SoftwareProfileDraftProvider>
-        <div className="min-h-screen bg-secondary-50">
+        <div className="min-h-screen bg-background">
           {!isHorizontal && (
             <Sidebar
               userRole={user.role}
@@ -344,7 +344,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SoftwareProfileDraftProvider>
-      <div className="min-h-screen bg-secondary-50">
+      <div className="min-h-screen bg-background">
         <OrgContextDialog
           open={orgDialogOpen}
           access={allowedAccess}

@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -23,23 +24,44 @@ const config: Config = {
           900: 'var(--primary-900)',
         },
         secondary: {
-          DEFAULT: '#6c757d',
-          50: '#f8f9fa',
-          100: '#e9ecef',
-          200: '#dee2e6',
-          300: '#ced4da',
-          400: '#adb5bd',
-          500: '#6c757d',
-          600: '#495057',
-          700: '#343a40',
-          800: '#212529',
-          900: '#0d1117',
+          DEFAULT: 'var(--secondary)',
+          50: 'var(--secondary-50)',
+          100: 'var(--secondary-100)',
+          200: 'var(--secondary-200)',
+          300: 'var(--secondary-300)',
+          400: 'var(--secondary-400)',
+          500: 'var(--secondary-500)',
+          600: 'var(--secondary-600)',
+          700: 'var(--secondary-700)',
+          800: 'var(--secondary-800)',
+          900: 'var(--secondary-900)',
         },
         text: {
-          DEFAULT: '#000000',
-          light: '#212529',
-          muted: '#6c757d',
+          DEFAULT: 'var(--foreground)',
+          light: 'var(--muted-foreground)',
+          muted: 'var(--muted-foreground)',
         },
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        border: 'var(--border)',
+        muted: {
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
+        },
+        card: {
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
+        },
+        popover: {
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
+        },
+        input: 'var(--input)',
+        ring: 'var(--ring)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

@@ -3,18 +3,17 @@
 import { useEffect } from "react";
 import api from "@/lib/api";
 import { applyPrimaryColor } from "@/lib/theme";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { type ThemeProviderProps } from "next-themes";
 
 /**
- * Fetches app settings and applies primary color to the document.
- * Ensures all primary-* shades across the app derive from Settings > Software.
+ * Combined ThemeProvider that handles:
+ * 1. Dark/Light mode switching via next-themes (class-based)
+ * 2. Dynamic Primary Color application from App Settings
  */
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   useEffect(() => {
-    // Initial fetch of theme-related data is handled by the page or other components
-    // and context-based theme application below.
-
-    // Context-based theme application
-    const updateTheme = () => {
+    const updatePrimaryColor = () => {
       const selRaw = localStorage.getItem("selectedOrgContext");
       if (selRaw) {
         try {
@@ -33,10 +32,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyPrimaryColor("#0d6efd");
     };
 
-    updateTheme();
-    window.addEventListener("orgContextChanged", updateTheme);
-    return () => window.removeEventListener("orgContextChanged", updateTheme);
+    updatePrimaryColor();
+    window.addEventListener("orgContextChanged", updatePrimaryColor);
+    return () => window.removeEventListener("orgContextChanged", updatePrimaryColor);
   }, []);
 
-  return <>{children}</>;
+  return (
+    <NextThemesProvider 
+      attribute="class" 
+      defaultTheme="light" 
+      enableSystem 
+      disableTransitionOnChange
+      storageKey="aira-dpm-theme"
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

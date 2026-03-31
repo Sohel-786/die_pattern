@@ -189,33 +189,33 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             contentScroll={false}
             className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col"
         >
-            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">
                     {/* Top row: PI No, Date, Type – same layout as PO */}
                     <div className="grid grid-cols-12 gap-4 items-end">
                         <div className="col-span-2">
-                            <Label className="text-xs font-semibold text-secondary-600">PI No.</Label>
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PI No.</Label>
                             <Input
                                 value={nextPiCode}
                                 readOnly
-                                className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-semibold"
+                                className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold dark:text-foreground"
                             />
                         </div>
                         <div className="col-span-2">
-                            <Label className="text-xs font-semibold text-secondary-600">PI Date</Label>
-                            <div className="h-9 mt-0.5 px-3 flex items-center bg-secondary-50 border border-secondary-200 rounded-lg text-sm text-secondary-700">
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PI Date</Label>
+                            <div className="h-9 mt-0.5 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm text-secondary-700 dark:text-secondary-300">
                                 {formatDate(indent?.createdAt ?? new Date())}
                             </div>
                         </div>
                         <div className="col-span-3">
-                            <Label className="text-xs font-semibold text-secondary-600">Indent Type</Label>
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Indent Type</Label>
                             <select
                                 value={type}
                                 onChange={(e) => setType(e.target.value as PurchaseIndentType)}
                                 disabled={isReadOnly}
                                 className={cn(
-                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                                    isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                                    isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
                                 )}
                             >
                                 <option value={PurchaseIndentType.New}>New Procurement</option>
@@ -225,7 +225,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             </select>
                         </div>
                         <div className="col-span-2">
-                            <Label className="text-xs font-semibold text-secondary-600">Req. Date of Delivery <span className="text-rose-500">*</span></Label>
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Req. Date of Delivery <span className="text-rose-500">*</span></Label>
                             <div className="mt-0.5">
                                 <DatePicker
                                     value={reqDateOfDelivery || null}
@@ -238,19 +238,19 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                         today.setHours(0, 0, 0, 0);
                                         return date < today;
                                     }}
-                                    className="h-9 text-sm border-secondary-200 bg-white"
+                                    className="h-9 text-sm border-secondary-200 dark:border-border bg-white dark:bg-card"
                                 />
                             </div>
                         </div>
                         <div className="col-span-2">
-                            <Label className="text-xs font-semibold text-secondary-600">MTC Req.</Label>
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">MTC Req.</Label>
                             <select
                                 value={mtcReq ? "yes" : "no"}
                                 onChange={(e) => setMtcReq(e.target.value === "yes")}
                                 disabled={isReadOnly}
                                 className={cn(
-                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 bg-white text-sm font-medium text-secondary-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                                    isReadOnly && "bg-secondary-50 cursor-not-allowed"
+                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                                    isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
                                 )}
                             >
                                 <option value="no">No</option>
@@ -283,20 +283,20 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                     />
 
                     {/* Items table – scrollable like PO */}
-                    <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden">
+                    <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 dark:border-border rounded-lg bg-white dark:bg-card overflow-hidden">
                         <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                             <table className="w-full border-collapse text-sm min-w-[500px]">
-                                <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
+                                <thead className="sticky top-0 bg-secondary-100 dark:bg-secondary-900/50 border-b border-secondary-200 dark:border-border z-10">
                                     <tr>
-                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-12 text-center">#</th>
-                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
-                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Type</th>
-                                        <th className="text-right py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">Action</th>
+                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-200 text-xs uppercase tracking-wider whitespace-nowrap w-12 text-center">#</th>
+                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-200 text-xs uppercase tracking-wider whitespace-nowrap">Name</th>
+                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-200 text-xs uppercase tracking-wider whitespace-nowrap w-24">Type</th>
+                                        <th className="text-right py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-200 text-xs uppercase tracking-wider whitespace-nowrap w-20">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-secondary-100 bg-white">
+                                <tbody className="divide-y divide-secondary-100 dark:divide-border bg-white dark:bg-card">
                                     {selectedItems.length === 0 ? (<tr key="no-items">
-                                            <td colSpan={4} className="py-12 text-center text-secondary-500 text-sm">
+                                            <td colSpan={4} className="py-12 text-center text-secondary-500 dark:text-secondary-500 text-sm">
                                                 No items. Click &quot;Add Die / Pattern&quot; to add items.
                                             </td>
                                         </tr>
@@ -305,16 +305,16 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                             const inPo = itemIdsInPo.has(item.id);
                                             return (<tr
                                                     key={item.id}
-                                                    className={cn("hover:bg-primary-50/30", inPo && "opacity-70 bg-secondary-50/50")}
+                                                    className={cn("hover:bg-primary-50/30 dark:hover:bg-primary-900/10", inPo && "opacity-70 bg-secondary-50/50 dark:bg-secondary-900/30")}
                                                 >
-                                                    <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
+                                                    <td className="py-2.5 px-3 text-secondary-500 dark:text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
                                                     <td className="py-2.5 px-3">
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className="font-semibold text-secondary-900 truncate">{item.currentName}</span>
-                                                            <span className="text-xs text-secondary-500 truncate">{item.mainPartName}</span>
+                                                            <span className="font-semibold text-secondary-900 dark:text-foreground truncate">{item.currentName}</span>
+                                                            <span className="text-xs text-secondary-500 dark:text-secondary-500 truncate">{item.mainPartName}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-secondary-700 whitespace-nowrap">{item.itemTypeName ?? "—"}</td>
+                                                    <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 whitespace-nowrap">{item.itemTypeName ?? "—"}</td>
                                                     <td className="py-2.5 px-3 text-right">
                                                         <Button
                                                             variant="ghost"
@@ -322,7 +322,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                                             onClick={() => removeItem(item.id)}
                                                             disabled={inPo}
                                                             title={inPo ? "Item is in an active PO and cannot be removed" : "Remove"}
-                                                            className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 hover:text-rose-600 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="h-8 w-8 p-0 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
@@ -338,19 +338,22 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
 
                     <div className="grid grid-cols-12 gap-4">
                         <div className="col-span-6">
-                            <Label className="text-xs font-semibold text-secondary-600">Remarks</Label>
+                            <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Remarks</Label>
                             <Textarea
                                 value={remarks}
                                 onChange={(e) => setRemarks(e.target.value)}
                                 readOnly={isReadOnly}
                                 placeholder="Reason for raising this indent..."
-                                className={cn("mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none", isReadOnly && "bg-secondary-50")}
+                                className={cn(
+                                  "mt-0.5 min-h-[72px] text-sm border-secondary-200 dark:border-border rounded-lg resize-none dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600",
+                                  isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10"
+                                )}
                             />
                         </div>
                     </div>
                 </div>
 
-                <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between gap-3">
+                <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                         {isEditing && onOpenPreview && (
                             <>
@@ -358,7 +361,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                     type="button"
                                     variant="outline"
                                     onClick={() => onOpenPreview(indent!.id)}
-                                    className="h-9 px-4 font-semibold border-secondary-300 gap-2"
+                                    className="h-9 px-4 font-semibold border-secondary-300 dark:border-border gap-2"
                                 >
                                     <Eye className="w-4 h-4" />
                                     View Preview
@@ -369,7 +372,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                     onClick={() => onOpenPreview(indent!.id)}
                                     disabled={indent?.status !== PurchaseIndentStatus.Approved}
                                     title={indent?.status !== PurchaseIndentStatus.Approved ? "Print is available only after approval" : "Print"}
-                                    className="h-9 px-4 font-semibold border-secondary-300 gap-2 disabled:opacity-60"
+                                    className="h-9 px-4 font-semibold border-secondary-300 dark:border-border gap-2 disabled:opacity-60"
                                 >
                                     <Printer className="w-4 h-4" />
                                     Print
@@ -381,7 +384,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         <Button
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="h-9 px-5 font-semibold"
+                            className="h-9 px-5 font-semibold dark:border-border"
                         >
                             Cancel
                         </Button>

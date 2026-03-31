@@ -211,20 +211,20 @@ export default function JobWorksPage() {
             />
 
             {/* Main Table Container */}
-            <Card className="border-secondary-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white">
+            <Card className="border-secondary-200 dark:border-border shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col bg-white dark:bg-card">
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900 hover:bg-primary-100 font-sans">
+                            <TableRow className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-900/40 font-sans">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 tracking-wider text-center w-12 border-r border-primary-200/50">SR.NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">JOBWORK NO</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">DATE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider">PARTY NAME</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">STATUS</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-center">ACTIVE</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right">CREATED BY</TableHead>
-                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 tracking-wider text-right pr-6">ACTIONS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-primary-900 dark:!text-white tracking-wider text-center w-12 border-r border-primary-200/50 dark:border-primary-800/50">SR.NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">JOBWORK NO</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">DATE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider">PARTY NAME</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">STATUS</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-center">ACTIVE</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right">CREATED BY</TableHead>
+                                <TableHead className="h-11 px-4 text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-400 tracking-wider text-right pr-6">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -240,8 +240,8 @@ export default function JobWorksPage() {
                                 jobWorks.map((jw, idx) => (
                                     <Fragment key={jw.id}><TableRow
                                             className={cn(
-                                                "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                expandedJWId === jw.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
+                                                "transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                expandedJWId === jw.id ? "bg-primary-50/60 border-none" : "border-b border-secondary-100 hover:bg-primary-50/30",
                                                 !jw.isActive && "bg-secondary-50/50 opacity-75"
                                             )}
                                             onClick={() => setExpandedJWId(expandedJWId === jw.id ? null : jw.id)}
@@ -261,14 +261,14 @@ export default function JobWorksPage() {
                                                     </motion.div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="px-4 py-3 text-secondary-400 font-bold text-center text-xs">
+                                            <TableCell className="px-4 py-3 text-secondary-400 dark:!text-white/90 font-bold text-center text-xs">
                                                 {String(jobWorks.length - idx).padStart(2, '0')}
                                             </TableCell>
-                                            <TableCell className="px-4 py-3 font-bold text-secondary-900 text-sm">{jw.jobWorkNo}</TableCell>
-                                            <TableCell className="px-4 py-3 text-secondary-700 text-sm">
+                                            <TableCell className="px-4 py-3 font-bold text-secondary-900 dark:!text-white text-sm">{jw.jobWorkNo}</TableCell>
+                                            <TableCell className="px-4 py-3 text-secondary-700 dark:!text-white text-sm">
                                                 {formatDateTime(jw.createdAt)}
                                             </TableCell>
-                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 text-sm">
+                                            <TableCell className="px-4 py-3 font-medium text-secondary-800 dark:!text-white text-sm">
                                                 {jw.toPartyName ?? "—"}
                                             </TableCell>
                                             <TableCell className="px-4 py-3 text-center">
@@ -282,7 +282,7 @@ export default function JobWorksPage() {
                                                     {jw.isActive ? "Active" : "Inactive"}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-3 text-right text-secondary-600 text-sm whitespace-nowrap">
+                                            <TableCell className="px-4 py-3 text-right text-secondary-600 dark:!text-white/90 text-sm whitespace-nowrap">
                                                 {jw.creatorName ?? "System"}
                                             </TableCell>
                                             <td className="px-4 py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
@@ -351,35 +351,35 @@ export default function JobWorksPage() {
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
                                                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                            className="overflow-hidden bg-secondary-50/10 w-full"
+                                                            className="overflow-hidden bg-secondary-50/10 dark:bg-secondary-900/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
-                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                <div className="bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm">
+                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/50 px-4 py-2 border-b border-secondary-100 dark:border-secondary-800 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                                                             Job Work Items
                                                                         </p>
-                                                                        <span className="text-[10px] font-medium text-secondary-400">
+                                                                        <span className="text-[10px] font-medium text-secondary-400 dark:text-secondary-500">
                                                                             Total: {jw.items?.length || 0} item(s)
                                                                         </span>
                                                                     </div>
                                                                     <div className="overflow-x-auto">
                                                                         <Table>
                                                                             <TableHeader>
-                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white text-nowrap">
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-14 text-center">SR.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">ITEM DESCRIPTION</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">TYPE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">MATERIAL</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider w-40 text-center">DWG NO / REV</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">UNIT RATE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">GST%</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-right">TOTAL AMOUNT</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center">INWARD NO.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">INWARD DATE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC NO.</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider">QC DATE</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider text-center pr-6">QC STATUS</TableHead>
+                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-border hover:bg-transparent dark:hover:bg-transparent text-nowrap">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-14 text-center">SR.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">ITEM DESCRIPTION</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">TYPE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">MATERIAL</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-40 text-center">DWG NO / REV</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-right">UNIT RATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center">GST%</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-right">TOTAL AMOUNT</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center">INWARD NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">INWARD DATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">QC NO.</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">QC DATE</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider text-center pr-6">QC STATUS</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                             <TableBody>

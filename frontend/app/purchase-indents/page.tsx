@@ -231,12 +231,12 @@ export default function PurchaseIndentsPage() {
                 <div className="overflow-auto flex-1 min-h-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="border-b border-primary-200 bg-primary-100 text-primary-900">
+                            <TableRow className="border-b border-primary-200 dark:border-primary-800 bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-200 hover:bg-primary-100 dark:hover:bg-primary-900/40">
                                 <TableHead className="w-14 min-w-[3.5rem] max-w-[3.5rem] h-11 px-0 text-center"></TableHead>
-                                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px]">
+                                <TableHead className="w-10 h-11 text-center font-bold uppercase tracking-tight text-[11px] text-primary-900 dark:text-primary-200">
                                     <input
                                         type="checkbox"
-                                        className="rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                                        className="rounded border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-primary-600 focus:ring-primary-500"
                                         checked={indents.filter(pi => canSelectPIForPO(pi)).length > 0 && selectedPIIds.length === indents.filter(pi => canSelectPIForPO(pi)).length}
                                         onChange={(e) => {
                                             if (e.target.checked) {
@@ -247,15 +247,15 @@ export default function PurchaseIndentsPage() {
                                         }}
                                     />
                                 </TableHead>
-                                <TableHead className="w-16 h-11 text-center font-bold uppercase tracking-tight text-[11px]">SR.NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">PI NO</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px]">CREATED DATE</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">APPROVAL STATUS</TableHead>
+                                <TableHead className="w-16 h-11 text-center font-bold uppercase tracking-tight text-[11px] text-primary-900 dark:!text-white border-r border-primary-200/50 dark:border-primary-800/50">SR.NO</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-secondary-700 dark:text-secondary-400">PI NO</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-secondary-700 dark:text-secondary-400">CREATED DATE</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center text-secondary-700 dark:text-secondary-400">APPROVAL STATUS</TableHead>
                                 {isAdmin && (
-                                    <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center">ACTIVE</TableHead>
+                                    <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-center text-secondary-700 dark:text-secondary-400">ACTIVE</TableHead>
                                 )}
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap">CREATED BY</TableHead>
-                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap">ACTIONS</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right whitespace-nowrap text-secondary-700 dark:text-secondary-400">CREATED BY</TableHead>
+                                <TableHead className="h-11 font-bold uppercase tracking-tight text-[11px] text-right pr-6 whitespace-nowrap text-secondary-700 dark:text-secondary-400">ACTIONS</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -272,9 +272,9 @@ export default function PurchaseIndentsPage() {
                                     <Fragment key={pi.id}><TableRow
                                             key={pi.id}
                                             className={cn(
-                                                "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                !pi.isActive && "opacity-60 bg-secondary-50/30",
-                                                expandedPIId === pi.id ? "bg-primary-50/60" : "hover:bg-primary-50/30"
+                                                "transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                expandedPIId === pi.id ? "bg-primary-50/60 border-none" : "border-b border-secondary-100 hover:bg-primary-50/30",
+                                                !pi.isActive && "opacity-60 bg-secondary-50/30"
                                             )}
                                             onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}
                                         >
@@ -437,12 +437,12 @@ export default function PurchaseIndentsPage() {
                                                             animate={{ height: "auto", opacity: 1 }}
                                                             exit={{ height: 0, opacity: 0 }}
                                                             transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                            className="overflow-hidden bg-secondary-50/10 w-full"
+                                                            className="overflow-hidden bg-secondary-50/10 dark:bg-secondary-900/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm w-full">
-                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
-                                                                        <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
+                                                                <div className="bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm w-full">
+                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/50 px-4 py-2 border-b border-secondary-100 dark:border-secondary-800 flex items-center justify-between">
+                                                                        <p className="text-[10px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                                                             Indent Items
                                                                         </p>
                                                                         <span className="text-[10px] font-medium text-secondary-400">
@@ -452,17 +452,17 @@ export default function PurchaseIndentsPage() {
                                                                     <div className="overflow-x-auto">
                                                                         <Table>
                                                                             <TableHeader>
-                                                                                <TableRow className="bg-white border-b border-secondary-100 hover:bg-white">
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Item Description</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap">Type</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">PO No</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">PO Date</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">Inward No</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">Inward Date</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">QC No</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-center">QC Date</TableHead>
-                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-400 tracking-wider whitespace-nowrap text-right pr-6">Action</TableHead>
+                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-border hover:bg-transparent dark:hover:bg-transparent">
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap w-12 text-center">SR.NO</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap">Item Description</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap">Type</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">PO No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">PO Date</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">Inward No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">Inward Date</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">QC No</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-center">QC Date</TableHead>
+                                                                                    <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider whitespace-nowrap text-right pr-6">Action</TableHead>
                                                                                 </TableRow>
                                                                             </TableHeader>
                                                                             <TableBody>

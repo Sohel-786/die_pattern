@@ -215,15 +215,15 @@ export function Dialog({
               aria-modal="true"
               aria-labelledby="dialog-title"
               className={cn(
-                "bg-white rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none overflow-hidden",
+                "bg-card text-card-foreground rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none overflow-hidden border border-border",
                 sizeClasses[size],
                 className
               )}
             >
               {/* Header */}
               {!hideHeader && (
-                <div className="flex items-center justify-between p-6 border-b border-secondary-200">
-                  <h2 id="dialog-title" className="text-xl font-semibold text-text">{title}</h2>
+                <div className="flex items-center justify-between p-6 border-b border-border">
+                  <h2 id="dialog-title" className="text-xl font-semibold text-foreground">{title}</h2>
                   <Button
                     type="button"
                     variant="ghost"
@@ -246,7 +246,7 @@ export function Dialog({
                 <button
                   onClick={onClose}
                   aria-label="Close dialog"
-                  className="absolute top-4 right-4 p-2 text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 rounded-full transition-all z-[1010]"
+                  className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all z-[1010]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -289,7 +289,7 @@ export function DialogTitle({ children, className }: { children: React.ReactNode
 }
 
 export function DialogDescription({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <p className={cn("text-sm text-secondary-500", className)}>{children}</p>;
+  return <p className={cn("text-sm text-muted-foreground", className)}>{children}</p>;
 }
 
 export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {

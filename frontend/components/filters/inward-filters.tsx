@@ -15,11 +15,11 @@ import { InwardSourceType } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
-const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
+const filterLabelClass = "text-[11px] font-medium text-secondary-500 dark:text-secondary-400 uppercase tracking-wider mb-1 block";
 const inputClass =
-    "h-9 rounded-lg border border-secondary-200 bg-white px-3 text-sm text-secondary-900 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
+    "h-9 rounded-lg border border-secondary-200 dark:border-secondary-200 bg-white dark:bg-card px-3 text-sm text-secondary-900 dark:text-foreground placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-colors";
 const selectClass =
-    "h-9 w-full rounded-lg border border-secondary-200 bg-white pl-3 pr-8 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
+    "h-9 w-full rounded-lg border border-secondary-200 dark:border-secondary-200 bg-white dark:bg-card pl-3 pr-8 text-sm text-secondary-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
 export interface InwardFiltersProps {
     filters: InwardFiltersState;
@@ -49,7 +49,7 @@ export function InwardFilters({
     return (
         <Card
             className={cn(
-                "overflow-visible shrink-0 rounded-xl border border-secondary-200 bg-white shadow-sm w-full",
+                "overflow-visible shrink-0 rounded-xl border border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm w-full",
                 className
             )}
         >
@@ -81,7 +81,7 @@ export function InwardFilters({
                                     variant="outline"
                                     size="sm"
                                     onClick={onClear}
-                                    className="h-9 px-4 text-xs font-medium rounded-lg transition-colors whitespace-nowrap border-secondary-300 text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400"
+                                    className="h-9 px-4 text-xs font-bold rounded-lg transition-colors whitespace-nowrap border-secondary-300 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-800 hover:border-secondary-400 dark:hover:border-secondary-600 shadow-sm"
                                 >
                                     <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                                     Clear Filter
@@ -124,10 +124,10 @@ export function InwardFilters({
                             />
                         </div>
                         <div className="min-w-0">
+                            <label className={filterLabelClass}>ITEM SELECTION</label>
                             <ItemInfiniteSelect
                                 value={filters.itemIds}
                                 onChange={(v) => update({ itemIds: v })}
-                                label="Item Selection"
                                 placeholder="Select items"
                             />
                         </div>
@@ -148,7 +148,7 @@ export function InwardFilters({
                                     <option value="false">Inactive Only</option>
                                 </select>
                             ) : (
-                                <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
+                                <div className={cn(selectClass, "flex items-center bg-secondary-50 dark:bg-secondary-900/40 text-secondary-500 dark:text-secondary-400 cursor-not-allowed")}>
                                     Active Only
                                 </div>
                             )}

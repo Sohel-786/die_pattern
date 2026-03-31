@@ -144,12 +144,12 @@ export function SourceSelectionDialog({
         >
             <div className="flex flex-col h-[70vh]">
                 {/* Search Bar */}
-                <div className="px-6 py-4 border-b border-secondary-200 bg-secondary-50">
+                <div className="px-6 py-4 border-b border-secondary-200 dark:border-border bg-secondary-50 dark:bg-card">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-5 h-5" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 dark:text-secondary-500 w-5 h-5" />
                         <Input
                             placeholder={`Search ${getSourceLabel().toLowerCase()}s to import...`}
-                            className="pl-10 h-10 border-secondary-200 focus:ring-primary-500/20"
+                            className="pl-10 h-10 border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 focus:ring-primary-500/20 text-foreground"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             autoFocus
@@ -162,25 +162,25 @@ export function SourceSelectionDialog({
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-primary-600">
                             <Loader2 className="w-10 h-10 animate-spin" />
-                            <p className="mt-4 text-[10px] font-black text-secondary-500 uppercase tracking-widest">Searching Records...</p>
+                            <p className="mt-4 text-[10px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">Searching Records...</p>
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-secondary-300">
+                        <div className="flex flex-col items-center justify-center py-20 text-secondary-300 dark:text-secondary-700">
                             <Package className="w-12 h-12 mb-3 opacity-20" />
                             <p className="text-sm font-black uppercase tracking-widest">No pending entries found</p>
-                            <p className="text-xs font-medium text-secondary-400 mt-1">Check if items are already added or if sources are approved.</p>
+                            <p className="text-xs font-medium text-secondary-400 dark:text-secondary-500 mt-1">Check if items are already added or if sources are approved.</p>
                         </div>
                     ) : (
                         <table className="w-full">
-                            <thead className="sticky top-0 bg-white border-b border-secondary-200 z-10">
-                                <tr className="text-left text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                            <thead className="sticky top-0 bg-white dark:bg-card border-b border-secondary-200 dark:border-border z-10">
+                                <tr className="text-left text-[10px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                     <th className="px-4 py-3 w-12 text-center">Select</th>
                                     <th className="px-4 py-3">Reference No</th>
                                     <th className="px-4 py-3">Vendor / Party</th>
                                     <th className="px-4 py-3">Date</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-secondary-100">
+                            <tbody className="divide-y divide-secondary-100 dark:divide-secondary-800">
                                 {filtered.map((item: any) => {
                                     const isSelected = tempSelectedIds.includes(item.id);
                                     let refNo = "";
@@ -202,29 +202,29 @@ export function SourceSelectionDialog({
                                             key={item.id}
                                             onClick={() => toggleSelection(item.id)}
                                             className={cn(
-                                                "transition-all duration-200 border-transparent group hover:bg-primary-50 cursor-pointer",
-                                                isSelected && "bg-primary-50/50"
+                                                "transition-all duration-200 border-transparent group hover:bg-primary-50 dark:hover:bg-primary-900/20 cursor-pointer",
+                                                isSelected && "bg-primary-50/50 dark:bg-primary-900/30"
                                             )}
                                         >
                                             <td className="px-4 py-4 text-center">
                                                 {isSelected ? (
-                                                    <CheckCircle2 className="w-5 h-5 text-primary-600 fill-primary-50" />
+                                                    <CheckCircle2 className="w-5 h-5 text-primary-600 dark:text-primary-400 fill-primary-50 dark:fill-primary-900/50" />
                                                 ) : (
-                                                    <Circle className="w-5 h-5 text-secondary-200 group-hover:text-primary-300" />
+                                                    <Circle className="w-5 h-5 text-secondary-200 dark:text-secondary-700 group-hover:text-primary-300 dark:group-hover:text-primary-600" />
                                                 )}
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-bold text-secondary-900 uppercase tracking-tight">{refNo}</span>
+                                                    <span className="text-sm font-bold text-secondary-900 dark:text-foreground uppercase tracking-tight">{refNo}</span>
                                                     {alreadySelectedIds.includes(item.id) && (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black bg-primary-100 text-primary-700 uppercase tracking-wider border border-primary-200">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 uppercase tracking-wider border border-primary-200 dark:border-primary-800">
                                                             Already Added
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-sm font-semibold text-secondary-700">{party}</td>
-                                            <td className="px-4 py-4 text-sm text-secondary-500 font-medium">{dateText}</td>
+                                            <td className="px-4 py-4 text-sm font-semibold text-secondary-700 dark:text-secondary-300">{party}</td>
+                                            <td className="px-4 py-4 text-sm text-secondary-500 dark:text-secondary-400 font-medium">{dateText}</td>
                                         </tr>
                                     );
                                 })}
@@ -234,8 +234,8 @@ export function SourceSelectionDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-secondary-200 bg-secondary-50 flex items-center justify-between">
-                    <p className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                <div className="px-6 py-4 border-t border-secondary-200 dark:border-border bg-secondary-50 dark:bg-card flex items-center justify-between">
+                    <p className="text-[10px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                         {tempSelectedIds.length} Entries Marked for Import
                     </p>
                     <div className="flex gap-3">

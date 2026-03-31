@@ -338,7 +338,7 @@ export function InwardDialog({
             contentScroll={false}
             className="overflow-hidden border-none shadow-2xl flex flex-col"
         >
-            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc]">
+            <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-background">
                 {loadingInward && isEditing ? (
                     <div className="flex flex-1 items-center justify-center py-20">
                         <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
@@ -347,13 +347,13 @@ export function InwardDialog({
                     <>
                         <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">
                             {/* Header Fields Block */}
-                            <div className="grid grid-cols-12 gap-4 items-end bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm">
+                            <div className="grid grid-cols-12 gap-4 items-end bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm">
                                 <div className="col-span-2">
-                                    <Label className="text-xs font-semibold text-secondary-600">Inward No.</Label>
-                                    <Input value={nextCode} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm font-semibold" />
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Inward No.</Label>
+                                    <Input value={nextCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-900/50 border-secondary-200 dark:border-secondary-800 text-sm font-semibold" />
                                 </div>
                                 <div className="col-span-2">
-                                    <Label className="text-xs font-semibold text-secondary-600">Inward Date</Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-400">Inward Date</Label>
                                     <div className="mt-0.5">
                                         <Input
                                             readOnly
@@ -363,7 +363,7 @@ export function InwardDialog({
                                     </div>
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600">Vendor / Party <span className="text-rose-500">*</span></Label>
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Vendor / Party <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
                                         <SearchableSelect
                                             options={vendors.map(v => ({ label: v.name, value: v.id }))}
@@ -381,21 +381,21 @@ export function InwardDialog({
                                     </div>
                                 </div>
                                 <div className="col-span-4">
-                                    <Label className="text-xs font-semibold text-secondary-600">Address</Label>
-                                    <Input value={selectedVendor?.address || "—"} readOnly className="h-9 mt-0.5 bg-secondary-50 border-secondary-200 text-sm truncate" />
+                                    <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-400">Address</Label>
+                                    <Input value={selectedVendor?.address || "—"} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-900/50 border-secondary-200 dark:border-secondary-800 text-sm truncate" />
                                 </div>
                             </div>
 
                             {/* Source Selection & Attachment */}
-                            <div className="flex items-center justify-between gap-3 bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm flex-wrap">
+                            <div className="flex items-center justify-between gap-3 bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm flex-wrap">
                                 <div className="flex flex-col gap-1 pr-4">
-                                    <span className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Select Source Type</span>
+                                    <span className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest">Select Source Type</span>
                                     <div className="flex items-center gap-2">
                                         <select
                                             value={selectedSourceType}
                                             onChange={(e) => setSelectedSourceType(e.target.value as InwardSourceType)}
                                             disabled={isReadOnly || !vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
-                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 bg-secondary-50/50 text-sm font-bold text-secondary-700 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-secondary-50/50 dark:bg-secondary-900/50 text-sm font-bold text-secondary-700 dark:text-secondary-200 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {sourceOptions.map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -425,8 +425,8 @@ export function InwardDialog({
                                             (uploading || isReadOnly) && "opacity-50 cursor-not-allowed"
                                         )}>
                                             <label className={cn("flex items-center gap-1.5 shrink-0 h-full py-1 w-full", (uploading || isReadOnly) ? "cursor-not-allowed" : "cursor-pointer")}>
-                                                <Upload className="w-4 h-4 text-secondary-400 shrink-0" />
-                                                <span className="text-xs font-medium text-secondary-600 whitespace-nowrap truncate">
+                                                <Upload className="w-4 h-4 text-secondary-400 dark:text-secondary-500 shrink-0" />
+                                                <span className="text-xs font-medium text-secondary-600 dark:text-secondary-300 whitespace-nowrap truncate">
                                                     {uploading ? "Saving..." : effectiveAttachmentCount === 0 ? "PDF / Images" : "PDF / Images"}
                                                 </span>
                                                 <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileSelect} disabled={uploading || isReadOnly} />
@@ -448,15 +448,15 @@ export function InwardDialog({
 
                             {/* Selected Sources Chips */}
                             {uniqueSources.length > 0 && (
-                                <div className="flex flex-col gap-1.5 px-1">
-                                    <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest leading-none">Selected Sources</span>
+                                <div className="flex flex-col gap-1.5 px-1 uppercase tracking-widest">
+                                    <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 leading-none">Selected Sources</span>
                                     <div className="flex flex-wrap items-center gap-2">
                                         {uniqueSources.map((src: { type: InwardSourceType; id: number; display: string }) => (
                                             <span
                                                 key={`${src.type}-${src.id}`}
                                                 className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700 shadow-sm transition-all hover:bg-white"
                                             >
-                                                <span className="opacity-50 text-[10px]">
+                                                <span className="opacity-50 dark:opacity-80 text-[10px]">
                                                     {src.type === InwardSourceType.PO ? "PO" : "JW"}
                                                 </span>
                                                 {src.display}
@@ -479,29 +479,29 @@ export function InwardDialog({
                             )}
 
                             {/* Items table */}
-                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 rounded-lg bg-white overflow-hidden shadow-sm mt-4">
+                            <div className="flex-1 min-h-0 flex flex-col border border-secondary-200 dark:border-border rounded-lg bg-white dark:bg-card overflow-hidden shadow-sm mt-4">
                                 <div className="flex-1 min-h-0 overflow-auto overflow-x-auto">
                                     <table className="w-full border-collapse text-sm min-w-[900px]">
-                                        <thead className="sticky top-0 bg-secondary-100 border-b border-secondary-200 z-10">
+                                        <thead className="sticky top-0 bg-primary-100 dark:bg-primary-900/40 border-b border-primary-200 dark:border-primary-800 z-10 font-bold uppercase tracking-wider text-[11px] text-primary-900 dark:text-primary-200">
                                             <tr>
-                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-16">Include</th>
-                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-12">Sr.No</th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-40">
+                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-16">Include</th>
+                                                <th className="text-center py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-12">Sr.No</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-40">
                                                     {displayHeader}
                                                 </th>
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Item Description</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap">Item Description</th>
                                                 {hasPoLines && (
                                                     <>
-                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">PO Ref</th>
-                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-24">Inw Rate</th>
-                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-20">Inw GST%</th>
-                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap w-28">Total Amt</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap">PO Ref</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-24">Inw Rate</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-20">Inw GST%</th>
+                                                        <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap w-28">Total Amt</th>
                                                     </>
                                                 )}
-                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 text-xs uppercase tracking-wider whitespace-nowrap">Line Remarks</th>
+                                                <th className="text-left py-2.5 px-3 font-semibold text-secondary-700 dark:text-secondary-300 text-xs uppercase tracking-wider whitespace-nowrap">Line Remarks</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-secondary-100 bg-white">
+                                        <tbody className="divide-y divide-secondary-200 dark:divide-border bg-white dark:bg-card">
                                             {lines.length === 0 ? (<tr key="no-items">
                                                     <td colSpan={5} className="py-12 text-center text-secondary-500 text-sm">
                                                         No items. Select a vendor and click "{getImportButtonText()}" to begin.
@@ -524,7 +524,7 @@ export function InwardDialog({
                                                             </td>
                                                             <td className="py-2.5 px-3 text-secondary-500 font-medium text-sm text-center">{idx + 1}</td>
                                                             <td className="py-2.5 px-3">
-                                                                <span className="font-semibold text-secondary-800 text-xs tracking-tight whitespace-nowrap">{line.sourceRefDisplay}</span>
+                                                                <span className="font-semibold text-secondary-800 dark:text-secondary-200 text-xs tracking-tight whitespace-nowrap">{line.sourceRefDisplay}</span>
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0">
@@ -562,7 +562,7 @@ export function InwardDialog({
                                                                                 }}
                                                                                 disabled={isQCLocked}
                                                                                 placeholder="0.00"
-                                                                                className={cn("h-8 border-secondary-200 text-right text-xs font-semibold", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
+                                                                                className={cn("h-8 border-secondary-200 dark:border-secondary-700 dark:bg-secondary-900 text-right text-xs font-semibold", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
                                                                             />
                                                                         ) : "—"}
                                                                     </td>
@@ -581,12 +581,12 @@ export function InwardDialog({
                                                                                 }}
                                                                                 disabled={isQCLocked}
                                                                                 placeholder="0%"
-                                                                                className={cn("h-8 border-secondary-200 text-right text-xs", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
+                                                                                className={cn("h-8 border-secondary-200 dark:border-secondary-700 dark:bg-secondary-900 text-right text-xs", isQCLocked && "opacity-60 cursor-not-allowed bg-secondary-100")}
                                                                             />
                                                                         ) : "—"}
                                                                     </td>
                                                                     <td className="py-2.5 px-3">
-                                                                        <div className="h-8 flex items-center justify-end px-2 bg-secondary-50/50 rounded border border-secondary-100/50 text-xs font-bold text-secondary-700">
+                                                                        <div className="h-8 flex items-center justify-end px-2 bg-secondary-50/50 dark:bg-secondary-900 rounded border border-secondary-100/50 dark:border-secondary-800 text-xs font-bold text-secondary-700 dark:text-secondary-300">
                                                                             {line.sourceType === InwardSourceType.PO ? `₹${calculateLineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                                                         </div>
                                                                     </td>
@@ -598,7 +598,7 @@ export function InwardDialog({
                                                                     value={line.remarks}
                                                                     onChange={(e) => updateLineRemark(idx, e.target.value)}
                                                                     disabled={!included || isQCLocked}
-                                                                    className={cn("h-8 border-secondary-200 focus:border-primary-400 text-sm bg-secondary-50/30 rounded-lg", (!included || isQCLocked) && "opacity-50 cursor-not-allowed")}
+                                                                    className={cn("h-8 border-secondary-200 dark:border-secondary-700 dark:bg-secondary-900 focus:border-primary-400 text-sm bg-secondary-50/30 rounded-lg", (!included || isQCLocked) && "opacity-50 cursor-not-allowed")}
                                                                 />
                                                             </td>
                                                         </tr>
@@ -611,20 +611,20 @@ export function InwardDialog({
                             </div>
 
                             {/* Overall Remarks Block */}
-                            <div className="bg-white p-4 rounded-xl border border-secondary-200/60 shadow-sm flex flex-col gap-2">
+                            <div className="bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm flex flex-col gap-2">
                                 <Label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest block leading-none">Overall Receipt Remarks</Label>
                                 <Textarea
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
                                     readOnly={isReadOnly}
                                     placeholder="Optional header level remarks..."
-                                    className={cn("min-h-[64px] text-sm border-secondary-100 rounded-lg resize-none", isReadOnly ? "bg-secondary-50" : "bg-secondary-50/20")}
+                                    className={cn("min-h-[64px] text-sm border-secondary-100 dark:border-secondary-800 rounded-lg resize-none dark:bg-secondary-900/20", isReadOnly ? "bg-secondary-50 dark:bg-secondary-900/40" : "bg-secondary-50/20")}
                                 />
                             </div>
                         </div>
 
                         {/* Footer: simplified as per request */}
-                        <footer className="shrink-0 border-t border-secondary-200 bg-white px-6 py-4 flex items-center justify-between shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
+                        <footer className="shrink-0 border-t border-secondary-200 dark:border-border bg-white dark:bg-card px-6 py-4 flex items-center justify-between shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.05)]">
                             <div className="flex items-center gap-4">
                                 {hasPoLines && (
                                     <div className="flex flex-col">

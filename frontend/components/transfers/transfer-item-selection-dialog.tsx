@@ -96,17 +96,17 @@ export function TransferItemSelectionDialog({
             contentScroll={false}
             className="max-h-[90vh] flex flex-col"
         >
-            <div className="flex flex-col flex-1 min-h-0 p-6 gap-4">
-                <p className="text-[11px] font-bold text-secondary-500 uppercase tracking-widest">
+            <div className="flex flex-col flex-1 min-h-0 px-6 py-4 gap-4 bg-white dark:bg-background">
+                <p className="text-[11px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-relaxed">
                     Add available items to your transfer selection. You can add multiple batches without closing.
                 </p>
 
                 {/* Pending Selection Section */}
                 {pendingItems.length > 0 && (
-                    <div className="rounded-xl border-2 border-primary-200 bg-primary-50/20 overflow-hidden shrink-0 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center justify-between px-4 py-2 bg-primary-100/50 border-b border-primary-200">
-                            <h3 className="text-[10px] font-black text-primary-900 uppercase tracking-widest flex items-center gap-2">
-                                <Package className="w-3.5 h-3.5 text-primary-600" />
+                    <div className="rounded-xl border-2 border-primary-200 dark:border-primary-900 bg-primary-50/20 dark:bg-primary-950/20 overflow-hidden shrink-0 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center justify-between px-4 py-2 bg-primary-100/50 dark:bg-primary-900/30 border-b border-primary-200 dark:border-primary-900">
+                            <h3 className="text-[10px] font-black text-primary-900 dark:text-primary-300 uppercase tracking-widest flex items-center gap-2">
+                                <Package className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
                                 Selection Batch ({pendingItems.length})
                             </h3>
                             <Button
@@ -114,34 +114,35 @@ export function TransferItemSelectionDialog({
                                 variant="ghost"
                                 size="sm"
                                 onClick={clearPending}
-                                className="h-6 px-2 text-[9px] font-black uppercase text-primary-700 hover:bg-primary-200 hover:text-primary-900 transition-colors"
+                                className="h-6 px-2 text-[9px] font-black uppercase tracking-widest text-primary-700 dark:text-primary-400 hover:bg-primary-200/50 dark:hover:bg-primary-800/50 hover:text-primary-900 dark:hover:text-primary-200 transition-colors"
                             >
                                 Clear batch
                             </Button>
                         </div>
-                        <div className="max-h-[160px] overflow-auto bg-white/50 backdrop-blur-sm">
+                        <div className="max-h-[160px] overflow-auto bg-white/50 dark:bg-card/50 backdrop-blur-sm">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-secondary-50/50 border-b border-primary-100">
-                                        <TableHead className="w-10 text-center text-[10px] font-black uppercase text-secondary-500 tracking-tighter">#</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 tracking-tighter">Name</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 tracking-tighter">Main Part</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 tracking-tighter w-24">Type</TableHead>
-                                        <TableHead className="w-12 text-center text-[10px] font-black uppercase text-secondary-500 tracking-tighter">Action</TableHead>
+                                    <TableRow className="bg-secondary-50/50 dark:bg-secondary-900/50 border-b border-primary-100 dark:border-primary-900">
+                                        <TableHead className="w-10 text-center text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">#</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Name</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Main Part</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap w-24">Type</TableHead>
+                                        <TableHead className="w-12 text-center text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {pendingItems.map((item, idx) => (<TableRow
+                                    {pendingItems.map((item, idx) => (
+                                        <TableRow
                                             key={item.id}
-                                            className="border-b border-primary-50 last:border-0 hover:bg-primary-50/30 transition-colors"
+                                            className="border-b border-primary-50 dark:border-primary-900/50 last:border-0 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors"
                                         >
-                                            <td className="text-center text-secondary-400 font-black text-[11px] py-1.5">{idx + 1}</td>
-                                            <td className="py-1.5">
-                                                <span className="font-bold text-secondary-900 text-xs">{item.currentName}</span>
+                                            <td className="text-center text-secondary-400 dark:text-secondary-500 font-black text-[11px] py-2 tabular-nums">{idx + 1}</td>
+                                            <td className="py-2">
+                                                <span className="font-bold text-secondary-900 text-xs uppercase tracking-tight">{item.currentName}</span>
                                             </td>
-                                            <td className="py-1.5 text-secondary-600 font-bold text-xs uppercase tracking-tighter">{item.mainPartName}</td>
-                                            <td className="py-1.5">
-                                                <span className="text-secondary-500 font-black text-[10px] uppercase tracking-widest">{item.itemTypeName}</span>
+                                            <td className="py-2 text-secondary-600 dark:text-secondary-400 font-bold text-xs uppercase tracking-tighter">{item.mainPartName}</td>
+                                            <td className="py-2">
+                                                <span className="text-secondary-500 dark:text-secondary-500 font-black text-[10px] uppercase tracking-widest">{item.itemTypeName}</span>
                                             </td>
                                             <td className="text-center py-1.5">
                                                 <Button
@@ -169,41 +170,41 @@ export function TransferItemSelectionDialog({
                         placeholder="Search by name, part or drawing number..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9 h-11 border-secondary-200 bg-white shadow-sm focus:ring-primary-500/10 rounded-xl font-medium"
+                        className="pl-9 h-11 border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium focus:ring-primary-500/10 shadow-sm rounded-xl"
                     />
                 </div>
 
                 {/* Available Items Section */}
-                <div className="flex-1 min-h-0 border border-secondary-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col">
-                    <div className="px-4 py-2 border-b border-secondary-100 bg-secondary-50/50 flex items-center justify-between">
-                        <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                <div className="flex-1 min-h-0 border border-secondary-200 dark:border-border rounded-xl overflow-hidden bg-white dark:bg-card shadow-sm flex flex-col">
+                    <div className="px-4 py-2 border-b border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-900/50 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap">
                             Available In-Stock Items
                         </span>
-                        <span className="bg-secondary-200 text-secondary-700 px-2 py-0.5 rounded text-[9px] font-black">
+                        <span className="bg-secondary-200 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300 px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter">
                             {filtered.length} Results
                         </span>
                     </div>
 
                     {isLoading ? (
-                        <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3 grayscale opacity-50">
-                            <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
-                            <p className="font-black uppercase tracking-[0.2em] text-[10px] text-secondary-400 animate-pulse">Loading available items...</p>
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3 bg-white dark:bg-background">
+                            <Loader2 className="w-10 h-10 animate-spin text-primary-500 opacity-50" />
+                            <p className="font-black uppercase tracking-[0.2em] text-[10px] text-secondary-400 dark:text-secondary-600 animate-pulse">Loading available items...</p>
                         </div>
                     ) : (
-                        <div className="overflow-auto flex-1 min-h-0 bg-white">
+                        <div className="overflow-auto flex-1 min-h-0 bg-white dark:bg-background">
                             <Table>
-                                <TableHeader className="sticky top-0 bg-white z-10 border-b border-secondary-100">
+                                <TableHeader className="sticky top-0 bg-white dark:bg-secondary-900/90 z-10 border-b border-secondary-100 dark:border-border">
                                     <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-14 text-center text-[10px] font-black uppercase text-secondary-400 tracking-widest">Action</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Die/Pattern Name</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Main Part</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 tracking-widest w-32">Specification</TableHead>
+                                        <TableHead className="w-16 text-center text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Action</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Die/Pattern Name</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Main Part</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap w-32">Specification</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filtered.length === 0 ? (<TableRow key="empty">
                                             <TableCell colSpan={4} className="py-24 text-center">
-                                                <div className="flex flex-col items-center gap-2 grayscale opacity-40">
+                                                <div className="flex flex-col items-center gap-2 opacity-40 dark:opacity-20 text-secondary-600 dark:text-secondary-400">
                                                     <Package className="w-10 h-10" />
                                                     <p className="font-black uppercase tracking-widest text-[10px]">No matching items found</p>
                                                 </div>
@@ -215,19 +216,19 @@ export function TransferItemSelectionDialog({
                                             return (<TableRow
                                                     key={item.id}
                                                     className={cn(
-                                                        "border-b border-secondary-50 last:border-0 transition-all cursor-pointer group",
-                                                        inPending ? "bg-primary-50/30" : "hover:bg-secondary-50/50"
+                                                        "border-b border-secondary-50 dark:border-secondary-900 last:border-0 transition-all cursor-pointer group",
+                                                        inPending ? "bg-primary-50/40 dark:bg-primary-900/20" : "hover:bg-secondary-50/50 dark:hover:bg-secondary-900/10"
                                                     )}
                                                     onClick={() => addToPending(item)}
                                                 >
                                                     <td className="text-center align-middle py-3">
                                                         <div className="flex justify-center">
                                                             {inPending ? (
-                                                                <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center border border-emerald-200 shadow-sm animate-in zoom-in-50">
+                                                                <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-900 shadow-sm animate-in zoom-in-50">
                                                                     <Check className="w-4 h-4 stroke-[3px]" />
                                                                 </div>
                                                             ) : (
-                                                                <div className="h-8 w-8 rounded-full border-2 border-dashed border-secondary-200 text-secondary-300 flex items-center justify-center group-hover:border-primary-400 group-hover:text-primary-500 group-hover:bg-white transition-all">
+                                                                <div className="h-8 w-8 rounded-full border-2 border-dashed border-secondary-200 dark:border-secondary-800 text-secondary-300 dark:text-secondary-700 flex items-center justify-center group-hover:border-primary-400 group-hover:text-primary-500 dark:group-hover:text-primary-400 group-hover:bg-white dark:group-hover:bg-secondary-900 transition-all">
                                                                     <Plus className="w-4 h-4" />
                                                                 </div>
                                                             )}
@@ -235,23 +236,23 @@ export function TransferItemSelectionDialog({
                                                     </td>
                                                     <td className="py-3">
                                                         <div className="flex flex-col">
-                                                            <span className={cn("font-bold text-sm transition-colors", inPending ? "text-primary-700 font-black" : "text-secondary-900")}>
+                                                            <span className={cn("font-bold text-[13px] transition-colors uppercase tracking-tight", inPending ? "text-primary-700 dark:text-primary-400 font-black" : "text-secondary-900")}>
                                                                 {item.currentName}
                                                             </span>
-                                                            <span className="text-[10px] font-bold text-secondary-400 uppercase tracking-tighter">
+                                                            <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest whitespace-nowrap">
                                                                 {item.drawingNo || "No Drawing"}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td className="py-3">
-                                                        <span className="text-secondary-600 font-bold text-xs uppercase tracking-tight">
+                                                        <span className="text-secondary-600 dark:text-secondary-400 font-bold text-[11px] uppercase tracking-wider">
                                                             {item.mainPartName}
                                                         </span>
                                                     </td>
                                                     <td className="py-3">
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="text-[10px] font-black text-secondary-500 uppercase tracking-widest">{item.itemTypeName}</span>
-                                                            <span className="text-[10px] font-bold text-secondary-400 uppercase tracking-tight">{item.materialName}</span>
+                                                            <span className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest whitespace-nowrap">{item.itemTypeName}</span>
+                                                            <span className="text-[10px] font-bold text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">{item.materialName}</span>
                                                         </div>
                                                     </td>
                                                 </TableRow>
@@ -265,11 +266,11 @@ export function TransferItemSelectionDialog({
                 </div>
 
                 {/* Footer Controls */}
-                <div className="flex items-center justify-between pt-4 border-t border-secondary-100 shrink-0">
+                <div className="flex items-center justify-between pt-4 border-t border-secondary-100 dark:border-border shrink-0 bg-white dark:bg-background">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-secondary-400 uppercase tracking-widest text-center">Batch Items</span>
+                        <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-600 uppercase tracking-widest whitespace-nowrap">Selection Count</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-2xl font-black text-primary-600">{pendingItems.length}</span>
+                            <span className="text-2xl font-black text-primary-600 dark:text-primary-400">{pendingItems.length}</span>
                         </div>
                     </div>
                     <div className="flex gap-3">
@@ -277,7 +278,7 @@ export function TransferItemSelectionDialog({
                             type="button"
                             variant="outline"
                             onClick={handleDone}
-                            className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-secondary-200 hover:bg-secondary-50 transition-colors"
+                            className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-secondary-200 dark:border-border text-secondary-700 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-800 transition-colors"
                         >
                             Done
                         </Button>
@@ -285,7 +286,7 @@ export function TransferItemSelectionDialog({
                             type="button"
                             onClick={commitAdd}
                             disabled={pendingItems.length === 0}
-                            className="bg-primary-600 hover:bg-primary-700 text-white font-black text-[10px] uppercase tracking-widest h-11 px-8 rounded-xl shadow-lg shadow-primary-200 transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:translate-y-0"
+                            className="bg-primary-600 hover:bg-primary-700 text-white font-black text-[10px] uppercase tracking-widest h-11 px-8 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100"
                         >
                             Add Assets to List
                         </Button>

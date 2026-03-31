@@ -109,7 +109,7 @@ export function QuotationViewerModal({ isOpen, onClose, url, fileName }: Quotati
           </Button>
         </div>
         <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center p-4">
-          <iframe src={fullUrl} title="Quotation PDF" className="w-full h-full min-h-[80vh] rounded-lg bg-white" />
+          <iframe src={fullUrl} title="Quotation PDF" className="w-full h-full min-h-[80vh] rounded-lg bg-white force-white" />
         </div>
       </div>
     );

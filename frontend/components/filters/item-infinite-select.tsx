@@ -16,8 +16,8 @@ interface ItemInfiniteSelectProps {
 export function ItemInfiniteSelect({
   value,
   onChange,
-  label = "Item",
-  placeholder = "All items",
+  label,
+  placeholder = "Select items",
   className,
 }: ItemInfiniteSelectProps) {
   const [search, setSearch] = React.useState("");

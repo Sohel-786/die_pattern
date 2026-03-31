@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { Save, X, ShieldCheck, Power, Package, FileText, Hash, Layers, Users, Info, MapPin, Truck, PackageX, History, RotateCcw } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { cn } from "@/lib/utils";
 import * as React from "react";
 import { toast } from "react-hot-toast";
 import { formatDateTime } from "@/lib/utils";
@@ -189,16 +190,16 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                 <fieldset disabled={isReadOnly} className="space-y-8">
                 {/* Identity Section */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100">
-                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200"></div>
-                        <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight flex items-center gap-2">
+                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100 dark:border-secondary-800">
+                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200 dark:shadow-none"></div>
+                        <h4 className="text-sm font-bold text-secondary-900 dark:text-foreground uppercase tracking-tight flex items-center gap-2">
                             Core Identity
                         </h4>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="mainPartName" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Main Die/Part Name <span className="text-red-500">*</span>
+                            <Label htmlFor="mainPartName" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Main Die/Part Name <span className="text-rose-500">*</span>
                             </Label>
                             <Autocomplete
                                 id="mainPartName"
@@ -206,15 +207,15 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 onChange={(val) => setValue("mainPartName", val, { shouldValidate: true })}
                                 options={mainPartNames}
                                 placeholder="e.g. EBW 200 BODY"
-                                className="h-11 shadow-sm disabled:opacity-50"
+                                className="h-11 shadow-sm disabled:opacity-50 dark:bg-card dark:border-border font-bold text-sm tracking-tight"
                                 onBlur={() => { }} // No-op
                                 disabled={!!item}
                             />
                             {errors.mainPartName && <p className="text-sm text-red-600 mt-1 uppercase text-[10px] font-bold">{errors.mainPartName.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="currentName" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Display Name <span className="text-red-500">*</span>
+                            <Label htmlFor="currentName" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Display Name <span className="text-rose-500">*</span>
                             </Label>
                             <Autocomplete
                                 id="currentName"
@@ -222,7 +223,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 onChange={(val) => setValue("currentName", val, { shouldValidate: true })}
                                 options={displayNames}
                                 placeholder="e.g. EBW 200 BODY - REV 1"
-                                className="h-11 shadow-sm"
+                                className="h-11 shadow-sm dark:bg-card dark:border-border font-bold text-sm tracking-tight"
                             />
                             {errors.currentName && <p className="text-sm text-red-600 mt-1 uppercase text-[10px] font-bold">{errors.currentName.message}</p>}
                         </div>
@@ -231,14 +232,14 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
 
                 {/* Specifications Section */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100">
-                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200"></div>
-                        <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Specifications</h4>
+                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100 dark:border-secondary-800">
+                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200 dark:shadow-none"></div>
+                        <h4 className="text-sm font-bold text-secondary-900 dark:text-foreground uppercase tracking-tight">Specifications</h4>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="itemTypeId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Asset Type <span className="text-red-500">*</span>
+                            <Label htmlFor="itemTypeId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Asset Type <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
                                 <SearchableSelect
@@ -252,35 +253,35 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.itemTypeId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.itemTypeId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="drawingNo" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Drawing Number</Label>
+                            <Label htmlFor="drawingNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Drawing Number</Label>
                             <Autocomplete
                                 id="drawingNo"
                                 value={watchedDrawingNo || ""}
                                 onChange={(val) => setValue("drawingNo", val, { shouldValidate: true })}
                                 options={drawingNumbers}
                                 placeholder="DRW-001"
-                                className="h-11 shadow-sm"
+                                className="h-11 shadow-sm dark:bg-card dark:border-border font-bold text-sm tracking-tight"
                             />
                             {!watchedDrawingNo && (
-                                <p className="text-[10px] text-amber-600 font-bold uppercase mt-1 flex items-center gap-1">
-                                    <Info className="w-3 h-3" />
-                                    Notice: Item will remain inactive for transactions without a drawing number
+                                <p className="text-[10px] text-amber-600 dark:text-amber-500 font-black uppercase mt-2 flex items-center gap-1.5 leading-tight italic">
+                                    <Info className="w-3.5 h-3.5" />
+                                    Notice: Asset will remain inactive for transactions without Drawing No.
                                 </p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="revisionNo" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">Revision</Label>
-                            <div className="relative">
-                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
-                                <Input id="revisionNo" {...register("revisionNo")} className="h-11 pl-10 border-secondary-300 shadow-sm focus:ring-primary-500 text-sm font-medium" placeholder="0" />
+                            <Label htmlFor="revisionNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Revision</Label>
+                            <div className="relative group">
+                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
+                                <Input id="revisionNo" {...register("revisionNo")} className="h-11 pl-10 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="0" />
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="materialId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Construction Material <span className="text-red-500">*</span>
+                            <Label htmlFor="materialId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Construction Material <span className="text-rose-500">*</span>
                             </Label>
                             <SearchableSelect
                                 options={materials.map((m: any) => ({ value: m.id, label: m.name }))}
@@ -292,8 +293,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.materialId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.materialId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="ownerTypeId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Asset Ownership <span className="text-red-500">*</span>
+                            <Label htmlFor="ownerTypeId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Asset Ownership <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
                                 <SearchableSelect
@@ -307,8 +308,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.ownerTypeId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.ownerTypeId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="statusId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">
-                                Functional Status <span className="text-red-500">*</span>
+                            <Label htmlFor="statusId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                                Functional Status <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
                                 <SearchableSelect
@@ -326,12 +327,12 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
 
                 {/* Initial Custodian: At Location (in-stock), Vendor, or Not in stock */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100">
-                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200"></div>
-                        <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Initial Custodian</h4>
+                    <div className="flex items-center gap-2 pb-2 border-b border-secondary-100 dark:border-secondary-800">
+                        <div className="h-5 w-1 bg-primary-500 rounded-full shadow-sm shadow-primary-200 dark:shadow-none"></div>
+                        <h4 className="text-sm font-bold text-secondary-900 dark:text-foreground uppercase tracking-tight">Initial Custodian</h4>
                     </div>
-                    <div className="p-5 bg-secondary-50/50 rounded-2xl border border-secondary-200 flex flex-col gap-5">
-                        <div className="flex flex-wrap gap-2 p-1 bg-white rounded-xl border border-secondary-200 w-fit shadow-sm">
+                    <div className="p-5 bg-secondary-50/50 dark:bg-secondary-950/20 rounded-2xl border border-secondary-200 dark:border-border flex flex-col gap-6 shadow-inner">
+                        <div className="flex flex-wrap gap-2 p-1 bg-white dark:bg-secondary-900/50 rounded-xl border border-secondary-200 dark:border-border w-fit shadow-sm">
                             <button
                                 type="button"
                                 onClick={() => {
@@ -339,7 +340,12 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     setValue("currentLocationId", null);
                                     setValue("currentPartyId", null);
                                 }}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Location ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
+                                className={cn(
+                                    "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
+                                    holderType === HolderType.Location 
+                                        ? "bg-primary-600 text-white shadow-md shadow-primary-900/20" 
+                                        : "text-secondary-500 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                )}
                             >
                                 <MapPin className="w-3.5 h-3.5" />
                                 At Location
@@ -351,7 +357,12 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     setValue("currentLocationId", null);
                                     setValue("currentPartyId", null);
                                 }}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.Vendor ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
+                                className={cn(
+                                    "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
+                                    holderType === HolderType.Vendor 
+                                        ? "bg-primary-600 text-white shadow-md shadow-primary-900/20" 
+                                        : "text-secondary-500 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                )}
                             >
                                 <Truck className="w-3.5 h-3.5" />
                                 Vendor
@@ -363,7 +374,12 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     setValue("currentLocationId", null);
                                     setValue("currentPartyId", null);
                                 }}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${holderType === HolderType.NotInStock ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:text-secondary-700"}`}
+                                className={cn(
+                                    "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
+                                    holderType === HolderType.NotInStock 
+                                        ? "bg-primary-600 text-white shadow-md shadow-primary-900/20" 
+                                        : "text-secondary-500 dark:text-secondary-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                )}
                             >
                                 <PackageX className="w-3.5 h-3.5" />
                                 Not in stock
@@ -371,13 +387,13 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                         </div>
 
                         {holderType === HolderType.Location && (
-                            <p className="text-xs text-secondary-600 font-medium">
+                            <p className="text-xs text-secondary-600 dark:text-secondary-400 font-medium">
                                 Item will be counted as <strong>in-stock at your current location</strong>. No location selection needed.
                             </p>
                         )}
                         {holderType === HolderType.Vendor && (
-                            <div className="space-y-2">
-                                <Label htmlFor="currentPartyId" className="text-xs font-bold text-secondary-500 uppercase tracking-wider mb-1 block">External Vendor</Label>
+                            <div className="space-y-2 animate-in fade-in slide-in-from-left-4 duration-300">
+                                <Label htmlFor="currentPartyId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">External Vendor</Label>
                                 <SearchableSelect
                                     options={parties.map((p: any) => ({ value: p.id, label: p.name }))}
                                     value={currentPartyId || ""}
@@ -388,7 +404,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             </div>
                         )}
                         {holderType === HolderType.NotInStock && (
-                            <p className="text-xs text-secondary-600 font-medium">
+                            <p className="text-xs text-secondary-600 dark:text-secondary-400 font-medium">
                                 Item is not in stock. It can be added to a Purchase Indent when needed.
                             </p>
                         )}
@@ -397,8 +413,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
 
                 {/* Active toggle - edit mode only */}
                 {!!item && (
-                    <div className="flex items-center py-1">
-                        <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="flex items-center py-1 px-1">
+                        <label className="flex items-center gap-4 cursor-pointer group">
                             <div className="relative">
                                 <input
                                     type="checkbox"
@@ -406,42 +422,50 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     checked={isActive}
                                     onChange={(e) => setValue("isActive", e.target.checked)}
                                 />
-                                <div className={`w-10 h-5 rounded-full transition-colors ${isActive ? 'bg-primary-600' : 'bg-secondary-200'}`}></div>
-                                <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${isActive ? 'translate-x-5' : 'translate-x-0'} shadow-sm`}></div>
+                                <div className={cn(
+                                    "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
+                                    isActive ? "bg-primary-600 shadow-primary-900/20" : "bg-secondary-200 dark:bg-secondary-800"
+                                )}></div>
+                                <div className={cn(
+                                    "absolute top-1 left-1 bg-white dark:bg-secondary-100 w-4 h-4 rounded-full transition-all duration-300 shadow-sm transform",
+                                    isActive ? "translate-x-5 scale-105" : "translate-x-0"
+                                )}></div>
                             </div>
-                            <span className="text-sm font-bold text-secondary-700 select-none">Mark as Active</span>
+                            <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                Active Production Status
+                            </span>
                         </label>
                     </div>
                 )}
 
                 {/* Display name history - edit/view mode only */}
                 {!!item && nameHistory.length >= 0 && (
-                    <div className="space-y-3 pt-4 border-t border-secondary-100">
-                        <div className="flex items-center gap-2 pb-2">
-                            <History className="w-4 h-4 text-primary-600" />
-                            <h4 className="text-sm font-bold text-secondary-900 uppercase tracking-tight">Display name history</h4>
+                    <div className="space-y-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
+                        <div className="flex items-center gap-2.5 px-1">
+                            <History className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-100 uppercase tracking-widest leading-none">Display Name History</h4>
                         </div>
                         {nameHistory.length === 0 ? (
                             <p className="text-xs text-secondary-500 italic">No display name changes recorded.</p>
                         ) : (
-                            <div className="rounded-lg border border-secondary-200 overflow-hidden">
-                                <table className="w-full text-xs">
-                                    <thead className="bg-secondary-50 border-b border-secondary-200">
+                            <div className="rounded-xl border border-secondary-200 dark:border-border overflow-hidden bg-white dark:bg-card shadow-sm">
+                                <table className="w-full text-[11px]">
+                                    <thead className="bg-secondary-50 dark:bg-secondary-900/50 border-b border-secondary-200 dark:border-border">
                                         <tr>
-                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Date</th>
-                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">From → To</th>
-                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Source</th>
-                                            <th className="text-left py-2 px-3 font-semibold text-secondary-600">Reference</th>
-                                            {showRevertAction && <th className="text-right py-2 px-3 font-semibold text-secondary-600 w-20">Action</th>}
+                                            <th className="text-left py-2.5 px-4 font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap">Date</th>
+                                            <th className="text-left py-2.5 px-4 font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap">From → To</th>
+                                            <th className="text-left py-2.5 px-4 font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap">Source</th>
+                                            <th className="text-left py-2.5 px-4 font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap">Reference</th>
+                                            {showRevertAction && <th className="text-right py-2.5 px-4 font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest whitespace-nowrap w-24">Action</th>}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-secondary-100">
+                                    <tbody className="divide-y divide-secondary-100 dark:divide-secondary-800">
                                         {nameHistory.map((h) => (
-                                            <tr key={h.id} className="hover:bg-secondary-50/50">
-                                                <td className="py-2 px-3 text-secondary-700">{formatDateTime(h.createdAt)}</td>
-                                                <td className="py-2 px-3 font-medium">{h.oldName} → {h.newName}</td>
-                                                <td className="py-2 px-3 text-secondary-600">{h.source ?? h.changeType ?? "—"}</td>
-                                                <td className="py-2 px-3 text-secondary-600">{[h.jobWorkNo, h.inwardNo, h.qcNo].filter(Boolean).join(" / ") || "—"}</td>
+                                            <tr key={h.id} className="hover:bg-secondary-50/50 dark:hover:bg-secondary-900/40 transition-colors">
+                                                <td className="py-2.5 px-4 text-secondary-500 dark:text-secondary-400 font-bold tabular-nums italic">{formatDateTime(h.createdAt)}</td>
+                                                <td className="py-2.5 px-4 font-black text-secondary-900 dark:text-secondary-100 uppercase tracking-tight">{h.oldName} → {h.newName}</td>
+                                                <td className="py-2.5 px-4 text-secondary-600 dark:text-secondary-400 font-bold italic">{h.source ?? h.changeType ?? "—"}</td>
+                                                <td className="py-2.5 px-4 text-secondary-500 dark:text-secondary-500 font-bold tabular-nums">{[h.jobWorkNo, h.inwardNo, h.qcNo].filter(Boolean).join(" / ") || "—"}</td>
                                                 {showRevertAction && (
                                                     <td className="py-2 px-3 text-right">
                                                         {h.canRevert ? (
@@ -449,11 +473,11 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-7 text-primary-600 hover:bg-primary-50"
+                                                                className="h-7 text-primary-600 dark:text-primary-400 font-black uppercase tracking-widest text-[9px] hover:bg-primary-50 dark:hover:bg-primary-900/30"
                                                                 onClick={() => revertMutation.mutate(h.id)}
                                                                 disabled={revertMutation.isPending}
                                                             >
-                                                                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                                                                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                                                                 Revert
                                                             </Button>
                                                         ) : (
@@ -471,12 +495,15 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                 )}
                 </fieldset>
 
-                <div className="flex gap-4 pt-4 border-t border-secondary-100">
+                <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={onClose}
-                        className={`${isReadOnly ? "w-full" : "flex-1"} border-secondary-300 text-secondary-700 font-bold h-11 hover:bg-secondary-50 transition-all active:scale-95`}
+                        className={cn(
+                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
+                            isReadOnly ? "w-full" : "flex-1"
+                        )}
                     >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
@@ -485,7 +512,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                         <Button
                             type="submit"
                             disabled={isLoading || submitting}
-                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold h-11 shadow-md transition-all active:scale-95"
+                            className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-black uppercase tracking-widest text-[10px] h-12 rounded-xl shadow-lg shadow-primary-200 dark:shadow-none transition-all active:scale-95 disabled:scale-100"
                         >
                             {isLoading || submitting ? (
                                 <div className="flex items-center gap-2">
@@ -495,7 +522,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save
+                                    Save Master
                                 </div>
                             )}
                         </Button>
