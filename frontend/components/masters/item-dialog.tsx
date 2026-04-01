@@ -198,7 +198,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="mainPartName" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="mainPartName" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Main Die/Part Name <span className="text-rose-500">*</span>
                             </Label>
                             <Autocomplete
@@ -214,7 +214,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.mainPartName && <p className="text-sm text-red-600 mt-1 uppercase text-[10px] font-bold">{errors.mainPartName.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="currentName" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="currentName" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Display Name <span className="text-rose-500">*</span>
                             </Label>
                             <Autocomplete
@@ -238,7 +238,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="itemTypeId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="itemTypeId" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Asset Type <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
@@ -253,7 +253,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.itemTypeId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.itemTypeId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="drawingNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Drawing Number</Label>
+                            <Label htmlFor="drawingNo" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Drawing Number</Label>
                             <Autocomplete
                                 id="drawingNo"
                                 value={watchedDrawingNo || ""}
@@ -270,7 +270,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="revisionNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Revision</Label>
+                            <Label htmlFor="revisionNo" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Revision</Label>
                             <div className="relative group">
                                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                                 <Input id="revisionNo" {...register("revisionNo")} className="h-11 pl-10 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="0" />
@@ -280,7 +280,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="materialId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="materialId" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Construction Material <span className="text-rose-500">*</span>
                             </Label>
                             <SearchableSelect
@@ -293,7 +293,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.materialId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.materialId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="ownerTypeId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="ownerTypeId" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Asset Ownership <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
@@ -308,7 +308,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             {errors.ownerTypeId && <p className="text-xs text-rose-500 mt-1 font-medium">{errors.ownerTypeId.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="statusId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
+                            <Label htmlFor="statusId" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
                                 Functional Status <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
@@ -393,7 +393,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                         )}
                         {holderType === HolderType.Vendor && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-left-4 duration-300">
-                                <Label htmlFor="currentPartyId" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">External Vendor</Label>
+                                <Label htmlFor="currentPartyId" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">External Vendor</Label>
                                 <SearchableSelect
                                     options={parties.map((p: any) => ({ value: p.id, label: p.name }))}
                                     value={currentPartyId || ""}
@@ -431,8 +431,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     isActive ? "translate-x-5 scale-105" : "translate-x-0"
                                 )}></div>
                             </div>
-                            <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                                Active Production Status
+                            <span className="text-xs font-black text-secondary-700 dark:text-white uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                Active
                             </span>
                         </label>
                     </div>
@@ -443,7 +443,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                     <div className="space-y-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
                         <div className="flex items-center gap-2.5 px-1">
                             <History className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-secondary-100 uppercase tracking-widest leading-none">Display Name History</h4>
+                            <h4 className="text-[11px] font-black text-secondary-900 dark:text-white uppercase tracking-widest leading-none">Display Name History</h4>
                         </div>
                         {nameHistory.length === 0 ? (
                             <p className="text-xs text-secondary-500 italic">No display name changes recorded.</p>
@@ -522,7 +522,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save Master
+                                    {item ? "Update" : "Save"}
                                 </div>
                             )}
                         </Button>

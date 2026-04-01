@@ -322,8 +322,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 min-w-0 flex-shrink-0">
                         <div className="sm:col-span-8 space-y-2 min-w-0">
-                            <Label htmlFor="company-name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">
-                                Legal Company Name <span className="text-rose-500">*</span>
+                            <Label htmlFor="company-name" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">
+                                Name <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative group">
                                 <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
@@ -337,7 +337,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                             {errors.name && <p className="text-xs text-rose-500 mt-0.5 font-medium">{errors.name.message}</p>}
                         </div>
                         <div className="sm:col-span-4 space-y-2 min-w-0">
-                            <Label className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Company Logo</Label>
+                            <Label className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Logo</Label>
                             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleLogoSelect} />
                             <div
                                 onDragOver={(e) => {
@@ -400,7 +400,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                     </div>
 
                     <div className="space-y-2 min-w-0 flex-shrink-0">
-                        <Label htmlFor="company-address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Legal Registered Address <span className="text-rose-500">*</span></Label>
+                        <Label htmlFor="company-address" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Address <span className="text-rose-500">*</span></Label>
                         <div className="relative group">
                             <MapPin className="absolute left-3.5 top-3 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                             <Textarea
@@ -416,7 +416,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0 flex-shrink-0 pb-1">
                         <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-gst" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">GST Identification Number <span className="text-rose-500">*</span></Label>
+                            <Label htmlFor="company-gst" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">GST Number <span className="text-rose-500">*</span></Label>
                             <div className="relative group">
                                 <FileDigit className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
                                 <Input
@@ -465,7 +465,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                             )}
                         </div>
                         <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-gst-date" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Registration Date <span className="text-rose-500">*</span></Label>
+                            <Label htmlFor="company-gst-date" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">GST Date <span className="text-rose-500">*</span></Label>
                             <Controller
                                 control={control}
                                 name="gstDate"
@@ -493,21 +493,21 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
 
                     <div className="grid grid-cols-3 gap-6 min-w-0 flex-shrink-0">
                         <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-state" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">State</Label>
+                            <Label htmlFor="company-state" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">State</Label>
                             <Input id="company-state" {...register("state")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. Gujarat" />
                         </div>
                         <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-city" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">City</Label>
+                            <Label htmlFor="company-city" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">City</Label>
                             <Input id="company-city" {...register("city")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. Ahmedabad" />
                         </div>
                         <div className="space-y-2 min-w-0">
-                            <Label htmlFor="company-pincode" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Pincode</Label>
+                            <Label htmlFor="company-pincode" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Pincode</Label>
                             <Input id="company-pincode" {...register("pincode")} className="h-11 border-secondary-200 dark:border-border bg-white dark:bg-card shadow-sm focus:ring-primary-500/10 text-sm font-bold tracking-tight" placeholder="e.g. 382405" />
                         </div>
                     </div>
 
                     <div className="space-y-2 min-w-0 flex-shrink-0">
-                        <Label htmlFor="theme-color" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1">Company Branding Palette</Label>
+                        <Label htmlFor="theme-color" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1">Company Branding Palette</Label>
                         <div className="flex gap-4">
                             <input
                                 type="color"
@@ -529,7 +529,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                     {useAsParty && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0 flex-shrink-0 bg-primary-50/30 dark:bg-primary-950/20 p-5 rounded-2xl border border-primary-100/30 dark:border-primary-800/30 shadow-inner group/party animate-in fade-in slide-in-from-top-4 duration-300">
                             <div className="space-y-2 min-w-0">
-                                <Label htmlFor="contact-person" className="text-[11px] font-black text-primary-700 dark:text-primary-400 uppercase tracking-widest leading-none block ml-1">Direct Contact Person <span className="text-rose-500">*</span></Label>
+                                <Label htmlFor="contact-person" className="text-[11px] font-black text-primary-700 dark:text-white uppercase tracking-widest leading-none block ml-1">Contact Person <span className="text-rose-500">*</span></Label>
                                 <div className="relative group/input">
                                     <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 dark:text-primary-500 group-focus-within/input:text-primary-600 transition-colors" />
                                     <Input
@@ -545,7 +545,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                 {errors.contactPerson && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.contactPerson.message}</p>}
                             </div>
                             <div className="space-y-2 min-w-0">
-                                <Label htmlFor="contact-number" className="text-[11px] font-black text-primary-700 dark:text-primary-400 uppercase tracking-widest leading-none block ml-1">Secure Contact Number <span className="text-rose-500">*</span></Label>
+                                <Label htmlFor="contact-number" className="text-[11px] font-black text-primary-700 dark:text-white uppercase tracking-widest leading-none block ml-1">Contact Number <span className="text-rose-500">*</span></Label>
                                 <div className="relative group/input">
                                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 dark:text-primary-500 group-focus-within/input:text-primary-600 transition-colors" />
                                     <Input
@@ -601,8 +601,8 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                     )}></div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest leading-none mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                                        Enable Transaction Entry Capability
+                                    <span className="text-xs font-black text-secondary-700 dark:text-white uppercase tracking-widest leading-none mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                        Use As Party
                                     </span>
                                     <span className="text-[10px] text-secondary-400 dark:text-secondary-500 font-bold uppercase tracking-tight leading-none italic">Allows company to be referenced in job-work or purchase modules</span>
                                 </div>
@@ -629,7 +629,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                                             isActive ? "translate-x-5 scale-105" : "translate-x-0"
                                         )}></div>
                                     </div>
-                                    <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                    <span className="text-xs font-black text-secondary-700 dark:text-white uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                                         Mark as Active Master Record
                                     </span>
                                 </label>
@@ -666,7 +666,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save Corporate Profile
+                                    {item ? "Update" : "Save"}
                                 </div>
                             )}
                         </Button>

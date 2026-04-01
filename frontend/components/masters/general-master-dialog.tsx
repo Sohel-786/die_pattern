@@ -149,7 +149,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save Record
+                                    {item ? "Update" : "Save"}
                                 </div>
                             )}
                         </Button>

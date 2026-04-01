@@ -143,7 +143,7 @@ export function ItemChangeDialog({ isOpen, onClose, onSubmit, item, isLoading }:
                         disabled={isLoading}
                         className="flex-[1.5] bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-widest text-[11px] h-12 rounded-xl shadow-lg shadow-amber-500/20 dark:shadow-none transition-all active:scale-95 disabled:scale-100 italic"
                     >
-                        {isLoading ? "Processing..." : "Finish Change Process"}
+                        {isLoading ? "Updating..." : "Update"}
                     </Button>
                     <Button
                         type="button"

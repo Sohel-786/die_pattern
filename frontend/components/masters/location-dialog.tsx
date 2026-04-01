@@ -85,8 +85,8 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
             >
                 {/* Parent Company */}
                 <div className="space-y-2">
-                    <Label className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                        Parent Corporate Entity <span className="text-rose-500">*</span>
+                    <Label className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Company <span className="text-rose-500">*</span>
                     </Label>
                     <div className="relative group">
                         <SearchableSelect
@@ -112,8 +112,8 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
 
                 {/* Location Name */}
                 <div className="space-y-2">
-                    <Label htmlFor="location-name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                        Location Identifier / Code <span className="text-rose-500">*</span>
+                    <Label htmlFor="location-name" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Location Name <span className="text-rose-500">*</span>
                     </Label>
                     <div className="relative group">
                         <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400 dark:text-secondary-500 group-focus-within:text-primary-500 transition-colors" />
@@ -130,8 +130,8 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
 
                 {/* Address */}
                 <div className="space-y-2">
-                    <Label htmlFor="location-address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                        Complete Address <span className="text-rose-500">*</span>
+                    <Label htmlFor="location-address" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                        Address <span className="text-rose-500">*</span>
                     </Label>
                     <Textarea
                         id="location-address"
@@ -163,14 +163,23 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
                                 isActive ? "translate-x-5 scale-105" : "translate-x-0"
                             )} />
                         </button>
-                        <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none">
-                            {isActive ? "Location Active" : "Location Inactive"}
+                        <span className="text-xs font-black text-secondary-700 dark:text-white uppercase tracking-widest select-none">
+                            Active
                         </span>
                     </div>
                 )}
 
                 {/* Actions */}
                 <div className="flex gap-4 pt-6 border-t border-secondary-100 dark:border-secondary-800">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        className="flex-1 border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95"
+                    >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                    </Button>
                     {!isReadOnly && (
                         <Button
                             type="submit"
@@ -185,25 +194,11 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
                             ) : (
                                 <span className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    {item ? "Update Location Profile" : "Register Location"}
+                                    {item ? "Update" : "Save"}
                                 </span>
                             )}
                         </Button>
-                    ) || (
-                        <div className="hidden" />
                     )}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onClose}
-                        className={cn(
-                            "border-secondary-300 dark:border-secondary-800 text-secondary-700 dark:text-secondary-400 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl transition-all hover:bg-secondary-50 dark:hover:bg-secondary-900 active:scale-95",
-                            isReadOnly ? "w-full" : "flex-[0.5]"
-                        )}
-                    >
-                        <X className="w-4 h-4 mr-2" />
-                        Cancel
-                    </Button>
                 </div>
             </form>
         </Dialog>

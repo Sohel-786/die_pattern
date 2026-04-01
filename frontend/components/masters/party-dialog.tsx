@@ -178,8 +178,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                 <div className="space-y-4">
                     {/* Party Name - full width */}
                     <div className="space-y-2">
-                        <Label htmlFor="name" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                            Legal Registered Name <span className="text-rose-500">*</span>
+                        <Label htmlFor="name" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                            Name <span className="text-rose-500">*</span>
                         </Label>
                         <Autocomplete
                             id="name"
@@ -199,8 +199,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                     {/* Contact Person, Contact No., Email */}
                     <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="contactPerson" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                                Point of Contact <span className="text-rose-500">*</span>
+                            <Label htmlFor="contactPerson" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                                Contact Person <span className="text-rose-500">*</span>
                             </Label>
                             <Input
                                 id="contactPerson"
@@ -212,8 +212,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             {errors.contactPerson && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.contactPerson.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="phoneNumber" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                                Secure Mobile <span className="text-rose-500">*</span>
+                            <Label htmlFor="phoneNumber" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                                Contact Number <span className="text-rose-500">*</span>
                             </Label>
                             <Input
                                 id="phoneNumber"
@@ -246,7 +246,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.phoneNumber.message}</p>}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">Company Email</Label>
+                            <Label htmlFor="email" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">Email</Label>
                             <Input
                                 id="email"
                                 {...register("email")}
@@ -260,8 +260,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
 
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="gstNo" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                                GST Identification <span className="text-rose-500">*</span>
+                            <Label htmlFor="gstNo" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                                GST Number <span className="text-rose-500">*</span>
                             </Label>
                             <div className="relative">
                                 <Input
@@ -326,8 +326,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="gstDate" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                                Registration Date <span className="text-rose-500">*</span>
+                            <Label htmlFor="gstDate" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                                GST Date <span className="text-rose-500">*</span>
                             </Label>
                             <Controller
                                 control={control}
@@ -362,8 +362,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
 
                     {/* Row 5: Address - full width */}
                     <div className="space-y-2">
-                        <Label htmlFor="address" className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none block ml-1 mb-1">
-                            Registered Office Address <span className="text-rose-500">*</span>
+                        <Label htmlFor="address" className="text-[11px] font-black text-secondary-500 dark:text-white uppercase tracking-widest leading-none block ml-1 mb-1">
+                            Address <span className="text-rose-500">*</span>
                         </Label>
                         <Textarea
                             id="address"
@@ -402,8 +402,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         isActive ? "translate-x-5 scale-105" : "translate-x-0"
                                     )}></div>
                                 </div>
-                                <span className="text-xs font-black text-secondary-700 dark:text-secondary-300 uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                                    Mark as Active Master Record
+                                <span className="text-xs font-black text-secondary-700 dark:text-white uppercase tracking-widest select-none group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                    Active
                                 </span>
                             </label>
                         </div>
@@ -437,7 +437,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             ) : (
                                 <div className="flex items-center gap-2">
                                     <Save className="w-4 h-4" />
-                                    Save Party Profile
+                                    {party ? "Update" : "Save"}
                                 </div>
                             )}
                         </Button>
