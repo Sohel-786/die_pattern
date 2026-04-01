@@ -66,6 +66,13 @@ export function PurchaseOrderDialog({
   const isReadOnly = !!readOnly || (isEditing && (po?.isActive === false || po?.status !== PoStatus.Pending));
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    if (open) {
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders", "approved-items-for-edit"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-indents"] });
+    }
+  }, [open, queryClient]);
+
   const [vendorId, setVendorId] = useState<number>(0);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -524,7 +531,7 @@ export function PurchaseOrderDialog({
       title={isEditing ? "Edit Purchase Order" : "Purchase Order"}
       size="full"
       contentScroll={false}
-      className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col"
+      className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col"
     >
       <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
         {loadingPO && isEditing ? (

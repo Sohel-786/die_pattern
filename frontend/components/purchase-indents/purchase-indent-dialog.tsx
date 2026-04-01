@@ -187,7 +187,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             title={isEditing ? "Edit Purchase Indent" : "Purchase Indent"}
             size="full"
             contentScroll={false}
-            className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col"
+            className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col"
         >
             <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">

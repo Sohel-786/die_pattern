@@ -269,7 +269,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             title={isEditing ? "Edit QC Entry" : "New QC Entry"}
             size="full"
             contentScroll={false}
-            className="overflow-hidden border-none shadow-2xl flex flex-col"
+            className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl flex flex-col"
         >
             <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 {isEditing && !qcDetail ? (

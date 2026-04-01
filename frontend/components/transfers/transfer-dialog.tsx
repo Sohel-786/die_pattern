@@ -340,7 +340,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                 title={isEditing ? `Transfer: ${transfer?.transferNo}` : "New Transfer Entry"}
                 size="full"
                 contentScroll={false}
-                className="overflow-hidden border-none shadow-2xl flex flex-col h-[94vh] max-h-[94vh]"
+                className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl flex flex-col h-[94vh] max-h-[94vh]"
             >
                 <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-5 py-3 gap-3 overflow-y-auto">

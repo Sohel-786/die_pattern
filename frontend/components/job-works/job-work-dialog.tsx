@@ -280,7 +280,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 title={isEditing ? "Edit Job Work Entry" : "New Job Work Entry"}
                 size="full"
                 contentScroll={false}
-                className="overflow-hidden border-none shadow-2xl max-h-[90vh] flex flex-col font-sans"
+                className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col font-sans"
             >
                 <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4 overflow-y-auto">

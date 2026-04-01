@@ -92,7 +92,7 @@ export function PiSelectionDialog({
         >
             <div className="flex flex-col max-h-[70vh]">
                 {/* Search Bar */}
-                <div className="px-6 py-4 border-b border-secondary-200 bg-secondary-50">
+                <div className="px-6 py-4 border-b border-secondary-200 dark:border-border bg-secondary-50 dark:bg-card">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-5 h-5" />
                         <Input
@@ -100,7 +100,7 @@ export function PiSelectionDialog({
                             placeholder="Search by PI No, requester, or remarks..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-11 border-secondary-200 focus:ring-primary-500/20"
+                            className="pl-10 h-11 border-secondary-200 dark:border-border dark:bg-background focus:ring-primary-500/20"
                         />
                     </div>
                 </div>
@@ -114,9 +114,10 @@ export function PiSelectionDialog({
                             <p className="text-sm">Only approved indents that are not yet in a PO (or have pending items) will be shown here.</p>
                         </div>
                     ) : (
-                        <table className="w-full">
-                            <thead className="sticky top-0 bg-white border-b border-secondary-200 z-10">
-                                <tr className="text-left text-[10px] font-black text-secondary-500 uppercase tracking-widest">
+                        <div className="border border-secondary-200 dark:border-border rounded-lg overflow-hidden bg-white dark:bg-card">
+                            <table className="w-full">
+                            <thead className="sticky top-0 bg-white dark:bg-card border-b border-secondary-200 dark:border-border z-10">
+                                <tr className="text-left text-[10px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                     <th className="px-4 py-3 w-12">Select</th>
                                     <th className="px-4 py-3">Indent Details</th>
                                     <th className="px-4 py-3">Requester</th>
@@ -125,7 +126,7 @@ export function PiSelectionDialog({
                                     <th className="px-4 py-3 text-right">Items</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-secondary-100">
+                            <tbody className="divide-y divide-secondary-100 dark:divide-border">
                                 {filteredPIs.map((pi) => {
                                     const isApproved = pi.status === PurchaseIndentStatus.Approved;
                                     const isSelected = tempSelectedIds.includes(pi.id);
@@ -135,10 +136,10 @@ export function PiSelectionDialog({
                                             key={pi.id}
                                             onClick={() => isApproved && toggleSelection(pi)}
                                             className={cn(
-                                                "transition-all duration-200 border-transparent",
+                                                "group transition-all duration-200 border-transparent",
                                                 isApproved
-                                                    ? "hover:bg-primary-50 cursor-pointer"
-                                                    : "opacity-50 cursor-not-allowed bg-secondary-50/50"
+                                                    ? "hover:bg-primary-50 cursor-pointer text-secondary-900 dark:text-foreground"
+                                                    : "opacity-50 cursor-not-allowed bg-secondary-50/50 dark:bg-secondary-900/10 text-secondary-500 dark:text-secondary-400"
                                             )}
                                         >
                                             <td className="px-4 py-4">
@@ -150,21 +151,21 @@ export function PiSelectionDialog({
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-secondary-900 uppercase tracking-tight">{pi.piNo}</span>
+                                                    <span className="text-sm font-black text-secondary-900 dark:text-foreground group-hover:text-black dark:group-hover:text-black uppercase tracking-tight">{pi.piNo}</span>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         {selectedPiIds.includes(pi.id) && (
-                                                            <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                            <span className="text-[10px] font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                                                                 Already Added
                                                             </span>
                                                         )}
                                                         {pi.remarks && (
-                                                            <p className="text-[10px] text-secondary-500 line-clamp-1 font-medium">{pi.remarks}</p>
+                                                            <p className="text-[10px] text-secondary-500 dark:text-secondary-400 group-hover:text-black dark:group-hover:text-black line-clamp-1 font-medium">{pi.remarks}</p>
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-sm font-bold text-secondary-700">{pi.creatorName}</td>
-                                            <td className="px-4 py-4 text-sm text-secondary-500">{formatDateTime(pi.createdAt)}</td>
+                                            <td className="px-4 py-4 text-sm font-bold text-secondary-900 dark:text-foreground group-hover:text-black dark:group-hover:text-black">{pi.creatorName}</td>
+                                            <td className="px-4 py-4 text-sm text-secondary-600 dark:text-secondary-400 group-hover:text-black dark:group-hover:text-black">{formatDateTime(pi.createdAt)}</td>
                                             <td className="px-4 py-4">
                                                 <span className={cn(
                                                     "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",
@@ -174,7 +175,7 @@ export function PiSelectionDialog({
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-right">
-                                                <span className="text-xs font-black text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">
+                                                <span className="text-xs font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-1 rounded-lg">
                                                     {pi.items?.filter(it => availablePiItemIds.includes(it.id)).length || 0} / {pi.items?.length || 0}
                                                 </span>
                                             </td>
@@ -183,12 +184,13 @@ export function PiSelectionDialog({
                                 })}
                             </tbody>
                         </table>
+                        </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-secondary-200 bg-secondary-50 flex items-center justify-between">
-                    <p className="text-xs font-bold text-secondary-500 uppercase tracking-widest">
+                <div className="px-6 py-4 border-t border-secondary-200 dark:border-border bg-secondary-50 dark:bg-card flex items-center justify-between">
+                    <p className="text-xs font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                         {tempSelectedIds.length} Indents Selected
                     </p>
                     <div className="flex gap-3">
