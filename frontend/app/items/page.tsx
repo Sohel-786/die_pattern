@@ -298,25 +298,25 @@ export default function ItemsPage() {
             <div className="flex items-center gap-1 p-1 bg-secondary-100/50 rounded-xl w-fit border border-secondary-200 shadow-inner">
                 <button
                     onClick={() => setTabState("all")}
-                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "all" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-colors border focus:outline-none focus:ring-0 ${tabState === "all" ? 'bg-white dark:bg-secondary-800 text-primary-600 shadow-sm border-secondary-200 dark:border-secondary-700' : 'text-secondary-500 hover:text-secondary-700 border-transparent hover:bg-secondary-200/20'}`}
                 >
                     All Assets
                 </button>
                 <button
                     onClick={() => setTabState("Die")}
-                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "Die" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-colors border focus:outline-none focus:ring-0 ${tabState === "Die" ? 'bg-white dark:bg-secondary-800 text-primary-600 shadow-sm border-secondary-200 dark:border-secondary-700' : 'text-secondary-500 hover:text-secondary-700 border-transparent hover:bg-secondary-200/20'}`}
                 >
                     Dies
                 </button>
                 <button
                     onClick={() => setTabState("Pattern")}
-                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all ${tabState === "Pattern" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-colors border focus:outline-none focus:ring-0 ${tabState === "Pattern" ? 'bg-white dark:bg-secondary-800 text-primary-600 shadow-sm border-secondary-200 dark:border-secondary-700' : 'text-secondary-500 hover:text-secondary-700 border-transparent hover:bg-secondary-200/20'}`}
                 >
                     Patterns
                 </button>
                 <button
                     onClick={() => setTabState("openingHistory")}
-                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${tabState === "openingHistory" ? 'bg-white text-primary-600 shadow-sm border border-secondary-200' : 'text-secondary-500 hover:text-secondary-700'}`}
+                    className={`px-6 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border focus:outline-none focus:ring-0 ${tabState === "openingHistory" ? 'bg-white dark:bg-secondary-800 text-primary-600 shadow-sm border-secondary-200 dark:border-secondary-700' : 'text-secondary-500 hover:text-secondary-700 border-transparent hover:bg-secondary-200/20'}`}
                 >
                     <History className="w-3.5 h-3.5" />
                     Opening History
