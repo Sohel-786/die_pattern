@@ -151,7 +151,7 @@ export function PiSelectionDialog({
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-secondary-900 dark:text-foreground group-hover:text-black dark:group-hover:text-black uppercase tracking-tight">{pi.piNo}</span>
+                                                    <span className="text-sm font-black text-secondary-900 dark:text-white group-hover:text-black dark:group-hover:text-white uppercase tracking-tight">{pi.piNo}</span>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         {selectedPiIds.includes(pi.id) && (
                                                             <span className="text-[10px] font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-tighter">
@@ -159,13 +159,13 @@ export function PiSelectionDialog({
                                                             </span>
                                                         )}
                                                         {pi.remarks && (
-                                                            <p className="text-[10px] text-secondary-500 dark:text-secondary-400 group-hover:text-black dark:group-hover:text-black line-clamp-1 font-medium">{pi.remarks}</p>
+                                                            <p className="text-[10px] text-secondary-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-gray-200 line-clamp-1 font-medium">{pi.remarks}</p>
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-sm font-bold text-secondary-900 dark:text-foreground group-hover:text-black dark:group-hover:text-black">{pi.creatorName}</td>
-                                            <td className="px-4 py-4 text-sm text-secondary-600 dark:text-secondary-400 group-hover:text-black dark:group-hover:text-black">{formatDateTime(pi.createdAt)}</td>
+                                            <td className="px-4 py-4 text-sm font-bold text-secondary-900 dark:text-white group-hover:text-black dark:group-hover:text-white">{pi.creatorName}</td>
+                                            <td className="px-4 py-4 text-sm text-secondary-600 dark:text-gray-300 group-hover:text-black dark:group-hover:text-gray-100">{formatDateTime(pi.createdAt)}</td>
                                             <td className="px-4 py-4">
                                                 <span className={cn(
                                                     "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter",

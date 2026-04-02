@@ -165,18 +165,19 @@ export default function InwardsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={9} className="h-16 px-6 text-center">
-                                            <div className="h-4 bg-secondary-100 dark:bg-secondary-800 rounded-full w-full max-w-sm mx-auto" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                <TableRow className="border-0 hover:bg-transparent">
+                                    <TableCell colSpan={9} className="h-64 text-center border-0">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="w-8 h-8 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+                                            <p className="text-xs font-medium text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">Loading...</p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             ) : inwards.length > 0 ? (
                                 inwards.map((i, idx) => (
                                     <Fragment key={i.id}><TableRow
                                              className={cn(
-                                                 "border-b border-secondary-100 dark:border-secondary-800 transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                 "border-b border-secondary-100 dark:border-border transition-all font-sans whitespace-nowrap group cursor-pointer",
                                                  expandedInwardId === i.id ? "bg-primary-50/60 dark:bg-primary-900/30 dark:border-transparent" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
                                                  !i.isActive && "bg-secondary-50/50 dark:bg-secondary-900/40 opacity-75"
                                              )}
@@ -213,7 +214,7 @@ export default function InwardsPage() {
                                             <TableCell className="px-4 py-3 text-center">
                                                 <span className={cn(
                                                     "inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm",
-                                                    i.isActive !== false ? "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/50" : "bg-secondary-100 dark:bg-secondary-900/40 text-secondary-600 dark:text-secondary-400 border-secondary-200 dark:border-secondary-800"
+                                                    i.isActive !== false ? "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/50" : "bg-secondary-100 dark:bg-secondary-900/40 text-secondary-600 dark:text-secondary-400 border-secondary-200 dark:border-border"
                                                 )}>
                                                     {i.isActive !== false ? "Active" : "Inactive"}
                                                 </span>
@@ -260,7 +261,7 @@ export default function InwardsPage() {
 
                                         <AnimatePresence>
                                             {expandedInwardId === i.id && (
-                                                <TableRow key={`expand-${i.id}`} className="hover:bg-transparent border-b border-secondary-100 dark:border-secondary-800">
+                                                <TableRow key={`expand-${i.id}`} className="hover:bg-transparent border-b border-secondary-100 dark:border-border">
                                                     <td colSpan={9} className="p-0 border-none max-w-0">
                                                         <motion.div
                                                             initial={{ height: 0, opacity: 0 }}
@@ -320,7 +321,7 @@ export default function InwardsPage() {
                                                                             </TableHeader>
                                                                             <TableBody>
                                                                                 {i.lines?.map((line, lidx) => (
-                                                                                    <TableRow key={lidx} className="border-b border-secondary-100 dark:border-secondary-800 last:border-0 hover:bg-secondary-50/20 dark:hover:bg-secondary-900/20 text-nowrap">
+                                                                                    <TableRow key={lidx} className="border-b border-secondary-100 dark:border-border last:border-0 hover:bg-secondary-50/20 dark:hover:bg-secondary-900/20 text-nowrap">
                                                                                         <TableCell className="px-4 py-2 text-secondary-400 dark:text-secondary-500 font-medium text-[13px] text-center">{lidx + 1}</TableCell>
                                                                                         <TableCell className="px-4 py-2 text-primary-700 dark:text-primary-400 font-bold text-[13px]">{line.sourceRefDisplay || "—"}</TableCell>
                                                                                         <TableCell className="px-4 py-2 text-secondary-500 dark:!text-white/90 font-medium text-[11px]">

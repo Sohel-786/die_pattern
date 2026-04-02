@@ -119,15 +119,15 @@ export function TransferItemSelectionDialog({
                                 Clear batch
                             </Button>
                         </div>
-                        <div className="max-h-[160px] overflow-auto bg-white/50 dark:bg-card/50 backdrop-blur-sm">
+                        <div className="max-h-[160px] overflow-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-secondary-50/50 dark:bg-secondary-900/50 border-b border-primary-100 dark:border-primary-900">
-                                        <TableHead className="w-10 text-center text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">#</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Name</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Main Part</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap w-24">Type</TableHead>
-                                        <TableHead className="w-12 text-center text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Action</TableHead>
+                                    <TableRow className="bg-primary-50/50 dark:bg-primary-950/20 border-b border-primary-200 dark:border-primary-900">
+                                        <TableHead className="w-10 text-center text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">#</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Name</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Main Part</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap w-24">Type</TableHead>
+                                        <TableHead className="w-12 text-center text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -138,11 +138,11 @@ export function TransferItemSelectionDialog({
                                         >
                                             <td className="text-center text-secondary-400 dark:text-secondary-500 font-black text-[11px] py-2 tabular-nums">{idx + 1}</td>
                                             <td className="py-2">
-                                                <span className="font-bold text-secondary-900 text-xs uppercase tracking-tight">{item.currentName}</span>
+                                                <span className="font-bold text-secondary-900 dark:text-white text-xs uppercase tracking-tight">{item.currentName}</span>
                                             </td>
-                                            <td className="py-2 text-secondary-600 dark:text-secondary-400 font-bold text-xs uppercase tracking-tighter">{item.mainPartName}</td>
+                                            <td className="py-2 text-secondary-600 dark:text-gray-300 font-bold text-xs uppercase tracking-tighter">{item.mainPartName}</td>
                                             <td className="py-2">
-                                                <span className="text-secondary-500 dark:text-secondary-500 font-black text-[10px] uppercase tracking-widest">{item.itemTypeName}</span>
+                                                <span className="text-secondary-500 dark:text-gray-400 font-black text-[10px] uppercase tracking-widest">{item.itemTypeName}</span>
                                             </td>
                                             <td className="text-center py-1.5">
                                                 <Button
@@ -195,10 +195,10 @@ export function TransferItemSelectionDialog({
                             <Table>
                                 <TableHeader className="sticky top-0 bg-white dark:bg-secondary-900/90 z-10 border-b border-secondary-100 dark:border-border">
                                     <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-16 text-center text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Action</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Die/Pattern Name</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap">Main Part</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest whitespace-nowrap w-32">Specification</TableHead>
+                                        <TableHead className="w-16 text-center text-[10px] font-black uppercase text-secondary-400 dark:text-white tracking-widest whitespace-nowrap">Action</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-white tracking-widest whitespace-nowrap">Die/Pattern Name</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-white tracking-widest whitespace-nowrap">Main Part</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase text-secondary-400 dark:text-white tracking-widest whitespace-nowrap w-32">Specification</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -236,23 +236,23 @@ export function TransferItemSelectionDialog({
                                                     </td>
                                                     <td className="py-3">
                                                         <div className="flex flex-col">
-                                                            <span className={cn("font-bold text-[13px] transition-colors uppercase tracking-tight", inPending ? "text-primary-700 dark:text-primary-400 font-black" : "text-secondary-900")}>
+                                                            <span className={cn("font-bold text-[13px] transition-colors uppercase tracking-tight", inPending ? "text-primary-700 dark:text-white font-black" : "text-secondary-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-100")}>
                                                                 {item.currentName}
                                                             </span>
-                                                            <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest whitespace-nowrap">
+                                                            <span className="text-[10px] font-black text-secondary-400 dark:text-gray-400 uppercase tracking-widest whitespace-nowrap">
                                                                 {item.drawingNo || "No Drawing"}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td className="py-3">
-                                                        <span className="text-secondary-600 dark:text-secondary-400 font-bold text-[11px] uppercase tracking-wider">
+                                                        <span className="text-secondary-600 dark:text-gray-300 font-bold text-[11px] uppercase tracking-wider group-hover:text-secondary-800 dark:group-hover:text-white transition-colors">
                                                             {item.mainPartName}
                                                         </span>
                                                     </td>
                                                     <td className="py-3">
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="text-[10px] font-black text-secondary-500 dark:text-secondary-500 uppercase tracking-widest whitespace-nowrap">{item.itemTypeName}</span>
-                                                            <span className="text-[10px] font-bold text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">{item.materialName}</span>
+                                                            <span className="text-[10px] font-black text-secondary-500 dark:text-gray-400 uppercase tracking-widest whitespace-nowrap group-hover:text-secondary-700 dark:group-hover:text-gray-200 transition-colors">{item.itemTypeName}</span>
+                                                            <span className="text-[10px] font-bold text-secondary-400 dark:text-gray-500 uppercase tracking-widest group-hover:text-secondary-600 dark:group-hover:text-gray-300 transition-colors">{item.materialName}</span>
                                                         </div>
                                                     </td>
                                                 </TableRow>

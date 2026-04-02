@@ -260,20 +260,21 @@ export default function PurchaseIndentsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={isAdmin ? 9 : 8} className="h-16 px-6">
-                                            <div className="h-4 bg-secondary-100 rounded-full w-full" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                <TableRow className="border-0 hover:bg-transparent">
+                                    <TableCell colSpan={isAdmin ? 9 : 8} className="h-64 text-center border-0">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="w-8 h-8 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+                                            <p className="text-xs font-medium text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">Loading...</p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             ) : indents.length > 0 ? (
                                 indents.map((pi, idx) => (
                                     <Fragment key={pi.id}><TableRow
                                             key={pi.id}
                                             className={cn(
                                                 "transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                expandedPIId === pi.id ? "bg-primary-50/60 dark:bg-primary-900/30 border-none dark:border-transparent" : "border-b border-secondary-100 dark:border-secondary-800 hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
+                                                expandedPIId === pi.id ? "bg-primary-50/60 dark:bg-primary-900/30 border-none dark:border-transparent" : "border-b border-secondary-100 dark:border-border hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
                                                 !pi.isActive && "opacity-60 bg-secondary-50/30 dark:bg-secondary-900/40"
                                             )}
                                             onClick={() => setExpandedPIId(expandedPIId === pi.id ? null : pi.id)}

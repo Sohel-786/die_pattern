@@ -127,7 +127,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/returns') ||
     pathname.startsWith('/job-works') ||
     pathname.startsWith('/transfers') ||
-
+    pathname.startsWith('/quality-control') ||
     pathname.startsWith('/statuses') ||
     pathname.startsWith('/store-items');
 

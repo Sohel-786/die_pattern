@@ -258,13 +258,14 @@ export default function OtherMastersPage() {
                         </thead>
                         <tbody>
                             {currentLoading ? (
-                                [1, 2, 3].map((i) => (
-                                    <tr key={i} className="animate-pulse border-b border-secondary-100">
-                                        {Array(4).fill(0).map((_, j) => (
-                                            <td key={j} className="px-4 py-3"><div className="h-5 bg-secondary-100 rounded-lg w-full" /></td>
-                                        ))}
-                                    </tr>
-                                ))
+                                <tr className="border-0 hover:bg-transparent">
+                                    <td colSpan={4} className="h-64 text-center border-0">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="w-8 h-8 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+                                            <p className="text-xs font-medium text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">Loading...</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : filteredData.length > 0 ? (
                                 filteredData.map((item: any, idx: number) => (
                                     <tr

@@ -201,18 +201,19 @@ export default function QualityControlPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i} className="animate-pulse">
-                                        <TableCell colSpan={9} className="h-16 px-6 text-center">
-                                            <div className="h-4 bg-secondary-100 rounded-full w-full max-w-sm mx-auto" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                <TableRow className="border-0 hover:bg-transparent">
+                                    <TableCell colSpan={9} className="h-64 text-center border-0">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="w-8 h-8 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+                                            <p className="text-xs font-medium text-secondary-400 dark:text-secondary-500 uppercase tracking-widest">Loading...</p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             ) : qcs.length > 0 ? (
                                 qcs.map((q, idx) => (
                                     <Fragment key={q.id}><TableRow
                                             className={cn(
-                                                "border-b border-secondary-100 dark:border-secondary-800 transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                "border-b border-secondary-100 dark:border-border transition-all font-sans whitespace-nowrap group cursor-pointer",
                                                 expandedQcId === q.id ? "bg-primary-50/60 dark:bg-primary-900/30 dark:border-transparent" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
                                                 !q.isActive && "bg-secondary-50/50 dark:bg-secondary-900/40 opacity-75"
                                             )}
@@ -327,7 +328,7 @@ export default function QualityControlPage() {
                                                                     <div className="overflow-x-auto">
                                                                         <Table>
                                                                             <TableHeader>
-                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-secondary-800 hover:bg-transparent dark:hover:bg-transparent text-nowrap">
+                                                                                <TableRow className="bg-transparent dark:bg-transparent border-b border-secondary-100 dark:border-border hover:bg-transparent dark:hover:bg-transparent text-nowrap">
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider w-14 text-center">SR.</TableHead>
                                                                                     <TableHead className="h-9 px-4 text-[10px] font-black uppercase text-secondary-500 dark:!text-white tracking-wider">
                                                                                         {q.sourceType === InwardSourceType.PO ? "PO NO." : "JW NO."}

@@ -169,11 +169,11 @@ export function PiItemSelectionDialog({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-primary-50/50 dark:bg-primary-950/20 border-b border-primary-200 dark:border-primary-900">
-                    <TableHead className="w-10 text-center text-[10px] font-black uppercase text-primary-800 dark:text-primary-400 tracking-widest whitespace-nowrap">#</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-primary-400 tracking-widest whitespace-nowrap">Name</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-primary-400 tracking-widest whitespace-nowrap">Main Part</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-primary-400 tracking-widest whitespace-nowrap w-40">Type</TableHead>
-                    <TableHead className="w-16 text-center text-[10px] font-black uppercase text-primary-800 dark:text-primary-400 tracking-widest whitespace-nowrap">Remove</TableHead>
+                    <TableHead className="w-10 text-center text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">#</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Name</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Main Part</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap w-40">Type</TableHead>
+                    <TableHead className="w-16 text-center text-[10px] font-black uppercase text-primary-800 dark:text-white tracking-widest whitespace-nowrap">Remove</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -186,10 +186,10 @@ export function PiItemSelectionDialog({
                         {idx + 1}
                       </TableCell>
                       <TableCell className="py-2.5">
-                        <span className="font-bold text-secondary-900 text-[13px] uppercase tracking-tight">{item.currentName ?? "—"}</span>
+                        <span className="font-bold text-secondary-900 dark:text-white text-[13px] uppercase tracking-tight">{item.currentName ?? "—"}</span>
                       </TableCell>
-                      <TableCell className="py-2.5 text-secondary-600 dark:text-secondary-400 font-bold text-[11px] uppercase tracking-wider">{item.mainPartName ?? "—"}</TableCell>
-                      <TableCell className="py-2.5 text-secondary-600 dark:text-secondary-500 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">{item.itemTypeName ?? "—"}</TableCell>
+                      <TableCell className="py-2.5 text-secondary-600 dark:text-gray-300 font-bold text-[11px] uppercase tracking-wider">{item.mainPartName ?? "—"}</TableCell>
+                      <TableCell className="py-2.5 text-secondary-600 dark:text-gray-400 font-bold text-[10px] uppercase tracking-widest whitespace-nowrap">{item.itemTypeName ?? "—"}</TableCell>
                       <TableCell className="text-center py-2">
                         <Button
                           type="button"
@@ -234,9 +234,9 @@ export function PiItemSelectionDialog({
                 <TableHeader>
                   <TableRow className="bg-secondary-50 dark:bg-secondary-900/80 border-b border-secondary-200 dark:border-border sticky top-0 z-10">
                     <TableHead className="w-16 text-center text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Action</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Name</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap">Main Part</TableHead>
-                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-secondary-400 tracking-widest whitespace-nowrap w-40">Type</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-white tracking-widest whitespace-nowrap">Name</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-white tracking-widest whitespace-nowrap">Main Part</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-secondary-500 dark:text-white tracking-widest whitespace-nowrap w-40">Type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,13 +295,13 @@ export function PiItemSelectionDialog({
                             )}
                           </TableCell>
                           <TableCell className="py-2.5">
-                            <span className="font-bold text-secondary-900 text-[13px] uppercase tracking-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{item.currentName ?? "—"}</span>
+                            <span className="font-bold text-secondary-900 dark:text-white text-[13px] uppercase tracking-tight group-hover:text-primary-600 dark:group-hover:text-white transition-colors">{item.currentName ?? "—"}</span>
                           </TableCell>
                           <TableCell className="py-2.5">
-                            <span className="text-secondary-600 dark:text-secondary-400 font-bold text-[11px] uppercase tracking-wider">{item.mainPartName ?? "—"}</span>
+                            <span className="text-secondary-600 dark:text-gray-300 font-bold text-[11px] uppercase tracking-wider group-hover:text-secondary-900 dark:group-hover:text-white transition-colors">{item.mainPartName ?? "—"}</span>
                           </TableCell>
                           <TableCell className="py-2.5">
-                            <span className="text-secondary-600 dark:text-secondary-500 font-bold text-[10px] uppercase tracking-widest">{item.itemTypeName ?? "—"}</span>
+                            <span className="text-secondary-600 dark:text-gray-400 font-bold text-[10px] uppercase tracking-widest group-hover:text-secondary-800 dark:group-hover:text-gray-200 transition-colors">{item.itemTypeName ?? "—"}</span>
                           </TableCell>
                         </TableRow>
                       );
