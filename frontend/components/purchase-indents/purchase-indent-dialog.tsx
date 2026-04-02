@@ -198,12 +198,12 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <Input
                                 value={nextPiCode}
                                 readOnly
-                                className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold dark:text-foreground"
+                                className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold dark:text-white"
                             />
                         </div>
                         <div className="col-span-2">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PI Date</Label>
-                            <div className="h-9 mt-0.5 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm text-secondary-700 dark:text-secondary-300">
+                            <div className="h-9 mt-0.5 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm text-secondary-700 dark:text-white">
                                 {formatDate(indent?.createdAt ?? new Date())}
                             </div>
                         </div>
@@ -314,7 +314,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                                                             <span className="text-xs text-secondary-500 dark:text-secondary-500 truncate">{item.mainPartName}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 whitespace-nowrap">{item.itemTypeName ?? "—"}</td>
+                                                    <td className="py-2.5 px-3 text-secondary-700 dark:text-white whitespace-nowrap">{item.itemTypeName ?? "—"}</td>
                                                     <td className="py-2.5 px-3 text-right">
                                                         <Button
                                                             variant="ghost"

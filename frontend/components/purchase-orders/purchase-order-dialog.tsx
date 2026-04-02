@@ -545,11 +545,11 @@ export function PurchaseOrderDialog({
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PO No.</Label>
-                  <Input value={nextPoCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold" />
+                  <Input value={nextPoCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-semibold dark:text-white" />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">PO Date</Label>
-                  <Input value={formatDate(isEditing && poData?.createdAt ? poData.createdAt : new Date())} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm" />
+                  <Input value={formatDate(isEditing && poData?.createdAt ? poData.createdAt : new Date())} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm dark:text-white" />
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>
@@ -723,14 +723,14 @@ export function PurchaseOrderDialog({
                                   <span className="text-xs text-secondary-500 truncate">{display.mainPartName}</span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-secondary-700 whitespace-nowrap">{display.itemTypeName ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-secondary-700 dark:text-white whitespace-nowrap">{display.itemTypeName ?? "—"}</td>
                               <td className="py-2.5 px-3">
                                 <div className="flex flex-col min-w-0">
-                                  <span className="font-medium text-secondary-800 truncate">{display.drawingNo ?? "N/A"}</span>
-                                  <span className="text-xs text-secondary-500">R{display.revisionNo ?? "0"}</span>
+                                  <span className="font-medium text-secondary-800 dark:text-white truncate">{display.drawingNo ?? "N/A"}</span>
+                                  <span className="text-xs text-secondary-500 dark:text-white">R{display.revisionNo ?? "0"}</span>
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-secondary-700 whitespace-nowrap">{display.materialName ?? "—"}</td>
+                              <td className="py-2.5 px-3 text-secondary-700 dark:text-white whitespace-nowrap">{display.materialName ?? "—"}</td>
                               <td className="py-2.5 px-3 text-center">
                                 <Input
                                   type="number"

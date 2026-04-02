@@ -212,9 +212,9 @@ export default function QualityControlPage() {
                                 qcs.map((q, idx) => (
                                     <Fragment key={q.id}><TableRow
                                             className={cn(
-                                                "border-b border-secondary-100 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                expandedQcId === q.id ? "bg-primary-50/60" : "hover:bg-primary-50/30",
-                                                !q.isActive && "bg-secondary-50/50 opacity-75"
+                                                "border-b border-secondary-100 dark:border-secondary-800 transition-all font-sans whitespace-nowrap group cursor-pointer",
+                                                expandedQcId === q.id ? "bg-primary-50/60 dark:bg-primary-900/30 dark:border-transparent" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
+                                                !q.isActive && "bg-secondary-50/50 dark:bg-secondary-900/40 opacity-75"
                                             )}
                                             onClick={() => setExpandedQcId(expandedQcId === q.id ? null : q.id)}
                                         >
@@ -315,8 +315,8 @@ export default function QualityControlPage() {
                                                             className="overflow-hidden bg-secondary-50/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
-                                                                    <div className="bg-secondary-50/50 px-4 py-2 border-b border-secondary-100 flex items-center justify-between">
+                                                                <div className="bg-white dark:bg-card rounded-xl border border-secondary-200 dark:border-border overflow-hidden shadow-sm">
+                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/30 px-4 py-2 border-b border-secondary-100 dark:border-border flex items-center justify-between">
                                                                         <p className="text-[10px] font-bold text-secondary-500 uppercase tracking-widest">
                                                                             QC Items
                                                                         </p>

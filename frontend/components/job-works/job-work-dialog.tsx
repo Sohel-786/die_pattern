@@ -288,11 +288,11 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                         <div className="grid grid-cols-12 gap-4 items-end bg-white dark:bg-card p-5 rounded-xl border border-secondary-200 dark:border-border shadow-sm">
                             <div className="col-span-12 md:col-span-2">
                                 <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">JW No.</Label>
-                                <Input value={nextCode} readOnly className="h-9 mt-1 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-secondary-300" />
+                                <Input value={nextCode} readOnly className="h-9 mt-1 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-white" />
                             </div>
                             <div className="col-span-12 md:col-span-2">
                                 <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">JW Date</Label>
-                                <div className="h-9 mt-1 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm font-medium text-secondary-700 dark:text-secondary-300">
+                                <div className="h-9 mt-1 px-3 flex items-center bg-secondary-50 dark:bg-secondary-200/10 border border-secondary-200 dark:border-border rounded-lg text-sm font-medium text-secondary-700 dark:text-white">
                                     {formatDate(isEditing && jobWork?.createdAt ? jobWork.createdAt : new Date())}
                                 </div>
                             </div>
@@ -425,14 +425,14 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-primary-700 dark:text-primary-300">{item.itemTypeName}</span>
-                                                                    <span className="text-[11px] text-secondary-500 dark:text-secondary-500">{item.materialName}</span>
+                                                                    <span className="text-xs font-bold text-primary-700 dark:text-white">{item.itemTypeName}</span>
+                                                                    <span className="text-[11px] text-secondary-500 dark:text-white">{item.materialName}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-4">
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-secondary-800 dark:text-secondary-200">{item.drawingNo || "N/A"}</span>
-                                                                    <span className="text-[11px] text-secondary-500 dark:text-secondary-500 font-medium">Rev: {item.revisionNo || "0"}</span>
+                                                                    <span className="text-xs font-bold text-secondary-800 dark:text-white">{item.drawingNo || "N/A"}</span>
+                                                                    <span className="text-[11px] text-secondary-500 dark:text-white font-medium">Rev: {item.revisionNo || "0"}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="py-2.5 px-4 text-center">

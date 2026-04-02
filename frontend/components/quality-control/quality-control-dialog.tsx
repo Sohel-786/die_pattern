@@ -285,7 +285,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                     <Input
                                         value={isEditing ? (qcDetail?.qcNo ?? "") : (nextCode ?? "...")}
                                         readOnly
-                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-primary-700 disabled:opacity-100 dark:text-primary-300"
+                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 disabled:opacity-100 dark:text-white"
                                     />
                                 </div>
                                 <div className="col-span-2">
@@ -293,7 +293,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                     <Input
                                         value={formatDate(isEditing && qcDetail?.createdAt ? qcDetail.createdAt : new Date())}
                                         readOnly
-                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-secondary-300 disabled:opacity-100"
+                                        className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-sm font-bold text-secondary-700 dark:text-white disabled:opacity-100"
                                     />
                                 </div>
                                 <div className="col-span-4">
@@ -322,11 +322,11 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                 setSelectedItems([]);
                                             }}
                                             disabled={isReadOnly || selectedItems.length > 0}
-                                            className="h-9 w-full px-3 rounded-lg border border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-sm font-semibold text-secondary-700 dark:text-secondary-300 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
+                                            className="h-9 w-full px-3 rounded-lg border border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-slate-950 text-sm font-semibold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
                                         >
-                                            <option value="">Select source type</option>
+                                            <option value="" className="dark:bg-slate-950 dark:text-white">Select source type</option>
                                             {sourceOptions.map((opt) => (
-                                                <option key={opt.value} value={opt.value}>
+                                                <option key={opt.value} value={opt.value} className="dark:bg-slate-950 dark:text-white">
                                                     {opt.label}
                                                 </option>
                                             ))}
@@ -469,8 +469,8 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col">
-                                                                    <span className="font-bold text-secondary-800 dark:text-secondary-200 text-[11px] tracking-tighter uppercase">{item.sourceRefDisplay || "—"}</span>
-                                                                    <span className="text-[9px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">
+                                                                    <span className="font-bold text-secondary-800 dark:text-white text-[11px] tracking-tighter uppercase">{item.sourceRefDisplay || "—"}</span>
+                                                                    <span className="text-[9px] font-black text-secondary-400 dark:text-white uppercase tracking-widest leading-none">
                                                                         {item.sourceType === InwardSourceType.PO ? "Purchase Order" : "Job Work"}
                                                                     </span>
                                                                 </div>
@@ -486,16 +486,16 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                                     <span className="text-[10px] font-bold text-secondary-500 dark:text-secondary-500 truncate uppercase">{item.mainPartName || ""}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 font-medium text-xs uppercase tracking-tight">
+                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-white font-medium text-xs uppercase tracking-tight">
                                                                 {item.itemTypeName || "—"}
                                                             </td>
                                                             <td className="py-2.5 px-3">
                                                                 <div className="flex flex-col min-w-0">
-                                                                    <span className="font-bold text-secondary-800 dark:text-secondary-200 text-xs truncate">{item.drawingNo ?? "N/A"}</span>
-                                                                    <span className="text-[10px] font-black text-secondary-400 dark:text-secondary-500 uppercase tracking-widest leading-none">R{item.revisionNo ?? "0"}</span>
+                                                                    <span className="font-bold text-secondary-800 dark:text-white text-xs truncate">{item.drawingNo ?? "N/A"}</span>
+                                                                    <span className="text-[10px] font-black text-secondary-400 dark:text-white uppercase tracking-widest leading-none">R{item.revisionNo ?? "0"}</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-secondary-300 font-medium text-xs uppercase tracking-tight">
+                                                            <td className="py-2.5 px-3 text-secondary-700 dark:text-white font-medium text-xs uppercase tracking-tight">
                                                                 {item.materialName || "—"}
                                                             </td>
                                                         </tr>

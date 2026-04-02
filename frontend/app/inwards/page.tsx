@@ -177,7 +177,7 @@ export default function InwardsPage() {
                                     <Fragment key={i.id}><TableRow
                                              className={cn(
                                                  "border-b border-secondary-100 dark:border-secondary-800 transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                 expandedInwardId === i.id ? "bg-primary-50/60 dark:bg-primary-900/30" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
+                                                 expandedInwardId === i.id ? "bg-primary-50/60 dark:bg-primary-900/30 dark:border-transparent" : "hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
                                                  !i.isActive && "bg-secondary-50/50 dark:bg-secondary-900/40 opacity-75"
                                              )}
                                              onClick={() => setExpandedInwardId(expandedInwardId === i.id ? null : i.id)}

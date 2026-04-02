@@ -182,8 +182,8 @@ export default function TransfersPage() {
                                     <Fragment key={tr.id}><TableRow
                                             className={cn(
                                                 "transition-all font-sans whitespace-nowrap group cursor-pointer",
-                                                expandedTransferId === tr.id ? "bg-primary-50/60 border-none" : "border-b border-secondary-100 hover:bg-primary-50/30",
-                                                !tr.isActive && "bg-secondary-50/50 opacity-75"
+                                                expandedTransferId === tr.id ? "bg-primary-50/60 dark:bg-primary-900/30 border-none dark:border-transparent" : "border-b border-secondary-100 dark:border-secondary-800 hover:bg-primary-50/30 dark:hover:bg-primary-900/10",
+                                                !tr.isActive && "bg-secondary-50/50 dark:bg-secondary-900/40 opacity-75"
                                             )}
                                             onClick={() => setExpandedTransferId(expandedTransferId === tr.id ? null : tr.id)}
                                         >
@@ -283,8 +283,8 @@ export default function TransfersPage() {
                                                             className="overflow-hidden bg-secondary-50/10 dark:bg-secondary-900/10 w-full"
                                                         >
                                                             <div className="px-4 pb-4 pt-4">
-                                                                <div className="bg-white dark:bg-card rounded-xl overflow-hidden shadow-sm w-full">
-                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/50 px-4 py-2 border-b border-secondary-100 dark:border-secondary-800 flex items-center justify-between">
+                                                                <div className="bg-white dark:bg-card rounded-xl border border-secondary-200 dark:border-border overflow-hidden shadow-sm w-full">
+                                                                    <div className="bg-secondary-50/50 dark:bg-secondary-900/30 px-4 py-2 border-b border-secondary-100 dark:border-border flex items-center justify-between">
                                                                         <p className="text-[10px] font-bold text-secondary-500 dark:text-secondary-400 uppercase tracking-widest">
                                                                             Transferred Items
                                                                         </p>

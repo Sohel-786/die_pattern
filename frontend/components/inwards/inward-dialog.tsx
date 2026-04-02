@@ -350,7 +350,7 @@ export function InwardDialog({
                             <div className="grid grid-cols-12 gap-4 items-end bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm">
                                 <div className="col-span-2">
                                     <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Inward No.</Label>
-                                    <Input value={nextCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-900/50 border-secondary-200 dark:border-secondary-800 text-sm font-semibold" />
+                                    <Input value={nextCode} readOnly className="h-9 mt-0.5 bg-secondary-50 dark:bg-secondary-900/50 border-secondary-200 dark:border-secondary-800 text-sm font-semibold dark:text-white" />
                                 </div>
                                 <div className="col-span-2">
                                     <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-400">Inward Date</Label>
@@ -358,7 +358,7 @@ export function InwardDialog({
                                         <Input
                                             readOnly
                                             value={formatDateOnly(inwardDate)}
-                                            className="h-9 w-full text-sm border-secondary-200 bg-secondary-50 font-semibold cursor-default"
+                                            className="h-9 w-full text-sm border-secondary-200 bg-secondary-50 dark:bg-secondary-900/50 font-semibold cursor-default dark:text-white"
                                         />
                                     </div>
                                 </div>
@@ -395,10 +395,10 @@ export function InwardDialog({
                                             value={selectedSourceType}
                                             onChange={(e) => setSelectedSourceType(e.target.value as InwardSourceType)}
                                             disabled={isReadOnly || !vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
-                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-secondary-50/50 dark:bg-secondary-900/50 text-sm font-bold text-secondary-700 dark:text-secondary-200 focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-secondary-50/50 dark:bg-slate-950 text-sm font-bold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {sourceOptions.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                <option key={opt.value} value={opt.value} className="dark:bg-slate-950 dark:text-white">{opt.label}</option>
                                             ))}
                                         </select>
                                         <Button

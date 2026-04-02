@@ -348,11 +348,11 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         <div className="grid grid-cols-12 gap-3 items-end bg-white dark:bg-card p-3 rounded-lg border border-secondary-200/60 dark:border-border shadow-sm shrink-0">
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Transfer No.</Label>
-                                <Input value={nextCode} readOnly className="h-8 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-xs font-semibold dark:text-foreground" />
+                                <Input value={nextCode} readOnly className="h-8 mt-0.5 bg-secondary-50 dark:bg-secondary-200/10 border-secondary-200 dark:border-border text-xs font-semibold dark:text-white" />
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Transfer Date</Label>
-                                <Input readOnly value={formatDateOnly(transferDate)} className="h-8 mt-0.5 text-xs border-secondary-200 dark:border-border bg-secondary-50 dark:bg-secondary-200/10 font-semibold cursor-default dark:text-foreground" />
+                                <Input readOnly value={formatDateOnly(transferDate)} className="h-8 mt-0.5 text-xs border-secondary-200 dark:border-border bg-secondary-50 dark:bg-secondary-200/10 font-semibold cursor-default dark:text-white" />
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Out For <span className="text-rose-500">*</span></Label>
@@ -401,7 +401,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                     placeholder="Choose source..."
                                 />
                                 <Label className="text-[11px] font-semibold text-secondary-500 dark:text-secondary-500 mt-0.5">Address</Label>
-                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-secondary-300 leading-snug overflow-y-auto font-medium">
+                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-white leading-snug overflow-y-auto font-medium">
                                     {fromAddress ?? "—"}
                                 </div>
                             </div>
@@ -415,7 +415,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                     placeholder="Choose destination..."
                                 />
                                 <Label className="text-[11px] font-semibold text-secondary-500 dark:text-secondary-500 mt-0.5">Address</Label>
-                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-secondary-300 leading-snug overflow-y-auto font-medium">
+                                <div className="min-h-[64px] px-2.5 py-1.5 rounded border border-secondary-100 dark:border-border bg-secondary-50/50 dark:bg-secondary-200/10 text-xs text-secondary-700 dark:text-white leading-snug overflow-y-auto font-medium">
                                     {toAddress ?? "—"}
                                 </div>
                             </div>
@@ -469,14 +469,14 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                                     </td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col">
-                                                            <span className="text-secondary-700 dark:text-secondary-300 font-medium text-[11px]">{item.itemTypeName ?? "—"}</span>
-                                                            <span className="text-[10px] text-secondary-400 dark:text-secondary-500">{item.materialName ?? "—"}</span>
+                                                            <span className="text-secondary-700 dark:text-white font-medium text-[11px]">{item.itemTypeName ?? "—"}</span>
+                                                            <span className="text-[10px] text-secondary-400 dark:text-white">{item.materialName ?? "—"}</span>
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-2">
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className="font-medium text-secondary-800 dark:text-secondary-200 text-[11px] truncate">{item.drawingNo ?? "NO DRAWING"}</span>
-                                                            <span className="text-[10px] text-secondary-400 dark:text-secondary-500">Rev: {item.revisionNo ?? "00"}</span>
+                                                            <span className="font-medium text-secondary-800 dark:text-white text-[11px] truncate">{item.drawingNo ?? "NO DRAWING"}</span>
+                                                            <span className="text-[10px] text-secondary-400 dark:text-white">Rev: {item.revisionNo ?? "00"}</span>
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-2 min-w-[160px]">
