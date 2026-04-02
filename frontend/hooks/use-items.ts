@@ -11,9 +11,22 @@ export interface ItemFilterRow {
   previousNames?: string[];
 }
 
+function getSelectedLocationId(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('selectedOrgContext');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return typeof parsed?.locationId === 'number' ? parsed.locationId : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useInfiniteItemsForFilter(search?: string, itemTypeId?: number | string | null) {
+  const locationId = getSelectedLocationId();
   return useInfiniteQuery({
-    queryKey: ['items-for-filter-infinite', search, itemTypeId || null],
+    queryKey: ['items-for-filter-infinite', locationId, search, itemTypeId || null],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await api.get('/items/for-filter', {
         params: {

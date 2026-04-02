@@ -34,6 +34,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useInfiniteItemsForFilter } from "@/hooks/use-items";
+import { useLocationContext } from "@/contexts/location-context";
 
 const ROW_COUNT_OPTIONS = [25, 50, 75, 100] as const;
 type RowCount = (typeof ROW_COUNT_OPTIONS)[number];
@@ -74,6 +75,8 @@ function buildLedgerParams(
 
 function ReportsContent() {
   const { data: permissions } = useCurrentUserPermissions();
+  const { selected } = useLocationContext();
+  const locationId = selected?.locationId ?? null;
   const canViewReports = permissions?.viewReports ?? false;
   const canViewLedger = permissions?.viewItemLedgerReport ?? false;
   const canAccess = canViewReports || canViewLedger;
@@ -92,9 +95,9 @@ function ReportsContent() {
   const debouncedItemSearch = useDebouncedValue(itemSearch, 400);
 
   const { data: itemTypes = [] } = useQuery({
-    queryKey: ["item-types", "active"],
+    queryKey: ["item-types", "for-filter", locationId],
     queryFn: async () => {
-      const res = await api.get("/masters/item-types/active");
+      const res = await api.get("/items/item-types/for-filter");
       return res.data?.data ?? [];
     },
     enabled: canAccess,

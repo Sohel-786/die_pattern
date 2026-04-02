@@ -130,14 +130,14 @@ export function DocumentControlSettings() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Label className="text-sm font-semibold text-gray-700">Document type</Label>
+          <Label className="text-sm font-semibold text-gray-700 dark:text-white">Document type</Label>
           <select
             value={documentTypeFilter}
             onChange={(e) => setDocumentTypeFilter(Number(e.target.value) as DocumentType)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            className="rounded-lg border border-gray-300 dark:border-secondary-700 px-3 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-card focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           >
             {(Object.keys(DOCUMENT_TYPE_LABELS) as unknown as DocumentType[]).map((k) => (
-              <option key={k} value={k}>
+              <option key={k} value={k} className="dark:bg-card">
                 {DOCUMENT_TYPE_LABELS[k]}
               </option>
             ))}
@@ -149,41 +149,41 @@ export function DocumentControlSettings() {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-lg border border-gray-200 dark:border-secondary-800 bg-white dark:bg-card overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400" />
           </div>
         ) : list.length === 0 ? (
-          <div className="py-12 text-center text-gray-500 text-sm">
+          <div className="py-12 text-center text-gray-500 dark:text-secondary-400 text-sm">
             No revisions for this document type. Add one to use in print formats.
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 border-b border-gray-200">
+            <thead className="bg-gray-100 dark:bg-secondary-900/50 border-b border-gray-200 dark:border-secondary-800">
               <tr>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Document No</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Revision No</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Revision Date</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 w-24">Applied</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-white">Document No</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-white">Revision No</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-white">Revision Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-white w-24">Applied</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-white">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-secondary-800/50">
               {list.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50/50">
-                  <td className="py-2.5 px-4 font-medium text-gray-900">{row.documentNo}</td>
-                  <td className="py-2.5 px-4 text-gray-700">{row.revisionNo}</td>
-                  <td className="py-2.5 px-4 text-gray-700">
+                <tr key={row.id} className="hover:bg-gray-50/50 dark:hover:bg-secondary-800/30">
+                  <td className="py-2.5 px-4 font-medium text-gray-900 dark:text-white">{row.documentNo}</td>
+                  <td className="py-2.5 px-4 text-gray-700 dark:text-secondary-300">{row.revisionNo}</td>
+                  <td className="py-2.5 px-4 text-gray-700 dark:text-secondary-300">
                     {row.revisionDate ? formatDate(row.revisionDate) : "-"}
                   </td>
                   <td className="py-2.5 px-4">
                     {row.isApplied ? (
-                      <span className="inline-flex items-center gap-1 text-green-700 font-medium">
+                      <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-500 font-medium">
                         <Check className="w-4 h-4" /> Yes
                       </span>
                     ) : (
-                      <span className="text-gray-400">No</span>
+                      <span className="text-gray-400 dark:text-secondary-600">No</span>
                     )}
                   </td>
                   <td className="py-2.5 px-4 text-right">
@@ -193,7 +193,7 @@ export function DocumentControlSettings() {
                         size="sm"
                         onClick={() => applyMutation.mutate(row.id)}
                         disabled={applyMutation.isPending}
-                        className="text-primary-600 hover:bg-primary-50 gap-1 mr-1"
+                        className="text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/50 gap-1 mr-1"
                       >
                         {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         Apply
@@ -203,7 +203,7 @@ export function DocumentControlSettings() {
                       variant="ghost"
                       size="sm"
                       onClick={() => openEdit(row)}
-                      className="text-gray-600 hover:bg-gray-100 gap-1 mr-1"
+                      className="text-gray-600 dark:text-secondary-400 hover:bg-gray-100 dark:hover:bg-secondary-800 gap-1 mr-1"
                     >
                       <Edit2 className="w-4 h-4" />
                       Edit
@@ -215,7 +215,7 @@ export function DocumentControlSettings() {
                         if (window.confirm("Remove this revision? It cannot be undone.")) deleteMutation.mutate(row.id);
                       }}
                       disabled={deleteMutation.isPending}
-                      className="text-rose-600 hover:bg-rose-50"
+                      className="text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -227,7 +227,7 @@ export function DocumentControlSettings() {
         )}
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-secondary-400">
         Only one revision can be applied at a time per document type. New purchase indents (after approval) will use the applied revision. Existing indents keep their revision.
       </p>
 
@@ -239,7 +239,7 @@ export function DocumentControlSettings() {
       >
         <div className="space-y-4 py-2">
           <div>
-            <Label className="text-sm font-semibold text-gray-700">Document No</Label>
+            <Label className="text-sm font-semibold text-gray-700 dark:text-white">Document No</Label>
             <Input
               value={formDocumentNo}
               onChange={(e) => setFormDocumentNo(e.target.value)}
@@ -248,7 +248,7 @@ export function DocumentControlSettings() {
             />
           </div>
           <div>
-            <Label className="text-sm font-semibold text-gray-700">Revision No</Label>
+            <Label className="text-sm font-semibold text-gray-700 dark:text-white">Revision No</Label>
             <Input
               value={formRevisionNo}
               onChange={(e) => setFormRevisionNo(e.target.value)}
@@ -257,7 +257,7 @@ export function DocumentControlSettings() {
             />
           </div>
           <div>
-            <Label className="text-sm font-semibold text-gray-700">Revision Date</Label>
+            <Label className="text-sm font-semibold text-gray-700 dark:text-white">Revision Date</Label>
             <div className="mt-1">
               <DatePicker
                 value={formRevisionDate ? (isValid(parseISO(formRevisionDate)) ? parseISO(formRevisionDate) : undefined) : undefined}

@@ -91,6 +91,19 @@
   /* We keep the dynamic primary as is, but dark mode can use lighter versions for contrast */
 }
 
+/* Chrome autofill fix for BOTH light and dark modes using CSS variables */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+input:-internal-autofill-selected {
+  -webkit-background-clip: text !important;
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  box-shadow: inset 0 0 0 1000px var(--background) !important;
+  -webkit-box-shadow: inset 0 0 0 1000px var(--background) !important;
+}
+
 /* Production hardening: many screens still use legacy Tailwind `bg-white`.
    In dark mode, treat it as `card` so pages don’t stay white. */
 .dark .bg-white {

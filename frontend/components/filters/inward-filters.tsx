@@ -81,7 +81,7 @@ export function InwardFilters({
                                     variant="outline"
                                     size="sm"
                                     onClick={onClear}
-                                    className="h-9 px-4 text-xs font-bold rounded-lg transition-colors whitespace-nowrap border-secondary-300 dark:border-secondary-700 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-800 hover:border-secondary-400 dark:hover:border-secondary-600 shadow-sm"
+                                    className="h-9 px-4 text-xs font-bold rounded-lg transition-colors whitespace-nowrap border-secondary-300 dark:border-border text-secondary-700 dark:text-white hover:bg-secondary-50 dark:bg-secondary-900/20 dark:hover:bg-secondary-900/35 hover:border-secondary-400 dark:hover:border-secondary-600 shadow-sm"
                                 >
                                     <X className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                                     Clear Filter

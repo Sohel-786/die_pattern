@@ -57,8 +57,8 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
   return (
     <header
       className={`bg-white dark:bg-card border-b border-secondary-200 dark:border-border flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 shadow-sm transition-colors duration-300 ${isHorizontal
-        ? 'h-20 py-4'
-        : hasLogo ? 'min-h-[7rem] py-6' : 'h-24 py-4'
+        ? 'h-16 py-2'
+        : hasLogo ? 'min-h-[5rem] py-3' : 'h-16 py-3'
         }`}
     >
       <div className="flex items-center min-w-0 shrink-0">
@@ -94,8 +94,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 shrink-0">
                   <Building2 className="h-4 w-4 text-primary-600 dark:text-primary-400" aria-hidden />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500 dark:text-secondary-400">Company</span>
+                <div className="flex flex-col justify-center min-w-0">
                   <span className="text-sm font-semibold text-secondary-900 dark:text-white truncate max-w-[120px] sm:max-w-[180px]" title={currentPair.companyName}>
                     {currentPair.companyName}
                   </span>
@@ -106,8 +105,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 shrink-0">
                   <MapPin className="h-4 w-4 text-primary-600 dark:text-primary-400" aria-hidden />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500 dark:text-secondary-400">Location</span>
+                <div className="flex flex-col justify-center min-w-0">
                   <span className="text-sm font-semibold text-secondary-900 dark:text-white truncate max-w-[120px] sm:max-w-[160px]" title={currentPair.locationName}>
                     {currentPair.locationName}
                   </span>
@@ -124,8 +122,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 shrink-0">
                   <Building2 className="h-4 w-4 text-primary-600 dark:text-primary-400" aria-hidden />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500 dark:text-secondary-400">Company</span>
+                <div className="flex flex-col justify-center min-w-0">
                   <span className="text-sm font-semibold text-secondary-900 dark:text-white truncate max-w-[120px] sm:max-w-[180px]" title={currentPair.companyName}>
                     {currentPair.companyName}
                   </span>
@@ -136,8 +133,7 @@ export function Header({ user, isNavExpanded, onNavExpandChange }: HeaderProps) 
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 shrink-0">
                   <MapPin className="h-4 w-4 text-primary-600 dark:text-primary-400" aria-hidden />
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-secondary-500 dark:text-secondary-400">Location</span>
+                <div className="flex flex-col justify-center min-w-0">
                   <span className="text-sm font-semibold text-secondary-900 dark:text-white truncate max-w-[120px] sm:max-w-[160px]" title={currentPair.locationName}>
                     {currentPair.locationName}
                   </span>

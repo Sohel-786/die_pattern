@@ -66,17 +66,17 @@ export function OrgContextDialog({ open, onClose, access, onSelect, closeDisable
       closeButtonDisabled={closeDisabled}
     >
       <div className="space-y-5">
-        <div className="text-sm text-secondary-600">
+        <div className="text-sm text-secondary-600 dark:text-secondary-400">
           Choose where you want to work. All masters, transactions, and reports will be scoped to this location.
         </div>
 
         {hasMultipleCompanies && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-white flex items-center gap-2">
               <Building2 className="w-4 h-4 text-secondary-500" /> Company
             </label>
             <select
-              className="w-full h-11 rounded-lg border border-secondary-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full h-11 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25 dark:text-white"
               value={companyId ?? ""}
               onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
             >
@@ -93,11 +93,11 @@ export function OrgContextDialog({ open, onClose, access, onSelect, closeDisable
         )}
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-white flex items-center gap-2">
             <MapPin className="w-4 h-4 text-secondary-500" /> Location
           </label>
           <select
-            className="w-full h-11 rounded-lg border border-secondary-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25 disabled:bg-secondary-50"
+            className="w-full h-11 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25 disabled:bg-secondary-50 dark:disabled:bg-secondary-900/50 dark:text-white"
             value={locationId ?? ""}
             onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : null)}
             disabled={companyId == null}

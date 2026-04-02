@@ -20,6 +20,36 @@ namespace net_backend.Controllers
             _itemState = itemState;
         }
 
+        /// <summary>
+        /// Active Item Types for filter UIs, scoped to current location (only types that have at least one item in that location).
+        /// </summary>
+        [HttpGet("item-types/for-filter")]
+        public async Task<IActionResult> GetItemTypesForFilter()
+        {
+            var canUse =
+                await HasAllPermissions("ViewMaster", "ManageItem") ||
+                await HasPermission("ViewTransfer") ||
+                await HasPermission("ViewPI") ||
+                await HasPermission("ViewPO") ||
+                await HasPermission("ViewInward") ||
+                await HasPermission("ViewMovement") ||
+                await HasPermission("ViewQC") ||
+                await HasPermission("ViewReports");
+            if (!canUse) return Forbidden();
+
+            var locationId = await GetCurrentLocationIdAsync();
+
+            var types = await _context.ItemTypes
+                .AsNoTracking()
+                .Where(t => t.IsActive)
+                .Where(t => _context.Items.Any(i => i.LocationId == locationId && i.ItemTypeId == t.Id))
+                .OrderBy(t => t.Name)
+                .Select(t => new { t.Id, t.Name })
+                .ToListAsync();
+
+            return Ok(new { data = types });
+        }
+
         [HttpGet("minimal")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetMinimal()
         {
