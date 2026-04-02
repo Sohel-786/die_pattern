@@ -62,7 +62,7 @@ export function OrgContextDialog({ open, onClose, access, onSelect, closeDisable
       onClose={onClose || (() => {})}
       title={title}
       size="md"
-      closeOnBackdropClick={!closeDisabled}
+      closeOnBackdropClick={false}
       closeButtonDisabled={closeDisabled}
     >
       <div className="space-y-5">
