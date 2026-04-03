@@ -68,6 +68,8 @@ export function Dialog({
   const confirmOnEscWhenDirtyRef = useRef(confirmOnEscWhenDirty);
   const [escConfirmOpen, setEscConfirmOpen] = useState(false);
   const escConfirmOpenRef = useRef(false);
+  const stayButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -129,6 +131,9 @@ export function Dialog({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
+      
+      // If the Esc confirmation sub-dialog is open, it has its own focus/key management
+      if (escConfirmOpenRef.current) return;
 
       // Handle Tab key (Focus Wrap)
       if (e.key === "Tab") {
@@ -218,6 +223,17 @@ export function Dialog({
       if (focusTimer) clearTimeout(focusTimer);
     };
   }, [isOpen]);
+  
+  // Handle focus for the Esc confirmation sub-dialog
+  useEffect(() => {
+    if (escConfirmOpen) {
+      // Small delay to ensure the sub-dialog is rendered
+      const timer = setTimeout(() => {
+        stayButtonRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [escConfirmOpen]);
 
   const sizeClasses: Record<NonNullable<DialogProps["size"]>, string> = {
     sm: "max-w-md",
@@ -325,11 +341,22 @@ export function Dialog({
                     initial={{ opacity: 0, scale: 0.96, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 10 }}
-                    className="w-full max-w-md rounded-xl border border-secondary-200 dark:border-secondary-800 bg-white dark:bg-[#06080a] text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
+                    className="w-full max-w-md rounded-xl border border-secondary-200 dark:border-secondary-800 bg-white dark:bg-[#06080a] text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden focus:outline-none"
                     onClick={(e) => e.stopPropagation()}
                     role="dialog"
                     aria-modal="true"
                     aria-label={escConfirmTitle}
+                    onKeyDown={(e) => {
+                      // Navigate between the two buttons using Tab or Arrow keys
+                      if (e.key === "Tab" || e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        if (document.activeElement === stayButtonRef.current) {
+                          closeButtonRef.current?.focus();
+                        } else {
+                          stayButtonRef.current?.focus();
+                        }
+                      }
+                    }}
                   >
                     <div className="p-6 border-b border-secondary-200 dark:border-secondary-800">
                       <h3 className="text-lg font-semibold text-foreground tracking-tight">{escConfirmTitle}</h3>
@@ -342,16 +369,18 @@ export function Dialog({
 
                       <div className="flex gap-3 pt-2">
                         <Button
+                          ref={stayButtonRef}
                           type="button"
                           variant="outline"
-                          className="flex-1 hover:bg-secondary-100 dark:hover:bg-secondary-900/50 dark:border-secondary-700 font-medium"
+                          className="flex-1 hover:bg-secondary-100 dark:hover:bg-secondary-900/50 dark:border-secondary-700 font-medium focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-[#06080a]"
                           onClick={() => setEscConfirmOpen(false)}
                         >
                           No, Stay
                         </Button>
                         <Button
+                          ref={closeButtonRef}
                           type="button"
-                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-all shadow-md active:scale-95"
+                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-all shadow-md active:scale-95 focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-[#06080a]"
                           onClick={() => {
                             setEscConfirmOpen(false);
                             onCloseRef.current();
