@@ -31,7 +31,7 @@ const navigationSections = {
       href: "/dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      getColor: (active: boolean) => active ? "text-blue-600" : "text-blue-500",
+      colorBase: "blue",
       permission: "viewDashboard",
     },
   ],
@@ -40,35 +40,35 @@ const navigationSections = {
       href: "/companies",
       label: "Company Master",
       icon: Building2,
-      getColor: (active: boolean) => active ? "text-violet-600" : "text-violet-500",
+      colorBase: "violet",
       permission: "manageCompany",
     },
     {
       href: "/locations",
       label: "Location Master",
       icon: MapPin,
-      getColor: (active: boolean) => active ? "text-emerald-600" : "text-emerald-500",
+      colorBase: "emerald",
       permission: "manageLocation",
     },
     {
       href: "/parties",
       label: "Party Master",
       icon: Users,
-      getColor: (active: boolean) => active ? "text-orange-600" : "text-orange-500",
+      colorBase: "orange",
       permission: "manageParty",
     },
     {
       href: "/items",
       label: "Item Master",
       icon: Package,
-      getColor: (active: boolean) => active ? "text-indigo-600" : "text-indigo-500",
+      colorBase: "indigo",
       permission: "manageItem",
     },
     {
       href: "/masters",
       label: "Other Masters",
       icon: Layers,
-      getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
+      colorBase: "teal",
       permission: "viewMaster",
     },
   ],
@@ -77,35 +77,35 @@ const navigationSections = {
       href: "/purchase-indents",
       label: "PI",
       icon: FileText,
-      getColor: (active: boolean) => active ? "text-amber-600" : "text-amber-500",
+      colorBase: "amber",
       permission: "viewPI",
     },
     {
       href: "/purchase-orders",
       label: "PO",
       icon: ShoppingCart,
-      getColor: (active: boolean) => active ? "text-rose-600" : "text-rose-500",
+      colorBase: "rose",
       permission: "viewPO",
     },
     {
       href: "/inwards",
       label: "Inward",
       icon: ArrowDownLeft,
-      getColor: (active: boolean) => active ? "text-green-600" : "text-green-500",
+      colorBase: "green",
       permission: "viewInward",
     },
     {
       href: "/quality-control",
       label: "QC",
       icon: ClipboardCheck,
-      getColor: (active: boolean) => active ? "text-purple-600" : "text-purple-500",
+      colorBase: "purple",
       permission: "viewQC",
     },
     {
       href: "/job-works",
       label: "Job Work",
       icon: Briefcase,
-      getColor: (active: boolean) => active ? "text-teal-600" : "text-teal-500",
+      colorBase: "teal",
       permission: "viewMovement",
     },
 
@@ -115,7 +115,7 @@ const navigationSections = {
       href: "/transfers",
       label: "Transfer Entry",
       icon: Truck,
-      getColor: (active: boolean) => active ? "text-indigo-600" : "text-indigo-500",
+      colorBase: "indigo",
       permission: "viewTransfer",
     },
   ],
@@ -125,24 +125,38 @@ const navigationSections = {
       href: "/reports",
       label: "Reports",
       icon: BarChart3,
-      getColor: (active: boolean) => active ? "text-amber-600" : "text-amber-500",
+      colorBase: "amber",
       permission: "viewReports",
     },
     {
       href: "/settings",
       label: "Settings",
       icon: Settings,
-      getColor: (active: boolean) => active ? "text-slate-600" : "text-slate-500",
+      colorBase: "slate",
       permission: "accessSettings",
     },
   ],
+};
+
+const colorMaps: Record<string, { active: string; icon: string }> = {
+  blue: { active: "from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 shadow-blue-500/30", icon: "text-blue-500" },
+  violet: { active: "from-violet-600 to-violet-700 dark:from-violet-500 dark:to-violet-600 shadow-violet-500/30", icon: "text-violet-500" },
+  emerald: { active: "from-emerald-600 to-emerald-700 dark:from-emerald-500 dark:to-emerald-600 shadow-emerald-500/30", icon: "text-emerald-500" },
+  orange: { active: "from-orange-600 to-orange-700 dark:from-orange-500 dark:to-orange-600 shadow-orange-500/30", icon: "text-orange-500" },
+  indigo: { active: "from-indigo-600 to-indigo-700 dark:from-indigo-500 dark:to-indigo-600 shadow-indigo-500/30", icon: "text-indigo-500" },
+  teal: { active: "from-teal-600 to-teal-700 dark:from-teal-500 dark:to-teal-600 shadow-teal-500/30", icon: "text-teal-500" },
+  amber: { active: "from-amber-600 to-amber-700 dark:from-amber-500 dark:to-amber-600 shadow-amber-500/30", icon: "text-amber-500" },
+  rose: { active: "from-rose-600 to-rose-700 dark:from-rose-500 dark:to-rose-600 shadow-rose-500/30", icon: "text-rose-500" },
+  green: { active: "from-green-600 to-green-700 dark:from-green-500 dark:to-green-600 shadow-green-500/30", icon: "text-green-500" },
+  purple: { active: "from-purple-600 to-purple-700 dark:from-purple-500 dark:to-purple-600 shadow-purple-500/30", icon: "text-purple-500" },
+  slate: { active: "from-slate-600 to-slate-700 dark:from-slate-500 dark:to-slate-600 shadow-slate-500/30", icon: "text-slate-500" },
 };
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  getColor: (active: boolean) => string;
+  colorBase: string;
   permission: string;
 }
 
@@ -176,33 +190,44 @@ export function HorizontalNav({ isExpanded }: HorizontalNavProps) {
     const Icon = item.icon;
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
+    const colorMap = colorMaps[item.colorBase] || colorMaps.blue;
+
     return (
       <Link key={item.href} href={item.href}>
         <div
           className={cn(
-            "flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all duration-500 min-w-[80px] group cursor-pointer relative",
+            "flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all duration-500 min-w-[80px] group cursor-pointer relative overflow-hidden",
             "border-[1.5px]",
             isActive
-              ? "bg-card shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.25)] scale-105 -translate-y-1.5 border-primary-600"
-              : "border-primary-600/20 hover:border-primary-600/40 hover:bg-card hover:shadow-2xl hover:-translate-y-1 active:scale-95",
+              ? cn("bg-gradient-to-br shadow-xl scale-105 -translate-y-1.5 border-white/20 dark:border-white/10", colorMap.active)
+              : "border-secondary-200 dark:border-white/5 hover:border-primary-600/40 hover:bg-card hover:shadow-2xl hover:-translate-y-1 active:scale-95",
           )}
         >
+          {isActive && (
+            <>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent_70%)] pointer-events-none" />
+            </>
+          )}
           <div className={cn("transition-all duration-500 flex items-center justify-center", isActive ? "scale-110" : "group-hover:scale-110")}>
             <Icon
-              className={cn("w-7 h-7 transition-colors duration-300", item.getColor(isActive))}
-              strokeWidth={1.5}
+              className={cn(
+                "w-7 h-7 transition-all duration-500", 
+                isActive ? "text-white" : colorMap.icon,
+                isActive && "drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+              )}
+              strokeWidth={isActive ? 2.5 : 1.5}
             />
           </div>
           <span className={cn(
-            "text-[10px] uppercase font-extrabold text-center whitespace-nowrap transition-colors tracking-widest",
-            isActive ? "text-primary-700 dark:text-primary-300" : "text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400",
+            "text-[10px] uppercase font-black text-center whitespace-nowrap transition-colors tracking-widest",
+            isActive ? "text-white" : "text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400",
           )}>
             {item.label}
           </span>
           {isActive && (
             <motion.div
               layoutId="activeTabIndicatorDP"
-              className="absolute -bottom-1.5 inset-x-0 mx-auto w-10 h-1 rounded-full bg-gradient-to-r from-primary-400 to-primary-600 shadow-[0_2px_10px_rgba(59,130,246,0.3)]"
+              className="absolute -bottom-1.5 inset-x-0 mx-auto w-10 h-1 rounded-full bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 shadow-[0_0_15px_rgba(59,130,246,0.5)] dark:shadow-[0_0_20px_rgba(59,130,246,0.7)]"
               transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
             />
           )}
