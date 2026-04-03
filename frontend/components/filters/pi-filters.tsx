@@ -13,6 +13,7 @@ import type { PIFiltersState } from "@/lib/pi-filters";
 import { hasActivePIFilters } from "@/lib/pi-filters";
 import { PurchaseIndentStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
 /** Shared with PO filter for consistent enterprise UX. */
@@ -103,17 +104,17 @@ export function PIFilters({
           <div className="grid grid-cols-3 gap-4 px-4 py-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Approval Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => update({ status: e.target.value })}
-                className={selectClass}
-                aria-label="Approval status"
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(v) => update({ status: v === "all" ? "" : v })}
+                className="border-secondary-200 h-9"
+                placeholder="All"
               >
-                <option value="">All</option>
+                <option value="all">All</option>
                 <option value={PurchaseIndentStatus.Pending}>Pending</option>
                 <option value={PurchaseIndentStatus.Approved}>Approved</option>
                 <option value={PurchaseIndentStatus.Rejected}>Rejected</option>
-              </select>
+              </Select>
             </div>
             <div className="min-w-0">
               <label className={filterLabelClass}>ITEM SELECTION</label>
@@ -141,15 +142,16 @@ export function PIFilters({
             <div className="min-w-0">
               <label className={filterLabelClass}>Entry Status</label>
               {isAdmin ? (
-                <select
-                  value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                  onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                  className={selectClass}
+                <Select
+                  value={filters.isActive === null ? "all" : filters.isActive ? "true" : "false"}
+                  onValueChange={(v) => update({ isActive: v === "all" ? null : v === "true" })}
+                  className="border-secondary-200 h-9"
+                  placeholder="All"
                 >
-                  <option value="">All</option>
+                  <option value="all">All</option>
                   <option value="true">Active Only</option>
                   <option value="false">Inactive Only</option>
-                </select>
+                </Select>
               ) : (
                 <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
                   Active Only

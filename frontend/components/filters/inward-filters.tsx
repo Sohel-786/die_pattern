@@ -13,6 +13,7 @@ import type { InwardFiltersState } from "@/lib/inward-filters";
 import { hasActiveInwardFilters } from "@/lib/inward-filters";
 import { InwardSourceType } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 dark:text-secondary-400 uppercase tracking-wider mb-1 block";
@@ -94,15 +95,16 @@ export function InwardFilters({
                     <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Source Type</label>
-                            <select
-                                value={filters.sourceType}
-                                onChange={(e) => update({ sourceType: e.target.value as InwardSourceType | "" })}
-                                className={selectClass}
+                            <Select
+                                value={filters.sourceType || "all"}
+                                onValueChange={(v) => update({ sourceType: v === "all" ? "" : v as InwardSourceType })}
+                                className="border-secondary-200 dark:border-border h-9"
+                                placeholder="All"
                             >
-                                <option value="">All</option>
+                                <option value="all">All</option>
                                 <option value={InwardSourceType.PO}>Purchase Order</option>
                                 <option value={InwardSourceType.JobWork}>Job Work</option>
-                            </select>
+                            </Select>
                         </div>
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Source Number</label>
@@ -138,15 +140,16 @@ export function InwardFilters({
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Entry Status</label>
                             {isAdmin ? (
-                                <select
-                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                    className={selectClass}
+                                <Select
+                                    value={filters.isActive === null ? "all" : filters.isActive ? "true" : "false"}
+                                    onValueChange={(v) => update({ isActive: v === "all" ? null : v === "true" })}
+                                    className="border-secondary-200 dark:border-border h-9"
+                                    placeholder="All Status"
                                 >
-                                    <option value="">All</option>
+                                    <option value="all">All</option>
                                     <option value="true">Active Only</option>
                                     <option value="false">Inactive Only</option>
-                                </select>
+                                </Select>
                             ) : (
                                 <div className={cn(selectClass, "flex items-center bg-secondary-50 dark:bg-secondary-900/40 text-secondary-500 dark:text-secondary-400 cursor-not-allowed")}>
                                     Active Only

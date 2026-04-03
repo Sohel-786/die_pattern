@@ -22,6 +22,7 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { PAGINATION_VISIBLE_THRESHOLD } from "@/lib/pagination";
 import { toast } from "react-hot-toast";
@@ -517,15 +518,16 @@ export default function ItemsPage() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <div className="flex flex-col">
                                         <label className={filterLabelClass}>Status</label>
-                                        <select
+                                        <Select
                                             value={activeFilter}
-                                            onChange={(e) => setActiveFilter(e.target.value as any)}
-                                            className="flex h-10 w-full sm:w-40 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 appearance-none cursor-pointer pr-8"
+                                            onValueChange={(v) => setActiveFilter(v as any)}
+                                            className="w-full sm:w-40 border-secondary-200"
+                                            placeholder="All Records"
                                         >
                                             <option value="all">All Records</option>
                                             <option value="active">Active Only</option>
                                             <option value="inactive">Inactive Only</option>
-                                        </select>
+                                        </Select>
                                     </div>
                                     <div className="w-20 shrink-0 max-w-[5.5rem]">
                                         <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); setPage(1); }} />
@@ -551,49 +553,53 @@ export default function ItemsPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-t border-secondary-100 pt-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Material</label>
-                                    <select
+                                    <Select
                                         value={materialFilter}
-                                        onChange={(e) => setMaterialFilter(e.target.value)}
-                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                        onValueChange={(v) => setMaterialFilter(v)}
+                                        className="h-9 border-secondary-200 bg-secondary-50/30"
+                                        placeholder="All Materials"
                                     >
                                         <option value="all">All Materials</option>
-                                        {materials.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                    </select>
+                                        {materials.map((m: any) => <option key={m.id} value={m.id.toString()}>{m.name}</option>)}
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Condition Status</label>
-                                    <select
+                                    <Select
                                         value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value)}
-                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                        onValueChange={(v) => setStatusFilter(v)}
+                                        className="h-9 border-secondary-200 bg-secondary-50/30"
+                                        placeholder="All Statuses"
                                     >
                                         <option value="all">All Statuses</option>
-                                        {statuses.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
+                                        {statuses.map((s: any) => <option key={s.id} value={s.id.toString()}>{s.name}</option>)}
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Current Process</label>
-                                    <select
+                                    <Select
                                         value={processFilter}
-                                        onChange={(e) => setProcessFilter(e.target.value)}
-                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                        onValueChange={(v) => setProcessFilter(v)}
+                                        className="h-9 border-secondary-200 bg-secondary-50/30"
+                                        placeholder="All Processes"
                                     >
                                         <option value="all">All Processes</option>
                                         {PROCESS_OPTIONS.map((p) => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                            <option key={p.id} value={p.id.toString()}>{p.name}</option>
                                         ))}
-                                    </select>
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-secondary-500 uppercase tracking-wider px-1">Ownership</label>
-                                    <select
+                                    <Select
                                         value={ownerFilter}
-                                        onChange={(e) => setOwnerFilter(e.target.value)}
-                                        className="flex h-9 w-full rounded-md border border-secondary-200 bg-secondary-50/30 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                                        onValueChange={(v) => setOwnerFilter(v)}
+                                        className="h-9 border-secondary-200 bg-secondary-50/30"
+                                        placeholder="All Ownership"
                                     >
                                         <option value="all">All Ownership</option>
-                                        {owners.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                                    </select>
+                                        {owners.map((o: any) => <option key={o.id} value={o.id.toString()}>{o.name}</option>)}
+                                    </Select>
                                 </div>
                             </div>
                         </div>

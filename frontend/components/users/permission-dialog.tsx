@@ -39,23 +39,24 @@ const PermissionToggle = ({
     icon: any;
     description?: string;
 }) => (
-    <div className="group flex items-center justify-between p-6 rounded-[2rem] bg-secondary-50/50 hover:bg-white border border-transparent hover:border-gray-100 transition-all hover:shadow-xl hover:shadow-black/5">
+    <div className="group flex items-center justify-between p-6 rounded-[2rem] bg-secondary-50/50 dark:bg-secondary-900/10 hover:bg-white dark:hover:bg-secondary-800/50 border border-transparent hover:border-gray-100 dark:hover:border-secondary-800 transition-all hover:shadow-xl hover:shadow-black/5">
         <div className="flex items-center gap-4">
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${checked ? 'bg-primary-600 text-white shadow-lg shadow-primary/30' : 'bg-gray-100 text-gray-400'}`}>
+            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${checked ? 'bg-primary-600 text-white shadow-lg shadow-primary/30' : 'bg-gray-100 dark:bg-secondary-800 text-gray-400 dark:text-secondary-400'}`}>
                 <Icon className="w-5 h-5" />
             </div>
             <div>
-                <p className="font-black text-gray-900 tracking-tight">{label}</p>
-                {description && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{description}</p>}
+                <p className="font-black text-gray-900 dark:text-white tracking-tight">{label}</p>
+                {description && <p className="text-[10px] font-bold text-gray-400 dark:text-secondary-500 uppercase tracking-widest">{description}</p>}
             </div>
         </div>
         <button
+            type="button"
             onClick={() => onChange(!checked)}
-            className={`relative w-16 h-8 rounded-full transition-all flex items-center px-1 ${checked ? 'bg-primary-600' : 'bg-gray-200'}`}
+            className={`relative w-16 h-8 rounded-full transition-all flex items-center px-1 ${checked ? 'bg-primary-600' : 'bg-gray-200 dark:bg-secondary-800'}`}
         >
             <motion.div
                 animate={{ x: checked ? 32 : 0 }}
-                className="h-6 w-6 rounded-full bg-white shadow-md shadow-black/10"
+                className="h-6 w-6 rounded-full bg-white dark:bg-secondary-100 shadow-md shadow-black/10"
             />
         </button>
     </div>
@@ -104,9 +105,9 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
             title=""
             hideHeader
             size="2xl"
-            className="rounded-[4rem] bg-white border-none shadow-2xl overflow-hidden p-0"
+            className="rounded-[4rem] bg-white dark:bg-secondary-950 border-none shadow-2xl overflow-hidden p-0"
         >
-            <div className="flex flex-col h-[85vh] -m-6 bg-white overflow-hidden">
+            <div className="flex flex-col h-[85vh] -m-6 bg-white dark:bg-secondary-950 overflow-hidden">
                 <div className="bg-gray-900 p-12 shrink-0 relative">
                     <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center gap-6">
@@ -128,13 +129,13 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                 <div className="flex-1 overflow-y-auto p-12 scrollbar-hide">
                     {isLoading ? (
                         <div className="h-full flex flex-col items-center justify-center gap-4">
-                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-100 border-t-amber-500" />
-                            <p className="font-black text-gray-400 uppercase text-xs tracking-widest">Hydrating ACL...</p>
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-100 dark:border-secondary-900 border-t-amber-500" />
+                            <p className="font-black text-gray-400 dark:text-secondary-600 uppercase text-xs tracking-widest">Hydrating ACL...</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="col-span-full mb-4">
-                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-4 mb-8">Intelligence & Reporting</h3>
+                                <h3 className="text-xs font-black text-gray-300 dark:text-secondary-600 uppercase tracking-[0.3em] border-b border-gray-50 dark:border-secondary-900 pb-4 mb-8">Intelligence & Reporting</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <PermissionToggle label="Strategic Dashboard" checked={permissions?.viewDashboard || false} onChange={(v) => updatePermission('viewDashboard', v)} icon={LayoutDashboard} description="Global visualization of metrics" />
                                     <PermissionToggle label="Operational Reports" checked={permissions?.viewReports || false} onChange={(v) => updatePermission('viewReports', v)} icon={BarChart3} description="Enable reports module" />
@@ -157,7 +158,7 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                                     <PermissionToggle label="Edit Master" checked={permissions?.editMaster || false} onChange={(v) => updatePermission('editMaster', v)} icon={Edit} description="Modify existing master records" />
                                     <PermissionToggle label="Import Bulk" checked={permissions?.importMaster || false} onChange={(v) => updatePermission('importMaster', v)} icon={ArrowDownLeft} description="Process bulk data intake" />
                                     <PermissionToggle label="Export Data" checked={permissions?.exportMaster || false} onChange={(v) => updatePermission('exportMaster', v)} icon={ArrowUpRight} description="Generate and download datasets" />
-                                    <div className="col-span-full h-px bg-gray-50 my-4" />
+                                    <div className="col-span-full h-px bg-gray-50 dark:bg-secondary-900 my-4" />
                                     <PermissionToggle label="Company Master" checked={permissions?.manageCompany || false} onChange={(v) => updatePermission('manageCompany', v)} icon={Building2} description="Organization entity control" />
                                     <PermissionToggle label="Location Master" checked={permissions?.manageLocation || false} onChange={(v) => updatePermission('manageLocation', v)} icon={MapPin} description="Site & Storage hierarchy" />
                                     <PermissionToggle label="Party Master" checked={permissions?.manageParty || false} onChange={(v) => updatePermission('manageParty', v)} icon={Users} description="Vendor & Client interaction" />
@@ -236,17 +237,17 @@ export function PermissionDialog({ isOpen, onClose, userId, userName }: Permissi
                     )}
                 </div>
 
-                <div className="p-12 shrink-0 border-t border-gray-50 flex justify-between items-center bg-secondary-50/10">
-                    <div className="flex items-center gap-3 text-amber-600 font-bold bg-amber-50 px-6 py-3 rounded-2xl border border-amber-100">
+                <div className="p-12 shrink-0 border-t border-gray-50 dark:border-secondary-900 flex justify-between items-center bg-secondary-50/10 dark:bg-secondary-900/20">
+                    <div className="flex items-center gap-3 text-amber-600 dark:text-amber-500 font-bold bg-amber-50 dark:bg-amber-950/20 px-6 py-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
                         <AlertTriangle className="w-4 h-4" />
                         <span className="text-xs uppercase tracking-widest">Changes affect real-time access</span>
                     </div>
                     <div className="flex gap-4">
-                        <Button variant="ghost" onClick={onClose} className="h-16 px-8 rounded-[1.5rem] font-black text-gray-400">Abort</Button>
+                        <Button variant="ghost" onClick={onClose} className="h-16 px-8 rounded-[1.5rem] font-black text-gray-400 dark:text-secondary-600">Abort</Button>
                         <Button
                             onClick={() => mutation.mutate(permissions!)}
                             disabled={mutation.isPending || !permissions}
-                            className="h-16 px-12 rounded-[1.5rem] bg-gray-900 hover:bg-black text-white font-black shadow-2xl shadow-gray-900/30 flex items-center gap-3 transition-all active:scale-95"
+                            className="h-16 px-12 rounded-[1.5rem] bg-gray-900 dark:bg-amber-500 hover:bg-black dark:hover:bg-amber-600 text-white dark:text-black font-black shadow-2xl shadow-gray-900/30 dark:shadow-amber-500/20 flex items-center gap-3 transition-all active:scale-95"
                         >
                             <Save className="w-5 h-5" />
                             {mutation.isPending ? "FLASHING..." : "COMMIT REACH CONFIG"}

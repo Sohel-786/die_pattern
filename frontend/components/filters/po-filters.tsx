@@ -13,6 +13,7 @@ import type { POFiltersState } from "@/lib/po-filters";
 import { hasActivePOFilters } from "@/lib/po-filters";
 import { PoStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
@@ -99,17 +100,17 @@ export function POFilters({
           <div className="grid grid-cols-4 gap-4 px-4 py-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Approval Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => update({ status: e.target.value })}
-                className={selectClass}
-                aria-label="Approval status"
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(v) => update({ status: v === "all" ? "" : v })}
+                className="border-secondary-200 h-9"
+                placeholder="All"
               >
-                <option value="">All</option>
+                <option value="all">All</option>
                 <option value={PoStatus.Pending}>Pending</option>
                 <option value={PoStatus.Approved}>Approved</option>
                 <option value={PoStatus.Rejected}>Rejected</option>
-              </select>
+              </Select>
             </div>
             <div className="min-w-0 [&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
               <label className={filterLabelClass}>Party</label>
@@ -147,31 +148,31 @@ export function POFilters({
           <div className="grid grid-cols-4 gap-4 px-4 pb-3 pt-2 w-full">
             <div className="min-w-0">
               <label className={filterLabelClass}>Purchase Type</label>
-              <select
-                value={filters.purchaseType}
-                onChange={(e) => update({ purchaseType: e.target.value })}
-                className={selectClass}
-                aria-label="Purchase type"
+              <Select
+                value={filters.purchaseType || "all"}
+                onValueChange={(v) => update({ purchaseType: v === "all" ? "" : v })}
+                className="border-secondary-200 h-9"
+                placeholder="All"
               >
-                <option value="">All</option>
+                <option value="all">All</option>
                 <option value="Regular">Regular</option>
                 <option value="Urgent">Urgent</option>
                 <option value="Critical">Critical</option>
-              </select>
+              </Select>
             </div>
             <div className="min-w-0">
               <label className={filterLabelClass}>Entry Status</label>
               {isAdmin ? (
-                <select
-                  value={filters.isActive === null ? "" : String(filters.isActive)}
-                  onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                  className={selectClass}
-                  aria-label="Entry status"
+                <Select
+                  value={filters.isActive === null ? "all" : String(filters.isActive)}
+                  onValueChange={(v) => update({ isActive: v === "all" ? null : v === "true" })}
+                  className="border-secondary-200 h-9"
+                  placeholder="All"
                 >
-                  <option value="">All</option>
+                  <option value="all">All</option>
                   <option value="true">Active Only</option>
                   <option value="false">Inactive Only</option>
-                </select>
+                </Select>
               ) : (
                 <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
                   Active Only

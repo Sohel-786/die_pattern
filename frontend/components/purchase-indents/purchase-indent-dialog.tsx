@@ -22,6 +22,7 @@ import { PiItemSelectionDialog } from "./pi-item-selection-dialog";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn, formatDate } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 
 interface PurchaseIndentDialogProps {
     open: boolean;
@@ -219,20 +220,17 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         </div>
                         <div className="col-span-3">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Indent Type</Label>
-                            <select
+                            <Select
                                 value={type}
-                                onChange={(e) => { setType(e.target.value as PurchaseIndentType); setIsDirty(true); }}
+                                onValueChange={(v) => { setType(v as PurchaseIndentType); setIsDirty(true); }}
                                 disabled={isReadOnly}
-                                className={cn(
-                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                                    isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
-                                )}
+                                className="mt-0.5 border-secondary-200 h-9"
                             >
                                 <option value={PurchaseIndentType.New}>New Procurement</option>
                                 <option value={PurchaseIndentType.Repair}>Repair / Refurbishing</option>
                                 <option value={PurchaseIndentType.Correction}>Engineering Correction</option>
                                 <option value={PurchaseIndentType.Modification}>Design Modification</option>
-                            </select>
+                            </Select>
                         </div>
                         <div className="col-span-2">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Req. Date of Delivery <span className="text-rose-500">*</span></Label>
@@ -257,18 +255,15 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         </div>
                         <div className="col-span-2">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">MTC Req.</Label>
-                             <select
+                             <Select
                                 value={mtcReq ? "yes" : "no"}
-                                onChange={(e) => { setMtcReq(e.target.value === "yes"); setIsDirty(true); }}
+                                onValueChange={(v) => { setMtcReq(v === "yes"); setIsDirty(true); }}
                                 disabled={isReadOnly}
-                                className={cn(
-                                    "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                                    isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
-                                )}
+                                className="mt-0.5 border-secondary-200 h-9"
                             >
                                 <option value="no">No</option>
                                 <option value="yes">Yes</option>
-                            </select>
+                            </Select>
                         </div>
                     </div>
 

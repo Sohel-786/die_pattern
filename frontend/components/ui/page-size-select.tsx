@@ -2,10 +2,9 @@
 
 import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
-const selectClass =
-  "h-9 w-full min-w-0 rounded-lg border border-secondary-200 bg-white pl-2 pr-7 text-sm text-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 appearance-none cursor-pointer transition-colors";
 
 export interface PageSizeSelectProps {
   value: number;
@@ -21,18 +20,18 @@ export function PageSizeSelect({ value, onChange, label = "Rows", className }: P
   return (
     <div className={cn("min-w-0 w-20 shrink-0 max-w-[5.5rem]", className)}>
       <label className={filterLabelClass}>{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={selectClass}
+      <Select
+        value={value.toString()}
+        onValueChange={(v) => onChange(Number(v))}
+        className="h-9 w-full min-w-0"
         aria-label={label}
       >
         {PAGE_SIZE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value.toString()}>
             {opt.label}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }

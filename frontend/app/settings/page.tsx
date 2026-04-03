@@ -829,12 +829,12 @@ export default function SettingsPage() {
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card">
-                              <CardHeader className="bg-gradient-to-r from-gray-50 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-primary-50/50 to-white dark:from-primary-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-primary-100/50 dark:bg-primary-900/25 rounded-lg text-primary-600 dark:text-primary-300">
+                                  <div className="p-2 bg-primary-100/50 dark:bg-primary-900/20 rounded-xl text-primary-600 dark:text-primary-400">
                                     <LayoutDashboard className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">System & Navigation</CardTitle>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">System & Navigation</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100 dark:divide-border">
@@ -866,12 +866,12 @@ export default function SettingsPage() {
                               </CardContent>
                             </Card>
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-orange-500">
-                              <CardHeader className="bg-gradient-to-r from-orange-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-orange-50/50 to-white dark:from-orange-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-orange-100/50 dark:bg-orange-900/25 rounded-lg text-orange-600 dark:text-orange-300">
+                                  <div className="p-2 bg-orange-100/50 dark:bg-orange-900/20 rounded-xl text-orange-600 dark:text-orange-400">
                                     <Database className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Master Data Management</CardTitle>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Master Data Management</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100 dark:divide-border">
@@ -887,7 +887,7 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-black text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-3">Core Master Actions</p>
                                   <div className="grid grid-cols-2 gap-3">
                                     {[{ key: "addMaster", label: "Add (Create)" }, { key: "editMaster", label: "Edit (Update)" }, { key: "importMaster", label: "Import (Bulk)" }, { key: "exportMaster", label: "Export (Reports)" }].map(item => (
-                                      <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-orange-100 dark:border-border bg-white dark:bg-secondary-900/15 hover:border-orange-200 dark:hover:bg-secondary-900/25 transition-colors">
+                                      <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-orange-100 dark:border-border bg-orange-50/20 dark:bg-secondary-900/15 hover:border-orange-300 dark:hover:bg-secondary-800/30 transition-colors">
                                         <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-orange-600 focus:ring-orange-500" />
                                         <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 group-hover:text-primary-900 dark:group-hover:text-white transition-colors">{item.label}</span>
                                       </label>
@@ -922,12 +922,12 @@ export default function SettingsPage() {
                               </CardContent>
                             </Card>
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-blue-500">
-                              <CardHeader className="bg-gradient-to-r from-blue-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-blue-50/50 to-white dark:from-blue-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-blue-100/50 dark:bg-blue-900/25 rounded-lg text-blue-600 dark:text-blue-300">
+                                  <div className="p-2 bg-blue-100/50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
                                     <Truck className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Core Operations</CardTitle>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Core Operations</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100 dark:divide-border">
@@ -935,9 +935,9 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-black text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-2">Job Work Management</p>
                                   <div className="grid grid-cols-2 gap-2">
                                     {[{ key: "viewMovement", label: "View JW" }, { key: "createMovement", label: "Add JW" }, { key: "editMovement", label: "Edit JW" }].map(item => (
-                                      <label key={item.key} className="flex items-center gap-2 cursor-pointer group p-1.5 rounded border border-blue-50 dark:border-border hover:bg-white dark:hover:bg-secondary-900/25 hover:border-blue-200 transition-all">
+                                      <label key={item.key} className="flex items-center gap-2 cursor-pointer group p-1.5 rounded border border-blue-50 dark:border-border hover:bg-blue-50/50 dark:hover:bg-secondary-800/30 hover:border-blue-200 transition-all">
                                         <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
-                                        <span className="text-[11px] font-semibold text-secondary-700 dark:text-white/90 group-hover:text-primary-900 dark:group-hover:text-white transition-colors">{item.label}</span>
+                                        <span className="text-[11px] font-semibold text-secondary-700 dark:text-white/90 group-hover:text-blue-700 dark:group-hover:text-white transition-colors">{item.label}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -946,9 +946,9 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-black text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-2">Inward Entry</p>
                                   <div className="grid grid-cols-3 gap-2">
                                     {[{ key: "viewInward", label: "VIEW" }, { key: "createInward", label: "ADD" }, { key: "editInward", label: "EDIT" }].map(item => (
-                                      <label key={item.key} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-blue-100 dark:border-border bg-white dark:bg-secondary-900/15 cursor-pointer hover:border-blue-300 dark:hover:bg-secondary-900/25 transition-colors shadow-sm">
+                                      <label key={item.key} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-blue-100 dark:border-border bg-blue-50/20 dark:bg-secondary-900/15 cursor-pointer hover:border-blue-300 dark:hover:bg-secondary-800/30 transition-colors shadow-sm">
                                         <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-3.5 h-3.5 rounded border-secondary-300 text-blue-600 focus:ring-blue-500" />
-                                        <span className="text-[10px] font-black text-secondary-500 dark:text-white/80">{item.label}</span>
+                                        <span className="text-[10px] font-black text-secondary-500 dark:text-white/80 group-hover:text-blue-700 dark:group-hover:text-white">{item.label}</span>
                                       </label>
                                     ))}
                                   </div>
@@ -968,12 +968,12 @@ export default function SettingsPage() {
                             </Card>
 
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-cyan-500">
-                              <CardHeader className="bg-gradient-to-r from-cyan-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-cyan-50/50 to-white dark:from-cyan-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-cyan-100/50 dark:bg-cyan-900/25 rounded-lg text-cyan-600 dark:text-cyan-300">
+                                  <div className="p-2 bg-cyan-100/50 dark:bg-cyan-900/20 rounded-xl text-cyan-600 dark:text-cyan-400">
                                     <ArrowLeftRight className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Transfer & Logistics</CardTitle>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Transfer & Logistics</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100">
@@ -982,7 +982,7 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-bold text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-3">Transfer Entry</p>
                                     <div className="grid grid-cols-2 gap-2">
                                       {[{ key: "viewTransfer", label: "View Transfer" }, { key: "createTransfer", label: "Add Transfer" }, { key: "editTransfer", label: "Edit Transfer" }].map(item => (
-                                        <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-cyan-100 dark:border-border bg-cyan-50/20 dark:bg-secondary-900/15 hover:bg-white dark:hover:bg-secondary-900/25 hover:border-cyan-300 transition-all">
+                                        <label key={item.key} className="flex items-center gap-2.5 cursor-pointer group p-2 rounded-lg border border-cyan-100 dark:border-border bg-cyan-50/20 dark:bg-secondary-900/15 hover:bg-cyan-50/50 dark:hover:bg-secondary-800/30 hover:border-cyan-300 transition-all">
                                           <input type="checkbox" checked={(localPermissions as any)[item.key]} onChange={(e) => handlePermissionChange(item.key as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-cyan-600 focus:ring-cyan-500" />
                                           <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 group-hover:text-cyan-700 dark:group-hover:text-white">{item.label}</span>
                                         </label>
@@ -996,12 +996,12 @@ export default function SettingsPage() {
                               </CardContent>
                             </Card>
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-indigo-500">
-                              <CardHeader className="bg-gradient-to-r from-indigo-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="p-2 bg-indigo-100/50 dark:bg-indigo-900/25 rounded-lg text-indigo-600 dark:text-indigo-300">
+                                  <div className="p-2 bg-indigo-100/50 dark:bg-indigo-900/20 rounded-xl text-indigo-600 dark:text-indigo-400">
                                     <FileText className="w-5 h-5" />
                                   </div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Purchasing</CardTitle>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Purchasing</CardTitle>
                                 </div>
                               </CardHeader>
                               <CardContent className="p-0 divide-y divide-secondary-100 dark:divide-border">
@@ -1009,9 +1009,9 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-bold text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-3">Purchase Indents</p>
                                   <div className="grid grid-cols-4 gap-2">
                                     {["viewPI", "createPI", "editPI", "approvePI"].map(k => (
-                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/15 cursor-pointer hover:bg-white dark:hover:bg-secondary-900/25 transition-colors">
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/15 cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-secondary-800/30 transition-colors">
                                         <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
-                                        <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 uppercase tracking-tight">
+                                        <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 uppercase tracking-tight group-hover:text-indigo-700 dark:group-hover:text-white">
                                           {k.replace("PI", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Approve")}
                                         </span>
                                       </label>
@@ -1022,9 +1022,9 @@ export default function SettingsPage() {
                                   <p className="text-[10px] font-bold text-secondary-400 dark:text-white/70 uppercase tracking-widest mb-3">Purchase Orders</p>
                                   <div className="grid grid-cols-4 gap-2">
                                     {["viewPO", "createPO", "editPO", "approvePO"].map(k => (
-                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/15 cursor-pointer hover:bg-white dark:hover:bg-secondary-900/25 transition-colors">
+                                      <label key={k} className="flex flex-col items-center gap-1.5 p-2 rounded-lg border border-secondary-100 dark:border-border bg-secondary-50/30 dark:bg-secondary-900/15 cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-secondary-800/30 transition-colors">
                                         <input type="checkbox" checked={(localPermissions as any)[k]} onChange={(e) => handlePermissionChange(k as any, e.target.checked)} className="w-4 h-4 rounded border-secondary-300 text-indigo-600 focus:ring-indigo-500" />
-                                        <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 uppercase tracking-tight">
+                                        <span className="text-xs font-semibold text-secondary-700 dark:text-white/90 uppercase tracking-tight group-hover:text-indigo-700 dark:group-hover:text-white">
                                           {k.replace("PO", "").replace("view", "View").replace("create", "Add").replace("edit", "Edit").replace("approve", "Approve")}
                                         </span>
                                       </label>
@@ -1034,13 +1034,13 @@ export default function SettingsPage() {
                               </CardContent>
                             </Card>
                             <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-purple-500">
-                              <CardHeader className="bg-gradient-to-r from-purple-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                              <CardHeader className="bg-gradient-to-r from-purple-50/50 to-white dark:from-purple-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2.5">
-                                    <div className="p-2 bg-purple-100/50 dark:bg-purple-900/25 rounded-lg text-purple-600 dark:text-purple-300">
+                                    <div className="p-2 bg-purple-100/50 dark:bg-purple-900/20 rounded-xl text-purple-600 dark:text-purple-400">
                                       <BarChart3 className="w-5 h-5" />
                                     </div>
-                                    <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Reports & Analytics</CardTitle>
+                                    <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Reports & Analytics</CardTitle>
                                   </div>
                                   <label className="flex items-center justify-between bg-white dark:bg-secondary-900/30 border border-secondary-200 dark:border-border px-3 py-1.5 rounded-full hover:bg-secondary-50 dark:hover:bg-secondary-900/40 transition-colors shadow-sm cursor-pointer">
                                     <span className="text-xs font-medium text-secondary-700 dark:text-white/90 mr-2">Enable Reports</span>
@@ -1051,14 +1051,14 @@ export default function SettingsPage() {
                             </Card>
                           </div>
                           <Card className="shadow-sm border-secondary-200 dark:border-border dark:bg-card border-t-4 border-t-emerald-500">
-                            <CardHeader className="bg-gradient-to-r from-emerald-50/30 to-white dark:from-secondary-900/40 dark:to-secondary-900/10 border-b border-secondary-100 dark:border-border pb-3 pt-4">
+                            <CardHeader className="bg-gradient-to-r from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-muted/30 border-b border-secondary-100 dark:border-white/10 pb-3 pt-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="p-2 bg-emerald-100/50 dark:bg-emerald-900/25 rounded-lg text-emerald-600 dark:text-emerald-300">
+                                <div className="p-2 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-xl text-emerald-600 dark:text-emerald-400">
                                   <Building2 className="w-5 h-5" />
                                 </div>
                                 <div>
-                                  <CardTitle className="text-base font-semibold text-primary-900 dark:text-white">Company & Location Access</CardTitle>
-                                  <p className="text-xs text-secondary-500 dark:text-white/70 mt-0.5">Assign companies and locations this user can access. Admin role still sees all.</p>
+                                  <CardTitle className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Company & Location Access</CardTitle>
+                                  <p className="text-[10px] text-slate-500 dark:text-white/60 font-black uppercase tracking-widest mt-0.5">Assign companies and locations this user can access. Admin role still sees all.</p>
                                 </div>
                               </div>
                             </CardHeader>

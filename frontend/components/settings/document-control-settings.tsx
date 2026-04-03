@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast";
 import { format, parseISO, isValid } from "date-fns";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDate } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.PurchaseIndent]: "Purchase Indent",
@@ -131,17 +132,17 @@ export function DocumentControlSettings() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Label className="text-sm font-semibold text-gray-700 dark:text-white">Document type</Label>
-          <select
-            value={documentTypeFilter}
-            onChange={(e) => setDocumentTypeFilter(Number(e.target.value) as DocumentType)}
-            className="rounded-lg border border-gray-300 dark:border-secondary-700 px-3 py-2 text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-card focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          <Select
+            value={documentTypeFilter.toString()}
+            onValueChange={(v) => setDocumentTypeFilter(Number(v) as DocumentType)}
+            className="w-[200px]"
           >
             {(Object.keys(DOCUMENT_TYPE_LABELS) as unknown as DocumentType[]).map((k) => (
-              <option key={k} value={k} className="dark:bg-card">
+              <option key={k} value={k.toString()}>
                 {DOCUMENT_TYPE_LABELS[k]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <Button onClick={openCreate} className="bg-primary-600 hover:bg-primary-700 text-white gap-2">
           <Plus className="w-4 h-4" />

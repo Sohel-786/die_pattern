@@ -14,6 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { cn, formatDateOnly } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 import { TransferItemSelectionDialog } from "./transfer-item-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { useLocationContext } from "@/contexts/location-context";
@@ -371,13 +372,18 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Out For <span className="text-rose-500">*</span></Label>
-                                <select value={outFor} onChange={(e) => { setOutFor(e.target.value); setIsDirty(true); }} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 dark:border-border bg-white dark:bg-card text-xs font-medium dark:text-foreground", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed")}>
-                                    <option value="">Select...</option>
+                                <Select 
+                                    value={outFor} 
+                                    onValueChange={(v) => { setOutFor(v); setIsDirty(true); }} 
+                                    disabled={isReadOnly} 
+                                    className="mt-0.5 border-secondary-200 h-8 text-xs font-medium" 
+                                    placeholder="Select..."
+                                >
                                     <option value="Casting">Casting</option>
                                     <option value="Job Work">Job Work</option>
                                     <option value="Repair">Repair</option>
                                     <option value="Other">Other</option>
-                                </select>
+                                </Select>
                             </div>
                             <div className="col-span-6 flex items-center justify-end gap-3">
                                 <div className="flex flex-col gap-1 items-end">

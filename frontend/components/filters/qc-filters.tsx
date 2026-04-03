@@ -14,6 +14,7 @@ import { hasActiveQCFilters } from "@/lib/qc-filters";
 import { InwardSourceType } from "@/types";
 import { QcStatus } from "@/types";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
@@ -105,28 +106,30 @@ export function QCFilters({
                         </div>
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Source Type</label>
-                            <select
-                                value={filters.sourceType}
-                                onChange={(e) => update({ sourceType: e.target.value as InwardSourceType | "" })}
-                                className={selectClass}
+                            <Select
+                                value={filters.sourceType || "all"}
+                                onValueChange={(v) => update({ sourceType: v === "all" ? "" : v as InwardSourceType })}
+                                className="border-secondary-200 h-9"
+                                placeholder="All"
                             >
-                                <option value="">All</option>
+                                <option value="all">All</option>
                                 <option value={InwardSourceType.PO}>Purchase Order</option>
                                 <option value={InwardSourceType.JobWork}>Job Work</option>
-                            </select>
+                            </Select>
                         </div>
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Approval Status</label>
-                            <select
-                                value={filters.status}
-                                onChange={(e) => update({ status: e.target.value === "" ? "" : e.target.value as QcStatus })}
-                                className={selectClass}
+                            <Select
+                                value={filters.status || "all"}
+                                onValueChange={(v) => update({ status: v === "all" ? "" : v as QcStatus })}
+                                className="border-secondary-200 h-9"
+                                placeholder="All"
                             >
-                                <option value="">All</option>
+                                <option value="all">All</option>
                                 <option value={QcStatus.Pending}>Pending</option>
                                 <option value={QcStatus.Approved}>Approved</option>
                                 <option value={QcStatus.Rejected}>Rejected</option>
-                            </select>
+                            </Select>
                         </div>
                         <div className="min-w-0">
                             <label className={filterLabelClass}>ITEM SELECTION</label>
@@ -153,15 +156,16 @@ export function QCFilters({
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Entry Status</label>
                             {isAdmin ? (
-                                <select
-                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                    className={selectClass}
+                                <Select
+                                    value={filters.isActive === null ? "all" : filters.isActive ? "true" : "false"}
+                                    onValueChange={(v) => update({ isActive: v === "all" ? null : v === "true" })}
+                                    className="border-secondary-200 h-9"
+                                    placeholder="All"
                                 >
-                                    <option value="">All</option>
+                                    <option value="all">All</option>
                                     <option value="true">Active Only</option>
                                     <option value="false">Inactive Only</option>
-                                </select>
+                                </Select>
                             ) : (
                                 <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
                                     Active Only

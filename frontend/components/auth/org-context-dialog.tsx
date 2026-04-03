@@ -5,6 +5,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin } from "lucide-react";
 import { CompanyLocationAccess, SelectedOrgContext } from "@/contexts/location-context";
+import {
+  Select,
+} from "@/components/ui/select";
 
 type Props = {
   open: boolean;
@@ -75,20 +78,18 @@ export function OrgContextDialog({ open, onClose, access, onSelect, closeDisable
             <label className="text-sm font-medium text-gray-700 dark:text-white flex items-center gap-2">
               <Building2 className="w-4 h-4 text-secondary-500" /> Company
             </label>
-            <select
-              className="w-full h-11 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25 dark:text-white"
-              value={companyId ?? ""}
-              onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
+            <Select
+              value={companyId?.toString() || ""}
+              onValueChange={(v) => setCompanyId(v ? Number(v) : null)}
+              className="h-11 rounded-xl"
+              placeholder="Select company..."
             >
-              <option value="" disabled>
-                Select company...
-              </option>
               {companies.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={c.id.toString()}>
                   {c.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
@@ -96,21 +97,19 @@ export function OrgContextDialog({ open, onClose, access, onSelect, closeDisable
           <label className="text-sm font-medium text-gray-700 dark:text-white flex items-center gap-2">
             <MapPin className="w-4 h-4 text-secondary-500" /> Location
           </label>
-          <select
-            className="w-full h-11 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25 disabled:bg-secondary-50 dark:disabled:bg-secondary-900/50 dark:text-white"
-            value={locationId ?? ""}
-            onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : null)}
+          <Select
+            value={locationId?.toString() || ""}
+            onValueChange={(v) => setLocationId(v ? Number(v) : null)}
             disabled={companyId == null}
+            className="h-11 rounded-xl"
+            placeholder={companyId == null ? "Select company first..." : "Select location..."}
           >
-            <option value="" disabled>
-              {companyId == null ? "Select company first..." : "Select location..."}
-            </option>
             {availableLocations.map((l) => (
-              <option key={l.id} value={l.id}>
+              <option key={l.id} value={l.id.toString()}>
                 {l.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

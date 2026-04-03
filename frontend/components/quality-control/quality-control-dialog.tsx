@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Select } from "@/components/ui/select";
 import { QCItemSelectionDialog } from "./qc-item-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
@@ -328,24 +329,23 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                 <div className="col-span-4">
                                     <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500 uppercase tracking-tighter">Source Type <span className="text-rose-500">*</span></Label>
                                     <div className="mt-0.5">
-                                        <select
+                                        <Select
                                             value={sourceType}
-                                            onChange={(e) => {
-                                                const v = e.target.value === "" ? "" : e.target.value as InwardSourceType;
-                                                setSourceType(v);
+                                            onValueChange={(v) => {
+                                                setSourceType(v as InwardSourceType);
                                                 setSelectedItems([]);
                                                 setIsDirty(true);
                                             }}
                                             disabled={isReadOnly || selectedItems.length > 0}
-                                            className="h-9 w-full px-3 rounded-lg border border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-slate-950 text-sm font-semibold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
+                                            className="h-9 w-full border-secondary-200"
+                                            placeholder="Select source type"
                                         >
-                                            <option value="" className="dark:bg-slate-950 dark:text-white">Select source type</option>
                                             {sourceOptions.map((opt) => (
-                                                <option key={opt.value} value={opt.value} className="dark:bg-slate-950 dark:text-white">
+                                                <option key={opt.value} value={opt.value}>
                                                     {opt.label}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </Select>
                                     </div>
                                 </div>
                                 <div className="col-span-12 flex flex-col gap-2 border-t border-secondary-100 dark:border-border pt-4 mt-2">

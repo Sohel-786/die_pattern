@@ -12,6 +12,7 @@ import { Role } from "@/types";
 
 import { hasActiveTransferFilters } from "@/lib/transfer-filters";
 import { PageSizeSelect } from "@/components/ui/page-size-select";
+import { Select } from "@/components/ui/select";
 import { ItemInfiniteSelect } from "./item-infinite-select";
 
 const filterLabelClass = "text-[11px] font-medium text-secondary-500 uppercase tracking-wider mb-1 block";
@@ -145,15 +146,16 @@ export function TransferFilters({
                         <div className="min-w-0">
                             <label className={filterLabelClass}>Entry Status</label>
                             {isAdmin ? (
-                                <select
-                                    value={filters.isActive === null ? "" : filters.isActive ? "true" : "false"}
-                                    onChange={(e) => update({ isActive: e.target.value === "" ? null : e.target.value === "true" })}
-                                    className={selectClass}
+                                <Select
+                                    value={filters.isActive === null ? "all" : filters.isActive ? "true" : "false"}
+                                    onValueChange={(v) => update({ isActive: v === "all" ? null : v === "true" })}
+                                    className="border-secondary-200 h-9"
+                                    placeholder="All"
                                 >
-                                    <option value="">All</option>
+                                    <option value="all">All</option>
                                     <option value="true">Active Only</option>
                                     <option value="false">Inactive Only</option>
-                                </select>
+                                </Select>
                             ) : (
                                 <div className={cn(selectClass, "flex items-center bg-secondary-50 text-secondary-500 cursor-not-allowed")}>
                                     Active Only

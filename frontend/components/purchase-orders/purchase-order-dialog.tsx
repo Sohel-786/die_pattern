@@ -28,6 +28,7 @@ import { toast } from "react-hot-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { cn, formatDate, formatRate } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 
 export interface POGridItem {
   purchaseIndentItemId: number;
@@ -568,19 +569,16 @@ export function PurchaseOrderDialog({
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>
-                    <select
+                    <Select
                       value={purchaseType}
-                      onChange={(e) => { setPurchaseType(e.target.value as PurchaseType); setIsDirty(true); }}
-                    disabled={isReadOnly}
-                    className={cn(
-                      "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-                      isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed"
-                    )}
-                  >
-                    <option value="Regular">Regular</option>
-                    <option value="Urgent">Urgent</option>
-                    <option value="Critical">Critical</option>
-                  </select>
+                      onValueChange={(v) => { setPurchaseType(v as PurchaseType); setIsDirty(true); }}
+                      disabled={isReadOnly}
+                      className="mt-0.5 border-secondary-200 h-9"
+                    >
+                      <option value="Regular">Regular</option>
+                      <option value="Urgent">Urgent</option>
+                      <option value="Critical">Critical</option>
+                    </Select>
                 </div>
                 <div className="col-span-3">
                   <Label className="text-xs font-semibold text-secondary-600">Party Name <span className="text-rose-500">*</span></Label>

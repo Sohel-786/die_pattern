@@ -12,6 +12,7 @@ import { useCreateUser, useUpdateUser } from "@/hooks/use-users";
 import { useCompaniesActive, useLocationsActive } from "@/hooks/use-settings";
 import { Save, X, Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { Select } from "@/components/ui/select";
 
 const userSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -186,45 +187,49 @@ export function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Role <span className="text-red-500">*</span></Label>
-            <select {...register("role")} className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm font-medium">
+            <Select
+              value={watch("role")}
+              onValueChange={(v) => setValue("role", v as Role, { shouldValidate: true })}
+              className="h-11"
+            >
               <option value={Role.USER}>User</option>
               <option value={Role.MANAGER}>Manager</option>
               <option value={Role.ADMIN}>Admin</option>
-            </select>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Company <span className="text-red-500">*</span></Label>
-            <select
-              className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm"
-              value={watch("companyId") ?? ""}
-              onChange={(e) => {
-                const v = e.target.value ? Number(e.target.value) : undefined;
-                setValue("companyId", v);
+            <Select
+              value={watch("companyId")?.toString() || ""}
+              onValueChange={(v) => {
+                const val = v ? Number(v) : undefined;
+                setValue("companyId", val, { shouldValidate: true });
                 setValue("locationId", undefined);
               }}
+              placeholder="Select company"
+              className="h-11"
             >
-              <option value="">Select company</option>
               {companies.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id.toString()}>{c.name}</option>
               ))}
-            </select>
+            </Select>
             {errors.companyId && <p className="text-xs text-rose-500">{errors.companyId.message}</p>}
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-bold text-secondary-500 uppercase tracking-wider">Location <span className="text-red-500">*</span></Label>
-            <select
-              className="h-11 w-full rounded-md border border-secondary-300 px-3 text-sm disabled:opacity-50"
-              value={watch("locationId") ?? ""}
-              onChange={(e) => setValue("locationId", e.target.value ? Number(e.target.value) : undefined)}
+            <Select
+              value={watch("locationId")?.toString() || ""}
+              onValueChange={(v) => setValue("locationId", v ? Number(v) : undefined, { shouldValidate: true })}
               disabled={!companyId}
+              placeholder={companyId ? "Select location" : "Select company first"}
+              className="h-11"
             >
-              <option value="">{companyId ? "Select location" : "Select company first"}</option>
               {locations.filter((l) => l.companyId === companyId).map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+                <option key={l.id} value={l.id.toString()}>{l.name}</option>
               ))}
-            </select>
+            </Select>
             {errors.locationId && <p className="text-xs text-rose-500">{errors.locationId.message}</p>}
           </div>
         </div>

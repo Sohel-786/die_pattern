@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Select } from "@/components/ui/select";
 import { SourceSelectionDialog } from "./source-selection-dialog";
 import { AttachmentListDialog } from "@/components/ui/attachment-list-dialog";
 import { toast } from "react-hot-toast";
@@ -405,19 +406,19 @@ export function InwardDialog({
                                 <div className="flex flex-col gap-1 pr-4">
                                     <span className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-widest">Select Source Type</span>
                                     <div className="flex items-center gap-2">
-                                        <select
+                                        <Select
                                             value={selectedSourceType}
-                                            onChange={(e) => {
-                                                setSelectedSourceType(e.target.value as InwardSourceType);
+                                            onValueChange={(v) => {
+                                                setSelectedSourceType(v as InwardSourceType);
                                                 setIsDirty(true);
                                             }}
                                             disabled={isReadOnly || !vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
-                                            className="h-9 w-48 px-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-secondary-50/50 dark:bg-slate-950 text-sm font-bold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="h-9 w-48 border-secondary-200"
                                         >
                                             {sourceOptions.map(opt => (
-                                                <option key={opt.value} value={opt.value} className="dark:bg-slate-950 dark:text-white">{opt.label}</option>
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
-                                        </select>
+                                        </Select>
                                         <Button
                                             type="button"
                                             onClick={() => setSourceSelectionOpen(true)}

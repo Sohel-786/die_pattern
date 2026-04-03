@@ -7,6 +7,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { DashboardMetrics, PurchaseIndent, PurchaseIndentStatus, PO, PoStatus, RecentItemChangeRow } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrentUserPermissions } from "@/hooks/use-settings";
@@ -746,31 +747,33 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <label className={filterLabelClass}>Item Type</label>
-                    <select
-                      value={locationItemTypeId === "" ? "" : locationItemTypeId}
-                      onChange={(e) => setLocationItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={selectClass}
+                    <Select
+                      value={locationItemTypeId?.toString() || "all"}
+                      onValueChange={(v) => setLocationItemTypeId(v === "all" ? "" : Number(v))}
+                      className="border-border bg-background"
+                      placeholder="All Types"
                     >
-                      <option value="">All</option>
+                      <option value="all">All Types</option>
                       {itemTypes.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id.toString()}>{t.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <label className={filterLabelClass}>Item Condition</label>
-                    <select
-                      value={locationStatusId === "" ? "" : locationStatusId}
-                      onChange={(e) => setLocationStatusId(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={selectClass}
+                    <Select
+                      value={locationStatusId?.toString() || "all"}
+                      onValueChange={(v) => setLocationStatusId(v === "all" ? "" : Number(v))}
+                      className="border-border bg-background"
+                      placeholder="All Statuses"
                     >
-                      <option value="">All</option>
+                      <option value="all">All Statuses</option>
                       {itemStatuses.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id.toString()}>{s.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:rounded-lg [&_button]:text-sm [&_button]:w-full">
                     <label className={filterLabelClass}>Item</label>
@@ -782,18 +785,19 @@ export default function DashboardPage() {
                       searchPlaceholder="Search…"
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <label className={filterLabelClass}>Current Process</label>
-                    <select
-                      value={locationProcessId === "" ? "" : locationProcessId}
-                      onChange={(e) => setLocationProcessId(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={selectClass}
+                    <Select
+                      value={locationProcessId?.toString() || "all"}
+                      onValueChange={(v) => setLocationProcessId(v === "all" ? "" : Number(v))}
+                      className="border-border bg-background"
+                      placeholder="All Processes"
                     >
-                      <option value="">All</option>
+                      <option value="all">All Processes</option>
                       {PROCESS_OPTIONS.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
+                        <option key={p.id} value={p.id.toString()}>{p.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="w-20 shrink-0 max-w-[5.5rem]">
                     <PageSizeSelect
@@ -1126,18 +1130,19 @@ export default function DashboardPage() {
                       searchPlaceholder="Search…"
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <label className={filterLabelClass}>Item Type</label>
-                    <select
-                      value={atVendorItemTypeId === "" ? "" : atVendorItemTypeId}
-                      onChange={(e) => setAtVendorItemTypeId(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={selectClass}
+                    <Select
+                      value={atVendorItemTypeId?.toString() || "all"}
+                      onValueChange={(v) => setAtVendorItemTypeId(v === "all" ? "" : Number(v))}
+                      className="border-border bg-background"
+                      placeholder="All Types"
                     >
-                      <option value="">All</option>
+                      <option value="all">All Types</option>
                       {itemTypes.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id.toString()}>{t.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="w-20 shrink-0 max-w-[5.5rem]">
                     <PageSizeSelect
@@ -1297,18 +1302,19 @@ export default function DashboardPage() {
                         searchPlaceholder="Search…"
                       />
                     </div>
-                    <div>
+                    <div className="flex flex-col">
                       <label className={filterLabelClass}>Status</label>
-                      <select
+                      <Select
                         value={pendingPIStatus || "All"}
-                        onChange={(e) => setPendingPIStatus(e.target.value)}
-                        className={selectClass}
+                        onValueChange={(v) => setPendingPIStatus(v)}
+                        className="border-border bg-background"
+                        placeholder="All Status"
                       >
                         <option value="All">All Status</option>
                         <option value="Pending">Pending</option>
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
-                      </select>
+                      </Select>
                     </div>
                     <div className="w-20 shrink-0 max-w-[5.5rem]">
                       <PageSizeSelect
@@ -1633,18 +1639,19 @@ export default function DashboardPage() {
                         searchPlaceholder="Search…"
                       />
                     </div>
-                    <div>
+                    <div className="flex flex-col">
                       <label className={filterLabelClass}>Status</label>
-                      <select
+                      <Select
                         value={pendingPOStatus || "All"}
-                        onChange={(e) => setPendingPOStatus(e.target.value)}
-                        className={selectClass}
+                        onValueChange={(v) => setPendingPOStatus(v)}
+                        className="border-border bg-background"
+                        placeholder="All Status"
                       >
                         <option value="All">All Status</option>
                         <option value="Pending">Pending</option>
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
-                      </select>
+                      </Select>
                     </div>
                     <div className="w-20 shrink-0 max-w-[5.5rem]">
                       <PageSizeSelect
