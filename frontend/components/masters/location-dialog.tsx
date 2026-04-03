@@ -40,7 +40,7 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
     } = useForm<FormValues>({
@@ -75,6 +75,8 @@ export function LocationDialog({ isOpen, onClose, onSubmit, item, isLoading, rea
             onClose={onClose}
             title={item ? "Update Location Details" : "Register New Location"}
             size="md"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <form
                 onSubmit={handleSubmit((data) => {

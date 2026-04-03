@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { registerDialog, getScrollLockCount } from "@/lib/dialog-stack";
@@ -26,6 +26,17 @@ interface DialogProps {
   hideHeader?: boolean;
   /** When false, this dialog does not lock body scroll (use for attachment list/viewer to avoid scroll lock issues) */
   lockScroll?: boolean;
+  /**
+   * When true, pressing Esc will show a confirmation dialog *only if* `isDirty` is true.
+   * This does not affect closing via Cancel buttons, X button, or backdrop clicks.
+   */
+  confirmOnEscWhenDirty?: boolean;
+  /** Set true when the form inside the dialog has unsaved changes. */
+  isDirty?: boolean;
+  /** Optional confirm dialog title (Esc only). */
+  escConfirmTitle?: string;
+  /** Optional confirm dialog message (Esc only). */
+  escConfirmDescription?: string;
   /** Custom class for the dialog container */
   className?: string;
 }
@@ -42,6 +53,10 @@ export function Dialog({
   closeButtonDisabled = false,
   hideHeader = false,
   lockScroll = true,
+  confirmOnEscWhenDirty = false,
+  isDirty = false,
+  escConfirmTitle = "Unsaved Changes",
+  escConfirmDescription = "You have unsaved changes in the form. Are you sure you want to close? All filled information will be lost.",
   className,
 }: DialogProps) {
   // Store the element that had focus before the dialog opened
@@ -49,6 +64,10 @@ export function Dialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const closeButtonDisabledRef = useRef(closeButtonDisabled);
+  const isDirtyRef = useRef(isDirty);
+  const confirmOnEscWhenDirtyRef = useRef(confirmOnEscWhenDirty);
+  const [escConfirmOpen, setEscConfirmOpen] = useState(false);
+  const escConfirmOpenRef = useRef(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -56,6 +75,19 @@ export function Dialog({
   useEffect(() => {
     closeButtonDisabledRef.current = closeButtonDisabled;
   }, [closeButtonDisabled]);
+  useEffect(() => {
+    isDirtyRef.current = !!isDirty;
+  }, [isDirty]);
+  useEffect(() => {
+    confirmOnEscWhenDirtyRef.current = !!confirmOnEscWhenDirty;
+  }, [confirmOnEscWhenDirty]);
+  useEffect(() => {
+    escConfirmOpenRef.current = escConfirmOpen;
+  }, [escConfirmOpen]);
+  useEffect(() => {
+    // Reset Esc confirm each time the dialog closes/opens
+    if (!isOpen) setEscConfirmOpen(false);
+  }, [isOpen]);
 
   // Handle focus storage and return only on open/close transitions
   useEffect(() => {
@@ -79,6 +111,17 @@ export function Dialog({
   // the identity of the entry in the stack stays the same, allowing isTopDialog to work.
   const handleClose = useCallback(() => {
     if (closeButtonDisabledRef.current) return;
+
+    // Esc confirm flow: global Esc calls this close fn.
+    // Only show confirm when requested + dirty; otherwise close immediately.
+    if (escConfirmOpenRef.current) {
+      setEscConfirmOpen(false);
+      return;
+    }
+    if (confirmOnEscWhenDirtyRef.current && isDirtyRef.current) {
+      setEscConfirmOpen(true);
+      return;
+    }
     onCloseRef.current();
   }, []);
 
@@ -215,7 +258,7 @@ export function Dialog({
               aria-modal="true"
               aria-labelledby="dialog-title"
               className={cn(
-                "bg-card text-card-foreground rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none overflow-hidden border border-border",
+                "bg-white dark:bg-[#0d1117] text-card-foreground rounded-xl shadow-2xl w-full max-h-[96vh] flex flex-col relative focus:outline-none overflow-hidden border border-secondary-200 dark:border-border",
                 sizeClasses[size],
                 className
               )}
@@ -263,6 +306,65 @@ export function Dialog({
                 {children}
               </div>
             </motion.div>
+
+            {/* Esc-only unsaved changes confirm */}
+            <AnimatePresence>
+              {escConfirmOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[1100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // clicking backdrop of confirm = stay (do not close original)
+                    setEscConfirmOpen(false);
+                  }}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                    className="w-full max-w-md rounded-xl border border-secondary-200 dark:border-secondary-800 bg-white dark:bg-[#06080a] text-card-foreground shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={escConfirmTitle}
+                  >
+                    <div className="p-6 border-b border-secondary-200 dark:border-secondary-800">
+                      <h3 className="text-lg font-semibold text-foreground tracking-tight">{escConfirmTitle}</h3>
+                    </div>
+                    
+                    <div className="p-6 space-y-6">
+                      <p className="text-sm text-secondary-600 dark:text-secondary-400 leading-relaxed">
+                        {escConfirmDescription}
+                      </p>
+
+                      <div className="flex gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 hover:bg-secondary-100 dark:hover:bg-secondary-900/50 dark:border-secondary-700 font-medium"
+                          onClick={() => setEscConfirmOpen(false)}
+                        >
+                          No, Stay
+                        </Button>
+                        <Button
+                          type="button"
+                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-all shadow-md active:scale-95"
+                          onClick={() => {
+                            setEscConfirmOpen(false);
+                            onCloseRef.current();
+                          }}
+                        >
+                          Yes, Close
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </>
       )}

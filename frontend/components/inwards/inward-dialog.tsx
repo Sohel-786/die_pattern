@@ -57,6 +57,7 @@ export function InwardDialog({
 }: InwardDialogProps) {
     const isEditing = !!inwardId;
     const queryClient = useQueryClient();
+    const [isDirty, setIsDirty] = useState(false);
 
     const [vendorId, setVendorId] = useState<number>(0);
     const [inwardDate, setInwardDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -72,6 +73,10 @@ export function InwardDialog({
     const [attachmentListDialogOpen, setAttachmentListDialogOpen] = useState(false);
     const [uploading, setUploading] = useState(false);
     const submitLockRef = useRef(false);
+
+    useEffect(() => {
+        if (open) setIsDirty(false);
+    }, [open, inwardId]);
 
     const uniqueSources = useMemo(() => {
         const map = new Map<string, { type: InwardSourceType; id: number; display: string }>();
@@ -109,6 +114,7 @@ export function InwardDialog({
 
     const removeSourceGroup = (type: InwardSourceType, id: number) => {
         setLines(prev => prev.filter(l => !(l.sourceType === type && l.sourceRefId === id)));
+        setIsDirty(true);
     };
 
     const { data: inward, isLoading: loadingInward } = useQuery<Inward>({
@@ -218,6 +224,7 @@ export function InwardDialog({
             next[idx] = { ...next[idx], included: !(next[idx].included !== false) };
             return next;
         });
+        setIsDirty(true);
     };
 
     const updateLineRemark = (idx: number, val: string) => {
@@ -226,6 +233,7 @@ export function InwardDialog({
             next[idx] = { ...next[idx], remarks: val };
             return next;
         });
+        setIsDirty(true);
     };
 
     const getImportButtonText = () => {
@@ -251,6 +259,7 @@ export function InwardDialog({
             return;
         }
         setPendingAttachmentFiles((prev) => [...prev, ...valid]);
+        setIsDirty(true);
         toast.success("File(s) added. They will be uploaded when you save.");
         e.target.value = "";
     };
@@ -258,9 +267,11 @@ export function InwardDialog({
     const removeAttachmentUrl = (url: string) => {
         // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+        setIsDirty(true);
     };
     const removePendingAttachment = (index: number) => {
         setPendingAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
+        setIsDirty(true);
     };
 
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
@@ -337,6 +348,8 @@ export function InwardDialog({
             size="full"
             contentScroll={false}
             className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl flex flex-col"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-background">
                 {loadingInward && isEditing ? (
@@ -373,6 +386,7 @@ export function InwardDialog({
                                                 if (Number(id)) {
                                                     setSelectedSourceType(InwardSourceType.PO);
                                                 }
+                                                setIsDirty(true);
                                             }}
                                             placeholder="Search vendors..."
                                             disabled={isReadOnly || lines.length > 0}
@@ -393,7 +407,10 @@ export function InwardDialog({
                                     <div className="flex items-center gap-2">
                                         <select
                                             value={selectedSourceType}
-                                            onChange={(e) => setSelectedSourceType(e.target.value as InwardSourceType)}
+                                            onChange={(e) => {
+                                                setSelectedSourceType(e.target.value as InwardSourceType);
+                                                setIsDirty(true);
+                                            }}
                                             disabled={isReadOnly || !vendorId || lines.length > 0 || lines.some(l => l.isQCPending === false)}
                                             className="h-9 w-48 px-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-secondary-50/50 dark:bg-slate-950 text-sm font-bold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
@@ -559,6 +576,7 @@ export function InwardDialog({
                                                                                         next[idx] = { ...next[idx], rate: val };
                                                                                         return next;
                                                                                     });
+                                                                                    setIsDirty(true);
                                                                                 }}
                                                                                 disabled={isQCLocked}
                                                                                 placeholder="0.00"
@@ -578,6 +596,7 @@ export function InwardDialog({
                                                                                         next[idx] = { ...next[idx], gstPercent: val };
                                                                                         return next;
                                                                                     });
+                                                                                    setIsDirty(true);
                                                                                 }}
                                                                                 disabled={isQCLocked}
                                                                                 placeholder="0%"
@@ -613,9 +632,9 @@ export function InwardDialog({
                             {/* Overall Remarks Block */}
                             <div className="bg-white dark:bg-card p-4 rounded-xl border border-secondary-200/60 dark:border-border shadow-sm flex flex-col gap-2">
                                 <Label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest block leading-none">Overall Receipt Remarks</Label>
-                                <Textarea
+                                 <Textarea
                                     value={remarks}
-                                    onChange={(e) => setRemarks(e.target.value)}
+                                    onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }}
                                     readOnly={isReadOnly}
                                     placeholder="Optional header level remarks..."
                                     className={cn("min-h-[64px] text-sm border-secondary-100 dark:border-secondary-800 rounded-lg resize-none dark:bg-secondary-900/20", isReadOnly ? "bg-secondary-50 dark:bg-secondary-900/40" : "bg-secondary-50/20")}

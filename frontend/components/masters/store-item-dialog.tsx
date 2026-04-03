@@ -63,7 +63,7 @@ export function StoreItemDialog({
         reset,
         watch,
         setValue,
-        formState: { errors },
+        formState: { errors, isDirty },
     } = useForm<ItemFormValues>({
         resolver: zodResolver(itemSchema),
         defaultValues: {
@@ -138,7 +138,14 @@ export function StoreItemDialog({
     const isImageLocked = item && (item._count?.issues ?? 0) > 0;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={item ? "Update Ledger Record" : "Register Store Asset"} size="2xl">
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={item ? "Update Ledger Record" : "Register Store Asset"}
+            size="2xl"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
+        >
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
                 <fieldset disabled={isReadOnly} className="space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8">

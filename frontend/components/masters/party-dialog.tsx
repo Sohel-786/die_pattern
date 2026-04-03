@@ -117,7 +117,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
         control,
@@ -167,6 +167,8 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
             onClose={onClose}
             title={party ? "Update Party Information" : "Register New Party"}
             size="xl"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <form
                 onSubmit={handleSubmit((data) => {
@@ -186,7 +188,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                             value={watchedName || ""}
                             onChange={(val) => {
                                 if (isReadOnly) return;
-                                setValue("name", val, { shouldValidate: true });
+                                setValue("name", val, { shouldValidate: true, shouldDirty: true });
                             }}
                             options={partyNames}
                             placeholder="e.g. J&J STEEL CAST"
@@ -240,7 +242,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                 onChange={(e) => {
                                     if (isReadOnly) return;
                                     const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 10);
-                                    setValue("phoneNumber", raw, { shouldValidate: true });
+                                    setValue("phoneNumber", raw, { shouldValidate: true, shouldDirty: true });
                                 }}
                             />
                             {errors.phoneNumber && <p className="text-xs text-rose-500 mt-1.5 font-bold uppercase text-[10px] tracking-tight">{errors.phoneNumber.message}</p>}
@@ -303,7 +305,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         if (isReadOnly) return;
                                         // Auto-uppercase and strip non-alphanumeric, enforce max 15
                                         const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 15);
-                                        setValue("gstNo", raw, { shouldValidate: true });
+                                        setValue("gstNo", raw, { shouldValidate: true, shouldDirty: true });
                                     }}
                                 />
                                 {/* Live validity icon */}
@@ -389,7 +391,7 @@ export function PartyDialog({ isOpen, onClose, onSubmit, party, isLoading, exist
                                         checked={isActive}
                                         onChange={(e) => {
                                             if (isReadOnly) return;
-                                            setValue("isActive", e.target.checked);
+                                            setValue("isActive", e.target.checked, { shouldDirty: true });
                                         }}
                                         disabled={isReadOnly}
                                     />

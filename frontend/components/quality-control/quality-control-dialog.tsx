@@ -28,6 +28,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
     const isEditing = !!qc?.id;
     const isReadOnly = !!readOnly || (isEditing && qc?.status !== QcStatus.Pending);
     const queryClient = useQueryClient();
+    const [isDirty, setIsDirty] = useState(false);
 
     const [partyId, setPartyId] = useState<number>(0);
     const [sourceType, setSourceType] = useState<InwardSourceType | "">("");
@@ -54,6 +55,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
 
     const removeInwardSource = (inwardId: number) => {
         setSelectedItems(prev => prev.filter(item => item.inwardId !== inwardId));
+        setIsDirty(true);
     };
 
     const { data: qcDetail } = useQuery<QC>({
@@ -106,6 +108,10 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             setAttachmentUrlsToDelete([]);
         }
     }, [open, isEditing, qcDetail]);
+
+    useEffect(() => {
+        if (open) setIsDirty(false);
+    }, [open, qc?.id]);
 
     const { data: parties = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
@@ -165,6 +171,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             return;
         }
         setPendingAttachmentFiles((prev) => [...prev, ...valid]);
+        setIsDirty(true);
         toast.success("File(s) added. They will be uploaded when you save.");
         e.target.value = "";
     };
@@ -172,9 +179,11 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
     const removeAttachmentUrl = (url: string) => {
         // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+        setIsDirty(true);
     };
     const removePendingAttachment = (index: number) => {
         setPendingAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
+        setIsDirty(true);
     };
 
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
@@ -241,12 +250,14 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
         setSelectedItems((prev) =>
             prev.map((i) => (i.inwardLineId === inwardLineId ? { ...i, included: !i.included } : i))
         );
+        setIsDirty(true);
     };
 
     const handleAddItems = (items: PendingQC[]) => {
         const existingIds = new Set(selectedItems.map((i) => i.inwardLineId));
         const toAdd = items.filter((i) => !existingIds.has(i.inwardLineId)).map((i) => ({ ...i, included: true }));
         setSelectedItems((prev) => [...prev, ...toAdd]);
+        setIsDirty(true);
     };
 
     const sourceOptions = [
@@ -270,6 +281,8 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
             size="full"
             contentScroll={false}
             className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl flex flex-col"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 {isEditing && !qcDetail ? (
@@ -305,6 +318,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                             onChange={(id) => {
                                                 setPartyId(Number(id));
                                                 if (Number(id)) setSelectedItems([]);
+                                                setIsDirty(true);
                                             }}
                                             placeholder="Search party..."
                                             disabled={isReadOnly || selectedItems.length > 0}
@@ -320,6 +334,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                                 const v = e.target.value === "" ? "" : e.target.value as InwardSourceType;
                                                 setSourceType(v);
                                                 setSelectedItems([]);
+                                                setIsDirty(true);
                                             }}
                                             disabled={isReadOnly || selectedItems.length > 0}
                                             className="h-9 w-full px-3 rounded-lg border border-secondary-200 dark:border-border bg-secondary-50/50 dark:bg-slate-950 text-sm font-semibold text-secondary-700 dark:text-white focus:border-primary-500 focus:ring-0 transition-all outline-none disabled:opacity-50"
@@ -379,7 +394,7 @@ export function QualityControlDialog({ open, onOpenChange, qc, readOnly }: Quali
                                         <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Remarks</Label>
                                         <Input
                                             value={remarks}
-                                            onChange={(e) => setRemarks(e.target.value)}
+                                            onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }}
                                             placeholder="Optional remarks..."
                                             disabled={isReadOnly}
                                             className="h-9 mt-0.5 border-secondary-200 dark:border-border text-sm dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600"

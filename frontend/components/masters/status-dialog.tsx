@@ -34,7 +34,7 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
     } = useForm<FormValues>({
@@ -66,6 +66,8 @@ export function StatusDialog({ isOpen, onClose, onSubmit, item, isLoading, readO
             onClose={onClose}
             title={item ? "Update Status Protocol" : "Register New Status Label"}
             size="md"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <form
                 onSubmit={handleSubmit((data) => {

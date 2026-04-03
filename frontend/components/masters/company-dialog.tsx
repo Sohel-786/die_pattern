@@ -126,7 +126,7 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
         control,
@@ -284,7 +284,15 @@ export function CompanyDialog({ isOpen, onClose, onSubmit, item, isLoading, read
     const dialogTitle = item ? "Update Company Information" : "Register New Company";
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={dialogTitle} size="2xl" contentScroll={false}>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={dialogTitle}
+            size="2xl"
+            contentScroll={false}
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
+        >
             <form
                 onSubmit={handleSubmit(async (data) => {
                     if (isReadOnly) return;

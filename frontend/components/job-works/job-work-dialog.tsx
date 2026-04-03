@@ -45,6 +45,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
     const isEditing = !!jobWork?.id;
     const isReadOnly = !!readOnly || (isEditing && jobWork?.isActive === false);
     const queryClient = useQueryClient();
+    const [isDirty, setIsDirty] = useState(false);
 
     const [nextCode, setNextCode] = useState("");
     const [toPartyId, setToPartyId] = useState<number>(0);
@@ -61,6 +62,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
 
     useEffect(() => {
         if (!open) {
+            setIsDirty(false);
             setToPartyId(0);
             setDescription("");
             setRemarks("");
@@ -100,6 +102,10 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 .catch(() => setNextCode("JW-ERROR"));
         }
     }, [open, isEditing, jobWork]);
+
+    useEffect(() => {
+        if (open) setIsDirty(false);
+    }, [open, jobWork?.id]);
 
     const { data: parties = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
@@ -150,6 +156,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
             return;
         }
         setPendingFiles((prev) => [...prev, ...valid]);
+        setIsDirty(true);
         toast.success("Files added. They will be uploaded when you Save/Update.");
         e.target.value = "";
     };
@@ -157,10 +164,12 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
     const removeUrl = (url: string) => {
         // Mark for deletion; actual deletion happens on Save/Update.
         setUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+        setIsDirty(true);
     };
 
     const removePending = (index: number) => {
         setPendingFiles(prev => prev.filter((_, i) => i !== index));
+        setIsDirty(true);
     };
 
     const effectiveAttachmentCount = attachmentUrls.filter(u => !urlsToDelete.includes(u)).length + pendingFiles.length;
@@ -183,12 +192,17 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 proposedNewName: ""
             }));
         setItems(prev => [...prev, ...newItems]);
+        setIsDirty(true);
     };
 
-    const removeItem = (id: number) => setItems(prev => prev.filter(i => i.itemId !== id));
+    const removeItem = (id: number) => {
+        setItems(prev => prev.filter(i => i.itemId !== id));
+        setIsDirty(true);
+    };
 
     const updateItem = (itemId: number, field: keyof JobWorkGridItem, value: any) => {
         setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, [field]: value } : i));
+        setIsDirty(true);
     };
 
     const handleSubmit = async () => {
@@ -281,6 +295,8 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                 size="full"
                 contentScroll={false}
                 className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col font-sans"
+                confirmOnEscWhenDirty={!isReadOnly}
+                isDirty={!isReadOnly && isDirty}
             >
                 <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4 overflow-y-auto">
@@ -302,7 +318,10 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                     <SearchableSelect
                                         options={parties.map(p => ({ value: p.id, label: p.name }))}
                                         value={toPartyId || ""}
-                                        onChange={(val) => setToPartyId(Number(val))}
+                                        onChange={(val) => {
+                                            setToPartyId(Number(val));
+                                            setIsDirty(true);
+                                        }}
                                         disabled={isReadOnly || hasAnyInward}
                                         placeholder={hasAnyInward ? "Locked - Active Inward Exists" : "Search Party..."}
                                     />
@@ -312,7 +331,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                 <Label className="text-xs font-semibold text-secondary-600 uppercase tracking-tighter">Purpose / Description <span className="text-rose-500">*</span></Label>
                                 <Input
                                     value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
+                                    onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
                                     disabled={isReadOnly || hasAnyInward}
                                     placeholder={hasAnyInward ? "Locked - Active Inward Exists" : "e.g. For Repairing, New Job..."}
                                     className={cn("h-9 mt-1 text-sm font-medium border-secondary-200 dark:border-border focus:border-primary-400 dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600", hasAnyInward && "opacity-60 cursor-not-allowed")}
@@ -323,7 +342,7 @@ export function JobWorkDialog({ open, onOpenChange, jobWork, readOnly }: JobWork
                                 <Label className="text-xs font-semibold text-secondary-600">Internal Remarks</Label>
                                 <Input
                                     value={remarks}
-                                    onChange={(e) => setRemarks(e.target.value)}
+                                    onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }}
                                     disabled={isReadOnly}
                                     placeholder="Add internal notes..."
                                     className="h-9 mt-1 text-sm border-secondary-200 dark:border-border focus:border-primary-400 dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600"

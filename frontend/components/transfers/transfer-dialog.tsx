@@ -44,6 +44,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const isReadOnly = isEditing ? !canEdit : false;
     const queryClient = useQueryClient();
     const { selected, getAllPairs } = useLocationContext();
+    const [isDirty, setIsDirty] = useState(false);
 
     const [fromPartyId, setFromPartyId] = useState<number | null>(0); // 0 = Current Location
     const [toPartyId, setToPartyId] = useState<number | null>(null);
@@ -114,6 +115,10 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             if (autoNextCode) setNextCode(autoNextCode);
         }
     }, [open, isEditing, transfer, autoNextCode]);
+
+    useEffect(() => {
+        if (open) setIsDirty(false);
+    }, [open, transfer?.id]);
 
     const { data: parties = [] } = useQuery<Party[]>({
         queryKey: ["parties", "active"],
@@ -198,12 +203,17 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                 remarks: ""
             }));
         setItems(prev => [...prev, ...newItems]);
+        setIsDirty(true);
     };
 
-    const removeItem = (id: number) => setItems(prev => prev.filter(i => i.itemId !== id));
+    const removeItem = (id: number) => {
+        setItems(prev => prev.filter(i => i.itemId !== id));
+        setIsDirty(true);
+    };
 
     const updateItem = (itemId: number, field: keyof TransferGridItem, value: any) => {
         setItems(prev => prev.map(i => i.itemId === itemId ? { ...i, [field]: value } : i));
+        setIsDirty(true);
     };
 
     const ALLOWED_ATTACHMENT_EXT = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"];
@@ -223,6 +233,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
             return;
         }
         setPendingAttachmentFiles((prev) => [...prev, ...valid]);
+        setIsDirty(true);
         toast.success("File(s) added. They will be uploaded when you save.");
         e.target.value = "";
     };
@@ -230,9 +241,11 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
     const removeAttachmentUrl = (url: string) => {
         // Mark for deletion; actual deletion happens on Save/Update.
         setAttachmentUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+        setIsDirty(true);
     };
     const removePendingAttachment = (index: number) => {
         setPendingAttachmentFiles((prev) => prev.filter((_, i) => i !== index));
+        setIsDirty(true);
     };
 
     const effectiveAttachmentCount = attachmentUrls.filter((u) => !attachmentUrlsToDelete.includes(u)).length + pendingAttachmentFiles.length;
@@ -341,6 +354,8 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                 size="full"
                 contentScroll={false}
                 className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl flex flex-col h-[94vh] max-h-[94vh]"
+                confirmOnEscWhenDirty={!isReadOnly}
+                isDirty={!isReadOnly && isDirty}
             >
                 <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                     <div className="flex-1 flex flex-col min-h-0 px-5 py-3 gap-3 overflow-y-auto">
@@ -356,7 +371,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                             </div>
                             <div className="col-span-2">
                                 <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Out For <span className="text-rose-500">*</span></Label>
-                                <select value={outFor} onChange={(e) => setOutFor(e.target.value)} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 dark:border-border bg-white dark:bg-card text-xs font-medium dark:text-foreground", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed")}>
+                                <select value={outFor} onChange={(e) => { setOutFor(e.target.value); setIsDirty(true); }} disabled={isReadOnly} className={cn("mt-0.5 w-full h-8 px-2 rounded border border-secondary-200 dark:border-border bg-white dark:bg-card text-xs font-medium dark:text-foreground", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-not-allowed")}>
                                     <option value="">Select...</option>
                                     <option value="Casting">Casting</option>
                                     <option value="Job Work">Job Work</option>
@@ -396,7 +411,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <SearchableSelect
                                     options={fromOptions}
                                     value={fromPartyId ?? ""}
-                                    onChange={(val) => { setFromPartyId(val === "" ? null : Number(val)); setItems([]); }}
+                                    onChange={(val) => { setFromPartyId(val === "" ? null : Number(val)); setItems([]); setIsDirty(true); }}
                                     disabled={isReadOnly || lockStructure || items.length > 0}
                                     placeholder="Choose source..."
                                 />
@@ -410,7 +425,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <SearchableSelect
                                     options={destinationOptions}
                                     value={toPartyId ?? ""}
-                                    onChange={(val) => setToPartyId(val === "" ? null : Number(val))}
+                                    onChange={(val) => { setToPartyId(val === "" ? null : Number(val)); setIsDirty(true); }}
                                     disabled={isReadOnly || lockStructure}
                                     placeholder="Choose destination..."
                                 />
@@ -424,16 +439,16 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
                                         <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Vehicle No. <span className="text-rose-500">*</span></Label>
-                                        <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="e.g. GJ01..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
+                                        <Input value={vehicleNo} onChange={(e) => { setVehicleNo(e.target.value); setIsDirty(true); }} placeholder="e.g. GJ01..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                     </div>
                                     <div className="flex flex-col gap-1.5">
                                         <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Person Name <span className="text-rose-500">*</span></Label>
-                                        <Input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="Name..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
+                                        <Input value={personName} onChange={(e) => { setPersonName(e.target.value); setIsDirty(true); }} placeholder="Name..." readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-1.5 mt-0.5">
                                     <Label className="text-[11px] font-semibold text-secondary-600 dark:text-secondary-500">Reason Details <span className="text-rose-500">*</span></Label>
-                                    <Input value={reasonDetails} onChange={(e) => setReasonDetails(e.target.value)} placeholder="e.g. FOR CASTING REPAIR" readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
+                                    <Input value={reasonDetails} onChange={(e) => { setReasonDetails(e.target.value); setIsDirty(true); }} placeholder="e.g. FOR CASTING REPAIR" readOnly={isReadOnly} className="h-8 border-secondary-200 dark:border-border text-xs dark:bg-card dark:text-foreground dark:placeholder:text-secondary-600" />
                                 </div>
                             </div>
                         </div>
@@ -500,7 +515,7 @@ export function TransferDialog({ open, onOpenChange, transfer }: TransferDialogP
                         {/* Overall remarks: small */}
                         <div className="bg-white dark:bg-card p-3 rounded-lg border border-secondary-200/60 dark:border-border shadow-sm shrink-0 flex flex-col gap-1">
                             <Label className="text-[10px] font-black text-secondary-500 uppercase tracking-widest block leading-none">Overall Transfer Remarks</Label>
-                            <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional remarks..." readOnly={isReadOnly} rows={2} className={cn("min-h-0 text-xs border-secondary-100 dark:border-border bg-secondary-50/20 dark:bg-secondary-200/10 rounded resize-none py-2 dark:text-foreground dark:placeholder:text-secondary-600", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-default")} />
+                            <Textarea value={remarks} onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }} placeholder="Optional remarks..." readOnly={isReadOnly} rows={2} className={cn("min-h-0 text-xs border-secondary-100 dark:border-border bg-secondary-50/20 dark:bg-secondary-200/10 rounded resize-none py-2 dark:text-foreground dark:placeholder:text-secondary-600", isReadOnly && "bg-secondary-50 dark:bg-secondary-200/10 cursor-default")} />
                         </div>
                     </div>
 

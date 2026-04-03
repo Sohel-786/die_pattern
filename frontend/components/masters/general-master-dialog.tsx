@@ -36,7 +36,7 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
     } = useForm<FormValues>({
@@ -68,6 +68,8 @@ export function GeneralMasterDialog({ isOpen, onClose, onSubmit, item, title, is
             onClose={onClose}
             title={item ? `Update ${title}` : `Register New ${title}`}
             size="md"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <form
                 onSubmit={handleSubmit((data) => {

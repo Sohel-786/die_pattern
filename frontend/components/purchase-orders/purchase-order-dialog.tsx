@@ -65,6 +65,7 @@ export function PurchaseOrderDialog({
   const isEditing = !!po?.id;
   const isReadOnly = !!readOnly || (isEditing && (po?.isActive === false || po?.status !== PoStatus.Pending));
   const queryClient = useQueryClient();
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -202,6 +203,10 @@ export function PurchaseOrderDialog({
     }
   }, [open, poData, isEditing]);
 
+  useEffect(() => {
+    if (open) setIsDirty(false);
+  }, [open, po?.id]);
+
   // In edit mode, derive selectedPiIds and sourcePiId from poData once approvedPIs is available (so Add PI dialog does not show already-selected PIs).
   useEffect(() => {
     if (!isEditing || !poData || !approvedPIs.length) return;
@@ -314,6 +319,7 @@ export function PurchaseOrderDialog({
       return;
     }
     setPendingQuotationFiles((prev) => [...prev, ...valid]);
+    setIsDirty(true);
     toast.success("File(s) added. They will be uploaded when you save the PO.");
     e.target.value = "";
   };
@@ -321,23 +327,28 @@ export function PurchaseOrderDialog({
   const removeQuotationUrl = (url: string) => {
     // Mark for deletion; actual deletion happens on Save/Update.
     setQuotationUrlsToDelete((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    setIsDirty(true);
   };
   const removePendingQuotation = (index: number) => {
     setPendingQuotationFiles((prev) => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
   };
 
   const effectiveQuotationCount = quotationUrls.filter((u) => !quotationUrlsToDelete.includes(u)).length + pendingQuotationFiles.length;
 
   const toggleItemIncluded = (purchaseIndentItemId: number) => {
     setItems((prev) => prev.map((i) => (i.purchaseIndentItemId === purchaseIndentItemId ? { ...i, included: !(i.included !== false) } : i)));
+    setIsDirty(true);
   };
 
   const updateItemRate = (purchaseIndentItemId: number, rate: number) => {
     setItems((prev) => prev.map((i) => (i.purchaseIndentItemId === purchaseIndentItemId ? { ...i, rate } : i)));
+    setIsDirty(true);
   };
 
   const updateItemGstPercent = (purchaseIndentItemId: number, gstPercent: number) => {
     setItems((prev) => prev.map((i) => (i.purchaseIndentItemId === purchaseIndentItemId ? { ...i, gstPercent } : i)));
+    setIsDirty(true);
   };
 
   const addItemsFromPi = (pi: PurchaseIndent) => {
@@ -388,6 +399,7 @@ export function PurchaseOrderDialog({
 
     if (!selectedPiIds.includes(pi.id)) {
       setSelectedPiIds((prev) => [...prev, pi.id]);
+      setIsDirty(true);
     }
   };
 
@@ -407,6 +419,7 @@ export function PurchaseOrderDialog({
       itemIdsToRemove.forEach((id) => delete next[id]);
       return next;
     });
+    setIsDirty(true);
   };
 
   const selectedPIsForDisplay = useMemo(
@@ -532,6 +545,8 @@ export function PurchaseOrderDialog({
       size="full"
       contentScroll={false}
       className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col"
+      confirmOnEscWhenDirty={!isReadOnly}
+      isDirty={!isReadOnly && isDirty}
     >
       <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
         {loadingPO && isEditing ? (
@@ -553,9 +568,9 @@ export function PurchaseOrderDialog({
                 </div>
                 <div className="col-span-2">
                   <Label className="text-xs font-semibold text-secondary-600">Purchase Type <span className="text-rose-500">*</span></Label>
-                  <select
-                    value={purchaseType}
-                    onChange={(e) => setPurchaseType(e.target.value as PurchaseType)}
+                    <select
+                      value={purchaseType}
+                      onChange={(e) => { setPurchaseType(e.target.value as PurchaseType); setIsDirty(true); }}
                     disabled={isReadOnly}
                     className={cn(
                       "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
@@ -573,7 +588,10 @@ export function PurchaseOrderDialog({
                     <SearchableSelect
                       options={vendors.map((v) => ({ label: v.name, value: v.id }))}
                       value={vendorId}
-                      onChange={(val) => setVendorId(Number(val))}
+                      onChange={(val) => {
+                        setVendorId(Number(val));
+                        setIsDirty(true);
+                      }}
                       placeholder="Search parties..."
                       disabled={isReadOnly}
                     />
@@ -588,10 +606,10 @@ export function PurchaseOrderDialog({
               <div className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-3">
                   <Label className="text-xs font-semibold text-secondary-600">Quotation Number</Label>
-                  <Input
-                    placeholder="Supplier quote ref"
-                    value={quotationNo}
-                    onChange={(e) => setQuotationNo(e.target.value)}
+                    <Input
+                      placeholder="Supplier quote ref"
+                      value={quotationNo}
+                      onChange={(e) => { setQuotationNo(e.target.value); setIsDirty(true); }}
                     className="h-9 mt-0.5 border-secondary-200 text-sm"
                     readOnly={isReadOnly}
                   />
@@ -767,7 +785,7 @@ export function PurchaseOrderDialog({
                   <Label className="text-xs font-semibold text-secondary-600">Remarks</Label>
                   <Textarea
                     value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
+                    onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }}
                     readOnly={isReadOnly}
                     placeholder="Optional remarks..."
                     className={cn("mt-0.5 min-h-[72px] text-sm border-secondary-200 rounded-lg resize-none", isReadOnly && "bg-secondary-50")}
@@ -784,7 +802,10 @@ export function PurchaseOrderDialog({
                   <div className="mt-0.5 w-40">
                     <DatePicker
                       value={deliveryDate}
-                      onChange={(date) => setDeliveryDate(date ? format(date, "yyyy-MM-dd") : "")}
+                      onChange={(date) => {
+                        setDeliveryDate(date ? format(date, "yyyy-MM-dd") : "");
+                        setIsDirty(true);
+                      }}
                       disabled={isReadOnly}
                       disabledDays={(date: Date) => {
                         const today = new Date();

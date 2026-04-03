@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Item } from "@/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +35,7 @@ export function ItemChangeDialog({ isOpen, onClose, onSubmit, item, isLoading }:
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
     } = useForm<ChangeFormValues>({
@@ -63,6 +63,8 @@ export function ItemChangeDialog({ isOpen, onClose, onSubmit, item, isLoading }:
             onClose={onClose}
             title="Change Process"
             size="md"
+            confirmOnEscWhenDirty={true}
+            isDirty={isDirty}
         >
             <div className="mb-6 px-1">
                 <p className="text-[11px] font-black text-secondary-500 dark:text-secondary-400 uppercase tracking-widest leading-none mb-1">

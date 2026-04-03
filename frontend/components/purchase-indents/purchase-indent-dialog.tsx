@@ -38,6 +38,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
     const isEditing = !!indent;
     const isReadOnly = !!readOnly;
     const queryClient = useQueryClient();
+    const [isDirty, setIsDirty] = useState(false);
     const [initialItemIds, setInitialItemIds] = useState<number[]>([]);
     const [selectedItemsState, setSelectedItemsState] = useState<any[]>([]);
     const [remarks, setRemarks] = useState("");
@@ -77,6 +78,11 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             });
         }
     }, [indent, open]);
+
+    // Reset dirty state whenever dialog opens or switches record.
+    useEffect(() => {
+        if (open) setIsDirty(false);
+    }, [open, indent?.id]);
 
     // When main PI dialog closes, ensure the add-item dialog is also closed (avoids stale overlay)
     useEffect(() => {
@@ -125,6 +131,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             return;
         }
         setSelectedItemsState(prev => prev.filter(x => x.id !== id));
+        setIsDirty(true);
     };
 
     const addItemsFromSelection = (newItems: ItemWithStatus[]) => {
@@ -139,6 +146,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                     mainPartName: ni.mainPartName,
                     itemTypeName: ni.itemTypeName
                 }));
+            setIsDirty(true);
             return [...prev, ...itemsToAdd];
         });
     };
@@ -188,6 +196,8 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
             size="full"
             contentScroll={false}
             className="overflow-hidden border border-secondary-300 dark:border-secondary-600 shadow-2xl max-h-[90vh] flex flex-col"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <div className="flex flex-col h-full min-h-0 bg-[#f8fafc] dark:bg-card">
                 <div className="flex-1 flex flex-col min-h-0 px-6 py-4 gap-4">
@@ -211,7 +221,7 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Indent Type</Label>
                             <select
                                 value={type}
-                                onChange={(e) => setType(e.target.value as PurchaseIndentType)}
+                                onChange={(e) => { setType(e.target.value as PurchaseIndentType); setIsDirty(true); }}
                                 disabled={isReadOnly}
                                 className={cn(
                                     "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
@@ -229,7 +239,10 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                             <div className="mt-0.5">
                                 <DatePicker
                                     value={reqDateOfDelivery || null}
-                                    onChange={(date) => setReqDateOfDelivery(date ? format(date, "yyyy-MM-dd") : "")}
+                                    onChange={(date) => {
+                                        setReqDateOfDelivery(date ? format(date, "yyyy-MM-dd") : "");
+                                        setIsDirty(true);
+                                    }}
                                     placeholder="Select date"
                                     clearable
                                     disabled={isReadOnly}
@@ -244,9 +257,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                         </div>
                         <div className="col-span-2">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">MTC Req.</Label>
-                            <select
+                             <select
                                 value={mtcReq ? "yes" : "no"}
-                                onChange={(e) => setMtcReq(e.target.value === "yes")}
+                                onChange={(e) => { setMtcReq(e.target.value === "yes"); setIsDirty(true); }}
                                 disabled={isReadOnly}
                                 className={cn(
                                     "w-full h-9 mt-0.5 px-3 rounded-lg border border-secondary-200 dark:border-border bg-white dark:bg-card text-sm font-medium text-secondary-900 dark:text-foreground focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
@@ -339,9 +352,9 @@ export function PurchaseIndentDialog({ open, onOpenChange, indent, onOpenPreview
                     <div className="grid grid-cols-12 gap-4">
                         <div className="col-span-6">
                             <Label className="text-xs font-semibold text-secondary-600 dark:text-secondary-500">Remarks</Label>
-                            <Textarea
+                             <Textarea
                                 value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
+                                onChange={(e) => { setRemarks(e.target.value); setIsDirty(true); }}
                                 readOnly={isReadOnly}
                                 placeholder="Reason for raising this indent..."
                                 className={cn(

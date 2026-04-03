@@ -74,7 +74,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
         register,
         handleSubmit,
         reset,
-        formState: { errors },
+        formState: { errors, isDirty },
         setValue,
         watch,
     } = useForm<ItemFormValues>({
@@ -175,6 +175,8 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
             onClose={onClose}
             title={item ? "Update Die / Pattern Master" : "Add New Die / Pattern Master"}
             size="2xl"
+            confirmOnEscWhenDirty={!isReadOnly}
+            isDirty={!isReadOnly && isDirty}
         >
             <form
                 onSubmit={handleSubmit((data) => {
@@ -204,7 +206,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <Autocomplete
                                 id="mainPartName"
                                 value={watchedMainPartName || ""}
-                                onChange={(val) => setValue("mainPartName", val, { shouldValidate: true })}
+                                onChange={(val) => setValue("mainPartName", val, { shouldValidate: true, shouldDirty: true })}
                                 options={mainPartNames}
                                 placeholder="e.g. EBW 200 BODY"
                                 className="h-11 shadow-sm disabled:opacity-50 dark:bg-card dark:border-border font-bold text-sm tracking-tight"
@@ -220,7 +222,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <Autocomplete
                                 id="currentName"
                                 value={watchedCurrentName || ""}
-                                onChange={(val) => setValue("currentName", val, { shouldValidate: true })}
+                                onChange={(val) => setValue("currentName", val, { shouldValidate: true, shouldDirty: true })}
                                 options={displayNames}
                                 placeholder="e.g. EBW 200 BODY - REV 1"
                                 className="h-11 shadow-sm dark:bg-card dark:border-border font-bold text-sm tracking-tight"
@@ -245,7 +247,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 <SearchableSelect
                                     options={itemTypes.map((t: any) => ({ value: t.id, label: t.name }))}
                                     value={itemTypeId || ""}
-                                    onChange={(val) => setValue("itemTypeId", Number(val), { shouldValidate: true })}
+                                    onChange={(val) => setValue("itemTypeId", Number(val), { shouldValidate: true, shouldDirty: true })}
                                     placeholder="Select Type"
                                     id="itemTypeId"
                                 />
@@ -257,7 +259,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <Autocomplete
                                 id="drawingNo"
                                 value={watchedDrawingNo || ""}
-                                onChange={(val) => setValue("drawingNo", val, { shouldValidate: true })}
+                                onChange={(val) => setValue("drawingNo", val, { shouldValidate: true, shouldDirty: true })}
                                 options={drawingNumbers}
                                 placeholder="DRW-001"
                                 className="h-11 shadow-sm dark:bg-card dark:border-border font-bold text-sm tracking-tight"
@@ -286,7 +288,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <SearchableSelect
                                 options={materials.map((m: any) => ({ value: m.id, label: m.name }))}
                                 value={materialId || ""}
-                                onChange={(val) => setValue("materialId", Number(val), { shouldValidate: true })}
+                                onChange={(val) => setValue("materialId", Number(val), { shouldValidate: true, shouldDirty: true })}
                                 placeholder="Select Material"
                                 id="materialId"
                             />
@@ -300,7 +302,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 <SearchableSelect
                                     options={owners.map((o: any) => ({ value: o.id, label: o.name }))}
                                     value={ownerTypeId || ""}
-                                    onChange={(val) => setValue("ownerTypeId", Number(val), { shouldValidate: true })}
+                                    onChange={(val) => setValue("ownerTypeId", Number(val), { shouldValidate: true, shouldDirty: true })}
                                     placeholder="Select Owner"
                                     id="ownerTypeId"
                                 />
@@ -315,7 +317,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 <SearchableSelect
                                     options={statuses.map((s: any) => ({ value: s.id, label: s.name }))}
                                     value={statusId || ""}
-                                    onChange={(val) => setValue("statusId", Number(val), { shouldValidate: true })}
+                                    onChange={(val) => setValue("statusId", Number(val), { shouldValidate: true, shouldDirty: true })}
                                     placeholder="Select Status"
                                     id="statusId"
                                 />
@@ -336,9 +338,9 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setValue("currentHolderType", HolderType.Location);
-                                    setValue("currentLocationId", null);
-                                    setValue("currentPartyId", null);
+                                    setValue("currentHolderType", HolderType.Location, { shouldDirty: true });
+                                    setValue("currentLocationId", null, { shouldDirty: true }); // Reset IDs when switching types
+                                    setValue("currentPartyId", null, { shouldDirty: true });
                                 }}
                                 className={cn(
                                     "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
@@ -353,9 +355,9 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setValue("currentHolderType", HolderType.Vendor);
-                                    setValue("currentLocationId", null);
-                                    setValue("currentPartyId", null);
+                                    setValue("currentHolderType", HolderType.Vendor, { shouldDirty: true });
+                                    setValue("currentLocationId", null, { shouldDirty: true });
+                                    setValue("currentPartyId", null, { shouldDirty: true });
                                 }}
                                 className={cn(
                                     "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
@@ -370,9 +372,9 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setValue("currentHolderType", HolderType.NotInStock);
-                                    setValue("currentLocationId", null);
-                                    setValue("currentPartyId", null);
+                                    setValue("currentHolderType", HolderType.NotInStock, { shouldDirty: true });
+                                    setValue("currentLocationId", null, { shouldDirty: true });
+                                    setValue("currentPartyId", null, { shouldDirty: true });
                                 }}
                                 className={cn(
                                     "flex items-center gap-2.5 px-5 py-2 rounded-lg text-[11px] font-black tracking-widest uppercase transition-all duration-300",
@@ -397,7 +399,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                 <SearchableSelect
                                     options={parties.map((p: any) => ({ value: p.id, label: p.name }))}
                                     value={currentPartyId || ""}
-                                    onChange={(val) => setValue("currentPartyId", Number(val), { shouldValidate: true })}
+                                    onChange={(val) => setValue("currentPartyId", Number(val), { shouldValidate: true, shouldDirty: true })}
                                     placeholder="Select Vendor"
                                     id="currentPartyId"
                                 />
@@ -420,7 +422,7 @@ export function ItemDialog({ isOpen, onClose, onSubmit, item, isLoading, existin
                                     type="checkbox"
                                     className="sr-only"
                                     checked={isActive}
-                                    onChange={(e) => setValue("isActive", e.target.checked)}
+                                    onChange={(e) => setValue("isActive", e.target.checked, { shouldDirty: true })}
                                 />
                                 <div className={cn(
                                     "w-11 h-6 rounded-full transition-all duration-300 shadow-inner",
